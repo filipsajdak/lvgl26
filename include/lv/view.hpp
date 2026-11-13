@@ -77,8 +77,8 @@ class view {
   }
 
   // set({.value = 0}) applies typed properties: see lv::props.
-  template <class Self>
-  Self set(this Self self, const props<W>& p)
+  template <class Self, class D = void>
+  Self set(this Self self, const detail::lazy_props<W, D>& p)
     pre(self.raw() != nullptr)
   {
     detail::apply_props<W>(self.raw(), p);

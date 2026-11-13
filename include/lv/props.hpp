@@ -1,7 +1,8 @@
 #pragma once
 
 // props<"arc"> is a struct that reflection generates from LVGL's C API: one member
-// per lv_arc_set_* and lv_obj_set_* function, and one per event (on_clicked, ...).
+// per lv_arc_set_* and lv_obj_set_* function, one per event (on_clicked, ...), an
+// `id` and a `style`.
 //
 //   lv::props<"arc"> p{.id = "speedo", .range = {0, 240}, .rotation = 90_deg, .value = 120};
 //
@@ -12,7 +13,9 @@
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
+#include <lv/style.hpp>
 #include <lv/units.hpp>
+#include <lv/values.hpp>
 
 #include <array>
 #include <concepts>
@@ -25,151 +28,6 @@
 namespace lv {
 
 namespace detail {
-
-template <class T>
-concept integer = std::integral<T> && !std::same_as<T, bool> && !std::same_as<T, char> &&
-                  !std::same_as<T, wchar_t> && !std::same_as<T, char8_t> &&
-                  !std::same_as<T, char16_t> && !std::same_as<T, char32_t>;
-
-}  // namespace detail
-
-// An integer or bool that only accepts its own kind, and only values that fit.
-// So `.value = true` and `.value = 1.5` do not compile.
-template <class T>
-class strict {
-  T v_{};
-
- public:
-  constexpr strict() = default;
-
-  template <detail::integer U>
-    requires detail::integer<T>
-  constexpr strict(U u) : v_(static_cast<T>(u)) {
-    contract_assert(std::in_range<T>(u));
-  }
-
-  template <std::same_as<bool> U>
-    requires std::same_as<T, bool>
-  constexpr strict(U u) : v_(u) {}
-
-  constexpr T raw() const { return v_; }
-};
-
-// An event handler stored in a props struct: a function or a lambda without captures.
-// For a handler with state, use view.on<LV_EVENT_...>() instead.
-struct handler {
-  void (*plain)() = nullptr;
-  void (*with_event)(event) = nullptr;
-
-  constexpr handler() = default;
-
-  template <class F>
-    requires std::convertible_to<F, void (*)()>
-  constexpr handler(F f) : plain(f) {}
-
-  template <class F>
-    requires(!std::convertible_to<F, void (*)()>) && std::convertible_to<F, void (*)(event)>
-  constexpr handler(F f) : with_event(f) {}
-};
-
-namespace detail {
-
-// How to write a value of type T, for the error message.
-template <class T>
-consteval std::string how_to_write() {
-  if (^^T == ^^length) return "a length (120_px, 50_pct or lv::size_content)";
-  if (^^T == ^^angle) return "an angle (90_deg)";
-  if (^^T == ^^duration) return "a time (300_ms)";
-  if (^^T == ^^opa) return "an opacity (50_pct)";
-  if (^^T == ^^strict<bool>) return "true or false";
-  if (std::meta::has_template_arguments(^^T) && std::meta::template_of(^^T) == ^^strict)
-    return "a whole number (not bool, not floating point)";
-  return std::string(std::meta::display_string_of(^^T));
-}
-
-template <class... Ts>
-struct wrong_value {
-  template <class... U>
-  static consteval std::string_view message() {
-    std::string m = "lv: wrong value for this property. It takes ";
-    std::string sep;
-    ((m += sep + how_to_write<Ts>(), sep = ", then "), ...);
-    m += ". You gave ";
-    sep.clear();
-    ((m += sep + std::string(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
-     ...);
-    if (sizeof...(U) == 0) m += "nothing";
-    return std::define_static_string(m + ".");
-  }
-};
-
-}  // namespace detail
-
-// One member of a props struct: unset, or the arguments of one setter.
-template <class... Ts>
-struct arg {
-  bool set = false;
-  std::tuple<Ts...> v{};
-
-  constexpr arg() = default;
-
-  // Accepts anything, so that a wrong value gets the message below instead of
-  // the compiler's "could not convert".
-  template <class... U>
-    requires(sizeof...(U) > 0) &&
-            (!(sizeof...(U) == 1 && (std::same_as<std::remove_cvref_t<U>, arg> && ...)))
-  constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
-
- private:
-  template <class... U>
-  static constexpr bool fits = sizeof...(U) == sizeof...(Ts) && requires {
-    requires(std::convertible_to<U, Ts> && ...);
-  };
-
-  template <class... U>
-  static constexpr std::tuple<Ts...> convert(U&&... u) {
-    static_assert(fits<U...>, detail::wrong_value<Ts...>::template message<U...>());
-    if constexpr (fits<U...>)
-      return std::tuple<Ts...>{static_cast<Ts>(std::forward<U>(u))...};
-    else
-      return {};  // unreachable: keeps the message above the only error
-  }
-};
-
-namespace detail {
-
-consteval bool has(std::string_view s, std::string_view part) {
-  return s.find(part) != std::string_view::npos;
-}
-
-consteval bool is_one_of(std::string_view s, std::initializer_list<std::string_view> names) {
-  for (auto n : names)
-    if (s == n) return true;
-  return false;
-}
-
-// The C++ type a setter parameter gets in the props struct.
-// The unit is inferred from the names LVGL uses, because C only says int32_t.
-consteval std::meta::info value_type(std::string_view prop, std::meta::info param) {
-  const auto raw = std::meta::type_of(param);
-  const auto t = std::meta::remove_cv(std::meta::dealias(raw));
-  const std::string_view name =
-      std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
-
-  if (std::meta::is_arithmetic_type(t) && t != ^^bool) {
-    if (has(prop, "opa") || has(name, "opa")) return ^^opa;
-    if (has(prop, "angle") || has(prop, "rotation") || has(name, "angle") ||
-        has(name, "rotation"))
-      return ^^angle;
-    if (has(prop, "duration") || has(prop, "time") || has(prop, "delay") ||
-        has(prop, "period") || has(name, "duration") || has(name, "time") ||
-        has(name, "delay") || has(name, "period"))
-      return ^^duration;
-    if (is_one_of(name, {"x", "y", "w", "h", "width", "height"})) return ^^length;
-  }
-  if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
-  return raw;
-}
 
 consteval bool is_keyword(std::string_view s) {
   return is_one_of(s, {"class", "default", "delete", "enum", "new", "operator", "static",
@@ -215,7 +73,8 @@ consteval std::vector<std::meta::info> setters_with_prefix(std::string_view pref
 struct member_item {
   std::string_view name;
   std::meta::info type;    // arg<...>
-  std::meta::info target;  // the setter, the LV_EVENT_* enumerator, or null for `id`
+  std::meta::info target;  // the setter, the LV_EVENT_* enumerator, lv_obj_add_style
+                           // for `style`, or null for `id`
 };
 
 consteval void sort_by_name(std::vector<member_item>& items) {
@@ -232,10 +91,12 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   return {prop, std::meta::substitute(^^arg, types), f};
 }
 
-// What every widget has: `id`, the lv_obj_set_* properties and the events.
+// What every widget has: `id`, `style`, the lv_obj_set_* properties and the events.
+template <class D>
 consteval std::vector<member_item> scan_base() {
   std::vector<member_item> items;
   items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}});
+  items.push_back({"style", ^^style_t<D>, ^^lv_obj_add_style});
   for (auto f : setters_with_prefix("lv_obj_set_"))
     items.push_back(setter_item(f, std::string_view("lv_obj_set_").size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
@@ -251,7 +112,7 @@ consteval std::vector<member_item> scan_base() {
 template <class D>
 consteval std::vector<std::meta::info> pack_base() {
   std::vector<std::meta::info> out;
-  for (const auto& it : scan_base()) {
+  for (const auto& it : scan_base<D>()) {
     out.push_back(std::meta::reflect_constant_string(it.name));
     out.push_back(it.type);
     out.push_back(it.target);
@@ -318,15 +179,6 @@ template <fixed W>
 inline constexpr std::span<const std::meta::info> targets =
     std::define_static_array(member_targets<>(W.sv()));
 
-// Unit types and strict<> hand LVGL their plain value; everything else passes as is.
-template <class T>
-constexpr decltype(auto) lower(const T& x) {
-  if constexpr (requires { x.raw(); })
-    return x.raw();
-  else
-    return (x);
-}
-
 inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
   // A function pointer travels in user_data, so nothing is allocated.
   if (h.plain)
@@ -346,15 +198,22 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
 template <fixed W, std::size_t I, class A>
 void apply_member(lv_obj_t* o, const A& a) {
   constexpr auto target = targets<W>[I];
-  const auto& [... x] = a.v;
   if constexpr (target == std::meta::info{}) {
     // `id` names the node for lv::mount; there is nothing to apply.
+  } else if constexpr (target == ^^lv_obj_add_style) {
+    apply_style_local(o, a, LV_PART_MAIN);
   } else if constexpr (std::meta::is_enumerator(target)) {
+    const auto& [... x] = a.v;
     add_handler(o, [:target:], x...);
   } else {
+    const auto& [... x] = a.v;
     [:target:](o, lower(x)...);
   }
 }
+
+// props<W>, named so that it is generated on first use: see props_of.
+template <fixed W, class D>
+using lazy_props = typename props_of<W, D>::type;
 
 }  // namespace detail
 
@@ -368,19 +227,12 @@ template <fixed W>
 inline constexpr auto members_of_props = std::define_static_array(
     std::meta::nonstatic_data_members_of(^^props<W>, std::meta::access_context::unchecked()));
 
-template <std::size_t N>
-inline constexpr auto indices = [] {
-  std::array<std::size_t, N> a{};
-  for (std::size_t i = 0; i < N; ++i) a[i] = i;
-  return a;
-}();
-
 // Applies every set member of `p`, read at run time.
 template <fixed W>
 void apply_props(lv_obj_t* o, const props<W>& p) {
   template for (constexpr auto i : indices<members_of_props<W>.size()>) {
     constexpr auto m = members_of_props<W>[i];
-    if (p.[:m:].set) apply_member<W, i>(o, p.[:m:]);
+    if (is_set(p.[:m:])) apply_member<W, i>(o, p.[:m:]);
   }
 }
 
