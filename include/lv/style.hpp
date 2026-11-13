@@ -189,13 +189,19 @@ void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector) {
   }
 }
 
-// How many set properties of the constant style S can live in a const lv_style_t.
-template <const auto& S, class D = void>
+// The constant style that `Where::get()` returns is described by a type, not by a
+// reference template argument. GCC gives every function made for a sub-object of a
+// variable the same symbol name in every file (`ui.kids.head`), so two files with a
+// tree of the same name would share code. A type built from the root variable and an
+// index path is unique.
+
+// How many set properties of a constant style can live in a const lv_style_t.
+template <class Where, class D = void>
 inline constexpr std::size_t const_count = [] {
   std::size_t n = 0;
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     constexpr auto m = style_members<D>[i];
-    if (S.[:m:].set && style_ids<D>[i] != std::meta::info{}) ++n;
+    if (Where::get().[:m:].set && style_ids<D>[i] != std::meta::info{}) ++n;
   }
   return n;
 }();
@@ -221,15 +227,15 @@ constexpr lv_style_value_t style_value(T n) {
 }
 
 // The property array of a const lv_style_t, ended by LV_STYLE_PROP_INV.
-template <const auto& S, class D = void>
-constexpr std::array<lv_style_const_prop_t, const_count<S, D> + 1> const_props() {
-  std::array<lv_style_const_prop_t, const_count<S, D> + 1> out{};
+template <class Where, class D = void>
+constexpr std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
+  std::array<lv_style_const_prop_t, const_count<Where, D> + 1> out{};
   std::size_t k = 0;
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     constexpr auto m = style_members<D>[i];
-    if constexpr (S.[:m:].set && style_ids<D>[i] != std::meta::info{}) {
+    if constexpr (Where::get().[:m:].set && style_ids<D>[i] != std::meta::info{}) {
       out[k].prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
-      out[k].value = style_value(lower(std::get<0>(S.[:m:].v)));
+      out[k].value = style_value(lower(std::get<0>(Where::get().[:m:].v)));
       ++k;
     }
   }
@@ -250,20 +256,20 @@ constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
   return s;
 }
 
-// Adds the constant style S to a widget. What LVGL can keep in a const style goes
-// to read-only memory; the few shorthands without a style id (pad_all, size, ...)
-// are set as local styles.
-template <const auto& S, class D = void>
+// Adds a constant style to a widget. What LVGL can keep in a const style goes to
+// read-only memory; the few shorthands without a style id (pad_all, size, ...) are
+// set as local styles.
+template <class Where, class D = void>
 void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
-  if constexpr (const_count<S, D> > 0) {
-    static constexpr auto props = const_props<S, D>();
+  if constexpr (const_count<Where, D> > 0) {
+    static constexpr auto props = const_props<Where, D>();
     static constexpr lv_style_t st = const_style(props.data());
     lv_obj_add_style(o, &st, selector);
   }
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     constexpr auto m = style_members<D>[i];
-    if constexpr (S.[:m:].set && style_ids<D>[i] == std::meta::info{}) {
-      constexpr auto a = S.[:m:];
+    if constexpr (Where::get().[:m:].set && style_ids<D>[i] == std::meta::info{}) {
+      constexpr auto a = Where::get().[:m:];
       const auto& [... x] = a.v;
       [:style_setters<D>[i]:](o, lower(x)..., selector);
     }
@@ -318,6 +324,23 @@ constexpr S operator|(S s, const token<transition_token>& t) {
   s.anim_duration = detail::part(t->duration);
   return s;
 }
+
+namespace detail {
+
+// Two styles merge with |: what the right one sets wins.
+//   .style = button | danger
+// It lives in this namespace because the generated style type does, and that is
+// where the compiler looks for operators on it.
+template <class S, class D = void>
+  requires a_style<S, D>
+constexpr S operator|(S base, const S& over) {
+  template for (constexpr auto m : style_members<D>) {
+    if (over.[:m:].set) base.[:m:] = over.[:m:];
+  }
+  return base;
+}
+
+}  // namespace detail
 
 // A style value: lv::style({.bg_color = tok.color.card, .radius = tok.radius.card}).
 // Keep it in a constexpr variable to give it a name and reuse it.

@@ -74,12 +74,13 @@ struct node {
   static constexpr auto kind = W;
   props<W> p{};
   detail::kids_list<Kids...> kids{};
+  bool bare = false;  // start without the theme's styles: see lv::group
 
   // The children: lv::column()[lv::label(...), lv::arc(...)].
   template <detail::tree_node... K>
     requires(sizeof...(Kids) == 0)
   constexpr node<W, K...> operator[](K... k) const {
-    return {p, detail::make_kids(std::move(k)...)};
+    return {p, detail::make_kids(std::move(k)...), bare};
   }
 
   constexpr std::string_view id() const {
@@ -113,6 +114,24 @@ struct factory {
   template <class D = void>
   constexpr auto operator()(lazy_props<W, D> p = {}) const {
     return make_node<W, D>(std::move(p));
+  }
+
+  template <tree_node... Kids>
+  constexpr auto operator[](Kids... kids) const {
+    return (*this)()[std::move(kids)...];
+  }
+};
+
+// lv::group: a box with none of the theme's styles (no background, border, padding
+// or scrollbars) that fills its parent, unless .size says otherwise. It groups
+// widgets without drawing anything itself.
+struct group_factory {
+  template <class D = void>
+  constexpr auto operator()(lazy_props<"obj", D> p = {}) const {
+    if (!p.size.set) p.size = {percent{100}, percent{100}};
+    auto n = make_node<"obj", D>(std::move(p));
+    n.bare = true;
+    return n;
   }
 
   template <tree_node... Kids>
@@ -158,6 +177,7 @@ inline constexpr detail::factory<"textarea"> textarea{};
 inline constexpr detail::factory<"dropdown"> dropdown{};
 inline constexpr detail::factory<"roller"> roller{};
 inline constexpr detail::factory<"spinner"> spinner{};
+inline constexpr detail::group_factory group{};
 inline constexpr detail::flex_factory column{LV_FLEX_FLOW_COLUMN};
 inline constexpr detail::flex_factory row{LV_FLEX_FLOW_ROW};
 
@@ -233,9 +253,33 @@ inline constexpr std::size_t kid_count = 0;
 template <fixed W, class... Kids>
 inline constexpr std::size_t kid_count<node<W, Kids...>> = sizeof...(Kids);
 
-// Builds the node `N`, a part of a constexpr tree, under `parent`.
-template <const auto& N>
+// The node of the tree `root` reached by taking child number Path[0], then child
+// number Path[1] of that, and so on.
+template <class Node>
+constexpr const Node& descend(const Node& n) {
+  return n;
+}
+template <std::size_t First, std::size_t... Rest, class Node>
+constexpr const auto& descend(const Node& n) {
+  return descend<Rest...>(kid<First>(n.kids));
+}
+
+// Names one style of one node of a tree, for add_const_style.
+template <const auto& Tree, std::size_t Member, std::size_t... Path>
+struct style_at {
+  static constexpr const auto& get() {
+    const auto& n = descend<Path...>(Tree);
+    using node_type = std::remove_cvref_t<decltype(n)>;
+    return n.p.[:members_of_props<node_type::kind>[Member]:];
+  }
+};
+
+// Builds one node of the constexpr tree `Tree` under `parent`.
+// A node is named by the root and an index path, never by a reference to the node
+// itself: see the note above const_count in style.hpp.
+template <const auto& Tree, std::size_t... Path>
 lv_obj_t* build(lv_obj_t* parent, build_state& st) {
+  constexpr const auto& N = descend<Path...>(Tree);
   using node_type = std::remove_cvref_t<decltype(N)>;
   constexpr auto W = node_type::kind;
 
@@ -245,11 +289,13 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
     return nullptr;
   }
   if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
+  if constexpr (N.bare) lv_obj_remove_style_all(w.raw());
 
   template for (constexpr auto i : indices<members_of_props<W>.size()>) {
     constexpr auto m = members_of_props<W>[i];
-    if constexpr (targets<W>[i] == ^^lv_obj_add_style) {
-      if constexpr (is_set(N.p.[:m:])) add_const_style<N.p.[:m:]>(w.raw(), LV_PART_MAIN);
+    if constexpr (a_style<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
+      if constexpr (is_set(N.p.[:m:]))
+        add_const_style<style_at<Tree, i, Path...>>(w.raw(), selector_of<targets<W>[i]>());
     } else if constexpr (is_set(N.p.[:m:])) {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
       if constexpr (requires { a.bound; })
@@ -261,7 +307,7 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
   }
 
   template for (constexpr auto i : indices<kid_count<node_type>>) {
-    if (st.ok) build<kid<i>(N.kids)>(w.raw(), st);
+    if (st.ok) build<Tree, Path..., i>(w.raw(), st);
   }
   return w.raw();
 }
@@ -290,6 +336,10 @@ class mounted {
 
   // The root widget, or an empty view if its parent already deleted it.
   obj root() const { return root_.get(); }
+
+  // Gives the widgets to their parent: they now live until the parent is deleted,
+  // as widgets made with LVGL's C API do. Returns the root.
+  obj detach() { return root_.release(); }
 
   // A typed view of the node with this id.
   template <detail::fixed Name>
