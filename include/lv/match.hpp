@@ -95,25 +95,33 @@ struct match_result<R...> {
   using type = void;
 };
 
+// A whole number as text.
+consteval std::string number_text(long long n) {
+  if (n == 0) return "0";
+  std::string out;
+  for (auto m = n < 0 ? -n : n; m > 0; m /= 10) out.insert(out.begin(), static_cast<char>('0' + m % 10));
+  return n < 0 ? "-" + out : out;
+}
+
+// The name of the enumerator of E that has the value v.
+template <class E>
+consteval std::string enumerator_text(E v) {
+  for (auto e : std::meta::enumerators_of(^^E))
+    if (std::meta::extract<E>(e) == v) return str(std::meta::identifier_of(e));
+  return "(not an enumerator)";
+}
+
 // How a value is written in an error message: the enumerator's name, or the number.
 template <class Subject>
 consteval std::string value_text(Subject v) {
-  if constexpr (std::is_enum_v<Subject>) {
-    for (auto e : std::meta::enumerators_of(^^Subject))
-      if (std::meta::extract<Subject>(e) == v) return str(std::meta::identifier_of(e));
-    return "(not an enumerator)";
-  } else if constexpr (std::same_as<Subject, bool>) {
+  if constexpr (std::is_enum_v<Subject>)
+    return enumerator_text(v);
+  else if constexpr (std::same_as<Subject, bool>)
     return v ? "true" : "false";
-  } else if constexpr (std::integral<Subject>) {
-    std::string out;
-    auto n = static_cast<long long>(v);
-    const bool negative = n < 0;
-    if (n == 0) out = "0";
-    for (auto m = negative ? -n : n; m > 0; m /= 10) out.insert(out.begin(), static_cast<char>('0' + m % 10));
-    return negative ? "-" + out : out;
-  } else {
+  else if constexpr (std::integral<Subject>)
+    return number_text(static_cast<long long>(v));
+  else
     return "(a value)";
-  }
 }
 
 // Collects the values of an arm's pattern, converted to the subject's type.
@@ -124,51 +132,67 @@ consteval void add_values(std::vector<Subject>& out, std::type_identity<arm<one_
 template <class Subject, class F>
 consteval void add_values(std::vector<Subject>&, std::type_identity<arm<anything, F>>) {}
 
-// What is wrong with the arms of a match on Subject, or an empty string.
-template <class Subject, class... Arms>
-consteval std::string_view match_problem() {
-  constexpr bool wildcard = (is_wildcard<Arms> || ...);
-  constexpr bool wildcard_is_last = is_wildcard<Arms...[sizeof...(Arms) - 1]>;
-  constexpr int wildcards = (int{is_wildcard<Arms>} + ...);
-  if (wildcards > 1) return "lv::match has more than one lv::otherwise arm.";
-  if (wildcard && !wildcard_is_last)
-    return "lv::match: lv::otherwise must be the last arm; the arms after it can never match.";
+template <class Subject>
+consteval bool contains(const std::vector<Subject>& values, Subject v) {
+  for (Subject x : values)  // by value: a std::vector<bool> has no real references
+    if (x == v) return true;
+  return false;
+}
 
-  std::vector<Subject> covered;
-  (add_values(covered, std::type_identity<Arms>{}), ...);
+// What is wrong with where lv::otherwise stands among the arms, or nothing.
+template <class... Arms>
+consteval std::string_view wildcard_problem() {
+  if ((int{is_wildcard<Arms>} + ...) > 1) return "lv::match has more than one lv::otherwise arm.";
+  if ((is_wildcard<Arms> || ...) && !is_wildcard<Arms...[sizeof...(Arms) - 1]>)
+    return "lv::match: lv::otherwise must be the last arm; the arms after it can never match.";
+  return {};
+}
+
+// The first value that two arms both name, as an error, or nothing.
+template <class Subject>
+consteval std::string_view duplicate_problem(const std::vector<Subject>& covered) {
   for (std::size_t i = 0; i < covered.size(); ++i)
     for (std::size_t j = i + 1; j < covered.size(); ++j)
       if (covered[i] == covered[j])
         return std::define_static_string("lv::match has two arms for " + value_text(covered[i]) +
                                          ". Each value needs exactly one.");
+  return {};
+}
 
-  // The values a subject of this type can have, when they can be listed.
+// Whether every value of Subject can be listed: an enum, or bool.
+template <class Subject>
+inline constexpr bool listable = std::is_enum_v<Subject> || std::same_as<Subject, bool>;
+
+// Every value a subject of this type can have. Two enumerators may share a value.
+template <class Subject>
+consteval std::vector<Subject> all_values() {
   std::vector<Subject> all;
-  bool listable = false;
   if constexpr (std::is_enum_v<Subject>) {
-    listable = true;
-    for (auto e : std::meta::enumerators_of(^^Subject)) {
-      const auto v = std::meta::extract<Subject>(e);
-      bool known = false;  // two enumerators may share a value
-      for (auto a : all) known = known || a == v;
-      if (!known) all.push_back(v);
-    }
+    for (auto e : std::meta::enumerators_of(^^Subject))
+      if (const Subject v = std::meta::extract<Subject>(e); !contains(all, v)) all.push_back(v);
   } else if constexpr (std::same_as<Subject, bool>) {
-    listable = true;
     all = {false, true};
   }
+  return all;
+}
 
-  if (!listable)
+// The values of Subject that no arm names, as a comma-separated list.
+template <class Subject>
+consteval std::string missing_values(const std::vector<Subject>& covered) {
+  std::string missing;
+  for (Subject v : all_values<Subject>())
+    if (!contains(covered, v)) missing += (missing.empty() ? "" : ", ") + value_text(v);
+  return missing;
+}
+
+// What is wrong with how the arms cover the values of Subject, or nothing.
+template <class Subject>
+consteval std::string_view coverage_problem(const std::vector<Subject>& covered, bool wildcard) {
+  if (!listable<Subject>)
     return wildcard ? std::string_view{}
                     : "lv::match on this type cannot list every value, so it needs a last arm "
                       "`lv::otherwise.then(...)`.";
-
-  std::string missing;
-  for (auto v : all) {
-    bool found = false;
-    for (auto c : covered) found = found || c == v;
-    if (!found) missing += (missing.empty() ? "" : ", ") + value_text(v);
-  }
+  const auto missing = missing_values(covered);
   if (!wildcard && !missing.empty())
     return std::define_static_string("lv::match does not cover: " + missing +
                                      ". Add an arm for each, or a last arm `lv::otherwise.then(...)`.");
@@ -176,6 +200,16 @@ consteval std::string_view match_problem() {
     return "lv::match already covers every value, so its lv::otherwise arm can never match. "
            "Remove it.";
   return {};
+}
+
+// What is wrong with the arms of a match on Subject, or an empty string.
+template <class Subject, class... Arms>
+consteval std::string_view match_problem() {
+  if (const auto p = wildcard_problem<Arms...>(); !p.empty()) return p;
+  std::vector<Subject> covered;
+  (add_values(covered, std::type_identity<Arms>{}), ...);
+  if (const auto p = duplicate_problem(covered); !p.empty()) return p;
+  return coverage_problem(covered, (is_wildcard<Arms> || ...));
 }
 
 template <std::equality_comparable Subject>

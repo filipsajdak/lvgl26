@@ -274,37 +274,44 @@ struct style_at {
   }
 };
 
-// Builds one node of the constexpr tree `Tree` under `parent`.
+// Applies the properties of one node of `Tree` to its widget `w`.
 // A node is named by the root and an index path, never by a reference to the node
 // itself: see the note above const_count in style.hpp.
 template <const auto& Tree, std::size_t... Path>
-lv_obj_t* build(lv_obj_t* parent, build_state& st) {
+void apply_node(lv_obj_t* w) {
   constexpr const auto& N = descend<Path...>(Tree);
-  using node_type = std::remove_cvref_t<decltype(N)>;
-  constexpr auto W = node_type::kind;
-
-  auto w = view<W>::create(obj{parent});
-  if (!w) {
-    st.ok = false;
-    return nullptr;
-  }
-  if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
-  if constexpr (N.bare) lv_obj_remove_style_all(w.raw());
+  constexpr auto W = std::remove_cvref_t<decltype(N)>::kind;
 
   template for (constexpr auto i : indices<members_of_props<W>.size()>) {
     constexpr auto m = members_of_props<W>[i];
     if constexpr (a_style<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
       if constexpr (is_set(N.p.[:m:]))
-        add_const_style<style_at<Tree, i, Path...>>(w.raw(), selector_of<targets<W>[i]>());
+        add_const_style<style_at<Tree, i, Path...>>(w, selector_of<targets<W>[i]>());
     } else if constexpr (is_set(N.p.[:m:])) {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
       if constexpr (requires { a.bound; })
         static_assert(a.bound == nullptr || bindable<W, i>(),
                       "lv: this property cannot follow a state. LVGL has no bind function "
                       "for it and it takes more than one value.");
-      apply_member<W, i>(w.raw(), a);
+      apply_member<W, i>(w, a);
     }
   }
+}
+
+// Builds one node of the constexpr tree `Tree` under `parent`, with its children.
+template <const auto& Tree, std::size_t... Path>
+lv_obj_t* build(lv_obj_t* parent, build_state& st) {
+  constexpr const auto& N = descend<Path...>(Tree);
+  using node_type = std::remove_cvref_t<decltype(N)>;
+
+  auto w = view<node_type::kind>::create(obj{parent});
+  if (!w) {
+    st.ok = false;
+    return nullptr;
+  }
+  if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
+  if constexpr (N.bare) lv_obj_remove_style_all(w.raw());
+  apply_node<Tree, Path...>(w.raw());
 
   template for (constexpr auto i : indices<kid_count<node_type>>) {
     if (st.ok) build<Tree, Path..., i>(w.raw(), st);

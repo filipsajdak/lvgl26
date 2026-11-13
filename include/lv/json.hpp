@@ -43,6 +43,13 @@ constexpr bool is_number_char(char c) {
   return is_digit(c) || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E';
 }
 
+// How many characters at the start of `s` belong to a plain decimal number.
+constexpr std::size_t number_length(std::string_view s) {
+  std::size_t i = 0;
+  while (i < s.size() && (s[i] == '-' || s[i] == '.' || is_digit(s[i]))) ++i;
+  return i;
+}
+
 // The index just past the number that starts at s[i], or npos if there is none.
 constexpr std::size_t skip_number(std::string_view s, std::size_t i) {
   std::size_t j = i;

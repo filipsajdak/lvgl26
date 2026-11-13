@@ -70,25 +70,27 @@ constexpr lv_style_selector_t selector_of() {
     return static_cast<lv_style_selector_t>([:Target:]);
 }
 
+consteval bool takes_va_list(std::meta::info f) {
+  for (auto p : std::meta::parameters_of(f))
+    if (std::meta::dealias(std::meta::type_of(p)) == std::meta::dealias(^^va_list)) return true;
+  return false;
+}
+
+// Whether the setter `f`, called <prefix><prop>, becomes a property.
+consteval bool is_usable_setter(std::meta::info f, std::string_view prop) {
+  // Styles get their own typed API; they are not plain properties.
+  if (prop.starts_with("style_") || prop.starts_with("local_style_")) return false;
+  if (is_keyword(prop) || is_deprecated_setter(std::meta::identifier_of(f))) return false;
+  if (std::meta::is_vararg_function(f) || takes_va_list(f)) return false;
+  return std::meta::parameters_of(f).size() >= 2;  // the widget and at least one value
+}
+
 // The usable lv_<...>_set_* functions with this prefix.
 consteval std::vector<std::meta::info> setters_with_prefix(std::string_view prefix) {
   std::vector<std::meta::info> out;
   for (auto f : api) {
     const auto id = std::meta::identifier_of(f);
-    if (!id.starts_with(prefix)) continue;
-    const auto prop = id.substr(prefix.size());
-    // Styles get their own typed API; they are not plain properties.
-    if (prop.starts_with("style_") || prop.starts_with("local_style_")) continue;
-    if (is_keyword(prop) || std::meta::is_vararg_function(f)) continue;
-    if (is_deprecated_setter(id)) continue;
-
-    const auto params = std::meta::parameters_of(f);
-    if (params.size() < 2) continue;
-    bool usable = true;
-    for (std::size_t i = 1; i < params.size(); ++i)
-      if (std::meta::dealias(std::meta::type_of(params[i])) == std::meta::dealias(^^va_list))
-        usable = false;
-    if (usable) out.push_back(f);
+    if (id.starts_with(prefix) && is_usable_setter(f, id.substr(prefix.size()))) out.push_back(f);
   }
   return out;
 }
@@ -102,12 +104,6 @@ struct member_item {
                            // `style`; the LV_STATE_* or LV_PART_* enumerator for
                            // `style_pressed` and the like; or null for `id`
 };
-
-consteval void sort_by_name(std::vector<member_item>& items) {
-  for (std::size_t i = 1; i < items.size(); ++i)
-    for (std::size_t j = i; j > 0 && items[j].name < items[j - 1].name; --j)
-      std::swap(items[j], items[j - 1]);
-}
 
 consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   const auto prop = std::meta::identifier_of(f).substr(prefix_size);
@@ -159,31 +155,33 @@ template <class D = void>
 inline constexpr std::span<const std::meta::info> base =
     std::define_static_array(pack_base<D>());
 
+// The widget's own setters as members, sorted by name. None for obj itself.
+consteval std::vector<member_item> own_members(std::string_view widget) {
+  std::vector<member_item> own;
+  if (widget == "obj") return own;
+  const std::string prefix = "lv_" + str(widget) + "_set_";
+  for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item(f, prefix.size()));
+  sort_by_name(own);
+  return own;
+}
+
 // The members of props<widget>, sorted by name: the widget's own setters merged
 // into the base. A widget's own setter wins over one of obj with the same name.
 // D only delays the base scan until a props struct is really needed.
 template <class D = void>
 consteval std::vector<member_item> members(std::string_view widget) {
   resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
-
-  std::vector<member_item> own;
-  if (widget != "obj") {
-    const std::string prefix = "lv_" + str(widget) + "_set_";
-    for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item(f, prefix.size()));
-    sort_by_name(own);
-  }
+  const auto own = own_members(widget);
 
   std::vector<member_item> items;
   std::size_t o = 0;
   for (std::size_t b = 0; b < base<D>.size(); b += 3) {
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
     while (o < own.size() && own[o].name < name) items.push_back(own[o++]);
-    if (o < own.size() && own[o].name == name)
-      items.push_back(own[o++]);
-    else
-      items.push_back({name, base<D>[b + 1], base<D>[b + 2]});
+    const bool overridden = o < own.size() && own[o].name == name;
+    items.push_back(overridden ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2]});
   }
-  while (o < own.size()) items.push_back(own[o++]);
+  items.insert(items.end(), own.begin() + static_cast<std::ptrdiff_t>(o), own.end());
   return items;
 }
 
@@ -229,31 +227,53 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
         code, reinterpret_cast<void*>(h.with_event));
 }
 
-// Reads the value of a subject as the type T that a setter takes.
+// from_subject(subject, type): the value of a subject as the type a setter takes.
+// One overload per kind of type.
 template <class T>
-T from_subject(lv_subject_t* s) {
-  if constexpr (std::same_as<T, lv_color_t>) {
-    return lv_subject_get_color(s);
-  } else if constexpr (std::is_pointer_v<T>) {
-    return static_cast<T>(const_cast<void*>(lv_subject_get_pointer(s)));
-  } else if constexpr (std::same_as<T, strict<bool>>) {
-    return lv_subject_get_int(s) != 0;
-  } else if constexpr (std::is_enum_v<T>) {
-    return static_cast<T>(lv_subject_get_int(s));
-  } else if constexpr (std::same_as<T, length> || std::same_as<T, horizontal> ||
-                       std::same_as<T, vertical>) {
-    return length::px(lv_subject_get_int(s));
-  } else if constexpr (std::same_as<T, opa>) {
-    return opa::from_raw(static_cast<lv_opa_t>(lv_subject_get_int(s)));
-  } else if constexpr (std::same_as<T, angle>) {
-    return angle{lv_subject_get_int(s)};
-  } else if constexpr (std::same_as<T, duration>) {
-    return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
-  } else if constexpr (std::constructible_from<T, std::int32_t>) {
+using as = std::type_identity<T>;
+
+inline lv_color_t from_subject(lv_subject_t* s, as<lv_color_t>) { return lv_subject_get_color(s); }
+
+template <class T>
+  requires std::is_pointer_v<T>
+T from_subject(lv_subject_t* s, as<T>) {
+  return static_cast<T>(const_cast<void*>(lv_subject_get_pointer(s)));
+}
+
+inline strict<bool> from_subject(lv_subject_t* s, as<strict<bool>>) {
+  return lv_subject_get_int(s) != 0;
+}
+
+template <class T>
+  requires std::is_enum_v<T>
+T from_subject(lv_subject_t* s, as<T>) {
+  return static_cast<T>(lv_subject_get_int(s));
+}
+
+inline length from_subject(lv_subject_t* s, as<length>) { return length::px(lv_subject_get_int(s)); }
+
+template <class Axis>
+along<Axis> from_subject(lv_subject_t* s, as<along<Axis>>) {
+  return length::px(lv_subject_get_int(s));
+}
+
+inline opa from_subject(lv_subject_t* s, as<opa>) {
+  return opa::from_raw(static_cast<lv_opa_t>(lv_subject_get_int(s)));
+}
+
+inline angle from_subject(lv_subject_t* s, as<angle>) { return angle{lv_subject_get_int(s)}; }
+
+inline duration from_subject(lv_subject_t* s, as<duration>) {
+  return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
+}
+
+// Anything else: built from the integer if it can be, such as strict<int>.
+template <class T>
+T from_subject(lv_subject_t* s, as<T>) {
+  if constexpr (std::constructible_from<T, std::int32_t>)
     return T{lv_subject_get_int(s)};
-  } else {
+  else
     return T{};  // no state type converts to T, so no binding to it can exist
-  }
 }
 
 // lv_<widget>_bind_<prop> for the setter lv_<widget>_set_<prop>, or a null reflection.
@@ -286,7 +306,7 @@ consteval bool bindable() {
 template <fixed W, std::size_t I, class V>
 void follow_subject(lv_observer_t* observer, lv_subject_t* s) {
   auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
-  [:targets<W>[I]:](target, lower(from_subject<V>(s)));
+  [:targets<W>[I]:](target, lower(from_subject(s, as<V>{})));
 }
 
 // Makes member number I of props<W> follow the state it is bound to.

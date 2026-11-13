@@ -112,18 +112,11 @@ struct measured {
   bool ok = false;
 };
 
-// How many characters at the start of `s` belong to a number.
-constexpr std::size_t number_length(std::string_view s) {
-  std::size_t i = 0;
-  while (i < s.size() && (s[i] == '-' || s[i] == '.' || json::detail::is_digit(s[i]))) ++i;
-  return i;
-}
-
 constexpr measured read_measured(json::value v) {
   if (v.is(json::kind::number)) return {v.number(), {}, true};
   if (!v.is(json::kind::string)) return {};
   const auto s = v.string();
-  const auto n = number_length(s);
+  const auto n = json::detail::number_length(s);
   if (n == 0) return {0, s, true};  // a word such as "content"
   return {json::value{s.substr(0, n)}.number(), s.substr(n), true};
 }
