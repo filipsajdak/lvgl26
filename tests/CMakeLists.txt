@@ -107,3 +107,22 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
+
+# The fuzz target for runtime documents is also an ordinary program. Building it
+# here keeps it compiling, and replaying its corpus under every preset (including
+# the sanitizers) turns each input a fuzzer ever found into a regression test.
+add_executable(fuzz_runtime_document ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/runtime_document.cpp)
+target_link_libraries(fuzz_runtime_document PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(GLOB LVGL26_DOCUMENT_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/document/*)
+foreach(input ${LVGL26_DOCUMENT_CORPUS})
+  get_filename_component(name ${input} NAME)
+  add_test(NAME fuzz_corpus_document_${name} COMMAND fuzz_runtime_document ${input})
+endforeach()
+
+# The JSON reader's libFuzzer target, built here with a plain main so that its
+# corpus (including every input that once crashed it) is replayed under every preset.
+add_executable(fuzz_json_replay ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/json_reader.cpp
+                                ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/replay_main.cpp)
+target_link_libraries(fuzz_json_replay PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(GLOB LVGL26_JSON_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/json/*)
+add_test(NAME fuzz_corpus_json COMMAND fuzz_json_replay ${LVGL26_JSON_CORPUS})

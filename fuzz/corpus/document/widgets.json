@@ -1,0 +1,8 @@
+{"type": "row", "children": [
+  {"type": "slider", "id": "s", "props": {"range": [0, 100], "value": [30, "off"], "width": "50%"}},
+  {"type": "switch"}, {"type": "checkbox", "props": {"text": "On"}},
+  {"type": "textarea", "props": {"text": "abc", "placeholder_text": "type", "one_line": true}},
+  {"type": "dropdown", "props": {"options": "a\nb"}}, {"type": "bar", "props": {"value": [5, "on"]}},
+  {"type": "roller"}, {"type": "obj", "props": {"align": "center", "style_pressed": {"bg_color": "#445566"}}}]}
+---
+{"s": {"value": [70, "on"]}}

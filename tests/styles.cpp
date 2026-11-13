@@ -98,6 +98,18 @@ void const_styles_use_no_heap_for_values(lv::obj screen) {
   check(local_cost > styled_cost);
 }
 
+// Styles merged at run time, not folded by the compiler.
+void merges_at_run_time(lv::obj screen) {
+  auto base = lv::style({.bg_color = lv::rgb(0x101010), .radius = 4 * px});
+  auto over = lv::style({.radius = 9 * px, .text_color = lv::rgb(0x202020)});
+  const auto merged = base | over;
+  auto box = screen.add<"obj">().set({.style = merged});
+  check(box.get<"style_radius">(LV_PART_MAIN) == 9);  // the right side wins
+  check(same(box.get<"style_bg_color">(LV_PART_MAIN), lv::rgb(0x101010)));
+  check(same(box.get<"style_text_color">(LV_PART_MAIN), lv::rgb(0x202020)));
+  lv_obj_delete(box.raw());
+}
+
 void renders(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
   check(lv_test_screenshot_compare(reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
@@ -116,6 +128,7 @@ int main(int argc, char** argv) {
 
   applies(screen);
   const_styles_use_no_heap_for_values(screen);
+  merges_at_run_time(screen);
   renders(argv[1]);
 
   lv_deinit();
