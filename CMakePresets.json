@@ -1,0 +1,35 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "host",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc-16",
+        "CMAKE_CXX_COMPILER": "g++-16",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "host-v96",
+      "inherits": "host",
+      "cacheVariables": { "LVGL26_LVGL_REF": "v9.6.0" }
+    },
+    {
+      "name": "host-v10",
+      "inherits": "host",
+      "cacheVariables": { "LVGL26_LVGL_REF": "53819fe4fd3f3a767420743cbfdb2816f3928931" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "host-v96", "configurePreset": "host-v96" },
+    { "name": "host-v10", "configurePreset": "host-v10" }
+  ],
+  "testPresets": [
+    { "name": "host-v96", "configurePreset": "host-v96", "output": { "outputOnFailure": true } },
+    { "name": "host-v10", "configurePreset": "host-v10", "output": { "outputOnFailure": true } }
+  ]
+}
