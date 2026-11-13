@@ -246,6 +246,15 @@ consteval bool bindable() {
   return binder_of(t) != std::meta::info{} || std::meta::parameters_of(t).size() == 2;
 }
 
+// The observer of a generic binding: calls the setter with the subject's value.
+// A named function, not a lambda: GCC's analyzer reports a null `this` for the
+// function pointer made from a lambda here.
+template <fixed W, std::size_t I, class V>
+void follow_subject(lv_observer_t* observer, lv_subject_t* s) {
+  auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
+  [:targets<W>[I]:](target, lower(from_subject<V>(s)));
+}
+
 // Makes member number I of props<W> follow the state it is bound to.
 template <fixed W, std::size_t I, class A>
 void bind_member(lv_obj_t* o, const A& a) {
@@ -263,13 +272,7 @@ void bind_member(lv_obj_t* o, const A& a) {
     contract_assert(false && "this property takes several values and cannot follow a state");
   } else {
     using value_type = std::tuple_element_t<0, decltype(a.v)>;
-    lv_subject_add_observer_obj(
-        subject,
-        [](lv_observer_t* observer, lv_subject_t* s) {
-          auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
-          [:setter:](target, lower(from_subject<value_type>(s)));
-        },
-        o, nullptr);
+    lv_subject_add_observer_obj(subject, &follow_subject<W, I, value_type>, o, nullptr);
   }
 }
 
