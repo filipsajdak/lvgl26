@@ -30,3 +30,18 @@ if(LVGL26_BUILD_TESTS)
     LV_USE_FS_STDIO=1 LV_FS_STDIO_LETTER=65
     LV_TEST_SCREENSHOT_CREATE_REFERENCE_IMAGE=$<BOOL:${LVGL26_UPDATE_REFERENCES}>)
 endif()
+
+# mp-units provides the units of application values in the tests. lvgl26's headers
+# do not include it: they accept any quantity of its shape.
+if(LVGL26_BUILD_TESTS)
+  set(MP_UNITS_API_CONTRACTS NONE CACHE STRING "" FORCE)
+  set(MP_UNITS_API_STD_FORMAT TRUE CACHE STRING "" FORCE)
+  set(MP_UNITS_BUILD_INSTALL OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(mp-units
+    URL "https://github.com/mpusz/mp-units/archive/refs/tags/v2.5.0.tar.gz"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SOURCE_SUBDIR src
+    EXCLUDE_FROM_ALL
+    SYSTEM)
+  FetchContent_MakeAvailable(mp-units)
+endif()
