@@ -435,13 +435,6 @@ struct change_source {
   }
 };
 
-// What a wait gives the coroutine: the source's value, or nothing.
-template <class S>
-using value_of = decltype([](S& s) {
-  if constexpr (requires { s.value(); })
-    return s.value();
-}(std::declval<S&>()));
-
 // co_await of one source.
 template <wait_source S>
 struct wait {
@@ -456,9 +449,16 @@ struct wait {
     return source.arm(&done, this, &h.promise());
   }
 
-  value_of<S> await_resume() noexcept {
-    if constexpr (requires { source.value(); }) return source.value();
+  // Two plain functions instead of one with a computed return type: GCC's analyzer
+  // reports an uninitialized result for the latter when the type is void.
+  auto await_resume() noexcept
+    requires requires(S& s) { s.value(); }
+  {
+    return source.value();
   }
+  void await_resume() noexcept
+    requires(!requires(S& s) { s.value(); })
+  {}
 
   static void done(void* context) { static_cast<wait*>(context)->waiting.resume(); }
 };
