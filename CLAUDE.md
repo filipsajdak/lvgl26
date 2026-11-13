@@ -38,6 +38,23 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
   pixels with `lv_test_screenshot_compare`.
 
+## Where a requirement goes
+
+| What must hold | Write it as |
+|---|---|
+| A property of a type, known at compile time | A named concept on the interface. Standard concepts first. Every template parameter of a public function or class has one, unless it has no requirement at all |
+| A property of values, known at compile time, whose message must name things | `static_assert` with a computed message, or `consteval` |
+| A call of the wrong shape, with a fixed message | A fallback overload `= delete("reason")` with the same signature and no constraint |
+| Something only known at run time that is a bug if violated | `pre` on the declaration; `post` for a guarantee; `contract_assert` only for an invariant inside a body |
+| A lifetime rule | Ref-qualifiers and types, not a contract |
+| Bad input from outside (a document, a file) | `std::expected`, never a contract |
+
+- A function with a precondition is not `noexcept`.
+- GCC 16.2 cannot compile `pre` on a function with a deduced return type, or a fold over the
+  parameters inside `pre`. Use `contract_assert` as the first statement there, with a comment that
+  says so.
+- Every new error message gets a compile-fail test in `tests/fail/`.
+
 ## Known tool limits
 
 - clang-tidy cannot analyze this code: Clang 23 has no reflection and no `<meta>` header.

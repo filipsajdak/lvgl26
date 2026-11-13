@@ -50,7 +50,13 @@
 
 namespace lv {
 
-template <class T = void>
+namespace detail {
+// What a task can give back: nothing, or a value that can be moved out of it.
+template <class T>
+concept task_result = std::is_void_v<T> || (std::movable<T> && std::default_initializable<T>);
+}  // namespace detail
+
+template <detail::task_result T = void>
 class task;
 
 namespace detail {
@@ -119,7 +125,10 @@ struct task_promise_base {
 };
 
 // The spawned task that `waiting` belongs to.
-inline task_promise_base* root_of(task_promise_base* waiting) noexcept {
+inline task_promise_base* root_of(task_promise_base* waiting)
+  pre(waiting != nullptr)
+  post(root: root != nullptr && root->parent == nullptr)
+{
   while (waiting->parent != nullptr) waiting = waiting->parent;
   return waiting;
 }
@@ -226,20 +235,21 @@ struct task_awaiter {
     return frame;  // start the awaited task now
   }
 
-  T await_resume() const noexcept {
-    if constexpr (std::is_void_v<T>) {
+  // An empty task (no memory for its frame) has no result to give.
+  T await_resume() const
+    pre(std::is_void_v<T> || frame)
+  {
+    if constexpr (std::is_void_v<T>)
       return;
-    } else {
-      contract_assert(frame && "the awaited task could not be allocated");
+    else
       return frame.promise().result();
-    }
   }
 };
 
 }  // namespace detail
 
 // A piece of work that can wait. It starts when it is awaited or given to lv::spawn.
-template <class T>
+template <detail::task_result T>
 class [[nodiscard]] task {
  public:
   using promise_type = detail::task_promise<T>;
@@ -347,8 +357,11 @@ struct event_source {
   event_source(event_source&&) = default;  // only moved before it is armed
   ~event_source() { disarm(); }
 
-  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner) noexcept {
-    contract_assert(widget != nullptr && "waiting for an event of an empty view");
+  // Not noexcept: a function with a precondition should let a violation handler throw.
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner)
+    pre(widget != nullptr)  // the view is not empty
+    pre(owner != nullptr)
+  {
     done = done_fn;
     context = done_context;
     // Without the record that ties the task to the widget, a later deletion would
@@ -389,8 +402,10 @@ struct event_source<LV_EVENT_DELETE> {
   event_source(event_source&&) = default;
   ~event_source() { disarm(); }
 
-  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner) noexcept {
-    contract_assert(widget != nullptr && "waiting for the deletion of an empty view");
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner)
+    pre(widget != nullptr)  // the view is not empty
+    pre(owner != nullptr)
+  {
     done = done_fn;
     context = done_context;
     // Take over from the task's own watch of this widget, if there is one.
@@ -446,7 +461,7 @@ struct sleep_source {
   }
 
   // For lv::first: what to do when the time runs out first.
-  template <class F>
+  template <std::invocable F>
   handled<sleep_source, F> then(F handler) && {
     return {std::move(*this), std::move(handler)};
   }
@@ -493,6 +508,7 @@ struct change_source {
   // For lv::first: what to do when the state changes first. The handler may take
   // the new value.
   template <class F>
+    requires std::invocable<F&, T> || std::invocable<F&>
   handled<change_source, F> then(F handler) && {
     return {std::move(*this), std::move(handler)};
   }
@@ -515,7 +531,7 @@ struct wait {
   bool await_ready() const noexcept { return false; }
 
   template <task_promise_type P>
-  bool await_suspend(std::coroutine_handle<P> h) noexcept {
+  bool await_suspend(std::coroutine_handle<P> h) {
     waiting = h;
     owner = &h.promise();
     if (cancel_pending(owner)) return true;  // the task is ending: just get suspended
@@ -600,7 +616,7 @@ struct first_of {
   bool await_ready() const noexcept { return false; }
 
   template <task_promise_type P>
-  bool await_suspend(std::coroutine_handle<P> h) noexcept {
+  bool await_suspend(std::coroutine_handle<P> h) {
     waiting = h;
     owner = &h.promise();
     template for (constexpr auto i : indices<sizeof...(Items)>) {
@@ -676,7 +692,7 @@ detail::wait<detail::event_source<Code>> operator co_await(event_ref<Code> e) no
 }
 
 template <lv_event_code_t Code>
-template <class F>
+template <std::invocable F>
 auto event_ref<Code>::then(F handler) const {
   return detail::handled<detail::event_source<Code>, F>{detail::event_source<Code>{widget},
                                                         std::move(handler)};
