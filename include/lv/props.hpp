@@ -4,7 +4,7 @@
 // per lv_arc_set_* and lv_obj_set_* function, one per event (on_clicked, ...), an
 // `id` and a `style`.
 //
-//   lv::props<"arc"> p{.id = "speedo", .range = {0, 240}, .rotation = 90_deg, .value = 120};
+//   lv::props<"arc"> p{.id = "speedo", .range = {0, 240}, .rotation = 90 * lv::deg, .value = 120};
 //
 // Members are in alphabetical order, which is the order designated initializers
 // must follow. Every member is typed: a wrong name, a wrong unit, a bool where an
@@ -209,7 +209,8 @@ T from_subject(lv_subject_t* s) {
     return lv_subject_get_int(s) != 0;
   } else if constexpr (std::is_enum_v<T>) {
     return static_cast<T>(lv_subject_get_int(s));
-  } else if constexpr (std::same_as<T, length>) {
+  } else if constexpr (std::same_as<T, length> || std::same_as<T, horizontal> ||
+                       std::same_as<T, vertical>) {
     return length::px(lv_subject_get_int(s));
   } else if constexpr (std::same_as<T, opa>) {
     return opa::from_raw(static_cast<lv_opa_t>(lv_subject_get_int(s)));

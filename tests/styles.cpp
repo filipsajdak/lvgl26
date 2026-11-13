@@ -10,22 +10,22 @@ inline constexpr lv::config lv::cfg<lv::override>{.raw_style_values = true};
 
 namespace {
 
-using namespace lv::literals;
+using namespace lv::units;
 
 // A named style, reused by two nodes.
 constexpr auto card = lv::style(
-    {.bg_color = 0x1b2430_rgb, .bg_opa = 100_pct, .border_width = 0_px, .pad_all = 12_px,
-     .radius = 8_px});
+    {.bg_color = lv::rgb(0x1b2430), .bg_opa = 100 * pct, .border_width = 0 * px, .pad_all = 12 * px,
+     .radius = 8 * px});
 
 constexpr auto ui = lv::column(
     {.flex_align = {LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER},
-     .size = {320_px, 240_px},
-     .style = {.bg_color = 0x0d1117_rgb, .bg_opa = 100_pct, .radius = 0_px}})[
-    lv::column({.id = "card", .size = {200_px, lv::size_content}, .style = card})[
-        lv::label({.id = "title", .style = {.text_color = 0xe6edf3_rgb}, .text = "Speed"}),
-        lv::label({.id = "unit", .style = {.text_color = 0x8b949e_rgb, .text_opa = 80_pct},
+     .size = {320 * px, 240 * px},
+     .style = {.bg_color = lv::rgb(0x0d1117), .bg_opa = 100 * pct, .radius = 0 * px}})[
+    lv::column({.id = "card", .size = {200 * px, lv::size_content}, .style = card})[
+        lv::label({.id = "title", .style = {.text_color = lv::rgb(0xe6edf3)}, .text = "Speed"}),
+        lv::label({.id = "unit", .style = {.text_color = lv::rgb(0x8b949e), .text_opa = 80 * pct},
                    .text = "km/h"})],
-    lv::box({.id = "plain", .size = {40_px, 10_px}})];
+    lv::box({.id = "plain", .size = {40 * px, 10 * px}})];
 
 // The types of a few style members.
 using style_type = std::remove_cvref_t<decltype(card)>;
@@ -57,17 +57,17 @@ void applies(lv::obj screen) {
   if (!root) return;
 
   auto c = root->get<"card">();
-  check(same(c.get<"style_bg_color">(LV_PART_MAIN), 0x1b2430_rgb));
+  check(same(c.get<"style_bg_color">(LV_PART_MAIN), lv::rgb(0x1b2430)));
   check(c.get<"style_radius">(LV_PART_MAIN) == 8);
   check(c.get<"style_border_width">(LV_PART_MAIN) == 0);
   check(c.get<"style_pad_top">(LV_PART_MAIN) == 12);  // from pad_all, a local style
   check(c.get<"style_bg_opa">(LV_PART_MAIN) == LV_OPA_COVER);
 
-  check(same(root->get<"title">().get<"style_text_color">(LV_PART_MAIN), 0xe6edf3_rgb));
+  check(same(root->get<"title">().get<"style_text_color">(LV_PART_MAIN), lv::rgb(0xe6edf3)));
   check(root->get<"unit">().get<"style_text_opa">(LV_PART_MAIN) == 204);
 
   // Changing a style at run time uses local styles and wins over the const one.
-  c.set({.style = {.radius = 2_px}});
+  c.set({.style = {.radius = 2 * px}});
   check(c.get<"style_radius">(LV_PART_MAIN) == 2);
 }
 
@@ -76,10 +76,10 @@ void applies(lv::obj screen) {
 void const_styles_use_no_heap_for_values(lv::obj screen) {
   static constexpr auto bare = lv::box();
   static constexpr auto styled = lv::box(
-      {.style = {.bg_color = 0x112233_rgb, .bg_opa = 100_pct, .border_color = 0x445566_rgb,
-                 .border_width = 2_px, .outline_width = 1_px, .radius = 4_px,
-                 .shadow_width = 3_px, .text_color = 0x778899_rgb}});
-  static constexpr auto local = lv::box({.style = {.pad_all = 4_px}});
+      {.style = {.bg_color = lv::rgb(0x112233), .bg_opa = 100 * pct, .border_color = lv::rgb(0x445566),
+                 .border_width = 2 * px, .outline_width = 1 * px, .radius = 4 * px,
+                 .shadow_width = 3 * px, .text_color = lv::rgb(0x778899)}});
+  static constexpr auto local = lv::box({.style = {.pad_all = 4 * px}});
 
   auto cost = [&](auto mount) {
     const auto before = free_bytes();

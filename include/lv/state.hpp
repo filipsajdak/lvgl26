@@ -6,7 +6,7 @@
 //   constinit lv::state<kmh> speed{kmh{0}};       // a constant-initialized global
 //
 //   lv::arc({.value = lv::bind(speed)})           // the arc follows speed, and writes back
-//   lv::label({.text = lv::bind(speed, "%d km/h")})
+//   lv::label({.text = lv::bind(speed, "{} km/h")})
 //
 //   speed = kmh{120};                             // every bound widget updates
 //
@@ -176,10 +176,10 @@ constexpr binding<T> bind(const state<T, O>& s) {
   return {&s, &detail::subject_of<T, O>};
 }
 
-// Binds a text property to a state through a printf format: lv::bind(speed, "%d km/h").
+// Binds a text property to a state through a format: lv::bind(speed, "{} km/h").
 template <class T, class O>
-constexpr formatted_binding<T> bind(const state<T, O>& s, const char* format) {
-  return {&s, &detail::subject_of<T, O>, format};
+constexpr formatted_binding<T> bind(const state<T, O>& s, text_format format) {
+  return {&s, &detail::subject_of<T, O>, format.printf};
 }
 
 }  // namespace lv

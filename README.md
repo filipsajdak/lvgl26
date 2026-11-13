@@ -6,11 +6,11 @@ Status: early. Typed widget views, the declarative tree, styles, design tokens a
 
 ```cpp
 #include <lv/lv.hpp>
-using namespace lv::literals;
+using namespace lv::units;
 
 void reset();
 
-constexpr auto ui = lv::column({.size = {320_px, 240_px}})[
+constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::label({.id = "title", .text = "Speed"}),
     lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
     lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
@@ -24,8 +24,8 @@ How it works:
 - **Properties are generated.** `lv::props<"arc">` is a struct that C++26 reflection builds from LVGL's
   own C API: one member per `lv_arc_set_*` and `lv_obj_set_*` function and one per event (`on_clicked`).
   Nothing is written by hand and nothing is generated offline.
-- **Properties are typed.** Sizes take `120_px`, `50_pct` or `lv::size_content`; angles `90_deg`; times
-  `300_ms`; opacity `50_pct`. Integers reject `bool`, floating point and values that do not fit.
+- **Properties are typed.** Sizes take `120 * px`, `50 * pct` or `lv::size_content`; angles `90 * deg`; times
+  `300 * ms`; opacity `50 * pct`. Integers reject `bool`, floating point and values that do not fit.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
 - **The tree costs nothing at run time.** `lv::mount<ui>` reads it at compile time; an optimized build
@@ -41,7 +41,7 @@ constinit lv::state<kmh> speed{kmh{0}};
 
 constexpr auto ui = lv::column[
     lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),     // follows, and writes back
-    lv::label({.text = lv::bind(speed, "%d km/h")})];
+    lv::label({.text = lv::bind(speed, "{} km/h")})];
 
 speed = kmh{120};   // both widgets update
 ```
@@ -74,8 +74,8 @@ token, a broken alias or an unreadable value is a compile error.
 ```cpp
 .style = {.radius = tok.card.radius}                       // ok
 .style = lv::style({...}) | tok.card.border | tok.card.shadow   // composite tokens merge with |
-.style = {.radius = lv::raw(3_px)}                         // a deliberate, searchable exception
-.style = {.radius = 8_px}                                  // error: it takes a design token
+.style = {.radius = lv::raw(3 * px)}                         // a deliberate, searchable exception
+.style = {.radius = 8 * px}                                  // error: it takes a design token
 ```
 
 Layout values (`.size`, `.range`, `.value`) and enums stay free. To accept plain values in styles,

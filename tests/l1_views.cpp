@@ -8,7 +8,7 @@
 namespace {
 
 using label_view = lv::view<"label">;
-using namespace lv::literals;
+using namespace lv::units;
 
 std::size_t free_bytes() {
   lv_mem_monitor_t m;
@@ -33,10 +33,10 @@ void properties(lv::obj screen) {
   check(l.get<"user_data">() == &tag);
 
   // Typed properties: units and strict integers.
-  a.set({.rotation = 90_deg, .value = 30});
+  a.set({.rotation = 90 * deg, .value = 30});
   check(a.get<"value">() == 30);
   check(a.get<"rotation">() == 90);
-  l.set({.text = "km/h", .width = 80_px});
+  l.set({.text = "km/h", .width = 80 * px});
   check(std::strcmp(l.get<"text">(), "km/h") == 0);
   lv_obj_update_layout(l.raw());
   check(l.get<"width">() == 80);

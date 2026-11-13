@@ -16,7 +16,7 @@
 namespace lv {
 
 struct config {
-  // Accept plain values such as 8_px in styles, instead of design tokens only.
+  // Accept plain values such as 8 * lv::px in styles, instead of design tokens only.
   bool raw_style_values = false;
 
   // Accept lv::state<int> and other plain integers, instead of a named type
