@@ -1,3 +1,7 @@
+# Where #embed finds the test data.
+add_library(lvgl26_test_data INTERFACE)
+target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/data)
+
 function(lvgl26_test name)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -7,7 +11,7 @@ endfunction()
 # A file that must not compile, and the message the user must see.
 function(lvgl26_compile_fail name message)
   add_library(fail_${name} OBJECT EXCLUDE_FROM_ALL fail/${name}.cpp)
-  target_link_libraries(fail_${name} PRIVATE lvgl26::lvgl26)
+  target_link_libraries(fail_${name} PRIVATE lvgl26::lvgl26 lvgl26_test_data)
   add_test(NAME fail_${name}
            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fail_${name})
   set_tests_properties(fail_${name} PROPERTIES PASS_REGULAR_EXPRESSION "${message}")
@@ -15,11 +19,17 @@ endfunction()
 
 lvgl26_test(smoke)
 lvgl26_test(l1_views)
+lvgl26_test(json)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+
+add_executable(tokens tokens.cpp)
+target_link_libraries(tokens PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME tokens COMMAND tokens A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_dark.png
+                                    A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_light.png)
 
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -37,3 +47,7 @@ lvgl26_compile_fail(props_bool_as_int "It takes a whole number \\(not bool, not 
 lvgl26_compile_fail(props_narrowing "It takes a whole number \\(not bool, not floating point\\). You gave double")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
 lvgl26_compile_fail(style_needs_unit "It takes a length \\(120_px, 50_pct or lv::size_content\\). You gave int")
+lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
+lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
+lvgl26_compile_fail(token_bad_unit "design tokens: the dimension unit 'pt' is not px, rem or %")
+lvgl26_compile_fail(token_misspelled "has no member named 'primry'")

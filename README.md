@@ -2,7 +2,7 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: early. Typed widget views and the declarative tree exist. Tokens, state, async and agent tools do not yet.
+Status: early. Typed widget views, the declarative tree, styles and design tokens exist. State, async and agent tools do not yet.
 
 ```cpp
 #include <lv/lv.hpp>
@@ -32,6 +32,21 @@ How it works:
   contains only the LVGL calls for the properties that are set.
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
   `lv::weak<T>` empties itself when LVGL deletes the widget.
+
+Design tokens come from a W3C Design Tokens (DTCG) JSON file, read at compile time:
+
+```cpp
+constexpr char tokens_json[] = {
+#embed "tokens.json"
+    , 0};
+constexpr auto tok = lv::tokens<tokens_json>;
+
+lv::box({.style = {.bg_color = tok.color.surface, .radius = tok.radius.card}})
+```
+
+Each token group becomes a struct and each token a typed member (`lv_color_t`, `lv::length`,
+`lv::duration`, ...). Aliases are resolved. A misspelled token, a broken alias or an unreadable
+value is a compile error. Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
 
 Rules to know:
 
