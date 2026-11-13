@@ -42,11 +42,23 @@ consteval std::string event_member(std::string_view enumerator) {
   return out;
 }
 
-// Setters that LVGL has deprecated. Reflection cannot see [[deprecated]], so they
-// are listed here and get no property. A newly deprecated setter shows up as a
-// warning in our own build, which is the cue to add it.
+// Setters that LVGL v9.6 has deprecated (v10 has removed them). Reflection cannot
+// see [[deprecated]], so they are listed here and get no property. The list is
+// every setter declared after an LV_DEPRECATED marker in include/lvgl:
+//   grep -rh -A2 "LV_DEPRECATED(" include/lvgl | grep -v '"' | grep -o "lv_[a-z0-9_]*_set_[a-z0-9_]*("
+// A setter that LVGL deprecates later shows up as a warning in our own build.
 consteval bool is_deprecated_setter(std::string_view name) {
-  return is_one_of(name, {"lv_obj_set_flag"});
+  return is_one_of(name, {"lv_file_explorer_set_quick_access_path", "lv_file_explorer_set_sort",
+                          "lv_gltf_set_env_brightness", "lv_image_buf_set_palette",
+                          "lv_list_set_button_text", "lv_list_set_button_translation_tag",
+                          "lv_menu_set_load_page_event", "lv_menu_set_mode_header",
+                          "lv_menu_set_mode_root_back_button", "lv_menu_set_page",
+                          "lv_menu_set_page_title", "lv_menu_set_page_title_static",
+                          "lv_menu_set_sidebar_page", "lv_obj_set_flag",
+                          "lv_obj_style_set_disabled", "lv_rlottie_set_current_frame",
+                          "lv_rlottie_set_play_mode", "lv_scale_section_set_style",
+                          "lv_spangroup_set_align", "lv_spangroup_set_mode",
+                          "lv_textarea_set_align"});
 }
 
 // "LV_STATE_PRESSED" -> "style_pressed". Empty for the entries that select nothing

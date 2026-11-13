@@ -241,7 +241,7 @@ constexpr lv_style_value_t style_value(T n) {
 
 // The property array of a const lv_style_t, ended by LV_STYLE_PROP_INV.
 template <class Where, class D = void>
-constexpr std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
+consteval std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
   std::array<lv_style_const_prop_t, const_count<Where, D> + 1> out{};
   std::size_t k = 0;
   template for (constexpr auto i : indices<style_members<D>.size()>) {
