@@ -35,41 +35,107 @@ constexpr std::size_t skip_string(std::string_view s, std::size_t i) {
   return npos;
 }
 
-// The index just past the value that starts at s[i], or npos if it is malformed.
-constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth = 0) {
-  if (i >= s.size() || depth > 64) return npos;
-  const char c = s[i];
-  if (c == '"') return skip_string(s, i);
-  if (c == '{' || c == '[') {
-    const char close = c == '{' ? '}' : ']';
-    i = skip_space(s, i + 1);
-    if (i < s.size() && s[i] == close) return i + 1;
-    while (true) {
-      if (c == '{') {
-        if (i >= s.size() || s[i] != '"') return npos;
-        i = skip_string(s, i);
-        if (i == npos) return npos;
-        i = skip_space(s, i);
-        if (i >= s.size() || s[i] != ':') return npos;
-        i = skip_space(s, i + 1);
-      }
-      i = skip_value(s, i, depth + 1);
-      if (i == npos) return npos;
-      i = skip_space(s, i);
-      if (i >= s.size()) return npos;
-      if (s[i] == close) return i + 1;
-      if (s[i] != ',') return npos;
-      i = skip_space(s, i + 1);
-    }
-  }
+constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth = 0);
+
+constexpr bool is_digit(char c) { return c >= '0' && c <= '9'; }
+
+constexpr bool is_number_char(char c) {
+  return is_digit(c) || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E';
+}
+
+// The index just past the number that starts at s[i], or npos if there is none.
+constexpr std::size_t skip_number(std::string_view s, std::size_t i) {
+  std::size_t j = i;
+  while (j < s.size() && is_number_char(s[j])) ++j;
+  return j == i ? npos : j;
+}
+
+// The index just past true, false or null at s[i], or npos.
+constexpr std::size_t skip_word(std::string_view s, std::size_t i) {
   for (std::string_view word : {std::string_view("true"), std::string_view("false"),
                                 std::string_view("null")})
     if (s.substr(i).starts_with(word)) return i + word.size();
-  std::size_t j = i;
-  while (j < s.size() && (s[j] == '-' || s[j] == '+' || s[j] == '.' || s[j] == 'e' ||
-                          s[j] == 'E' || (s[j] >= '0' && s[j] <= '9')))
-    ++j;
-  return j == i ? npos : j;
+  return npos;
+}
+
+// The index of the value of the member whose key starts at s[i], or npos.
+constexpr std::size_t skip_key(std::string_view s, std::size_t i) {
+  if (i >= s.size() || s[i] != '"') return npos;
+  i = skip_string(s, i);
+  if (i == npos) return npos;
+  i = skip_space(s, i);
+  if (i >= s.size() || s[i] != ':') return npos;
+  return skip_space(s, i + 1);
+}
+
+// After one element that ends at s[i]: the index of the next element, the index
+// just past the closing character (with `closed` set), or npos.
+constexpr std::size_t after_element(std::string_view s, std::size_t i, char close, bool& closed) {
+  i = skip_space(s, i);
+  if (i >= s.size()) return npos;
+  closed = s[i] == close;
+  if (closed) return i + 1;
+  return s[i] == ',' ? skip_space(s, i + 1) : npos;
+}
+
+// The index just past one element of a container (a member of an object, or a
+// value of an array) that starts at s[i], or npos.
+constexpr std::size_t skip_element(std::string_view s, std::size_t i, bool object, int depth) {
+  if (object) i = skip_key(s, i);
+  return i == npos ? npos : skip_value(s, i, depth + 1);
+}
+
+// The index just past the object or array that opens at s[i], or npos.
+constexpr std::size_t skip_container(std::string_view s, std::size_t i, int depth) {
+  const bool object = s[i] == '{';
+  const char close = object ? '}' : ']';
+  i = skip_space(s, i + 1);
+  if (i < s.size() && s[i] == close) return i + 1;
+  for (bool closed = false; !closed && i != npos;) {
+    i = skip_element(s, i, object, depth);
+    if (i != npos) i = after_element(s, i, close, closed);
+  }
+  return i;
+}
+
+// The index just past the value that starts at s[i], or npos if it is malformed.
+constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth) {
+  if (i >= s.size() || depth > 64) return npos;
+  if (s[i] == '"') return skip_string(s, i);
+  if (s[i] == '{' || s[i] == '[') return skip_container(s, i, depth);
+  if (const auto word = skip_word(s, i); word != npos) return word;
+  return skip_number(s, i);
+}
+
+// A run of digits read as a whole number, advancing i past it.
+constexpr double read_digits(std::string_view s, std::size_t& i) {
+  double v = 0;
+  for (; i < s.size() && is_digit(s[i]); ++i) v = v * 10 + (s[i] - '0');
+  return v;
+}
+
+// The digits after a decimal point, as a value below one, advancing i past them.
+constexpr double read_fraction(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || s[i] != '.') return 0;
+  double v = 0, scale = 0.1;
+  for (++i; i < s.size() && is_digit(s[i]); ++i, scale /= 10) v += (s[i] - '0') * scale;
+  return v;
+}
+
+// Reads an optional sign at s[i], advancing i past it. True for a minus.
+constexpr bool read_minus(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || (s[i] != '-' && s[i] != '+')) return false;
+  return s[i++] == '-';
+}
+
+// The factor of an exponent part (e-3 gives 0.001), advancing i past it. 1 if there is none.
+constexpr double read_exponent(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || (s[i] != 'e' && s[i] != 'E')) return 1;
+  ++i;
+  const bool down = read_minus(s, i);
+  double factor = 1;
+  for (auto e = static_cast<int>(read_digits(s, i)); e > 0; --e) factor = down ? factor / 10 : factor * 10;
+  return factor;
 }
 
 }  // namespace detail
@@ -131,23 +197,10 @@ class value {
 
   constexpr double number() const {
     std::size_t i = 0;
-    const bool negative = !text_.empty() && text_[0] == '-';
-    if (negative) ++i;
-    double v = 0;
-    for (; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i) v = v * 10 + (text_[i] - '0');
-    if (i < text_.size() && text_[i] == '.') {
-      double scale = 0.1;
-      for (++i; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i, scale /= 10)
-        v += (text_[i] - '0') * scale;
-    }
-    if (i < text_.size() && (text_[i] == 'e' || text_[i] == 'E')) {
-      ++i;
-      const bool down = i < text_.size() && text_[i] == '-';
-      if (i < text_.size() && (text_[i] == '-' || text_[i] == '+')) ++i;
-      int e = 0;
-      for (; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i) e = e * 10 + (text_[i] - '0');
-      for (; e > 0; --e) v = down ? v / 10 : v * 10;
-    }
+    const bool negative = detail::read_minus(text_, i);
+    double v = detail::read_digits(text_, i);
+    v += detail::read_fraction(text_, i);
+    v *= detail::read_exponent(text_, i);
     return negative ? -v : v;
   }
 

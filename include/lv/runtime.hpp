@@ -112,14 +112,20 @@ struct measured {
   bool ok = false;
 };
 
+// How many characters at the start of `s` belong to a number.
+constexpr std::size_t number_length(std::string_view s) {
+  std::size_t i = 0;
+  while (i < s.size() && (s[i] == '-' || s[i] == '.' || json::detail::is_digit(s[i]))) ++i;
+  return i;
+}
+
 constexpr measured read_measured(json::value v) {
   if (v.is(json::kind::number)) return {v.number(), {}, true};
   if (!v.is(json::kind::string)) return {};
   const auto s = v.string();
-  std::size_t i = 0;
-  while (i < s.size() && (s[i] == '-' || s[i] == '.' || (s[i] >= '0' && s[i] <= '9'))) ++i;
-  if (i == 0) return {0, s, true};
-  return {json::value{s.substr(0, i)}.number(), s.substr(i), true};
+  const auto n = number_length(s);
+  if (n == 0) return {0, s, true};  // a word such as "content"
+  return {json::value{s.substr(0, n)}.number(), s.substr(n), true};
 }
 
 constexpr std::int32_t rounded_i32(double v) {
@@ -135,18 +141,21 @@ constexpr bool read_length(json::value v, length& out) {
   return false;
 }
 
+// The value of a hex digit, or -1.
+constexpr int hex_value(char c) {
+  c = lower_char(c);
+  if (json::detail::is_digit(c)) return c - '0';
+  return (c >= 'a' && c <= 'f') ? c - 'a' + 10 : -1;
+}
+
 constexpr bool read_color(json::value v, lv_color_t& out) {
   const auto s = v.string();
   if (s.size() != 7 || s[0] != '#') return false;
   std::uint32_t n = 0;
-  for (std::size_t i = 1; i < 7; ++i) {
-    const char c = lower_char(s[i]);
-    if (c >= '0' && c <= '9')
-      n = n * 16 + static_cast<std::uint32_t>(c - '0');
-    else if (c >= 'a' && c <= 'f')
-      n = n * 16 + static_cast<std::uint32_t>(c - 'a' + 10);
-    else
-      return false;
+  for (char c : s.substr(1)) {
+    const int digit = hex_value(c);
+    if (digit < 0) return false;
+    n = n * 16 + static_cast<std::uint32_t>(digit);
   }
   return out = rgb(n), true;
 }
@@ -163,76 +172,84 @@ inline constexpr bool readable<strict<I>> = true;
 template <class T>
 inline constexpr bool readable<styled<T>> = readable<T>;
 
-template <class T>
-bool read(json::value v, json_value<T>& out);
+// read(value, out): one overload per kind of property value. Each returns false
+// when the JSON value does not fit.
 
-template <class Inner>
-bool read_styled(json::value v, styled<Inner>& out);
-
-template <class I>
-bool read_strict(json::value v, strict<I>& out) {
-  if constexpr (std::same_as<I, bool>) {
-    if (!v.is(json::kind::boolean)) return false;
-    return out = strict<bool>{v.boolean()}, true;
-  } else {
-    if (!v.is(json::kind::number)) return false;
-    const double n = v.number();
-    const auto whole = static_cast<std::int64_t>(n);
-    if (static_cast<double>(whole) != n || !std::in_range<I>(whole)) return false;
-    return out = strict<I>{static_cast<I>(whole)}, true;
-  }
+// Text: copied into the buffer next to it, NUL-terminated.
+inline bool read(json::value v, json_value<const char*>& out) {
+  if (!v.is(json::kind::string) || v.string().size() >= text_capacity) return false;
+  const auto s = v.string();
+  for (std::size_t i = 0; i < s.size(); ++i) out.text[i] = s[i];
+  out.text[s.size()] = '\0';
+  return out.value = out.text, true;
 }
 
-template <class T>
-bool read(json::value v, json_value<T>& out) {
-  if constexpr (std::same_as<T, const char*>) {
-    if (!v.is(json::kind::string) || v.string().size() >= text_capacity) return false;
-    const auto s = v.string();
-    for (std::size_t i = 0; i < s.size(); ++i) out.text[i] = s[i];
-    out.text[s.size()] = '\0';
-    return out.value = out.text, true;
-  } else if constexpr (std::is_enum_v<T>) {
-    if (!v.is(json::kind::string)) return false;
-    for (const auto& e : enum_names<T>)
-      if (names_enumerator(v.string(), e.name)) return out.value = static_cast<T>(e.value), true;
-    return false;
-  } else if constexpr (std::same_as<T, length>) {
-    return read_length(v, out.value);
-  } else if constexpr (std::same_as<T, horizontal> || std::same_as<T, vertical>) {
-    length l;
-    if (!read_length(v, l)) return false;
-    return out.value = T{l}, true;
-  } else if constexpr (std::same_as<T, angle>) {
-    const auto m = read_measured(v);
-    if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
-    return out.value = angle{rounded_i32(m.number)}, true;
-  } else if constexpr (std::same_as<T, duration>) {
-    const auto m = read_measured(v);
-    if (!m.ok || m.number < 0) return false;
-    if (m.unit.empty() || m.unit == "ms")
-      return out.value = duration{static_cast<std::uint32_t>(rounded_i32(m.number))}, true;
-    if (m.unit == "s")
-      return out.value = duration{static_cast<std::uint32_t>(rounded_i32(m.number * 1000))}, true;
-    return false;
-  } else if constexpr (std::same_as<T, opa>) {
-    const auto m = read_measured(v);
-    if (!m.ok || m.unit != "%") return false;
-    return out.value = opa{percent{rounded_i32(m.number)}}, true;
-  } else if constexpr (std::same_as<T, lv_color_t>) {
-    return read_color(v, out.value);
-  } else if constexpr (requires { read_strict(v, out.value); }) {
-    return read_strict(v, out.value);
-  } else {
-    // styled<Inner>: a document has no design tokens, so the value is a raw one.
-    return read_styled(v, out.value);
-  }
+// An enumerator, by name.
+template <class E>
+  requires std::is_enum_v<E>
+bool read(json::value v, json_value<E>& out) {
+  if (!v.is(json::kind::string)) return false;
+  for (const auto& e : enum_names<E>)
+    if (names_enumerator(v.string(), e.name)) return out.value = static_cast<E>(e.value), true;
+  return false;
 }
 
+inline bool read(json::value v, json_value<length>& out) { return read_length(v, out.value); }
+
+template <class Axis>
+bool read(json::value v, json_value<along<Axis>>& out) {
+  length l;
+  if (!read_length(v, l)) return false;
+  return out.value = along<Axis>{l}, true;
+}
+
+inline bool read(json::value v, json_value<angle>& out) {
+  const auto m = read_measured(v);
+  if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
+  return out.value = angle{rounded_i32(m.number)}, true;
+}
+
+// Milliseconds for a measured time, or -1 when the unit is not ms or s.
+constexpr double milliseconds(const measured& m) {
+  if (m.unit.empty() || m.unit == "ms") return m.number;
+  return m.unit == "s" ? m.number * 1000 : -1;
+}
+
+inline bool read(json::value v, json_value<duration>& out) {
+  const auto m = read_measured(v);
+  if (!m.ok || m.number < 0 || milliseconds(m) < 0) return false;
+  return out.value = duration{static_cast<std::uint32_t>(rounded_i32(milliseconds(m)))}, true;
+}
+
+inline bool read(json::value v, json_value<opa>& out) {
+  const auto m = read_measured(v);
+  if (!m.ok || m.unit != "%") return false;
+  return out.value = opa{percent{rounded_i32(m.number)}}, true;
+}
+
+inline bool read(json::value v, json_value<lv_color_t>& out) { return read_color(v, out.value); }
+
+inline bool read(json::value v, json_value<strict<bool>>& out) {
+  if (!v.is(json::kind::boolean)) return false;
+  return out.value = strict<bool>{v.boolean()}, true;
+}
+
+// A whole number that fits the property's integer type.
+template <integer I>
+bool read(json::value v, json_value<strict<I>>& out) {
+  if (!v.is(json::kind::number)) return false;
+  const double n = v.number();
+  const auto whole = static_cast<std::int64_t>(n);
+  if (static_cast<double>(whole) != n || !std::in_range<I>(whole)) return false;
+  return out.value = strict<I>{static_cast<I>(whole)}, true;
+}
+
+// A style value. A document has no design tokens, so it is a raw one.
 template <class Inner>
-bool read_styled(json::value v, styled<Inner>& out) {
+bool read(json::value v, json_value<styled<Inner>>& out) {
   json_value<Inner> inner;
   if (!read(v, inner)) return false;
-  return out = styled<Inner>{lv::raw(inner.value)}, true;
+  return out.value = styled<Inner>{lv::raw(inner.value)}, true;
 }
 
 // ---- property tables ---------------------------------------------------------
@@ -308,7 +325,7 @@ consteval bool settable() {
 
 // The properties of widget W that a document can set, by name.
 template <fixed W>
-constexpr auto make_property_table() {
+consteval auto make_property_table() {
   constexpr std::size_t count = [] {
     std::size_t n = 0;
     template for (constexpr auto i : indices<members_of_props<W>.size()>) {
@@ -348,7 +365,7 @@ bool set_style_from_json(lv_obj_t* o, json::value v, lv_style_selector_t selecto
 }
 
 template <class D = void>
-constexpr auto make_style_table() {
+consteval auto make_style_table() {
   constexpr std::size_t count = [] {
     std::size_t n = 0;
     template for (constexpr auto i : indices<style_members<D>.size()>) {
@@ -378,7 +395,7 @@ struct style_slot {
 };
 
 template <class D = void>
-constexpr auto make_style_slots() {
+consteval auto make_style_slots() {
   constexpr std::size_t count = [] {
     std::size_t n = 0;
     template for (constexpr auto i : indices<members_of_props<"obj">.size()>) {
@@ -418,29 +435,40 @@ inline std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json:
   return {};
 }
 
+// The style member of props called `key` ("style", "style_pressed", ...), or null.
+inline const style_slot* find_style_slot(std::string_view key) {
+  for (const auto& s : style_slots<>)
+    if (s.name == key) return &s;
+  return nullptr;
+}
+
+// The property of widget W called `key` that a document can set, or null.
+template <fixed W>
+const property_entry* find_property(std::string_view key) {
+  for (const auto& e : property_table<W>)
+    if (e.name == key) return &e;
+  return nullptr;
+}
+
+// Applies one member of a "props" object to a widget of kind W.
+template <fixed W>
+std::expected<void, load_failure> apply_property(lv_obj_t* o, json::member m) {
+  const json::value v{m.text};
+  if (const auto* slot = find_style_slot(m.key)) return apply_style_document(o, v, slot->selector);
+  const auto* entry = find_property<W>(m.key);
+  if (entry == nullptr) return std::unexpected(load_failure{load_error::unknown_property, m.key});
+  if (!entry->set(o, v)) return std::unexpected(load_failure{load_error::bad_value, m.text});
+  return {};
+}
+
 // Applies the "props" object of a node to a widget of kind W.
 template <fixed W>
 std::expected<void, load_failure> apply_properties(lv_obj_t* o, json::value props) {
   if (!props) return {};
-  if (!props.is(json::kind::object)) return std::unexpected(load_failure{load_error::malformed, props.text()});
-  for (std::size_t i = 0; i < props.size(); ++i) {
-    const auto m = props.member_at(i);
-    const json::value v{m.text};
-
-    const style_slot* slot = nullptr;
-    for (const auto& s : style_slots<>)
-      if (s.name == m.key) slot = &s;
-    if (slot != nullptr) {
-      if (auto r = apply_style_document(o, v, slot->selector); !r) return r;
-      continue;
-    }
-
-    const property_entry* entry = nullptr;
-    for (const auto& e : property_table<W>)
-      if (e.name == m.key) entry = &e;
-    if (entry == nullptr) return std::unexpected(load_failure{load_error::unknown_property, m.key});
-    if (!entry->set(o, v)) return std::unexpected(load_failure{load_error::bad_value, m.text});
-  }
+  if (!props.is(json::kind::object))
+    return std::unexpected(load_failure{load_error::malformed, props.text()});
+  for (std::size_t i = 0; i < props.size(); ++i)
+    if (auto r = apply_property<W>(o, props.member_at(i)); !r) return r;
   return {};
 }
 
@@ -492,20 +520,23 @@ class runtime {
       const auto parsed = json::value::parse(patch);
       if (!parsed || !parsed->is(json::kind::object))
         return std::unexpected(load_failure{load_error::malformed, patch});
-      for (std::size_t i = 0; i < parsed->size(); ++i) {
-        const auto m = parsed->member_at(i);
-        const named_widget* n = entry(m.key);
-        const obj widget = n != nullptr ? n->widget.get() : obj{};
-        // The widget must still exist and still be what it was built as: its
-        // setters are chosen by kind, and must never run on another class.
-        if (!widget || lv_obj_get_class(widget.raw()) != n->cls)
-          return std::unexpected(load_failure{load_error::unknown_id, m.key});
-        if (auto r = runtime::apply_to(n->kind, widget.raw(), json::value{m.text}); !r) return r;
-      }
+      for (std::size_t i = 0; i < parsed->size(); ++i)
+        if (auto r = apply_one(parsed->member_at(i)); !r) return r;
       return {};
     }
 
    private:
+    // Applies the properties of one entry of a patch to the widget it names.
+    std::expected<void, load_failure> apply_one(json::member m) const {
+      const named_widget* n = entry(m.key);
+      const obj widget = n != nullptr ? n->widget.get() : obj{};
+      // The widget must still exist and still be what it was built as: its
+      // setters are chosen by kind, and must never run on another class.
+      if (!widget || lv_obj_get_class(widget.raw()) != n->cls)
+        return std::unexpected(load_failure{load_error::unknown_id, m.key});
+      return runtime::apply_to(n->kind, widget.raw(), json::value{m.text});
+    }
+
     const named_widget* entry(std::string_view id) const {
       for (std::size_t i = 0; i < named_count_; ++i)
         if (named_[i].id == id) return &named_[i];
@@ -544,52 +575,73 @@ class runtime {
     return [:detail::resolve_create(W.sv()):](parent);
   }
 
-  static std::expected<void, load_failure> build(json::value node, lv_obj_t* parent,
-                                                 lv_obj_t*& made, loaded& out) {
-    const auto type_value = node["type"];
-    if (!node.is(json::kind::object) || !type_value.is(json::kind::string))
-      return std::unexpected(load_failure{load_error::malformed, node.text()});
-    std::string_view type = type_value.string();
+  using result = std::expected<void, load_failure>;
+  static result fail(load_error error, std::string_view at) {
+    return std::unexpected(load_failure{error, at});
+  }
 
-    // "column" and "row" are an obj laid out as a flex container.
-    const bool column = type == "column", row = type == "row";
-    if (column || row) type = "obj";
-
+  // A widget made for a node: the object, and which of Widgets... it is.
+  struct made_widget {
+    lv_obj_t* object = nullptr;
+    std::size_t kind = 0;
     bool known = false;
-    lv_obj_t* o = nullptr;
-    std::size_t kind = 0, position = 0;
-    ((type == Widgets.sv() ? (o = create<Widgets>(parent), kind = position, known = true)
+  };
+
+  // Creates the widget called `type` under `parent`, if this runtime allows it.
+  static made_widget create_named(std::string_view type, lv_obj_t* parent) {
+    made_widget m;
+    std::size_t position = 0;
+    ((type == Widgets.sv() ? (m = {create<Widgets>(parent), position, true}, true)
                            : (++position, false)) || ...);
-    if (!known) return std::unexpected(load_failure{load_error::unknown_widget, type_value.string()});
-    if (o == nullptr) return std::unexpected(load_failure{load_error::out_of_memory, node.text()});
-    made = o;
+    return m;
+  }
 
-    if (const auto id = node["id"]; id) {
-      if (!id.is(json::kind::string) || id.string().empty())
-        return std::unexpected(load_failure{load_error::malformed, id.text()});
-      if (out.entry(id.string()) != nullptr)
-        return std::unexpected(load_failure{load_error::duplicate_id, id.string()});
-      if (out.named_count_ == id_capacity)
-        return std::unexpected(load_failure{load_error::too_many_ids, id.string()});
-      auto& n = out.named_[out.named_count_++];
-      n.id = id.string();
-      n.widget = weak<obj>{obj{o}};
-      n.kind = kind;
-      n.cls = lv_obj_get_class(o);
-    }
+  // Remembers the widget of a node that has an "id".
+  static result record_id(json::value id, const made_widget& made, loaded& out) {
+    if (!id) return {};
+    if (!id.is(json::kind::string) || id.string().empty()) return fail(load_error::malformed, id.text());
+    if (out.entry(id.string()) != nullptr) return fail(load_error::duplicate_id, id.string());
+    if (out.named_count_ == id_capacity) return fail(load_error::too_many_ids, id.string());
+    auto& n = out.named_[out.named_count_++];
+    n.id = id.string();
+    n.widget = weak<obj>{obj{made.object}};
+    n.kind = made.kind;
+    n.cls = lv_obj_get_class(made.object);
+    return {};
+  }
 
-    if (column) lv_obj_set_flex_flow(o, LV_FLEX_FLOW_COLUMN);
-    if (row) lv_obj_set_flex_flow(o, LV_FLEX_FLOW_ROW);
-    if (auto r = apply_to(kind, o, node["props"]); !r) return r;
-
-    const auto children = node["children"];
-    if (children && !children.is(json::kind::array))
-      return std::unexpected(load_failure{load_error::malformed, children.text()});
+  static result build_children(json::value children, lv_obj_t* parent, loaded& out) {
+    if (children && !children.is(json::kind::array)) return fail(load_error::malformed, children.text());
     for (std::size_t i = 0; i < children.size(); ++i) {
       lv_obj_t* child = nullptr;
-      if (auto r = build(children.at(i), o, child, out); !r) return r;
+      if (auto r = build(children.at(i), parent, child, out); !r) return r;
     }
     return {};
+  }
+
+  // "column" and "row" are an obj laid out as a flex container.
+  static std::string_view widget_of(std::string_view type) {
+    return (type == "column" || type == "row") ? "obj" : type;
+  }
+  static void lay_out(std::string_view type, lv_obj_t* o) {
+    if (type == "column") lv_obj_set_flex_flow(o, LV_FLEX_FLOW_COLUMN);
+    if (type == "row") lv_obj_set_flex_flow(o, LV_FLEX_FLOW_ROW);
+  }
+
+  static result build(json::value node, lv_obj_t* parent, lv_obj_t*& made, loaded& out) {
+    const auto type = node["type"];
+    if (!node.is(json::kind::object) || !type.is(json::kind::string))
+      return fail(load_error::malformed, node.text());
+
+    const made_widget m = create_named(widget_of(type.string()), parent);
+    if (!m.known) return fail(load_error::unknown_widget, type.string());
+    if (m.object == nullptr) return fail(load_error::out_of_memory, node.text());
+    made = m.object;
+
+    if (auto r = record_id(node["id"], m, out); !r) return r;
+    lay_out(type.string(), m.object);
+    if (auto r = apply_to(m.kind, m.object, node["props"]); !r) return r;
+    return build_children(node["children"], m.object, out);
   }
 };
 
