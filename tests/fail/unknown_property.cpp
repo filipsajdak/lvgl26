@@ -1,2 +1,2 @@
 #include <lv/lv.hpp>
-void f(lv::label l) { l.set<"txt">("x"); }
+void f(lv::view<"label"> l) { l.set<"txt">("x"); }
