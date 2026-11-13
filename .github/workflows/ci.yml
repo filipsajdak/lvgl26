@@ -6,13 +6,23 @@ on:
   pull_request:
 
 jobs:
+  # Every preset builds with warnings as errors and runs the whole test suite.
   host:
     runs-on: ubuntu-latest
-    container: gcc:16
+    container:
+      image: gcc:16
+      # The sanitizers need ptrace and an unrestricted address space layout.
+      options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
     strategy:
       fail-fast: false
       matrix:
-        preset: [host-v96, host-v10]
+        preset:
+          - host-v96
+          - host-v10
+          - host-v96-asan      # AddressSanitizer + UndefinedBehaviorSanitizer
+          - host-v10-asan
+          - host-v96-tsan      # ThreadSanitizer
+          - host-v96-analyze   # GCC static analyzer
     steps:
       - uses: actions/checkout@v4
       - name: Install build tools
@@ -26,4 +36,28 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
       - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          TSAN_OPTIONS: halt_on_error=1
         run: ctest --preset ${{ matrix.preset }}
+
+  coverage:
+    runs-on: ubuntu-latest
+    container: gcc:16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends cmake ninja-build python3 python3-pip
+          pip3 install --break-system-packages gcovr
+          ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
+          ln -sf "$(command -v g++)" /usr/local/bin/g++-16
+      - name: Build and test with coverage
+        run: |
+          cmake --preset host-v96-coverage
+          cmake --build --preset host-v96-coverage
+          ctest --preset host-v96-coverage
+      - name: Report coverage of include/lv
+        run: gcovr --root . --filter 'include/lv/' --txt --print-summary build/host-v96-coverage

@@ -16,20 +16,132 @@
     {
       "name": "host-v96",
       "inherits": "host",
-      "cacheVariables": { "LVGL26_LVGL_REF": "v9.6.0" }
+      "cacheVariables": {
+        "LVGL26_LVGL_REF": "v9.6.0"
+      }
     },
     {
       "name": "host-v10",
       "inherits": "host",
-      "cacheVariables": { "LVGL26_LVGL_REF": "53819fe4fd3f3a767420743cbfdb2816f3928931" }
+      "cacheVariables": {
+        "LVGL26_LVGL_REF": "53819fe4fd3f3a767420743cbfdb2816f3928931"
+      }
+    },
+    {
+      "name": "host-v96-asan",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_SANITIZE": "address,undefined"
+      }
+    },
+    {
+      "name": "host-v10-asan",
+      "inherits": "host-v10",
+      "cacheVariables": {
+        "LVGL26_SANITIZE": "address,undefined"
+      }
+    },
+    {
+      "name": "host-v96-tsan",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_SANITIZE": "thread"
+      }
+    },
+    {
+      "name": "host-v96-analyze",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_ANALYZE": "ON"
+      }
+    },
+    {
+      "name": "host-v96-coverage",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_COVERAGE": "ON"
+      }
     }
   ],
   "buildPresets": [
-    { "name": "host-v96", "configurePreset": "host-v96" },
-    { "name": "host-v10", "configurePreset": "host-v10" }
+    {
+      "name": "host-v96",
+      "configurePreset": "host-v96"
+    },
+    {
+      "name": "host-v10",
+      "configurePreset": "host-v10"
+    },
+    {
+      "name": "host-v96-asan",
+      "configurePreset": "host-v96-asan"
+    },
+    {
+      "name": "host-v10-asan",
+      "configurePreset": "host-v10-asan"
+    },
+    {
+      "name": "host-v96-tsan",
+      "configurePreset": "host-v96-tsan"
+    },
+    {
+      "name": "host-v96-analyze",
+      "configurePreset": "host-v96-analyze"
+    },
+    {
+      "name": "host-v96-coverage",
+      "configurePreset": "host-v96-coverage"
+    }
   ],
   "testPresets": [
-    { "name": "host-v96", "configurePreset": "host-v96", "output": { "outputOnFailure": true } },
-    { "name": "host-v10", "configurePreset": "host-v10", "output": { "outputOnFailure": true } }
+    {
+      "name": "host-v96",
+      "configurePreset": "host-v96",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v10",
+      "configurePreset": "host-v10",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-asan",
+      "configurePreset": "host-v96-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v10-asan",
+      "configurePreset": "host-v10-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-tsan",
+      "configurePreset": "host-v96-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-analyze",
+      "configurePreset": "host-v96-analyze",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-coverage",
+      "configurePreset": "host-v96-coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }
