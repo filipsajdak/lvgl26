@@ -99,7 +99,9 @@ class value {
 
   // The value that starts at `offset` in `doc`. The offset must come from a value
   // of the same document.
-  static constexpr value at_offset(std::string_view doc, std::size_t offset) {
+  static constexpr value at_offset(std::string_view doc, std::size_t offset)
+    pre(offset < doc.size())
+  {
     return value{doc.substr(offset, detail::skip_value(doc, offset) - offset)};
   }
 

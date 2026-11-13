@@ -12,6 +12,7 @@
 #include <lv/detail/api.hpp>
 #include <lv/values.hpp>
 
+#include <concepts>
 #include <span>
 #include <string>
 #include <string_view>
@@ -27,7 +28,7 @@ struct event_ref {
   // For lv::first: what to do when this event is the first to happen.
   //   button.next().clicked.then([] { ... })
   // Defined in lv/task.hpp.
-  template <class F>
+  template <std::invocable F>
   auto then(F handler) const;
 };
 

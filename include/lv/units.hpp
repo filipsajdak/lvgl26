@@ -69,7 +69,15 @@ inline constexpr opa opa::transparent{percent{0}};
 // A horizontal or vertical length: a kind of length, as in mp-units. A plain length
 // converts to either, so `.size = {320 * px, 240 * px}` just works; but a value that
 // was named as one kind cannot be passed where the other is expected.
-template <class Axis>
+struct x_axis;
+struct y_axis;
+
+namespace detail {
+template <class T>
+concept axis = std::same_as<T, x_axis> || std::same_as<T, y_axis>;
+}  // namespace detail
+
+template <detail::axis Axis>
 class along {
   length v_{};
 
@@ -85,8 +93,6 @@ class along {
   friend constexpr bool operator==(along, along) = default;
 };
 
-struct x_axis;
-struct y_axis;
 using horizontal = along<x_axis>;  // a width or an x position
 using vertical = along<y_axis>;    // a height or a y position
 
@@ -98,8 +104,9 @@ concept unit_count = std::integral<T> && !std::same_as<T, bool> && !std::same_as
 // The count as an int32_t. A count that does not fit is a contract violation, and
 // so a compile error in a constant expression.
 template <unit_count T>
-constexpr std::int32_t count(T n) {
-  contract_assert(std::in_range<std::int32_t>(n));
+constexpr std::int32_t count(T n)
+  pre(std::in_range<std::int32_t>(n))
+{
   return static_cast<std::int32_t>(n);
 }
 
@@ -133,13 +140,15 @@ constexpr angle operator*(T n, deg_unit) {
   return {detail::count(n)};
 }
 template <detail::unit_count T>
-constexpr duration operator*(T n, ms_unit) {
-  contract_assert(n >= 0);
+constexpr duration operator*(T n, ms_unit)
+  pre(n >= 0)
+{
   return {static_cast<std::uint32_t>(detail::count(n))};
 }
 template <detail::unit_count T>
-constexpr duration operator*(T n, sec_unit) {
-  contract_assert(n >= 0 && n <= 2'000'000);
+constexpr duration operator*(T n, sec_unit)
+  pre(n >= 0 && n <= 2'000'000)
+{
   return {static_cast<std::uint32_t>(detail::count(n)) * 1000};
 }
 
@@ -172,8 +181,9 @@ struct counter {
 };
 
 // A color from 0xRRGGBB: lv::rgb(0x3366ff).
-constexpr lv_color_t rgb(std::uint32_t hex) {
-  contract_assert(hex <= 0xffffff);
+constexpr lv_color_t rgb(std::uint32_t hex)
+  pre(hex <= 0xffffff)
+{
   lv_color_t c{};
   c.red = static_cast<std::uint8_t>(hex >> 16);
   c.green = static_cast<std::uint8_t>(hex >> 8);

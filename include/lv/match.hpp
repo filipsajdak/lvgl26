@@ -45,7 +45,7 @@ struct arm {
 template <auto... Values>
 struct one_of {
   // What to do when the value is one of these: lv::is<1, 2>.then([] { ... }).
-  template <class F>
+  template <std::move_constructible F>
   constexpr arm<one_of, F> then(F handler) const {
     return {std::move(handler)};
   }
@@ -54,11 +54,25 @@ struct one_of {
 // The pattern "anything else".
 struct anything {
   // What to do for every other value: lv::otherwise.then([] { ... }).
-  template <class F>
+  template <std::move_constructible F>
   constexpr arm<anything, F> then(F handler) const {
     return {std::move(handler)};
   }
 };
+
+template <class T>
+inline constexpr bool is_arm = false;
+template <class Pattern, class F>
+inline constexpr bool is_arm<arm<Pattern, F>> = true;
+
+// A handler of a match on Subject: it takes the matched value, or nothing.
+template <class F, class Subject>
+concept handler_for = std::invocable<F&, const Subject&> || std::invocable<F&>;
+
+// An arm of a match on Subject: a pattern with a handler for that subject.
+template <class A, class Subject>
+concept arm_for =
+    is_arm<A> && requires(A& a) { requires handler_for<decltype(a.handler), Subject>; };
 
 template <class T>
 inline constexpr bool is_wildcard = false;
@@ -164,17 +178,36 @@ consteval std::string_view match_problem() {
   return {};
 }
 
-template <class Subject>
+template <std::equality_comparable Subject>
 struct matcher {
   const Subject& subject;
 
+  // Only on the temporary that lv::match returns: the matcher holds a reference to
+  // the value, so it must not outlive the expression it was made in.
   template <class... Arms>
-    requires(sizeof...(Arms) > 0)
-  constexpr auto operator()(Arms... arms) const {
+    requires(sizeof...(Arms) > 0) && (arm_for<Arms, Subject> && ...)
+  constexpr auto operator()(Arms... arms) && {
     static_assert(match_problem<Subject, Arms...>().empty(), match_problem<Subject, Arms...>());
+    // Precondition: the value has an arm. With every value covered, only an enum
+    // holding a value that is none of its enumerators fails it.
+    // A check in the body, not pre(): on GCC 16.2, pre() crashes with a deduced
+    // return type, and a fold over the parameters in pre() is not a constant.
+    contract_assert((matches(arms) || ...));
     using result = typename match_result<decltype(run_arm(arms, subject))...>::type;
     return choose<result>(arms...);
   }
+
+  // The same signature without the constraint: chosen only when the one above does
+  // not apply, to say why.
+  template <class... Wrong>
+  void operator()(Wrong...) && = delete(
+      "lv::match takes arms: lv::is<...>.then(handler) or lv::otherwise.then(handler). "
+      "A handler takes the matched value or nothing.");
+
+  template <class... Any>
+  void operator()(Any...) const& = delete(
+      "lv::match(value)(arms...) must be one expression: the matcher refers to the value "
+      "and must not be stored.");
 
  private:
   template <auto... Values, class F>
@@ -189,14 +222,10 @@ struct matcher {
   template <class Result, class First, class... Rest>
   constexpr Result choose(First& first, Rest&... rest) const {
     if (matches(first)) return static_cast<Result>(run_arm(first, subject));
-    if constexpr (sizeof...(Rest) > 0) {
+    if constexpr (sizeof...(Rest) > 0)
       return choose<Result>(rest...);
-    } else {
-      // Every value is covered, so only an enum holding a value that is not one of
-      // its enumerators gets here.
-      contract_assert(false && "lv::match: the value is not one of its type's enumerators");
-      std::unreachable();
-    }
+    else
+      std::unreachable();  // excluded by the precondition in operator()
   }
 };
 
@@ -211,7 +240,7 @@ inline constexpr detail::one_of<Values...> is{};
 inline constexpr detail::anything otherwise{};
 
 // lv::match(value)(arms...). See the top of this file.
-template <class Subject>
+template <std::equality_comparable Subject>
 constexpr detail::matcher<Subject> match(const Subject& subject) {
   return {subject};
 }

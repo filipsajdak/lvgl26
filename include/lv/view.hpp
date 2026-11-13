@@ -20,6 +20,15 @@ using obj = view<"obj">;
 
 namespace detail {
 
+template <class T>
+inline constexpr bool is_view = false;
+template <fixed W>
+inline constexpr bool is_view<view<W>> = true;
+
+// A view of some widget: lv::view<"label">, lv::obj.
+template <class T>
+concept a_view = is_view<T>;
+
 template <class F>
 concept event_handler = std::invocable<F&, event> || std::invocable<F&>;
 
@@ -95,6 +104,9 @@ class view {
   // The untyped escape hatch, for anything props does not cover:
   // set<"text">("Speed") calls lv_label_set_text, or lv_obj_set_* as a fallback.
   template <detail::fixed P, class Self, class... A>
+    requires requires(lv_obj_t* o, A&&... a) {
+      [:detail::resolve(W.sv(), "set", P.sv()):](o, std::forward<A>(a)...);
+    }
   Self set(this Self self, A&&... a)
     pre(self.raw() != nullptr)
   {
@@ -104,6 +116,9 @@ class view {
 
   // get<"text">() calls lv_label_get_text, or lv_obj_get_* as a fallback.
   template <detail::fixed P, class... A>
+    requires requires(lv_obj_t* o, A&&... a) {
+      [:detail::resolve(W.sv(), "get", P.sv()):](o, std::forward<A>(a)...);
+    }
   auto get(A&&... a) const {
     // A deduced return type with pre() crashes GCC 16.2, so the check is in the body.
     contract_assert(p_ != nullptr);

@@ -322,11 +322,13 @@ enum class mount_error {
 
 // The widgets built from a tree. Owns them: they are deleted with this object.
 template <const auto& Tree>
+  requires detail::tree_node<decltype(Tree)>
 class mounted {
   owned<obj> root_;
   std::array<lv_obj_t*, detail::id_count<Tree>> ids_{};
 
   template <const auto& T>
+    requires detail::tree_node<decltype(T)>
   friend std::expected<mounted<T>, mount_error> mount(obj);
 
  public:
@@ -344,6 +346,7 @@ class mounted {
   // A typed view of the node with this id.
   template <detail::fixed Name>
   auto get() const {
+    // A check in the body, not pre(): GCC 16.2 crashes on pre() with a deduced return type.
     contract_assert(root_ && "the mounted tree was deleted by its parent");
     using view_type = typename[:detail::id_view<Tree>(Name.sv()):];
     return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
@@ -352,8 +355,10 @@ class mounted {
 
 // Builds the widgets of the constexpr tree `Tree` under `parent`.
 template <const auto& Tree>
-std::expected<mounted<Tree>, mount_error> mount(obj parent) {
-  contract_assert(parent.raw() != nullptr);
+  requires detail::tree_node<decltype(Tree)>
+std::expected<mounted<Tree>, mount_error> mount(obj parent)
+  pre(parent.raw() != nullptr)
+{
   mounted<Tree> m;
   detail::build_state st{m.ids_.data()};
   lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
@@ -366,7 +371,10 @@ std::expected<mounted<Tree>, mount_error> mount(obj parent) {
 // made with LVGL's C API are: they live until the parent is deleted.
 // Returns the root, or an empty view if LVGL had no memory.
 template <const auto& Tree>
-obj place(obj parent) {
+  requires detail::tree_node<decltype(Tree)>
+obj place(obj parent)
+  pre(parent.raw() != nullptr)
+{
   auto built = mount<Tree>(parent);
   return built ? built->detach() : obj{};
 }
