@@ -161,6 +161,14 @@ consteval bool is_name_char(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
+// The value that starts at `offset` in `doc`. The offset comes from a value of the
+// same document.
+consteval json::value value_at(std::string_view doc, std::size_t offset)
+  pre(offset < doc.size())
+{
+  return json::value{doc.substr(offset, json::detail::skip_value(doc, offset) - offset)};
+}
+
 // A JSON key as a C++ member name: "primary-500" -> primary_500, "2xl" -> _2xl.
 consteval std::string token_member_name(std::string_view key) {
   std::string out;
@@ -181,7 +189,7 @@ template <const auto& Doc>
 consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_type inherited) {
   const auto doc = token_text<Doc>();
   const auto root = token_root<Doc>();
-  const auto group = json::value::at_offset(doc, offset);
+  const auto group = value_at(doc, offset);
   if (auto t = group["$type"]) inherited = token_type_of(t.string());
 
   std::vector<std::string> names;

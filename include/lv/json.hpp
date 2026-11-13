@@ -1,6 +1,8 @@
 #pragma once
 
 // A small JSON reader that works at compile time and at run time.
+// It is plain C++23 with no contracts and no reflection, so that Clang can compile
+// it too: its fuzz target (fuzz/json_reader.cpp) is built with libFuzzer.
 // It allocates nothing: a value is a view of its text inside the document.
 // Strings are returned as written, without unescaping.
 
@@ -39,10 +41,6 @@ constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth = 
 
 constexpr bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
-constexpr bool is_number_char(char c) {
-  return is_digit(c) || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E';
-}
-
 // How many characters at the start of `s` belong to a plain decimal number.
 constexpr std::size_t number_length(std::string_view s) {
   std::size_t i = 0;
@@ -50,11 +48,37 @@ constexpr std::size_t number_length(std::string_view s) {
   return i;
 }
 
+// The index just past the digits that start at s[i].
+constexpr std::size_t skip_digits(std::string_view s, std::size_t i) {
+  while (i < s.size() && is_digit(s[i])) ++i;
+  return i;
+}
+
+// The index just past an optional ".digits" at s[i], or npos if the dot has no digits.
+constexpr std::size_t skip_fraction(std::string_view s, std::size_t i) {
+  if (i >= s.size() || s[i] != '.') return i;
+  const auto end = skip_digits(s, i + 1);
+  return end == i + 1 ? npos : end;
+}
+
+// The index just past an optional exponent at s[i], or npos if it has no digits.
+constexpr std::size_t skip_exponent(std::string_view s, std::size_t i) {
+  if (i >= s.size() || (s[i] != 'e' && s[i] != 'E')) return i;
+  ++i;
+  if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
+  const auto end = skip_digits(s, i);
+  return end == i ? npos : end;
+}
+
 // The index just past the number that starts at s[i], or npos if there is none.
+// The JSON grammar exactly: -? (0 | [1-9][0-9]*) (.[0-9]+)? ([eE][+-]?[0-9]+)?
 constexpr std::size_t skip_number(std::string_view s, std::size_t i) {
-  std::size_t j = i;
-  while (j < s.size() && is_number_char(s[j])) ++j;
-  return j == i ? npos : j;
+  if (i < s.size() && s[i] == '-') ++i;
+  const auto whole = skip_digits(s, i);
+  if (whole == i) return npos;                          // no digits
+  if (s[i] == '0' && whole > i + 1) return npos;        // a leading zero
+  const auto fraction = skip_fraction(s, whole);
+  return fraction == npos ? npos : skip_exponent(s, fraction);
 }
 
 // The index just past true, false or null at s[i], or npos.
@@ -135,13 +159,22 @@ constexpr bool read_minus(std::string_view s, std::size_t& i) {
   return s[i++] == '-';
 }
 
+// A run of digits as an exponent, advancing i past it. It stops counting at 999:
+// any larger exponent already gives zero or infinity, and an int must not overflow.
+constexpr int read_exponent_digits(std::string_view s, std::size_t& i) {
+  int e = 0;
+  for (; i < s.size() && is_digit(s[i]); ++i)
+    if (e < 100) e = e * 10 + (s[i] - '0');
+  return e;
+}
+
 // The factor of an exponent part (e-3 gives 0.001), advancing i past it. 1 if there is none.
 constexpr double read_exponent(std::string_view s, std::size_t& i) {
   if (i >= s.size() || (s[i] != 'e' && s[i] != 'E')) return 1;
   ++i;
   const bool down = read_minus(s, i);
   double factor = 1;
-  for (auto e = static_cast<int>(read_digits(s, i)); e > 0; --e) factor = down ? factor / 10 : factor * 10;
+  for (int e = read_exponent_digits(s, i); e > 0; --e) factor = down ? factor / 10 : factor * 10;
   return factor;
 }
 
@@ -168,14 +201,6 @@ class value {
     const auto end = detail::skip_value(doc, begin);
     if (end == detail::npos || detail::skip_space(doc, end) != doc.size()) return std::nullopt;
     return value{doc.substr(begin, end - begin)};
-  }
-
-  // The value that starts at `offset` in `doc`. The offset must come from a value
-  // of the same document.
-  static constexpr value at_offset(std::string_view doc, std::size_t offset)
-    pre(offset < doc.size())
-  {
-    return value{doc.substr(offset, detail::skip_value(doc, offset) - offset)};
   }
 
   constexpr std::string_view text() const { return text_; }
@@ -220,6 +245,7 @@ class value {
 
   // Member number `index` of an object, in document order.
   constexpr member member_at(std::size_t index) const {
+    if (!is(kind::object)) return {};
     std::size_t i = first();
     for (; index > 0 && i != detail::npos; --index) i = next(i);
     return i == detail::npos ? member{} : read(i);
@@ -227,6 +253,7 @@ class value {
 
   // Element number `index` of an array.
   constexpr value at(std::size_t index) const {
+    if (!is(kind::array)) return {};  // an object's "elements" would be its keys
     std::size_t i = first();
     for (; index > 0 && i != detail::npos; --index) i = next(i);
     if (i == detail::npos) return {};
