@@ -85,9 +85,9 @@ lv::task<> count_clicks(lv::view<"button"> button) {
 
 lv::task<bool> confirm(lv::view<"button"> ok, lv::view<"button"> cancel) {
   co_return co_await lv::first(
-      ok.next().clicked     >> [] { return true; },
-      cancel.next().clicked >> [] { return false; },
-      lv::sleep(5 * sec)    >> [] { return false; });
+      ok.next().clicked.then([] { return true; }),
+      cancel.next().clicked.then([] { return false; }),
+      lv::sleep(5 * sec).then([] { return false; }));
 }
 
 lv::spawn(count_clicks(button));

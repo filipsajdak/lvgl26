@@ -57,22 +57,22 @@ lv::task<> watch_mode(int* seen) {
 // Whichever comes first decides the answer.
 lv::task<> confirm(lv::view<"button"> ok, lv::view<"button"> cancel, int* answer, bool* ended) {
   at_exit cleanup{ended};
-  *answer = co_await lv::first(ok.next().clicked >> [] { return 1; },
-                               cancel.next().clicked >> [] { return 2; },
-                               lv::sleep(500 * ms) >> [] { return 3; });
+  *answer = co_await lv::first(ok.next().clicked.then([] { return 1; }),
+                               cancel.next().clicked.then([] { return 2; }),
+                               lv::sleep(500 * ms).then([] { return 3; }));
 }
 
 // A task that wants to see the deletion waits for it.
 lv::task<> confirm_or_gone(lv::view<"button"> ok, int* answer) {
-  *answer = co_await lv::first(ok.next().clicked >> [] { return 1; },
-                               ok.next().gone >> [] { return 4; });
+  *answer = co_await lv::first(ok.next().clicked.then([] { return 1; }),
+                               ok.next().gone.then([] { return 4; }));
 }
 
 // A handler can take the value of what it waited for, and can capture.
 lv::task<> mode_or_timeout(int* out) {
   const int base = 100;
-  *out = co_await lv::first(lv::changed(current_mode) >> [&](mode m) { return base + m.value; },
-                            lv::sleep(50 * ms) >> [] { return -1; });
+  *out = co_await lv::first(lv::changed(current_mode).then([&](mode m) { return base + m.value; }),
+                            lv::sleep(50 * ms).then([] { return -1; }));
 }
 
 // Without handlers, lv::first says which one won.

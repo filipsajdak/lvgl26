@@ -322,6 +322,18 @@ concept wait_source =
       s.disarm();
     };
 
+// A source with what to do when it wins: view.next().clicked.then([] { ... }).
+template <wait_source S, class F>
+struct handled {
+  S source;
+  F handler;
+};
+
+template <class T>
+inline constexpr bool is_handled = false;
+template <class S, class F>
+inline constexpr bool is_handled<handled<S, F>> = true;
+
 // One event of a widget. Waiting for it ties the task to the widget: see watch().
 template <lv_event_code_t Code>
 struct event_source {
@@ -433,6 +445,12 @@ struct sleep_source {
     timer = nullptr;
   }
 
+  // For lv::first: what to do when the time runs out first.
+  template <class F>
+  handled<sleep_source, F> then(F handler) && {
+    return {std::move(*this), std::move(handler)};
+  }
+
   static void elapsed_cb(lv_timer_t* t) {
     auto* self = static_cast<sleep_source*>(lv_timer_get_user_data(t));
     self->timer = nullptr;  // LVGL deletes it when this callback returns
@@ -471,6 +489,13 @@ struct change_source {
 
   // What the wait gives: the state's new value.
   T value() const noexcept { return source->get(); }
+
+  // For lv::first: what to do when the state changes first. The handler may take
+  // the new value.
+  template <class F>
+  handled<change_source, F> then(F handler) && {
+    return {std::move(*this), std::move(handler)};
+  }
 
   static void changed_cb(lv_observer_t* o, lv_subject_t*) {
     auto* self = static_cast<change_source*>(lv_observer_get_user_data(o));
@@ -514,18 +539,6 @@ struct wait {
   }
 };
 
-// A source with what to do when it wins: view.next().clicked >> [] { ... }.
-template <wait_source S, class F>
-struct handled {
-  S source;
-  F handler;
-};
-
-template <class T>
-inline constexpr bool is_handled = false;
-template <class S, class F>
-inline constexpr bool is_handled<handled<S, F>> = true;
-
 template <wait_source S>
 S& source_of(S& s) {
   return s;
@@ -557,9 +570,9 @@ struct common_result<R...> {
 
 // co_await lv::first(...): the first of several to be done. The others are cancelled.
 //
-//   int answer = co_await lv::first(ok.next().clicked     >> [] { return 1; },
-//                                   cancel.next().clicked >> [] { return 2; },
-//                                   lv::sleep(5 * lv::sec) >> [] { return 3; });
+//   int answer = co_await lv::first(ok.next().clicked.then([] { return 1; }),
+//                                   cancel.next().clicked.then([] { return 2; }),
+//                                   lv::sleep(5 * lv::sec).then([] { return 3; }));
 //
 // With handlers, the result is what the winner's handler returns. Without any,
 // the result is the position of the winner, starting at 0.
@@ -567,7 +580,7 @@ template <class... Items>
 struct first_of {
   static constexpr bool with_handlers = (is_handled<Items> && ...);
   static_assert(with_handlers || (!is_handled<Items> && ...),
-                "lv: in lv::first, give a handler to every item (a >> [] { ... }) or to none.");
+                "lv: in lv::first, give a handler to every item (a.then([] { ... })) or to none.");
 
   static constexpr std::size_t none = static_cast<std::size_t>(-1);
 
@@ -654,12 +667,6 @@ wait<S> operator co_await(S source) noexcept {
   return {std::move(source)};
 }
 
-// source >> handler, for lv::first. In this namespace because the sources are.
-template <wait_source S, class F>
-handled<S, F> operator>>(S source, F handler) noexcept {
-  return {std::move(source), std::move(handler)};
-}
-
 }  // namespace detail
 
 // co_await button.next().clicked
@@ -668,10 +675,11 @@ detail::wait<detail::event_source<Code>> operator co_await(event_ref<Code> e) no
   return {detail::event_source<Code>{e.widget}};
 }
 
-// button.next().clicked >> handler, for lv::first.
-template <lv_event_code_t Code, class F>
-detail::handled<detail::event_source<Code>, F> operator>>(event_ref<Code> e, F handler) noexcept {
-  return {detail::event_source<Code>{e.widget}, std::move(handler)};
+template <lv_event_code_t Code>
+template <class F>
+auto event_ref<Code>::then(F handler) const {
+  return detail::handled<detail::event_source<Code>, F>{detail::event_source<Code>{widget},
+                                                        std::move(handler)};
 }
 
 // co_await lv::sleep(300 * lv::ms)
