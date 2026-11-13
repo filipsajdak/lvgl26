@@ -33,21 +33,40 @@ How it works:
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
   `lv::weak<T>` empties itself when LVGL deletes the widget.
 
-State is typed and lives in ordinary globals. Widgets follow it:
+State is typed and lives in ordinary globals. Widgets follow it. Measures are
+[mp-units](https://github.com/mpusz/mp-units) quantities:
 
 ```cpp
-struct kmh { int value; };              // a named value: the type says what the number is
-constinit lv::state<kmh> speed{kmh{0}};
+#include <mp-units/systems/si.h>
+using namespace mp_units::si::unit_symbols;
+
+constinit lv::state speed{0 * km / h};
+constinit lv::state clicks{lv::counter{}};
 
 constexpr auto ui = lv::column[
-    lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),     // follows, and writes back
-    lv::label({.text = lv::bind(speed, "{} km/h")})];
+    lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),   // follows, and writes back
+    lv::label({.text = lv::bind(speed)}),                     // shows "0 km/h"
+    lv::label({.text = lv::bind(clicks, "{} clicks")})];
 
-speed = kmh{120};   // both widgets update
+speed = 120 * km / h;                                  // the widgets update
+speed = 2 * km / min;                                  // converted: nothing is lost
+speed = 33 * m / s;                                    // error: 118.8 km/h does not fit an int
+speed = 3 * m;                                         // error: not a speed
+clicks.update([](lv::counter c) { return ++c; });
 ```
 
-A state holds a named value (any struct with one integer, bool or enum member), a bool, an enum, a
-color or a pointer. `lv::state<int>` is rejected unless `lv::config::raw_integer_state` is set.
+What a state can hold:
+
+- **A measure:** an mp-units quantity with an integer number. lvgl26 has no unit system of its own and
+  does not include mp-units; it accepts any type of that shape, so the dependency is yours to add.
+  It builds freestanding, and a quantity compiles to the same code as an `int`.
+- **A count:** `lv::counter`.
+- **Anything else that is a number:** a struct with one integer, bool or enum member, such as
+  `struct tab_index { int value; };`.
+- A bool, an enum, a color or a pointer (`const char*` for text).
+
+`lv::state<int>` is rejected, because a plain integer does not say what it is; the error shows these
+choices. `lv::config::raw_integer_state` allows it.
 
 A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a
 bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a

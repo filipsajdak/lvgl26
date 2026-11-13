@@ -30,6 +30,8 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.
+- Application values are strongly typed: a measure is an mp-units quantity (`120 * km / h`), a
+  count is `lv::counter`, anything else a one-member struct. Do not add a unit system to lvgl26.
 - No handwritten per-property code. Properties, styles and events come from reflection.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).

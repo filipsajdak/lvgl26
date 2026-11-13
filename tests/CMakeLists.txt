@@ -1,6 +1,8 @@
 # Where #embed finds the test data.
 add_library(lvgl26_test_data INTERFACE)
 target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/data)
+# The compile-fail tests that use quantities need mp-units too.
+target_link_libraries(lvgl26_test_data INTERFACE mp-units::mp-units)
 
 function(lvgl26_test name)
   add_executable(${name} ${name}.cpp)
@@ -21,6 +23,7 @@ lvgl26_test(smoke)
 lvgl26_test(l1_views)
 lvgl26_test(json)
 lvgl26_test(state)
+target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
@@ -58,10 +61,13 @@ lvgl26_compile_fail(token_misspelled "has no member named 'primry'")
 lvgl26_compile_fail(token_bad_shadow "design tokens: a composite token has no 'blur'")
 lvgl26_compile_fail(bind_wrong_type "this property cannot be bound to a state of that type")
 lvgl26_compile_fail(bind_format_not_text "is for text properties only")
-lvgl26_compile_fail(state_bad_type "a state holds a named value")
+lvgl26_compile_fail(state_bad_type "a state holds a quantity")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
 lvgl26_compile_fail(config_too_late "redefinition of .*lv::cfg<lv::override>")
-lvgl26_compile_fail(state_plain_int "a state of a plain integer does not say what the number is")
+lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h.;.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")
 lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one {} for the value")
+lvgl26_compile_fail(quantity_wrong_dimension "no match for .operator=")
+lvgl26_compile_fail(quantity_lossy "no match for .operator=")
+lvgl26_compile_fail(quantity_floating "a quantity in a state needs an integer number for now")

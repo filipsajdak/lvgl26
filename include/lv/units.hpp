@@ -5,6 +5,7 @@
 
 #include <lvgl/lvgl.h>
 
+#include <compare>
 #include <concepts>
 #include <cstdint>
 #include <utility>
@@ -143,6 +144,32 @@ constexpr duration operator*(T n, sec_unit) {
 }
 
 }  // namespace units
+
+// A count of things: clicks, items, steps. The ready-made named value for the most
+// common state that is not a measure.
+//   constinit lv::state clicks{lv::counter{}};
+//   clicks.update([](lv::counter c) { return ++c; });
+struct counter {
+  std::int32_t value = 0;
+
+  constexpr counter& operator++() {
+    ++value;
+    return *this;
+  }
+  constexpr counter& operator--() {
+    --value;
+    return *this;
+  }
+  constexpr counter& operator+=(std::int32_t n) {
+    value += n;
+    return *this;
+  }
+  constexpr counter& operator-=(std::int32_t n) {
+    value -= n;
+    return *this;
+  }
+  friend constexpr auto operator<=>(const counter&, const counter&) = default;
+};
 
 // A color from 0xRRGGBB: lv::rgb(0x3366ff).
 constexpr lv_color_t rgb(std::uint32_t hex) {

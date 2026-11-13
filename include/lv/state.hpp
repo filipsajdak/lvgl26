@@ -2,13 +2,20 @@
 
 // Typed application state over LVGL's observer.
 //
-//   struct kmh { int value; };                    // a named value: says what the number is
-//   constinit lv::state<kmh> speed{kmh{0}};       // a constant-initialized global
+//   #include <mp-units/systems/si.h>
+//   using namespace mp_units::si::unit_symbols;
+//
+//   constinit lv::state speed{0 * km / h};        // a constant-initialized global
 //
 //   lv::arc({.value = lv::bind(speed)})           // the arc follows speed, and writes back
-//   lv::label({.text = lv::bind(speed, "{} km/h")})
+//   lv::label({.text = lv::bind(speed)})          // shows "0 km/h"
 //
-//   speed = kmh{120};                             // every bound widget updates
+//   speed = 120 * km / h;                         // every bound widget updates
+//   speed = 2 * km / min;                         // converted, by mp-units' rules
+//
+// Measures are mp-units quantities: lvgl26 has no unit system of its own for them.
+// A count is an lv::counter. A state can also hold any struct with one member
+// (an index, an id), a bool, an enum, a color or a pointer.
 //
 // A state is an lv_subject_t underneath, created the first time something binds to
 // it or asks for raw(). C code can use that subject like any other.
@@ -20,6 +27,7 @@
 #include <concepts>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <type_traits>
 
 namespace lv {
@@ -28,8 +36,8 @@ namespace detail {
 
 // What a state can hold, and which kind of subject carries it.
 template <class T>
-concept state_value = plain_state_value<T> || strong_value<T> || std::same_as<T, lv_color_t> ||
-                      std::is_pointer_v<T>;
+concept state_value = plain_state_value<T> || strong_value<T> || integer_quantity<T> ||
+                      std::same_as<T, lv_color_t> || std::is_pointer_v<T>;
 
 template <class T>
 constexpr lv_subject_type_t subject_type() {
@@ -47,6 +55,8 @@ void write_subject(lv_subject_t* s, T v) {
     lv_subject_set_color(s, v);
   else if constexpr (std::is_pointer_v<T>)
     lv_subject_set_pointer(s, const_cast<void*>(static_cast<const void*>(v)));
+  else if constexpr (integer_quantity<T>)
+    lv_subject_set_int(s, static_cast<std::int32_t>(v.numerical_value_in(T::unit)));
   else if constexpr (strong_value<T>)
     lv_subject_set_int(s, static_cast<std::int32_t>(v.[:strong_member<T>():]));
   else
@@ -59,6 +69,8 @@ T read_subject(lv_subject_t* s) {
     return lv_subject_get_color(s);
   } else if constexpr (std::is_pointer_v<T>) {
     return static_cast<T>(lv_subject_get_pointer(s));
+  } else if constexpr (integer_quantity<T>) {
+    return T{static_cast<typename T::rep>(lv_subject_get_int(s)), T::reference};
   } else if constexpr (strong_value<T>) {
     using member = typename state_payload<T>::type;
     return T{static_cast<member>(lv_subject_get_int(s))};
@@ -81,14 +93,19 @@ lv_subject_t* subject_of(const void* source) {
 // O is the settings tag; leave it out.
 template <class T, class O = override>
 class state {
+  static_assert(!detail::unit_quantity<T> || detail::integer_quantity<T>,
+                "lv: a quantity in a state needs an integer number for now, for example "
+                "`0 * km / h` rather than `0.0 * km / h`.");
   static_assert(detail::state_value<T>,
-                "lv: a state holds a named value (a struct with one integer, bool or enum "
-                "member, such as `struct kmh { int value; };`), a bool, an enum, an "
-                "lv_color_t or a pointer (for text: const char*).");
+                "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one "
+                "integer, bool or enum member, a bool, an enum, an lv_color_t or a pointer "
+                "(for text: const char*).");
   static_assert(!detail::integer<T> || cfg<O>.raw_integer_state,
-                "lv: a state of a plain integer does not say what the number is. Give it a "
-                "named type: `struct kmh { int value; }; lv::state<kmh> speed;`. To allow "
-                "plain integers, set lv::config::raw_integer_state.");
+                "lv: a state of a plain integer does not say what the number is. If it is a "
+                "measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it "
+                "counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For "
+                "anything else, name it: `struct tab_index { int value; };`. To allow plain "
+                "integers, set lv::config::raw_integer_state.");
 
   T value_{};
   mutable lv_subject_t* subject_ = nullptr;
@@ -112,6 +129,14 @@ class state {
   state& operator=(T v) {
     set(v);
     return *this;
+  }
+
+  // Changes the value with a function of the current one:
+  //   clicks.update([](lv::counter c) { return ++c; });
+  template <class F>
+    requires std::invocable<F&, T> && std::convertible_to<std::invoke_result_t<F&, T>, T>
+  void update(F f) {
+    set(f(get()));
   }
 
   // The LVGL subject, created on first use. Needs lv_init() to have run.
