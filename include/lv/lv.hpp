@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lv/owned.hpp>
+#include <lv/tree.hpp>
 #include <lv/view.hpp>
 
 namespace lv {

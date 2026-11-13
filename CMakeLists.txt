@@ -7,6 +7,7 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSIO
 endif()
 
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
+option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
 include(cmake/lvgl.cmake)
 

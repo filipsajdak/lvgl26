@@ -16,6 +16,14 @@ endfunction()
 lvgl26_test(smoke)
 lvgl26_test(l1_views)
 
+# LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
+add_executable(l2_tree l2_tree.cpp)
+target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26)
+add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
 lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
+lvgl26_compile_fail(unknown_id "the tree has no id 'titel'. Its ids: title")
+lvgl26_compile_fail(duplicate_id "the id 'a' is used twice in one tree")
+lvgl26_compile_fail(tree_unknown_property "widget 'arc' has no property 'rnge' to set")
