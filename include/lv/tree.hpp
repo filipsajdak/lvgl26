@@ -65,10 +65,6 @@ constexpr const auto& kid(const kids_list<First, Rest...>& l) {
     return kid<I - 1>(l.tail);
 }
 
-// props<W>, named so that it is generated on first use: see props_of.
-template <fixed W, class D>
-using lazy_props = typename props_of<W, D>::type;
-
 }  // namespace detail
 
 // One widget of a tree: its properties and its children.
@@ -90,10 +86,27 @@ struct node {
   }
 };
 
+namespace detail {
+
+// The functions below must not name node<"arc"> directly: that would generate
+// the property struct of every listed widget in every file that includes this.
+template <fixed W, class D>
+constexpr node<W> make_node(lazy_props<W, D> p) {
+  return {std::move(p)};
+}
+
+template <class D>
+constexpr auto make_flex(lazy_props<"obj", D> p, lv_flex_flow_t flow) {
+  if (!p.flex_flow.set) p.flex_flow = flow;
+  return make_node<"obj", D>(std::move(p));
+}
+
+}  // namespace detail
+
 // Any LVGL widget by name: lv::widget<"spinbox">({...}).
 template <detail::fixed W, class D = void>
-constexpr node<W> widget(detail::lazy_props<W, D> p = {}) {
-  return {std::move(p)};
+constexpr auto widget(detail::lazy_props<W, D> p = {}) {
+  return detail::make_node<W, D>(std::move(p));
 }
 
 // Short names for the common widgets. C++ cannot generate these names, so this
@@ -101,8 +114,8 @@ constexpr node<W> widget(detail::lazy_props<W, D> p = {}) {
 // Each has exactly one signature, so a wrong value gets a precise error.
 #define LV_DETAIL_WIDGET(name, kind)                                   \
   template <class D = void>                                            \
-  constexpr node<kind> name(detail::lazy_props<kind, D> p = {}) {      \
-    return {std::move(p)};                                             \
+  constexpr auto name(detail::lazy_props<kind, D> p = {}) {            \
+    return detail::make_node<kind, D>(std::move(p));                   \
   }
 
 LV_DETAIL_WIDGET(box, "obj")
@@ -123,16 +136,14 @@ LV_DETAIL_WIDGET(spinner, "spinner")
 
 // A box laid out as a flex column, unless .flex_flow says otherwise.
 template <class D = void>
-constexpr node<"obj"> column(detail::lazy_props<"obj", D> p = {}) {
-  if (!p.flex_flow.set) p.flex_flow = LV_FLEX_FLOW_COLUMN;
-  return {std::move(p)};
+constexpr auto column(detail::lazy_props<"obj", D> p = {}) {
+  return detail::make_flex<D>(std::move(p), LV_FLEX_FLOW_COLUMN);
 }
 
 // A box laid out as a flex row, unless .flex_flow says otherwise.
 template <class D = void>
-constexpr node<"obj"> row(detail::lazy_props<"obj", D> p = {}) {
-  if (!p.flex_flow.set) p.flex_flow = LV_FLEX_FLOW_ROW;
-  return {std::move(p)};
+constexpr auto row(detail::lazy_props<"obj", D> p = {}) {
+  return detail::make_flex<D>(std::move(p), LV_FLEX_FLOW_ROW);
 }
 
 // ---- compile-time facts about a tree ----------------------------------------
@@ -222,7 +233,9 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
 
   template for (constexpr auto i : indices<members_of_props<W>.size()>) {
     constexpr auto m = members_of_props<W>[i];
-    if constexpr (N.p.[:m:].set) {
+    if constexpr (targets<W>[i] == ^^lv_obj_add_style) {
+      if constexpr (is_set(N.p.[:m:])) add_const_style<N.p.[:m:]>(w.raw(), LV_PART_MAIN);
+    } else if constexpr (is_set(N.p.[:m:])) {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
       apply_member<W, i>(w.raw(), a);
     }

@@ -21,6 +21,10 @@ add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
 
+add_executable(styles styles.cpp)
+target_link_libraries(styles PRIVATE lvgl26::lvgl26)
+add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
+
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
 lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
@@ -32,3 +36,4 @@ lvgl26_compile_fail(props_wrong_unit "It takes an angle \\(90_deg\\). You gave l
 lvgl26_compile_fail(props_bool_as_int "It takes a whole number \\(not bool, not floating point\\). You gave bool")
 lvgl26_compile_fail(props_narrowing "It takes a whole number \\(not bool, not floating point\\). You gave double")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
+lvgl26_compile_fail(style_needs_unit "It takes a length \\(120_px, 50_pct or lv::size_content\\). You gave int")
