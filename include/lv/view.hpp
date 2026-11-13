@@ -2,6 +2,8 @@
 
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/event.hpp>
+#include <lv/props.hpp>
 
 #include <concepts>
 #include <cstring>
@@ -11,25 +13,9 @@
 namespace lv {
 
 template <detail::fixed W>
-class widget;
+class view;
 
-using obj = widget<"obj">;
-
-// What an event handler receives.
-class event {
-  lv_event_t* e_;
-
- public:
-  constexpr explicit event(lv_event_t* e) : e_(e) {}
-  constexpr lv_event_t* raw() const { return e_; }
-  lv_event_code_t code() const { return lv_event_get_code(e_); }
-
-  // The widget the handler was added to.
-  template <class V = obj>
-  V target() const {
-    return V{lv_event_get_current_target_obj(e_)};
-  }
-};
+using obj = view<"obj">;
 
 namespace detail {
 
@@ -57,39 +43,49 @@ void call(F& f, lv_event_t* e) {
 // A non-owning, pointer-sized view of an LVGL widget. Copy it freely.
 // It never deletes the widget: see lv::owned for that.
 template <detail::fixed W>
-class widget {
+class view {
   lv_obj_t* p_ = nullptr;
 
  public:
   static constexpr std::string_view kind = W.sv();
 
-  constexpr widget() = default;
-  constexpr explicit widget(lv_obj_t* p) : p_(p) {}
+  constexpr view() = default;
+  constexpr explicit view(lv_obj_t* p) : p_(p) {}
 
   // Every widget is an obj.
-  constexpr operator widget<"obj">() const
+  constexpr operator view<"obj">() const
     requires(W.sv() != "obj")
   {
-    return widget<"obj">{p_};
+    return view<"obj">{p_};
   }
 
   constexpr lv_obj_t* raw() const { return p_; }
   constexpr explicit operator bool() const { return p_ != nullptr; }
-  friend constexpr bool operator==(widget, widget) = default;
+  friend constexpr bool operator==(view, view) = default;
 
   // Creates the widget as a child of `parent`. The parent owns it.
-  static widget create(widget<"obj"> parent)
+  static view create(view<"obj"> parent)
     pre(parent.raw() != nullptr)
   {
-    return widget{[:detail::resolve_create(W.sv()):](parent.raw())};
+    return view{[:detail::resolve_create(W.sv()):](parent.raw())};
   }
 
   // Creates a child of this widget.
   template <detail::fixed C>
-  widget<C> add() const {
-    return widget<C>::create(widget<"obj">{p_});
+  view<C> add() const {
+    return view<C>::create(view<"obj">{p_});
   }
 
+  // set({.value = 0}) applies typed properties: see lv::props.
+  template <class Self>
+  Self set(this Self self, const props<W>& p)
+    pre(self.raw() != nullptr)
+  {
+    detail::apply_props<W>(self.raw(), p);
+    return self;
+  }
+
+  // The untyped escape hatch, for anything props does not cover:
   // set<"text">("Speed") calls lv_label_set_text, or lv_obj_set_* as a fallback.
   template <detail::fixed P, class Self, class... A>
   Self set(this Self self, A&&... a)
@@ -143,10 +139,6 @@ class widget {
   }
 };
 
-using label = widget<"label">;
-using button = widget<"button">;
-using arc = widget<"arc">;
-
-static_assert(sizeof(label) == sizeof(void*));
+static_assert(sizeof(obj) == sizeof(void*));
 
 }  // namespace lv

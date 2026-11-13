@@ -1,66 +1,138 @@
 #pragma once
 
-// L2: a UI described as a constexpr value, and lv::mount() to build it.
+// L2: a UI described as a constexpr value, and lv::mount to build it.
 //
-//   constexpr auto ui = lv::node<"obj">(
-//       lv::node<"label">(lv::id<"title">, lv::p<"text">("Speed")),
-//       lv::node<"arc">(lv::id<"speedo">, lv::p<"range">(0, 240)));
+//   constexpr auto ui = lv::column({.size = {320_px, 240_px}})[
+//       lv::label({.id = "title", .text = "Speed"}),
+//       lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
+//       lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 //
-//   auto root = lv::mount(ui, lv::screen_active());
-//   root->get<"speedo">().set<"value">(120);
+//   auto root = lv::mount<ui>(lv::screen_active());
+//   root->get<"speedo">().set({.value = 0});
+//
+// Properties go in (), in alphabetical order; children go in [].
+// The tree is read at compile time. Only the calls for the properties that are
+// set end up in the program; the tree itself is not stored in it.
 
 #include <lv/owned.hpp>
+#include <lv/props.hpp>
 #include <lv/view.hpp>
 
 #include <array>
 #include <expected>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace lv {
 
-// ---- the pieces of a tree ---------------------------------------------------
+template <detail::fixed W, class... Kids>
+struct node;
 
-template <detail::fixed Name>
-struct id_t {};
+namespace detail {
 
-// Names a node, so that the mounted tree can hand out a typed view of it.
-template <detail::fixed Name>
-inline constexpr id_t<Name> id{};
+template <class T>
+inline constexpr bool is_node = false;
+template <fixed W, class... Kids>
+inline constexpr bool is_node<node<W, Kids...>> = true;
 
-template <detail::fixed P, class... A>
-struct prop_t {
-  std::tuple<A...> args;
+template <class T>
+concept tree_node = is_node<std::remove_cvref_t<T>>;
+
+// The children of a node. A plain recursive struct: every child has its own
+// member path, which a reference template argument needs to be told apart.
+template <class... Kids>
+struct kids_list {};
+
+template <class First, class... Rest>
+struct kids_list<First, Rest...> {
+  First head;
+  kids_list<Rest...> tail;
 };
 
-// A property and its arguments: p<"range">(0, 240) becomes set<"range">(0, 240).
-template <detail::fixed P, class... A>
-constexpr prop_t<P, std::decay_t<A>...> p(A&&... a) {
-  return {{std::forward<A>(a)...}};
+constexpr kids_list<> make_kids() { return {}; }
+
+template <class First, class... Rest>
+constexpr kids_list<First, Rest...> make_kids(First first, Rest... rest) {
+  return {std::move(first), make_kids(std::move(rest)...)};
 }
 
-template <lv_event_code_t Code, class F>
-struct handler_t {
-  F f;
-};
-
-// An event handler: on<LV_EVENT_CLICKED>(&reset).
-template <lv_event_code_t Code, detail::event_handler F>
-constexpr handler_t<Code, F> on(F f) {
-  return {std::move(f)};
+template <std::size_t I, class First, class... Rest>
+constexpr const auto& kid(const kids_list<First, Rest...>& l) {
+  if constexpr (I == 0)
+    return l.head;
+  else
+    return kid<I - 1>(l.tail);
 }
 
-template <detail::fixed W, class... Items>
-struct node_t {
-  std::tuple<Items...> items;
+// props<W>, named so that it is generated on first use: see props_of.
+template <fixed W, class D>
+using lazy_props = typename props_of<W, D>::type;
+
+}  // namespace detail
+
+// One widget of a tree: its properties and its children.
+template <detail::fixed W, class... Kids>
+struct node {
+  static constexpr auto kind = W;
+  props<W> p{};
+  detail::kids_list<Kids...> kids{};
+
+  // The children: lv::column()[lv::label(...), lv::arc(...)].
+  template <detail::tree_node... K>
+    requires(sizeof...(Kids) == 0)
+  constexpr node<W, K...> operator[](K... k) const {
+    return {p, detail::make_kids(std::move(k)...)};
+  }
+
+  constexpr std::string_view id() const {
+    return p.id.set ? std::get<0>(p.id.v) : std::string_view{};
+  }
 };
 
-// A widget with its ids, properties, handlers and child nodes, in any order.
-template <detail::fixed W, class... Items>
-constexpr node_t<W, std::decay_t<Items>...> node(Items&&... items) {
-  return {{std::forward<Items>(items)...}};
+// Any LVGL widget by name: lv::widget<"spinbox">({...}).
+template <detail::fixed W, class D = void>
+constexpr node<W> widget(detail::lazy_props<W, D> p = {}) {
+  return {std::move(p)};
+}
+
+// Short names for the common widgets. C++ cannot generate these names, so this
+// list is written by hand; lv::widget<"..."> reaches every other widget.
+// Each has exactly one signature, so a wrong value gets a precise error.
+#define LV_DETAIL_WIDGET(name, kind)                                   \
+  template <class D = void>                                            \
+  constexpr node<kind> name(detail::lazy_props<kind, D> p = {}) {      \
+    return {std::move(p)};                                             \
+  }
+
+LV_DETAIL_WIDGET(box, "obj")
+LV_DETAIL_WIDGET(label, "label")
+LV_DETAIL_WIDGET(button, "button")
+LV_DETAIL_WIDGET(arc, "arc")
+LV_DETAIL_WIDGET(bar, "bar")
+LV_DETAIL_WIDGET(slider, "slider")
+LV_DETAIL_WIDGET(toggle, "switch")
+LV_DETAIL_WIDGET(checkbox, "checkbox")
+LV_DETAIL_WIDGET(image, "image")
+LV_DETAIL_WIDGET(textarea, "textarea")
+LV_DETAIL_WIDGET(dropdown, "dropdown")
+LV_DETAIL_WIDGET(roller, "roller")
+LV_DETAIL_WIDGET(spinner, "spinner")
+
+#undef LV_DETAIL_WIDGET
+
+// A box laid out as a flex column, unless .flex_flow says otherwise.
+template <class D = void>
+constexpr node<"obj"> column(detail::lazy_props<"obj", D> p = {}) {
+  if (!p.flex_flow.set) p.flex_flow = LV_FLEX_FLOW_COLUMN;
+  return {std::move(p)};
+}
+
+// A box laid out as a flex row, unless .flex_flow says otherwise.
+template <class D = void>
+constexpr node<"obj"> row(detail::lazy_props<"obj", D> p = {}) {
+  if (!p.flex_flow.set) p.flex_flow = LV_FLEX_FLOW_ROW;
+  return {std::move(p)};
 }
 
 // ---- compile-time facts about a tree ----------------------------------------
@@ -69,39 +141,31 @@ namespace detail {
 
 struct id_entry {
   std::string_view name;
-  std::meta::info view;  // the widget<...> type of the node
+  std::meta::info view;  // the view<...> type of the node
 };
 
-template <fixed W, fixed Name>
-consteval void collect_item(std::vector<id_entry>& out, std::type_identity<id_t<Name>>,
-                            std::type_identity<widget<W>>) {
-  out.push_back({Name.sv(), ^^widget<W>});
+consteval void collect_kids(std::vector<id_entry>&, const kids_list<>&) {}
+
+template <class First, class... Rest>
+consteval void collect_kids(std::vector<id_entry>& out, const kids_list<First, Rest...>& l);
+
+template <fixed W, class... Kids>
+consteval void collect(std::vector<id_entry>& out, const node<W, Kids...>& n) {
+  if (!n.id().empty()) out.push_back({n.id(), ^^view<W>});
+  collect_kids(out, n.kids);
 }
 
-template <fixed W, class Item>
-consteval void collect_item(std::vector<id_entry>&, std::type_identity<Item>,
-                            std::type_identity<widget<W>>) {}
-
-template <fixed W, class... Items>
-consteval void collect(std::vector<id_entry>& out, std::type_identity<node_t<W, Items...>>);
-
-template <fixed Parent, fixed W, class... Items>
-consteval void collect_item(std::vector<id_entry>& out,
-                            std::type_identity<node_t<W, Items...>> child,
-                            std::type_identity<widget<Parent>>) {
-  collect(out, child);
+template <class First, class... Rest>
+consteval void collect_kids(std::vector<id_entry>& out, const kids_list<First, Rest...>& l) {
+  collect(out, l.head);
+  collect_kids(out, l.tail);
 }
 
-template <fixed W, class... Items>
-consteval void collect(std::vector<id_entry>& out, std::type_identity<node_t<W, Items...>>) {
-  (collect_item(out, std::type_identity<Items>{}, std::type_identity<widget<W>>{}), ...);
-}
-
-// The ids of a tree, in the order mount() meets them.
-template <class Tree>
+// The ids of a tree, in the order mount meets them.
+template <const auto& Tree>
 consteval std::vector<id_entry> ids_of() {
   std::vector<id_entry> out;
-  collect(out, std::type_identity<Tree>{});
+  collect(out, Tree);
   for (std::size_t i = 0; i < out.size(); ++i)
     for (std::size_t j = i + 1; j < out.size(); ++j)
       if (out[i].name == out[j].name)
@@ -110,10 +174,10 @@ consteval std::vector<id_entry> ids_of() {
   return out;
 }
 
-template <class Tree>
+template <const auto& Tree>
 inline constexpr std::size_t id_count = ids_of<Tree>().size();
 
-template <class Tree>
+template <const auto& Tree>
 consteval std::size_t id_index(std::string_view name) {
   const auto ids = ids_of<Tree>();
   std::string valid;
@@ -126,7 +190,7 @@ consteval std::size_t id_index(std::string_view name) {
                      (valid.empty() ? std::string("none") : valid) + ".");
 }
 
-template <class Tree>
+template <const auto& Tree>
 consteval std::meta::info id_view(std::string_view name) {
   return ids_of<Tree>()[id_index<Tree>(name)].view;
 }
@@ -138,39 +202,35 @@ struct build_state {
   bool ok = true;
 };
 
-template <fixed W, class... Items>
-lv_obj_t* build(const node_t<W, Items...>& n, lv_obj_t* parent, build_state& st);
+template <class T>
+inline constexpr std::size_t kid_count = 0;
+template <fixed W, class... Kids>
+inline constexpr std::size_t kid_count<node<W, Kids...>> = sizeof...(Kids);
 
-template <fixed W, fixed Name>
-void apply(widget<W> w, const id_t<Name>&, build_state& st) {
-  *st.next_id++ = w.raw();
-}
+// Builds the node `N`, a part of a constexpr tree, under `parent`.
+template <const auto& N>
+lv_obj_t* build(lv_obj_t* parent, build_state& st) {
+  using node_type = std::remove_cvref_t<decltype(N)>;
+  constexpr auto W = node_type::kind;
 
-template <fixed W, fixed P, class... A>
-void apply(widget<W> w, const prop_t<P, A...>& pr, build_state&) {
-  std::apply([w](const A&... a) { w.template set<P>(a...); }, pr.args);
-}
-
-template <fixed W, lv_event_code_t Code, class F>
-void apply(widget<W> w, const handler_t<Code, F>& h, build_state&) {
-  w.template on<Code>(h.f);
-}
-
-template <fixed W, fixed C, class... Items>
-void apply(widget<W> w, const node_t<C, Items...>& child, build_state& st) {
-  build(child, w.raw(), st);
-}
-
-template <fixed W, class... Items>
-lv_obj_t* build(const node_t<W, Items...>& n, lv_obj_t* parent, build_state& st) {
-  if (!st.ok) return nullptr;
-  auto w = widget<W>::create(obj{parent});
+  auto w = view<W>::create(obj{parent});
   if (!w) {
     st.ok = false;
     return nullptr;
   }
-  std::apply([&](const Items&... item) { ((st.ok ? apply(w, item, st) : void()), ...); },
-             n.items);
+  if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
+
+  template for (constexpr auto i : indices<members_of_props<W>.size()>) {
+    constexpr auto m = members_of_props<W>[i];
+    if constexpr (N.p.[:m:].set) {
+      constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
+      apply_member<W, i>(w.raw(), a);
+    }
+  }
+
+  template for (constexpr auto i : indices<kid_count<node_type>>) {
+    if (st.ok) build<kid<i>(N.kids)>(w.raw(), st);
+  }
   return w.raw();
 }
 
@@ -183,13 +243,13 @@ enum class mount_error {
 };
 
 // The widgets built from a tree. Owns them: they are deleted with this object.
-template <class Tree>
+template <const auto& Tree>
 class mounted {
   owned<obj> root_;
   std::array<lv_obj_t*, detail::id_count<Tree>> ids_{};
 
-  template <class T>
-  friend std::expected<mounted<T>, mount_error> mount(const T&, obj);
+  template <const auto& T>
+  friend std::expected<mounted<T>, mount_error> mount(obj);
 
  public:
   mounted() = default;
@@ -199,22 +259,22 @@ class mounted {
   // The root widget, or an empty view if its parent already deleted it.
   obj root() const { return root_.get(); }
 
-  // A typed view of the node named by lv::id<"name">.
+  // A typed view of the node with this id.
   template <detail::fixed Name>
   auto get() const {
     contract_assert(root_ && "the mounted tree was deleted by its parent");
-    using view = typename[:detail::id_view<Tree>(Name.sv()):];
-    return view{ids_[detail::id_index<Tree>(Name.sv())]};
+    using view_type = typename[:detail::id_view<Tree>(Name.sv()):];
+    return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
   }
 };
 
-// Builds the widgets of `tree` under `parent`.
-template <class Tree>
-std::expected<mounted<Tree>, mount_error> mount(const Tree& tree, obj parent) {
+// Builds the widgets of the constexpr tree `Tree` under `parent`.
+template <const auto& Tree>
+std::expected<mounted<Tree>, mount_error> mount(obj parent) {
   contract_assert(parent.raw() != nullptr);
   mounted<Tree> m;
   detail::build_state st{m.ids_.data()};
-  lv_obj_t* root = detail::build(tree, parent.raw(), st);
+  lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
   m.root_ = owned<obj>{obj{root}};  // also deletes a half-built tree on failure
   if (!st.ok) return std::unexpected(mount_error::out_of_memory);
   return m;

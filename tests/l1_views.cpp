@@ -7,6 +7,9 @@
 
 namespace {
 
+using label_view = lv::view<"label">;
+using namespace lv::literals;
+
 std::size_t free_bytes() {
   lv_mem_monitor_t m;
   lv_mem_monitor(&m);
@@ -18,7 +21,7 @@ int stateless_calls = 0;
 void properties(lv::obj screen) {
   auto l = screen.add<"label">().set<"text">("Speed");
   CHECK(std::strcmp(l.get<"text">(), "Speed") == 0);
-  static_assert(std::is_same_v<decltype(l), lv::label>);
+  static_assert(std::is_same_v<decltype(l), lv::view<"label">>);
 
   auto a = screen.add<"arc">().set<"range">(0, 240).set<"value">(120);
   CHECK(a.get<"value">() == 120);
@@ -29,11 +32,20 @@ void properties(lv::obj screen) {
   l.set<"user_data">(&tag);
   CHECK(l.get<"user_data">() == &tag);
 
+  // Typed properties: units and strict integers.
+  a.set({.rotation = 90_deg, .value = 30});
+  CHECK(a.get<"value">() == 30);
+  CHECK(a.get<"rotation">() == 90);
+  l.set({.text = "km/h", .width = 80_px});
+  CHECK(std::strcmp(l.get<"text">(), "km/h") == 0);
+  lv_obj_update_layout(l.raw());
+  CHECK(l.get<"width">() == 80);
+
   // A view is a pointer: copies compare equal and convert to obj.
   lv::obj as_obj = l;
   CHECK(as_obj.raw() == l.raw());
-  CHECK(lv::label{l.raw()} == l);
-  CHECK(!lv::label{});
+  CHECK(lv::view<"label">{l.raw()} == l);
+  CHECK(!lv::view<"label">{});
 }
 
 void events(lv::obj screen) {
@@ -43,7 +55,7 @@ void events(lv::obj screen) {
   b.on<LV_EVENT_CLICKED>([] { ++stateless_calls; });
   int captured_calls = 0;
   b.on<LV_EVENT_CLICKED>([&captured_calls](lv::event e) {
-    if (e.code() == LV_EVENT_CLICKED && e.target<lv::button>()) ++captured_calls;
+    if (e.code() == LV_EVENT_CLICKED && e.target<lv::view<"button">>()) ++captured_calls;
   });
   int other_calls = 0;
   b.on<LV_EVENT_PRESSED>([p = &other_calls] { ++*p; });
@@ -57,11 +69,11 @@ void events(lv::obj screen) {
 
 void weak_views(lv::obj screen) {
   auto box = screen.add<"obj">();
-  lv::weak<lv::label> w{box.add<"label">()};
+  lv::weak<label_view> w{box.add<"label">()};
   CHECK(w && !w.expired());
 
-  lv::weak<lv::label> copy = w;
-  lv::weak<lv::label> moved = std::move(w);
+  lv::weak<label_view> copy = w;
+  lv::weak<label_view> moved = std::move(w);
   CHECK(w.expired());
   CHECK(copy && moved && copy.get() == moved.get());
 
@@ -75,9 +87,9 @@ void owned_views(lv::obj screen) {
   const auto before = count();
 
   {
-    lv::owned<lv::label> o{screen.add<"label">()};
+    lv::owned<label_view> o{screen.add<"label">()};
     CHECK(count() == before + 1);
-    lv::owned<lv::label> p = std::move(o);
+    lv::owned<label_view> p = std::move(o);
     CHECK(!o && p);
     CHECK(count() == before + 1);
   }
@@ -86,24 +98,24 @@ void owned_views(lv::obj screen) {
   // The parent deletes first: the owner must not delete again.
   {
     auto box = screen.add<"obj">();
-    lv::owned<lv::label> o{box.add<"label">()};
+    lv::owned<label_view> o{box.add<"label">()};
     lv_obj_delete(box.raw());
     CHECK(!o);
   }
   CHECK(count() == before);
 
   // release() hands the widget back to its parent.
-  lv::label kept;
+  label_view kept;
   {
-    lv::owned<lv::label> o{screen.add<"label">()};
+    lv::owned<label_view> o{screen.add<"label">()};
     kept = o.release();
     CHECK(!o);
   }
   CHECK(count() == before + 1);
   lv_obj_delete(kept.raw());
 
-  lv::owned<lv::label> a{screen.add<"label">()};
-  a = lv::owned<lv::label>{screen.add<"label">()};  // the first label is deleted
+  lv::owned<label_view> a{screen.add<"label">()};
+  a = lv::owned<label_view>{screen.add<"label">()};  // the first label is deleted
   CHECK(count() == before + 1);
   a.reset();
   CHECK(count() == before);
