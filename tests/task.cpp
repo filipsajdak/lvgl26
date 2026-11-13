@@ -47,6 +47,79 @@ lv::task<> watch_mode(int* seen) {
   *seen = m.value;
 }
 
+// Waits for whichever comes first and says which it was.
+lv::task<> confirm(lv::view<"button"> ok, lv::view<"button"> cancel, int* answer) {
+  auto outcome = co_await lv::first(lv::next<LV_EVENT_CLICKED>(ok) | lv::as<"accepted">,
+                                    lv::next<LV_EVENT_CLICKED>(cancel) | lv::as<"rejected">,
+                                    lv::sleep(500 * ms));
+  static_assert(std::is_same_v<decltype(outcome),
+                               lv::outcome<lv::named<"accepted">, lv::gone, lv::named<"rejected">,
+                                           lv::elapsed>>);
+  *answer = outcome.match<int>({.accepted = [] { return 1; },
+                                .elapsed = [] { return 3; },
+                                .gone = [] { return 4; },
+                                .rejected = [] { return 2; }});
+}
+
+// A case can carry a value, and a handler can capture.
+lv::task<> mode_or_timeout(int* out) {
+  const int base = 100;
+  auto outcome = co_await lv::first(lv::changed(current_mode), lv::sleep(50 * ms));
+  *out = outcome.match<int>({.changed_to = [&](lv::changed_to<mode> c) { return base + c.value.value; },
+                             .elapsed = [] { return -1; }});
+}
+
+// The outcome of a single wait is matched the same way; its case is named after the event.
+lv::task<> one_event(lv::view<"button"> button, const char** what) {
+  (co_await lv::next<LV_EVENT_VALUE_CHANGED>(button))
+      .match({.gone = [&] { *what = "gone"; }, .value_changed = [&] { *what = "value_changed"; }});
+}
+
+void first_of_several(lv::obj screen) {
+  const auto before = free_bytes();
+  for (int scenario = 1; scenario <= 4; ++scenario) {
+    auto ok = screen.add<"button">();
+    auto cancel = screen.add<"button">();
+    int answer = 0;
+    check(lv::spawn(confirm(ok, cancel, &answer)));
+    check(answer == 0);
+
+    if (scenario == 1) click(ok);
+    if (scenario == 2) click(cancel);
+    if (scenario == 3) lv_test_wait(600);
+    if (scenario == 4) lv_obj_delete(ok.raw());
+    check(answer == scenario);
+
+    // The losers were cancelled: none of this reaches the finished task.
+    answer = 0;
+    if (scenario != 4) click(ok);
+    click(cancel);
+    lv_test_wait(600);
+    check(answer == 0);
+
+    if (scenario != 4) lv_obj_delete(ok.raw());
+    lv_obj_delete(cancel.raw());
+  }
+  check(free_bytes() == before);  // no timer, handler or frame is left
+
+  int out = 0;
+  check(lv::spawn(mode_or_timeout(&out)));
+  current_mode = mode{7};
+  check(out == 107);
+  check(lv::spawn(mode_or_timeout(&out)));
+  lv_test_wait(60);
+  check(out == -1);
+
+  const char* what = "";
+  auto b = screen.add<"button">();
+  check(lv::spawn(one_event(b, &what)));
+  lv_obj_send_event(b.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(std::strcmp(what, "value_changed") == 0);
+  check(lv::spawn(one_event(b, &what)));
+  lv_obj_delete(b.raw());
+  check(std::strcmp(what, "gone") == 0);
+}
+
 void events_and_timers(lv::obj screen) {
   auto button = screen.add<"button">();
   bool ended = false;
@@ -121,6 +194,7 @@ int main() {
   events_and_timers(screen);
   tasks_await_tasks();
   state_changes();
+  first_of_several(screen);
   nothing_is_left_behind(screen);
 
   clicks.reset();
