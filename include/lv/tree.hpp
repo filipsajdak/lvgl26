@@ -180,7 +180,7 @@ consteval std::vector<id_entry> ids_of() {
   for (std::size_t i = 0; i < out.size(); ++i)
     for (std::size_t j = i + 1; j < out.size(); ++j)
       if (out[i].name == out[j].name)
-        throw unknown_name("lv: the id '" + std::string(out[i].name) +
+        throw unknown_name("lv: the id '" + str(out[i].name) +
                            "' is used twice in one tree. Ids must be unique.");
   return out;
 }
@@ -197,8 +197,8 @@ consteval std::size_t id_index(std::string_view name) {
     if (!valid.empty()) valid += ", ";
     valid += ids[i].name;
   }
-  throw unknown_name("lv: the tree has no id '" + std::string(name) + "'. Its ids: " +
-                     (valid.empty() ? std::string("none") : valid) + ".");
+  throw unknown_name("lv: the tree has no id '" + str(name) + "'. Its ids: " +
+                     (valid.empty() ? str("none") : valid) + ".");
 }
 
 template <const auto& Tree>

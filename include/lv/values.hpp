@@ -77,7 +77,7 @@ consteval std::string how_to_write() {
   if (^^T == ^^strict<bool>) return "true or false";
   if (std::meta::has_template_arguments(^^T) && std::meta::template_of(^^T) == ^^strict)
     return "a whole number (not bool, not floating point)";
-  return std::string(std::meta::display_string_of(^^T));
+  return str(std::meta::display_string_of(^^T));
 }
 
 template <class... Ts>
@@ -89,7 +89,7 @@ struct wrong_value {
     ((m += sep + how_to_write<Ts>(), sep = ", then "), ...);
     m += ". You gave ";
     sep.clear();
-    ((m += sep + std::string(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
+    ((m += sep + str(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
      ...);
     if (sizeof...(U) == 0) m += "nothing";
     return std::define_static_string(m + ".");
