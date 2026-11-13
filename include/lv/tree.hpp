@@ -237,6 +237,10 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
       if constexpr (is_set(N.p.[:m:])) add_const_style<N.p.[:m:]>(w.raw(), LV_PART_MAIN);
     } else if constexpr (is_set(N.p.[:m:])) {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
+      if constexpr (requires { a.bound; })
+        static_assert(a.bound == nullptr || bindable<W, i>(),
+                      "lv: this property cannot follow a state. LVGL has no bind function "
+                      "for it and it takes more than one value.");
       apply_member<W, i>(w.raw(), a);
     }
   }

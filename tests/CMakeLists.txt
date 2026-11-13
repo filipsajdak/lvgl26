@@ -20,6 +20,7 @@ endfunction()
 lvgl26_test(smoke)
 lvgl26_test(l1_views)
 lvgl26_test(json)
+lvgl26_test(state)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
@@ -56,3 +57,7 @@ lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that
 lvgl26_compile_fail(token_bad_unit "design tokens: the dimension unit 'pt' is not px, rem or %")
 lvgl26_compile_fail(token_misspelled "has no member named 'primry'")
 lvgl26_compile_fail(token_bad_shadow "design tokens: a composite token has no 'blur'")
+lvgl26_compile_fail(bind_wrong_type "this property cannot be bound to a state of that type")
+lvgl26_compile_fail(bind_format_not_text "is for text properties only")
+lvgl26_compile_fail(state_bad_type "a state holds an integer, a bool, an enum")
+lvgl26_compile_fail(bind_two_values "this property cannot follow a state")

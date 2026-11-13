@@ -19,6 +19,8 @@
 namespace lv {
 
 template <class T>
+class state;
+template <class T>
 class token;
 template <class T>
 struct raw_value;
@@ -108,11 +110,46 @@ struct wrong_value {
 
 }  // namespace detail
 
-// One member of a props struct: unset, or the arguments of one setter.
+// A property bound to a state: lv::bind(speed). See lv/state.hpp.
+template <class T>
+struct binding {
+  const state<T>* source;
+};
+
+// A text property bound to a state through a printf format: lv::bind(speed, "%d km/h").
+template <class T>
+struct formatted_binding {
+  const state<T>* source;
+  const char* format;
+};
+
+namespace detail {
+
+template <class T>
+inline constexpr bool is_binding = false;
+template <class T>
+inline constexpr bool is_binding<binding<T>> = true;
+template <class T>
+inline constexpr bool is_binding<formatted_binding<T>> = true;
+
+// The LVGL subject behind a state, created on first use.
+template <class T>
+lv_subject_t* subject_of(const void* source) {
+  return static_cast<const state<T>*>(source)->raw();
+}
+
+}  // namespace detail
+
+// One member of a props struct: unset, the arguments of one setter, or a binding.
 template <class... Ts>
 struct arg {
   bool set = false;
   std::tuple<Ts...> v{};
+
+  // Set when the property follows a state instead of holding a value.
+  const void* bound = nullptr;
+  lv_subject_t* (*bound_subject)(const void*) = nullptr;
+  const char* bound_format = nullptr;
 
   constexpr arg() = default;
 
@@ -120,8 +157,25 @@ struct arg {
   // the compiler's "could not convert".
   template <class... U>
     requires(sizeof...(U) > 0) &&
-            (!(sizeof...(U) == 1 && (std::same_as<std::remove_cvref_t<U>, arg> && ...)))
+            (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
+                                      detail::is_binding<std::remove_cvref_t<U>>) && ...)))
   constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
+
+  template <class T>
+  constexpr arg(binding<T> b)
+      : set(true), bound(b.source), bound_subject(&detail::subject_of<T>) {
+    static_assert(std::convertible_to<T, std::tuple_element_t<0, std::tuple<Ts...>>>,
+                  "lv: this property cannot be bound to a state of that type. The state's "
+                  "type must be what the property takes.");
+  }
+
+  template <class T>
+  constexpr arg(formatted_binding<T> b)
+      : set(true), bound(b.source), bound_subject(&detail::subject_of<T>),
+        bound_format(b.format) {
+    static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
+                  "lv: lv::bind(state, format) is for text properties only.");
+  }
 
  private:
   template <class... U>
