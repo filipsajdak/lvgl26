@@ -133,7 +133,7 @@ consteval std::vector<member_item> members(std::string_view widget) {
 
   std::vector<member_item> own;
   if (widget != "obj") {
-    const std::string prefix = "lv_" + std::string(widget) + "_set_";
+    const std::string prefix = "lv_" + str(widget) + "_set_";
     for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item(f, prefix.size()));
     sort_by_name(own);
   }
@@ -156,7 +156,7 @@ template <class D = void>
 consteval std::vector<std::meta::info> member_specs(std::string_view widget) {
   std::vector<std::meta::info> specs;
   for (const auto& it : members<D>(widget))
-    specs.push_back(std::meta::data_member_spec(it.type, {.name = it.name}));
+    specs.push_back(std::meta::data_member_spec(it.type, {.name = str(it.name)}));
   return specs;
 }
 
@@ -195,6 +195,10 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
 }
 
 // Applies member number I of props<W>, whose value is `a`, to a widget.
+// set() at run time instantiates this for every member, including the few setters
+// LVGL has deprecated; reflection cannot see that attribute, so the warning is off here.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 template <fixed W, std::size_t I, class A>
 void apply_member(lv_obj_t* o, const A& a) {
   constexpr auto target = targets<W>[I];
@@ -210,6 +214,7 @@ void apply_member(lv_obj_t* o, const A& a) {
     [:target:](o, lower(x)...);
   }
 }
+#pragma GCC diagnostic pop
 
 // props<W>, named so that it is generated on first use: see props_of.
 template <fixed W, class D>

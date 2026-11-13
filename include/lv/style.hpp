@@ -121,7 +121,7 @@ consteval std::vector<std::meta::info> style_specs() {
   for (std::size_t i = 0; i < style_table<D>.size(); i += 3)
     out.push_back(std::meta::data_member_spec(
         style_table<D>[i],
-        {.name = std::meta::identifier_of(style_table<D>[i + 1]).substr(style_prefix.size())}));
+        {.name = str(std::meta::identifier_of(style_table<D>[i + 1]).substr(style_prefix.size()))}));
   return out;
 }
 
@@ -228,6 +228,18 @@ constexpr std::array<lv_style_const_prop_t, const_count<S, D> + 1> const_props()
   return out;
 }
 
+// What LVGL's LV_STYLE_CONST_INIT macro expands to, without its C cast.
+constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
+  lv_style_t s{};
+#if LV_USE_ASSERT_STYLE
+  s.sentinel = LV_STYLE_SENTINEL_VALUE;
+#endif
+  s.values_and_props = const_cast<void*>(static_cast<const void*>(props));
+  s.has_group = 0xFFFFFFFF;
+  s.prop_cnt = 255;
+  return s;
+}
+
 // Adds the constant style S to a widget. What LVGL can keep in a const style goes
 // to read-only memory; the few shorthands without a style id (pad_all, size, ...)
 // are set as local styles.
@@ -235,7 +247,7 @@ template <const auto& S, class D = void>
 void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
   if constexpr (const_count<S, D> > 0) {
     static constexpr auto props = const_props<S, D>();
-    static LV_STYLE_CONST_INIT(st, props.data());
+    static constexpr lv_style_t st = const_style(props.data());
     lv_obj_add_style(o, &st, selector);
   }
   template for (constexpr auto i : indices<style_members<D>.size()>) {

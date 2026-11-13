@@ -9,13 +9,15 @@ endif()
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
+include(cmake/quality.cmake)
 include(cmake/lvgl.cmake)
 
 add_library(lvgl26 INTERFACE)
 add_library(lvgl26::lvgl26 ALIAS lvgl26)
 target_include_directories(lvgl26 INTERFACE include)
 target_compile_features(lvgl26 INTERFACE cxx_std_26)
-target_compile_options(lvgl26 INTERFACE -freflection)
+# Designated initializers leave most members of a props struct out on purpose.
+target_compile_options(lvgl26 INTERFACE -freflection -Wno-missing-field-initializers)
 # stdc++exp holds GCC's default contract violation handler.
 target_link_libraries(lvgl26 INTERFACE lvgl::lvgl stdc++exp)
 

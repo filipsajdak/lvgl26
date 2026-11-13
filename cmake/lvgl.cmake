@@ -18,6 +18,9 @@ FetchContent_Declare(lvgl
   EXCLUDE_FROM_ALL)
 FetchContent_MakeAvailable(lvgl)
 
+# LVGL's headers are system headers to us: our warning flags do not apply to them.
+set_target_properties(lvgl PROPERTIES SYSTEM TRUE)
+
 # The tests render headless and compare screenshots.
 if(LVGL26_BUILD_TESTS)
   target_compile_definitions(lvgl PUBLIC

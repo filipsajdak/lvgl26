@@ -123,9 +123,9 @@ class view {
       lv_obj_add_event_cb(
           self.raw(),
           [](lv_event_t* e) {
-            void* state = lv_event_get_user_data(e);
+            void* stored = lv_event_get_user_data(e);
             alignas(F) unsigned char buf[sizeof(F)];
-            std::memcpy(buf, &state, sizeof(F));
+            std::memcpy(buf, &stored, sizeof(F));
             detail::call(*reinterpret_cast<F*>(buf), e);
           },
           Code, state);

@@ -1,6 +1,6 @@
 function(lvgl26_test name)
   add_executable(${name} ${name}.cpp)
-  target_link_libraries(${name} PRIVATE lvgl26::lvgl26)
+  target_link_libraries(${name} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
@@ -18,11 +18,11 @@ lvgl26_test(l1_views)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
-target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26)
+target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
 
 add_executable(styles styles.cpp)
-target_link_libraries(styles PRIVATE lvgl26::lvgl26)
+target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
