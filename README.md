@@ -36,17 +36,18 @@ How it works:
 State is typed and lives in ordinary globals. Widgets follow it:
 
 ```cpp
-struct kmh { int value; };              // a named value: the type says what the number is
-constinit lv::state<kmh> speed{kmh{0}};
+inline constexpr lv::unit<"km/h"> kmh;  // your own unit, in one line
+constinit lv::state speed{0 * kmh};
 
 constexpr auto ui = lv::column[
     lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),     // follows, and writes back
-    lv::label({.text = lv::bind(speed, "{} km/h")})];
+    lv::label({.text = lv::bind(speed)})];                      // shows "0 km/h"
 
-speed = kmh{120};   // both widgets update
+speed = 120 * kmh;   // both widgets update
+speed = 3000 * rpm;  // error: not the same unit
 ```
 
-A state holds a named value (any struct with one integer, bool or enum member), a bool, an enum, a
+A state holds a quantity, any struct with one integer, bool or enum member, a bool, an enum, a
 color or a pointer. `lv::state<int>` is rejected unless `lv::config::raw_integer_state` is set.
 
 A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a

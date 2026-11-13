@@ -7,6 +7,7 @@
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
+#include <lv/quantity.hpp>
 #include <lv/units.hpp>
 
 #include <array>
@@ -227,9 +228,11 @@ struct arg {
   constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
 
   template <class T>
-  constexpr arg(binding<T> b) : set(true), bound(b.source), bound_subject(b.subject) {
+  constexpr arg(binding<T> b)
+      : set(true), bound(b.source), bound_subject(b.subject),
+        bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
     using first = std::tuple_element_t<0, std::tuple<Ts...>>;
-    static_assert(std::convertible_to<T, first> ||
+    static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
                       std::convertible_to<typename detail::state_payload<T>::type, first>,
                   "lv: this property cannot be bound to a state of that type. The state's "
                   "type, or the value inside its named type, must be what the property takes.");
@@ -243,6 +246,11 @@ struct arg {
   }
 
  private:
+  // A quantity bound to a text property is shown with its unit: "120 km/h".
+  template <class T>
+  static constexpr bool text_of_quantity =
+      detail::is_quantity<T> && sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...);
+
   template <class... U>
   static constexpr bool fits = sizeof...(U) == sizeof...(Ts) && requires {
     requires(std::convertible_to<U, Ts> && ...);

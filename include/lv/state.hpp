@@ -2,13 +2,13 @@
 
 // Typed application state over LVGL's observer.
 //
-//   struct kmh { int value; };                    // a named value: says what the number is
-//   constinit lv::state<kmh> speed{kmh{0}};       // a constant-initialized global
+//   inline constexpr lv::unit<"km/h"> kmh;        // a unit, in one line
+//   constinit lv::state speed{0 * kmh};           // a constant-initialized global
 //
 //   lv::arc({.value = lv::bind(speed)})           // the arc follows speed, and writes back
-//   lv::label({.text = lv::bind(speed, "{} km/h")})
+//   lv::label({.text = lv::bind(speed)})          // shows "0 km/h"
 //
-//   speed = kmh{120};                             // every bound widget updates
+//   speed = 120 * kmh;                            // every bound widget updates
 //
 // A state is an lv_subject_t underneath, created the first time something binds to
 // it or asks for raw(). C code can use that subject like any other.
@@ -82,13 +82,14 @@ lv_subject_t* subject_of(const void* source) {
 template <class T, class O = override>
 class state {
   static_assert(detail::state_value<T>,
-                "lv: a state holds a named value (a struct with one integer, bool or enum "
-                "member, such as `struct kmh { int value; };`), a bool, an enum, an "
-                "lv_color_t or a pointer (for text: const char*).");
+                "lv: a state holds a quantity (`0 * kmh`, with `inline constexpr "
+                "lv::unit<\"km/h\"> kmh;`), a struct with one integer, bool or enum member, "
+                "a bool, an enum, an lv_color_t or a pointer (for text: const char*).");
   static_assert(!detail::integer<T> || cfg<O>.raw_integer_state,
                 "lv: a state of a plain integer does not say what the number is. Give it a "
-                "named type: `struct kmh { int value; }; lv::state<kmh> speed;`. To allow "
-                "plain integers, set lv::config::raw_integer_state.");
+                "unit, one line: `inline constexpr lv::unit<\"km/h\"> kmh;` and then "
+                "`lv::state speed{0 * kmh};`. To allow plain integers, set "
+                "lv::config::raw_integer_state.");
 
   T value_{};
   mutable lv_subject_t* subject_ = nullptr;

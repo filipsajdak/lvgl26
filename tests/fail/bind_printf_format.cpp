@@ -1,4 +1,4 @@
 #include <lv/lv.hpp>
-struct kmh { int value; };
-constinit lv::state<kmh> n{kmh{0}};
+inline constexpr lv::unit<"km/h"> kmh;
+constinit lv::state n{0 * kmh};
 constexpr auto ui = lv::label({.text = lv::bind(n, "%d km/h")});
