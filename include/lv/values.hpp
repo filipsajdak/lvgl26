@@ -13,9 +13,17 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace lv {
+
+template <class T>
+class token;
+template <class T>
+struct raw_value;
+template <class T>
+class styled;
 
 namespace detail {
 
@@ -67,17 +75,19 @@ struct handler {
 
 namespace detail {
 
-// How to write a value of type T, for the error message.
-template <class T>
-consteval std::string how_to_write() {
-  if (^^T == ^^length) return "a length (120_px, 50_pct or lv::size_content)";
-  if (^^T == ^^angle) return "an angle (90_deg)";
-  if (^^T == ^^duration) return "a time (300_ms)";
-  if (^^T == ^^opa) return "an opacity (50_pct)";
-  if (^^T == ^^strict<bool>) return "true or false";
-  if (std::meta::has_template_arguments(^^T) && std::meta::template_of(^^T) == ^^strict)
+// How to write a value of type `t`, for the error message.
+consteval std::string how_to_write(std::meta::info t) {
+  if (t == ^^length) return "a length (120_px, 50_pct or lv::size_content)";
+  if (t == ^^angle) return "an angle (90_deg)";
+  if (t == ^^duration) return "a time (300_ms)";
+  if (t == ^^opa) return "an opacity (50_pct)";
+  if (t == ^^strict<bool>) return "true or false";
+  if (std::meta::has_template_arguments(t) && std::meta::template_of(t) == ^^strict)
     return "a whole number (not bool, not floating point)";
-  return str(std::meta::display_string_of(^^T));
+  if (std::meta::has_template_arguments(t) && std::meta::template_of(t) == ^^styled)
+    return "a design token (for example tok.space.md) or lv::raw(...), holding " +
+           how_to_write(std::meta::template_arguments_of(t)[0]);
+  return str(std::meta::display_string_of(t));
 }
 
 template <class... Ts>
@@ -86,7 +96,7 @@ struct wrong_value {
   static consteval std::string_view message() {
     std::string m = "lv: wrong value for this property. It takes ";
     std::string sep;
-    ((m += sep + how_to_write<Ts>(), sep = ", then "), ...);
+    ((m += sep + how_to_write(^^Ts), sep = ", then "), ...);
     m += ". You gave ";
     sep.clear();
     ((m += sep + str(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
@@ -200,5 +210,89 @@ constexpr bool is_set(const arg<Ts...>& a) {
 }
 
 }  // namespace detail
+
+// ---- design tokens and styles ----------------------------------------------
+
+namespace detail {
+struct from_design_tokens {};
+}  // namespace detail
+
+// A value that was read from a design token file. It converts to the plain value.
+template <class T>
+class token {
+  T v_{};
+
+ public:
+  constexpr token() = default;
+  constexpr token(T v, detail::from_design_tokens) : v_(v) {}
+  constexpr operator const T&() const { return v_; }
+  constexpr const T& operator*() const { return v_; }
+  constexpr const T* operator->() const { return &v_; }
+};
+
+// A style value that is deliberately not a design token. See lv::raw.
+template <class T>
+struct raw_value {
+  T value;
+};
+
+// Marks a style value as a deliberate exception to "styles use design tokens":
+// lv::raw(1_px). Easy to search for in a review.
+template <class T>
+constexpr raw_value<T> raw(T value) {
+  return {value};
+}
+
+namespace detail {
+
+template <class T>
+inline constexpr bool is_token_or_raw = false;
+template <class T>
+inline constexpr bool is_token_or_raw<token<T>> = true;
+template <class T>
+inline constexpr bool is_token_or_raw<raw_value<T>> = true;
+
+}  // namespace detail
+
+// The type of a design value in a style: a color, length, opacity, time or number.
+// It only accepts a design token or lv::raw(...), so that styles cannot drift away
+// from the design system. Define LV_ALLOW_RAW_STYLE_VALUES to accept plain values.
+template <class T>
+class styled {
+  T v_{};
+
+ public:
+  constexpr styled() = default;
+
+  template <class U>
+    requires std::convertible_to<const U&, T>
+  constexpr styled(const token<U>& t) : v_(static_cast<T>(*t)) {}
+
+  // A number token from 0 to 1 is an opacity.
+  constexpr styled(const token<double>& t)
+    requires std::same_as<T, opa>
+      : v_(percent{static_cast<std::int32_t>(*t * 100 + 0.5)}) {}
+
+  // A number token that is a whole number.
+  template <std::same_as<double> N>
+    requires requires { typename std::type_identity_t<decltype(T{}.raw())>; } &&
+             detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>)
+  constexpr styled(const token<N>& t) : v_(static_cast<decltype(T{}.raw())>(*t)) {
+    contract_assert(static_cast<double>(static_cast<decltype(T{}.raw())>(*t)) == *t);
+  }
+
+  template <class U>
+    requires std::convertible_to<const U&, T>
+  constexpr styled(const raw_value<U>& r) : v_(static_cast<T>(r.value)) {}
+
+#ifdef LV_ALLOW_RAW_STYLE_VALUES
+  template <class U>
+    requires(!detail::is_token_or_raw<std::remove_cvref_t<U>>) &&
+            (!std::same_as<std::remove_cvref_t<U>, styled>) && std::convertible_to<U, T>
+  constexpr styled(U&& u) : v_(static_cast<T>(std::forward<U>(u))) {}
+#endif
+
+  constexpr decltype(auto) raw() const { return detail::lower(v_); }
+};
 
 }  // namespace lv

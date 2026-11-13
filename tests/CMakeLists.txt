@@ -31,8 +31,10 @@ target_link_libraries(tokens PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_
 add_test(NAME tokens COMMAND tokens A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_dark.png
                                     A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_light.png)
 
+# This test turns the token rule off, to test styles on their own and the switch itself.
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+target_compile_definitions(styles PRIVATE LV_ALLOW_RAW_STYLE_VALUES)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
@@ -46,8 +48,11 @@ lvgl26_compile_fail(props_wrong_unit "It takes an angle \\(90_deg\\). You gave l
 lvgl26_compile_fail(props_bool_as_int "It takes a whole number \\(not bool, not floating point\\). You gave bool")
 lvgl26_compile_fail(props_narrowing "It takes a whole number \\(not bool, not floating point\\). You gave double")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
-lvgl26_compile_fail(style_needs_unit "It takes a length \\(120_px, 50_pct or lv::size_content\\). You gave int")
+lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example tok.space.md\\) or lv::raw\\(...\\), holding a length .*You gave lv::length")
+lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
+lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
 lvgl26_compile_fail(token_bad_unit "design tokens: the dimension unit 'pt' is not px, rem or %")
 lvgl26_compile_fail(token_misspelled "has no member named 'primry'")
+lvgl26_compile_fail(token_bad_shadow "design tokens: a composite token has no 'blur'")

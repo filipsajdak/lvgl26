@@ -25,11 +25,13 @@ constexpr auto ui = lv::column(
 
 // The types of a few style members.
 using style_type = std::remove_cvref_t<decltype(card)>;
-static_assert(std::is_same_v<decltype(style_type{}.radius), lv::arg<lv::length>>);
-static_assert(std::is_same_v<decltype(style_type{}.bg_opa), lv::arg<lv::opa>>);
-static_assert(std::is_same_v<decltype(style_type{}.bg_color), lv::arg<lv_color_t>>);
+static_assert(std::is_same_v<decltype(style_type{}.radius), lv::arg<lv::styled<lv::length>>>);
+static_assert(std::is_same_v<decltype(style_type{}.bg_opa), lv::arg<lv::styled<lv::opa>>>);
+static_assert(std::is_same_v<decltype(style_type{}.bg_color), lv::arg<lv::styled<lv_color_t>>>);
+// Enums are structure, not design: they stay plain.
+static_assert(std::is_same_v<decltype(style_type{}.text_align), lv::arg<lv_text_align_t>>);
 static_assert(std::is_same_v<decltype(style_type{}.transform_rotation),
-                             lv::arg<lv::strict<std::int32_t>>>);
+                             lv::arg<lv::styled<lv::strict<std::int32_t>>>>);
 
 // card sets five properties; pad_all has no LV_STYLE_* id, so four go to the const style.
 static_assert(lv::detail::const_count<card> == 4);

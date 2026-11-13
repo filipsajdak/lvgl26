@@ -1,39 +1,248 @@
 {
-  "$description": "Test tokens for lvgl26, in the W3C Design Tokens format.",
+  "$description": "Test tokens for lvgl26, in the W3C Design Tokens format. Three tiers: primitive values, semantic roles, component tokens.",
+  "primitive": {
+    "color": {
+      "$type": "color",
+      "blue-500": {
+        "$value": "#3366ff"
+      },
+      "ink-900": {
+        "$value": "#f6f8fa"
+      },
+      "ink-700": {
+        "$value": "#ffffff"
+      },
+      "ink-500": {
+        "$value": "#d0d7de"
+      },
+      "paper": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9,
+            0.93,
+            0.95
+          ],
+          "hex": "#1f2328"
+        }
+      },
+      "black": {
+        "$value": "#000000"
+      }
+    },
+    "space": {
+      "$type": "dimension",
+      "0": {
+        "$value": "0px"
+      },
+      "1": {
+        "$value": "4px"
+      },
+      "3": {
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
+      },
+      "6": {
+        "$value": "1.5rem"
+      }
+    },
+    "radius": {
+      "$type": "dimension",
+      "none": {
+        "$value": "0px"
+      },
+      "md": {
+        "$value": "20px"
+      }
+    },
+    "opacity": {
+      "$type": "number",
+      "opaque": {
+        "$value": 1
+      },
+      "muted": {
+        "$value": 0.8
+      },
+      "none": {
+        "$value": 0
+      }
+    },
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": "150ms"
+      },
+      "slow": {
+        "$value": {
+          "value": 0.4,
+          "unit": "s"
+        }
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [
+          0.2,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "font": {
+      "family": {
+        "$type": "fontFamily",
+        "$value": [
+          "Montserrat",
+          "sans-serif"
+        ]
+      },
+      "weight-bold": {
+        "$type": "fontWeight",
+        "$value": "bold"
+      },
+      "scale": {
+        "$type": "number",
+        "$value": 1.25
+      }
+    }
+  },
   "color": {
     "$type": "color",
-    "palette": {
-      "blue-500": { "$value": "#3366ff" },
-      "ink-900": { "$value": "#f6f8fa" },
-      "ink-700": { "$value": "#ffffff" },
-      "paper": { "$value": { "colorSpace": "srgb", "components": [0.9, 0.93, 0.95], "hex": "#1f2328" } }
+    "primary": {
+      "$value": "{primitive.color.blue-500}"
     },
-    "primary": { "$value": "{color.palette.blue-500}" },
-    "surface": { "$value": "{color.palette.ink-900}" },
-    "card": { "$value": "{color.palette.ink-700}" },
-    "text": { "$value": "{color.palette.paper}" }
+    "surface": {
+      "$value": "{primitive.color.ink-900}"
+    },
+    "card": {
+      "$value": "{primitive.color.ink-700}"
+    },
+    "text": {
+      "$value": "{primitive.color.paper}"
+    },
+    "outline": {
+      "$value": "{primitive.color.ink-500}"
+    }
   },
   "space": {
     "$type": "dimension",
-    "sm": { "$value": "4px" },
-    "md": { "$value": { "value": 12, "unit": "px" } },
-    "lg": { "$value": "1.5rem" }
+    "none": {
+      "$value": "{primitive.space.0}"
+    },
+    "sm": {
+      "$value": "{primitive.space.1}"
+    },
+    "md": {
+      "$value": "{primitive.space.3}"
+    },
+    "lg": {
+      "$value": "{primitive.space.6}"
+    }
   },
-  "radius": {
-    "$type": "dimension",
-    "card": { "$value": "20px" },
-    "pill": { "$value": "{space.lg}" }
+  "opacity": {
+    "$type": "number",
+    "opaque": {
+      "$value": "{primitive.opacity.opaque}"
+    },
+    "muted": {
+      "$value": "{primitive.opacity.muted}"
+    }
   },
   "motion": {
-    "fast": { "$type": "duration", "$value": "150ms" },
-    "slow": { "$type": "duration", "$value": { "value": 0.4, "unit": "s" } }
+    "enter": {
+      "$type": "transition",
+      "$value": {
+        "duration": "{primitive.duration.fast}",
+        "delay": "0ms",
+        "timingFunction": "{primitive.easing.standard}"
+      }
+    },
+    "slow": {
+      "$type": "duration",
+      "$value": "{primitive.duration.slow}"
+    }
   },
-  "font": {
-    "family": { "$type": "fontFamily", "$value": "Montserrat" },
-    "weight": { "$type": "fontWeight", "$value": "bold" },
-    "scale": { "$type": "number", "$value": 1.25 }
+  "text": {
+    "body": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "{primitive.font.family}",
+        "fontSize": "14px",
+        "fontWeight": 400,
+        "letterSpacing": "0px",
+        "lineHeight": 1.4
+      }
+    },
+    "title": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "{primitive.font.family}",
+        "fontSize": "20px",
+        "fontWeight": "{primitive.font.weight-bold}",
+        "letterSpacing": "1px",
+        "lineHeight": 1.2
+      }
+    }
   },
-  "elevation": {
-    "card": { "$type": "shadow", "$value": { "color": "#00000080", "offsetX": "0px", "offsetY": "2px", "blur": "8px", "spread": "0px" } }
+  "card": {
+    "radius": {
+      "$type": "dimension",
+      "$value": "{primitive.radius.md}"
+    },
+    "padding": {
+      "$type": "dimension",
+      "$value": "{space.md}"
+    },
+    "border": {
+      "$type": "border",
+      "$value": {
+        "color": "{color.outline}",
+        "width": "1px",
+        "style": "solid"
+      }
+    },
+    "shadow": {
+      "$type": "shadow",
+      "$value": {
+        "color": "{primitive.color.black}",
+        "offsetX": "0px",
+        "offsetY": "2px",
+        "blur": "8px",
+        "spread": "0px"
+      }
+    },
+    "fill": {
+      "$type": "gradient",
+      "$value": [
+        {
+          "color": "{color.card}",
+          "position": 0
+        },
+        {
+          "color": "{color.surface}",
+          "position": 1
+        }
+      ]
+    }
+  },
+  "screen": {
+    "radius": {
+      "$type": "dimension",
+      "$value": "{primitive.radius.none}"
+    },
+    "border-width": {
+      "$type": "dimension",
+      "$value": "{primitive.space.0}"
+    }
+  },
+  "unknown": {
+    "thing": {
+      "$type": "somethingNew",
+      "$value": "x"
+    }
   }
 }

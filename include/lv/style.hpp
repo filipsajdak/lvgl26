@@ -3,12 +3,16 @@
 // A style is a struct that reflection generates from LVGL's lv_obj_set_style_*
 // functions: one typed member per style property, in alphabetical order.
 //
-//   constexpr auto card = lv::style({.bg_color = 0x1b2430_rgb, .pad_all = 12_px, .radius = 8_px});
+//   constexpr auto card = lv::style({.bg_color = tok.color.card, .radius = tok.radius.card});
 //   lv::box({.style = card})
 //
 // In a tree built by lv::mount, a style becomes a const lv_style_t in read-only
 // memory: no heap is used, and LVGL only stores a pointer to it.
+//
+// Design values must be design tokens (see lv/tokens.hpp) or lv::raw(...).
+// Define LV_ALLOW_RAW_STYLE_VALUES to accept plain values such as 8_px.
 
+#include <lv/token_types.hpp>
 #include <lv/values.hpp>
 
 #include <array>
@@ -23,14 +27,18 @@ namespace detail {
 inline constexpr std::string_view style_prefix = "lv_obj_set_style_";
 
 // The C++ type of a style value. All style setters call their parameter `value`,
-// so the unit comes from the property name alone.
+// so the unit comes from the property name alone. Design values (colors, lengths,
+// opacities, times and numbers) are wrapped in styled<>, which asks for a design
+// token. Enums, flags and pointers are structure, not design, and stay plain.
 consteval std::meta::info style_value_type(std::string_view prop, std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
+  const auto design = [](std::meta::info inner) { return std::meta::substitute(^^styled, {inner}); };
 
+  if (t == std::meta::dealias(^^lv_color_t)) return design(^^lv_color_t);
   if (std::meta::is_arithmetic_type(t) && t != ^^bool) {
-    if (has(prop, "opa")) return ^^opa;
-    if (has(prop, "duration")) return ^^duration;
+    if (has(prop, "opa")) return design(^^opa);
+    if (has(prop, "duration")) return design(^^duration);
     // Scale and skew are ratios and tenths of a degree, not lengths.
     const bool ratio = has(prop, "scale") || has(prop, "skew") || has(prop, "rotation");
     const bool sized = prop.ends_with("width") || prop.ends_with("height") ||
@@ -38,9 +46,10 @@ consteval std::meta::info style_value_type(std::string_view prop, std::meta::inf
                        prop.ends_with("_space") || prop.ends_with("spread") ||
                        prop.ends_with("_pad") || prop.starts_with("pad_") ||
                        prop.starts_with("margin_") || is_one_of(prop, {"x", "y", "length"});
-    if (sized && !ratio) return ^^length;
+    if (sized && !ratio) return design(^^length);
   }
-  if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
+  if (t == ^^bool) return ^^strict<bool>;
+  if (std::meta::is_integral_type(t)) return design(std::meta::substitute(^^strict, {t}));
   return raw;
 }
 
@@ -262,7 +271,54 @@ void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
 
 }  // namespace detail
 
-// A style value: lv::style({.bg_color = 0x1b2430_rgb, .radius = 8_px}).
+namespace detail {
+
+template <class T>
+constexpr token<T> part(T v) {
+  return {v, from_design_tokens{}};
+}
+
+}  // namespace detail
+
+// Composite tokens are merged into a style with |:
+//   lv::style({.bg_color = tok.color.card}) | tok.elevation.card | tok.border.card
+
+template <class S, class D = void>
+  requires detail::a_style<S, D>
+constexpr S operator|(S s, const token<shadow_token>& t) {
+  s.shadow_color = detail::part(t->color);
+  s.shadow_offset_x = detail::part(t->offset_x);
+  s.shadow_offset_y = detail::part(t->offset_y);
+  s.shadow_width = detail::part(t->blur);
+  s.shadow_spread = detail::part(t->spread);
+  return s;
+}
+
+template <class S, class D = void>
+  requires detail::a_style<S, D>
+constexpr S operator|(S s, const token<border_token>& t) {
+  s.border_color = detail::part(t->color);
+  s.border_width = detail::part(t->width);
+  return s;
+}
+
+// Only the letter spacing: choosing an lv_font_t from a family, size and weight
+// needs the font assets, which are not part of the framework yet.
+template <class S, class D = void>
+  requires detail::a_style<S, D>
+constexpr S operator|(S s, const token<typography_token>& t) {
+  s.text_letter_space = detail::part(t->letter_spacing);
+  return s;
+}
+
+template <class S, class D = void>
+  requires detail::a_style<S, D>
+constexpr S operator|(S s, const token<transition_token>& t) {
+  s.anim_duration = detail::part(t->duration);
+  return s;
+}
+
+// A style value: lv::style({.bg_color = tok.color.card, .radius = tok.radius.card}).
 // Keep it in a constexpr variable to give it a name and reuse it.
 template <class D = void>
 constexpr detail::style_t<D> style(detail::style_t<D> s) {

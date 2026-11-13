@@ -25,6 +25,8 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
   compile-fail test in `tests/fail/` for every new one.
 - The library throws nothing: compile error first, then contracts, then `std::expected`.
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
+- Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
+  reasoned exception. Use semantic or component tokens in UI code, not primitives.
 - No handwritten per-property code. Properties, styles and events come from reflection.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).

@@ -44,9 +44,27 @@ constexpr auto tok = lv::tokens<tokens_json>;
 lv::box({.style = {.bg_color = tok.color.surface, .radius = tok.radius.card}})
 ```
 
-Each token group becomes a struct and each token a typed member (`lv_color_t`, `lv::length`,
-`lv::duration`, ...). Aliases are resolved. A misspelled token, a broken alias or an unreadable
-value is a compile error. Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
+Each token group becomes a struct and each token a typed `lv::token<T>`: colors, dimensions
+(spacing, radius, sizes), durations, numbers (opacity), font family and weight, easing curves, and the
+composite types shadow, border, typography, transition and gradient. Aliases are resolved. A misspelled
+token, a broken alias or an unreadable value is a compile error.
+
+**Styles use tokens.** A design value in a style (color, length, opacity, time, number) must be a token:
+
+```cpp
+.style = {.radius = tok.card.radius}                       // ok
+.style = lv::style({...}) | tok.card.border | tok.card.shadow   // composite tokens merge with |
+.style = {.radius = lv::raw(3_px)}                         // a deliberate, searchable exception
+.style = {.radius = 8_px}                                  // error: it takes a design token
+```
+
+Layout values (`.size`, `.range`, `.value`) and enums stay free. To accept plain values in styles,
+configure with `-DLVGL26_TOKENS_ONLY=OFF` (or define `LV_ALLOW_RAW_STYLE_VALUES`).
+
+Keep tokens in three tiers: primitive values (`primitive.color.blue-500`), semantic roles that alias
+them (`color.primary`), and component tokens that alias those (`card.radius`). UI code uses the last two.
+
+Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
 
 Rules to know:
 
