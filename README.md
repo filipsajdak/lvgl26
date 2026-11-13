@@ -2,7 +2,7 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: early. Typed widget views, the declarative tree, styles and design tokens exist. State, async and agent tools do not yet.
+Status: early. Typed widget views, the declarative tree, styles, design tokens and state exist. Async and agent tools do not yet.
 
 ```cpp
 #include <lv/lv.hpp>
@@ -32,6 +32,22 @@ How it works:
   contains only the LVGL calls for the properties that are set.
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
   `lv::weak<T>` empties itself when LVGL deletes the widget.
+
+State is typed and lives in ordinary globals. Widgets follow it:
+
+```cpp
+constinit lv::state<int> speed{0};
+
+constexpr auto ui = lv::column()[
+    lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),     // follows, and writes back
+    lv::label({.text = lv::bind(speed, "%d km/h")})];
+
+speed = 120;   // both widgets update
+```
+
+A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a
+bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a
+generic observer.
 
 Design tokens come from a W3C Design Tokens (DTCG) JSON file, read at compile time:
 

@@ -20,6 +20,8 @@
 #include <array>
 #include <concepts>
 #include <cstdarg>
+#include <cstdint>
+#include <type_traits>
 #include <span>
 #include <string_view>
 #include <tuple>
@@ -188,11 +190,90 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
         code, reinterpret_cast<void*>(h.with_event));
 }
 
-// Applies member number I of props<W>, whose value is `a`, to a widget.
-// set() at run time instantiates this for every member, including the few setters
-// LVGL has deprecated; reflection cannot see that attribute, so the warning is off here.
+// Reads the value of a subject as the type T that a setter takes.
+template <class T>
+T from_subject(lv_subject_t* s) {
+  if constexpr (std::same_as<T, lv_color_t>) {
+    return lv_subject_get_color(s);
+  } else if constexpr (std::is_pointer_v<T>) {
+    return static_cast<T>(const_cast<void*>(lv_subject_get_pointer(s)));
+  } else if constexpr (std::same_as<T, strict<bool>>) {
+    return lv_subject_get_int(s) != 0;
+  } else if constexpr (std::is_enum_v<T>) {
+    return static_cast<T>(lv_subject_get_int(s));
+  } else if constexpr (std::same_as<T, length>) {
+    return length::px(lv_subject_get_int(s));
+  } else if constexpr (std::same_as<T, opa>) {
+    return opa::from_raw(static_cast<lv_opa_t>(lv_subject_get_int(s)));
+  } else if constexpr (std::same_as<T, angle>) {
+    return angle{lv_subject_get_int(s)};
+  } else if constexpr (std::same_as<T, duration>) {
+    return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
+  } else if constexpr (std::constructible_from<T, std::int32_t>) {
+    return T{lv_subject_get_int(s)};
+  } else {
+    return T{};  // no state type converts to T, so no binding to it can exist
+  }
+}
+
+// lv_<widget>_bind_<prop> for the setter lv_<widget>_set_<prop>, or a null reflection.
+// LVGL's own bind functions are used when they exist: they also write the widget's
+// value back to the subject (an arc, a slider).
+consteval std::meta::info binder_of(std::meta::info setter) {
+  const auto name = std::meta::identifier_of(setter);
+  const auto at = name.find("_set_");
+  const auto f = find(str(name.substr(0, at)) + "_bind_" + str(name.substr(at + 5)));
+  if (f == std::meta::info{}) return f;
+  const auto params = std::meta::parameters_of(f);
+  const bool plain = params.size() == 2;
+  const bool with_format =
+      params.size() == 3 && std::meta::type_of(params[2]) == ^^const char*;
+  return (plain || with_format) ? f : std::meta::info{};
+}
+
+// The two functions below are instantiated for every member when set() runs at run
+// time, including the few setters LVGL has deprecated; reflection cannot see that
+// attribute, so the warning is off here.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+// Whether member number I of props<W> can follow a state: LVGL has a bind function
+// for it, or it is a setter that takes one value.
+template <fixed W, std::size_t I>
+consteval bool bindable() {
+  const auto t = targets<W>[I];
+  if (t == std::meta::info{} || !std::meta::is_function(t)) return false;
+  return binder_of(t) != std::meta::info{} || std::meta::parameters_of(t).size() == 2;
+}
+
+// Makes member number I of props<W> follow the state it is bound to.
+template <fixed W, std::size_t I, class A>
+void bind_member(lv_obj_t* o, const A& a) {
+  constexpr auto setter = targets<W>[I];
+  lv_subject_t* subject = a.bound_subject(a.bound);
+  if (subject == nullptr) return;  // LVGL had no memory for the subject
+
+  constexpr auto native = binder_of(setter);
+  if constexpr (native != std::meta::info{} && std::meta::parameters_of(native).size() == 3) {
+    [:native:](o, subject, a.bound_format);
+  } else if constexpr (native != std::meta::info{}) {
+    [:native:](o, subject);
+  } else if constexpr (std::tuple_size_v<decltype(a.v)> != 1) {
+    // lv::mount rejects this at compile time; set() at run time ends up here.
+    contract_assert(false && "this property takes several values and cannot follow a state");
+  } else {
+    using value_type = std::tuple_element_t<0, decltype(a.v)>;
+    lv_subject_add_observer_obj(
+        subject,
+        [](lv_observer_t* observer, lv_subject_t* s) {
+          auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
+          [:setter:](target, lower(from_subject<value_type>(s)));
+        },
+        o, nullptr);
+  }
+}
+
+// Applies member number I of props<W>, whose value is `a`, to a widget.
 template <fixed W, std::size_t I, class A>
 void apply_member(lv_obj_t* o, const A& a) {
   constexpr auto target = targets<W>[I];
@@ -204,6 +285,10 @@ void apply_member(lv_obj_t* o, const A& a) {
     const auto& [... x] = a.v;
     add_handler(o, [:target:], x...);
   } else {
+    if (a.bound != nullptr) {
+      bind_member<W, I>(o, a);
+      return;
+    }
     const auto& [... x] = a.v;
     [:target:](o, lower(x)...);
   }

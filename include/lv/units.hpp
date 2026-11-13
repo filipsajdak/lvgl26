@@ -54,6 +54,7 @@ class opa {
   constexpr opa() = default;
   constexpr opa(percent p)
       : raw_(static_cast<lv_opa_t>((p.value < 0 ? 0 : p.value > 100 ? 100 : p.value) * 255 / 100)) {}
+  static constexpr opa from_raw(lv_opa_t raw) { return opa{raw}; }
   static const opa cover;
   static const opa transparent;
   constexpr lv_opa_t raw() const { return raw_; }
