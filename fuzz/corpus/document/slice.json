@@ -1,0 +1,8 @@
+{"type": "column", "props": {"flex_align": ["center", "center", "center"], "size": ["320px", "240px"],
+ "style": {"bg_color": "#112233", "bg_opa": "50%", "radius": "8px"}},
+ "children": [
+  {"type": "label", "id": "title", "props": {"text": "Speed"}},
+  {"type": "arc", "id": "speedo", "props": {"range": [0, 240], "value": 120, "rotation": "90deg"}},
+  {"type": "button", "id": "reset", "children": [{"type": "label", "props": {"text": "Reset"}}]}]}
+---
+{"speedo": {"value": 60}, "title": {"text": "Trip"}}

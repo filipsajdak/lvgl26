@@ -42,7 +42,9 @@ jobs:
           TSAN_OPTIONS: halt_on_error=1
         run: ctest --preset ${{ matrix.preset }}
 
-  coverage:
+  # Complexity and CRAP: every function at complexity 8 or less, and every function
+  # that runs at run time at CRAP 8 or less. See tools/crap.py.
+  crap:
     runs-on: ubuntu-latest
     container: gcc:16
     steps:
@@ -51,13 +53,29 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends cmake ninja-build python3 python3-pip
-          pip3 install --break-system-packages gcovr
+          pip3 install --break-system-packages lizard
           ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
           ln -sf "$(command -v g++)" /usr/local/bin/g++-16
+          ln -sf "$(command -v gcov)" /usr/local/bin/gcov-16
       - name: Build and test with coverage
         run: |
           cmake --preset host-v96-coverage
           cmake --build --preset host-v96-coverage
           ctest --preset host-v96-coverage
-      - name: Report coverage of include/lv
-        run: gcovr --root . --filter 'include/lv/' --txt --print-summary build/host-v96-coverage
+      - name: CRAP report
+        run: python3 tools/crap.py build/host-v96-coverage
+
+  # The JSON reader is plain C++, so Clang's libFuzzer can fuzz it with coverage
+  # feedback. A short run on every push; the corpus is also replayed by ctest above.
+  fuzz-json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the fuzz target
+        run: |
+          clang++ -std=c++23 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+            -Iinclude fuzz/json_reader.cpp -o json_reader
+      - name: Fuzz for one minute
+        run: |
+          mkdir -p new_corpus
+          ./json_reader new_corpus fuzz/corpus/json -max_total_time=60 -max_len=4096

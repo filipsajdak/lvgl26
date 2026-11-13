@@ -90,6 +90,21 @@ void styles_and_units(lv::obj screen) {
   check(box.get<"style_bg_opa">(LV_PART_MAIN) == 127);
   check(box.get<"style_border_width">(LV_PART_MAIN) == 2);
   check(box.get<"style_align">(LV_PART_MAIN) == LV_ALIGN_CENTER);
+
+  // Angles and times, with and without their unit.
+  auto more = ui::load(R"({"type": "column", "children": [
+      {"type": "arc", "id": "a", "props": {"rotation": "90deg", "bg_angles": [10, "200deg"]}},
+      {"type": "obj", "id": "o", "props": {"style": {"anim_duration": "0.5s"}}},
+      {"type": "obj", "id": "p", "props": {"style": {"anim_duration": 250}}},
+      {"type": "obj", "id": "q", "props": {"style": {"anim_duration": "300ms"}}}]})",
+                       screen);
+  check(more.has_value());
+  if (more) {
+    check(lv::view<"arc">{more->find("a").raw()}.get<"rotation">() == 90);
+    check(more->find("o").get<"style_anim_duration">(LV_PART_MAIN) == 500);
+    check(more->find("p").get<"style_anim_duration">(LV_PART_MAIN) == 250);
+    check(more->find("q").get<"style_anim_duration">(LV_PART_MAIN) == 300);
+  }
 }
 
 // What a document must not be able to do.
@@ -118,6 +133,10 @@ void rejects(lv::obj screen) {
   expect(R"({"type": "obj", "props": {"align": "middle"}})", lv::load_error::bad_value, R"("middle")");
   expect(R"({"type": "obj", "props": {"style": {"bg_color": "red"}}})", lv::load_error::bad_value, R"("red")");
   expect(R"({"type": "obj", "props": {"style": {"colour": "#000000"}}})", lv::load_error::unknown_property, "colour");
+  expect(R"({"type": "arc", "props": {"rotation": "90rad"}})", lv::load_error::bad_value, R"("90rad")");
+  expect(R"({"type": "obj", "props": {"style": {"anim_duration": "5min"}}})", lv::load_error::bad_value, R"("5min")");
+  expect(R"({"type": "obj", "props": {"style": {"anim_duration": -5}}})", lv::load_error::bad_value, "-5");
+  expect(R"({"type": "obj", "props": {"style": {"bg_opa": 0.5}}})", lv::load_error::bad_value, "0.5");
   // Handlers and pointers cannot come from a document.
   expect(R"({"type": "button", "props": {"on_clicked": "reset"}})", lv::load_error::unknown_property, "on_clicked");
   expect(R"({"type": "obj", "props": {"user_data": 1}})", lv::load_error::unknown_property, "user_data");

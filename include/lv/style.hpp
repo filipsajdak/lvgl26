@@ -26,6 +26,32 @@ namespace detail {
 
 inline constexpr std::string_view style_prefix = "lv_obj_set_style_";
 
+// Scale, skew and rotation are ratios and tenths of a degree, not lengths.
+consteval bool is_ratio_prop(std::string_view prop) {
+  return has(prop, "scale") || has(prop, "skew") || has(prop, "rotation");
+}
+
+consteval bool has_size_suffix(std::string_view prop) {
+  for (std::string_view end : {"width", "height", "_x", "_y", "radius", "_space", "spread", "_pad"})
+    if (prop.ends_with(end)) return true;
+  return false;
+}
+
+// Whether a style property is a length, judged by its name.
+consteval bool is_sized_prop(std::string_view prop) {
+  const bool sized = has_size_suffix(prop) || prop.starts_with("pad_") ||
+                     prop.starts_with("margin_") || is_one_of(prop, {"x", "y", "length"});
+  return sized && !is_ratio_prop(prop);
+}
+
+// The unit type of a numeric style property, or a null reflection if it has none.
+consteval std::meta::info style_unit(std::string_view prop) {
+  if (has(prop, "opa")) return ^^opa;
+  if (has(prop, "duration")) return ^^duration;
+  if (is_sized_prop(prop)) return ^^length;
+  return {};
+}
+
 // The C++ type of a style value. All style setters call their parameter `value`,
 // so the unit comes from the property name alone. Design values (colors, lengths,
 // opacities, times and numbers) are wrapped in styled<>, which asks for a design
@@ -36,19 +62,9 @@ consteval std::meta::info style_value_type(std::string_view prop, std::meta::inf
   const auto design = [](std::meta::info inner) { return std::meta::substitute(^^styled, {inner}); };
 
   if (t == std::meta::dealias(^^lv_color_t)) return design(^^lv_color_t);
-  if (std::meta::is_arithmetic_type(t) && t != ^^bool) {
-    if (has(prop, "opa")) return design(^^opa);
-    if (has(prop, "duration")) return design(^^duration);
-    // Scale and skew are ratios and tenths of a degree, not lengths.
-    const bool ratio = has(prop, "scale") || has(prop, "skew") || has(prop, "rotation");
-    const bool sized = prop.ends_with("width") || prop.ends_with("height") ||
-                       prop.ends_with("_x") || prop.ends_with("_y") || prop.ends_with("radius") ||
-                       prop.ends_with("_space") || prop.ends_with("spread") ||
-                       prop.ends_with("_pad") || prop.starts_with("pad_") ||
-                       prop.starts_with("margin_") || is_one_of(prop, {"x", "y", "length"});
-    if (sized && !ratio) return design(^^length);
-  }
   if (t == ^^bool) return ^^strict<bool>;
+  if (!std::meta::is_arithmetic_type(t)) return raw;
+  if (const auto unit = style_unit(prop); unit != std::meta::info{}) return design(unit);
   if (std::meta::is_integral_type(t)) return design(std::meta::substitute(^^strict, {t}));
   return raw;
 }
@@ -72,39 +88,36 @@ struct style_item {
   std::meta::info id;      // LV_STYLE_<NAME>, or null when LVGL has no such id
 };
 
+// The LV_STYLE_* enumerator of the style property `prop`, or a null reflection.
+consteval std::meta::info style_id_of(std::string_view prop) {
+  for (auto e : std::meta::enumerators_of(^^_lv_style_id_t))
+    if (is_style_id(std::meta::identifier_of(e), prop)) return e;
+  return {};
+}
+
+// The member of lv::style for the setter `f`, called lv_obj_set_style_<prop>.
+consteval style_item style_item_of(std::meta::info f, std::string_view prop) {
+  const auto params = std::meta::parameters_of(f);  // obj, value(s), selector
+  std::vector<std::meta::info> types;
+  for (std::size_t i = 1; i + 1 < params.size(); ++i)
+    types.push_back(style_value_type(prop, params[i]));
+  // Only a setter with one value can have a style id.
+  const auto id = params.size() == 3 ? style_id_of(prop) : std::meta::info{};
+  return {prop, std::meta::substitute(^^arg, types), f, id};
+}
+
 // The functions below are templates on D only so that nothing runs until a style
 // is really used: the scan costs about a second of compile time.
 template <class D>
 consteval std::vector<style_item> scan_style() {
-  struct known_id {
-    std::string_view name;
-    std::meta::info e;
-  };
-  std::vector<known_id> ids;
-  for (auto e : std::meta::enumerators_of(^^_lv_style_id_t))
-    ids.push_back({std::meta::identifier_of(e), e});
-
   std::vector<style_item> items;
   for (auto f : api) {
     const auto name = std::meta::identifier_of(f);
     if (!name.starts_with(style_prefix) || std::meta::is_vararg_function(f)) continue;
-    const auto prop = name.substr(style_prefix.size());
-    const auto params = std::meta::parameters_of(f);
-    if (params.size() < 3) continue;  // obj, value(s), selector
-
-    std::vector<std::meta::info> types;
-    for (std::size_t i = 1; i + 1 < params.size(); ++i)
-      types.push_back(style_value_type(prop, params[i]));
-
-    std::meta::info id{};
-    if (params.size() == 3)
-      for (const auto& k : ids)
-        if (is_style_id(k.name, prop)) id = k.e;
-    items.push_back({prop, std::meta::substitute(^^arg, types), f, id});
+    if (std::meta::parameters_of(f).size() < 3) continue;
+    items.push_back(style_item_of(f, name.substr(style_prefix.size())));
   }
-  for (std::size_t i = 1; i < items.size(); ++i)
-    for (std::size_t j = i; j > 0 && items[j].name < items[j - 1].name; --j)
-      std::swap(items[j], items[j - 1]);
+  sort_by_name(items);
   return items;
 }
 
@@ -228,7 +241,7 @@ constexpr lv_style_value_t style_value(T n) {
 
 // The property array of a const lv_style_t, ended by LV_STYLE_PROP_INV.
 template <class Where, class D = void>
-constexpr std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
+consteval std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
   std::array<lv_style_const_prop_t, const_count<Where, D> + 1> out{};
   std::size_t k = 0;
   template for (constexpr auto i : indices<style_members<D>.size()>) {

@@ -16,6 +16,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace lv {
 
@@ -79,19 +80,36 @@ struct handler {
 namespace detail {
 
 // How to write a value of type `t`, for the error message.
+consteval bool is_made_from(std::meta::info t, std::meta::info a_template) {
+  return std::meta::has_template_arguments(t) && std::meta::template_of(t) == a_template;
+}
+
+// How to write a value of one of the unit types, or an empty string for another type.
+consteval std::string_view how_to_write_unit(std::meta::info t) {
+  struct entry {
+    std::meta::info type;
+    std::string_view text;
+  };
+  for (const entry& e :
+       {entry{^^length, "a length (120 * lv::px, 50 * lv::pct or lv::size_content)"},
+        entry{std::meta::dealias(^^horizontal),
+              "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical "
+              "length)"},
+        entry{std::meta::dealias(^^vertical),
+              "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal "
+              "length)"},
+        entry{^^angle, "an angle (90 * lv::deg)"},
+        entry{^^duration, "a time (300 * lv::ms)"},
+        entry{^^opa, "an opacity (50 * lv::pct)"},
+        entry{^^strict<bool>, "true or false"}})
+    if (e.type == t) return e.text;
+  return {};
+}
+
 consteval std::string how_to_write(std::meta::info t) {
-  if (t == ^^length) return "a length (120 * lv::px, 50 * lv::pct or lv::size_content)";
-  if (t == std::meta::dealias(^^horizontal))
-    return "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)";
-  if (t == std::meta::dealias(^^vertical))
-    return "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal length)";
-  if (t == ^^angle) return "an angle (90 * lv::deg)";
-  if (t == ^^duration) return "a time (300 * lv::ms)";
-  if (t == ^^opa) return "an opacity (50 * lv::pct)";
-  if (t == ^^strict<bool>) return "true or false";
-  if (std::meta::has_template_arguments(t) && std::meta::template_of(t) == ^^strict)
-    return "a whole number (not bool, not floating point)";
-  if (std::meta::has_template_arguments(t) && std::meta::template_of(t) == ^^styled)
+  if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
+  if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
   return str(std::meta::display_string_of(t));
@@ -120,6 +138,14 @@ namespace detail {
 template <class T>
 concept plain_state_value = integer<T> || std::same_as<T, bool> || std::is_enum_v<T>;
 
+// Whether `t` is an integer, bool or enum type, and not a character type.
+consteval bool is_plain_value_type(std::meta::info t) {
+  // Parentheses: `^^char || x` would otherwise be parsed with the type.
+  for (auto character : {(^^char), (^^wchar_t), (^^char8_t), (^^char16_t), (^^char32_t)})
+    if (t == character) return false;
+  return std::meta::is_integral_type(t) || std::meta::is_enum_type(t);
+}
+
 // The single data member of a class that wraps one plain value, or a null reflection.
 template <class T>
 consteval std::meta::info strong_member() {
@@ -128,11 +154,7 @@ consteval std::meta::info strong_member() {
       std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked());
   if (members.size() != 1 || !std::meta::is_public(members[0])) return {};
   const auto t = std::meta::remove_cv(std::meta::dealias(std::meta::type_of(members[0])));
-  // Parentheses: `^^char && x` would be read as a reflection of the type char&&.
-  const bool character = t == (^^char) || t == (^^wchar_t) || t == (^^char8_t) ||
-                         t == (^^char16_t) || t == (^^char32_t);
-  const bool plain = (std::meta::is_integral_type(t) || std::meta::is_enum_type(t)) && !character;
-  return plain ? members[0] : std::meta::info{};
+  return is_plain_value_type(t) ? members[0] : std::meta::info{};
 }
 
 // A quantity of a units library: a number with a unit, as mp_units::quantity is.
@@ -313,6 +335,15 @@ consteval bool is_one_of(std::string_view s, std::initializer_list<std::string_v
   return false;
 }
 
+// Sorts items that have a `name` by it. An insertion sort: std::sort costs far more
+// constexpr steps for the few hundred items this is used on.
+template <class Item>
+consteval void sort_by_name(std::vector<Item>& items) {
+  for (std::size_t i = 1; i < items.size(); ++i)
+    for (std::size_t j = i; j > 0 && items[j].name < items[j - 1].name; --j)
+      std::swap(items[j], items[j - 1]);
+}
+
 // Names that cannot be used for a generated struct member.
 consteval bool is_keyword(std::string_view s) {
   return is_one_of(s, {"auto",     "bool",   "break",  "case",     "char",      "class",  "const",
@@ -321,6 +352,25 @@ consteval bool is_keyword(std::string_view s) {
                        "long",     "namespace", "new", "operator", "private",   "public", "return",
                        "short",    "signed", "static", "struct",   "switch",    "template", "this",
                        "true",     "union",  "unsigned", "using",  "virtual",   "void",   "while"});
+}
+
+// Whether the property or its parameter is named after one of these words.
+consteval bool named_after(std::string_view prop, std::string_view parameter,
+                           std::initializer_list<std::string_view> words) {
+  for (auto w : words)
+    if (has(prop, w) || has(parameter, w)) return true;
+  return false;
+}
+
+// The unit type of a numeric setter parameter, judged by the names LVGL uses, or
+// a null reflection if they say nothing.
+consteval std::meta::info unit_of(std::string_view prop, std::string_view parameter) {
+  if (named_after(prop, parameter, {"opa"})) return ^^opa;
+  if (named_after(prop, parameter, {"angle", "rotation"})) return ^^angle;
+  if (named_after(prop, parameter, {"duration", "time", "delay", "period"})) return ^^duration;
+  if (is_one_of(parameter, {"x", "w", "width"})) return ^^horizontal;
+  if (is_one_of(parameter, {"y", "h", "height"})) return ^^vertical;
+  return {};
 }
 
 // The C++ type a setter parameter gets in the props struct.
@@ -332,22 +382,11 @@ consteval std::meta::info value_type(std::string_view prop, std::meta::info para
   const std::string_view name =
       std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
 
-  if (std::meta::is_arithmetic_type(t) && t != ^^bool) {
-    if (has(prop, "opa") || has(name, "opa")) return ^^opa;
-    if (has(prop, "angle") || has(prop, "rotation") || has(name, "angle") ||
-        has(name, "rotation"))
-      return ^^angle;
-    if (has(prop, "duration") || has(prop, "time") || has(prop, "delay") ||
-        has(prop, "period") || has(name, "duration") || has(name, "time") ||
-        has(name, "delay") || has(name, "period"))
-      return ^^duration;
-    if (is_one_of(name, {"x", "w", "width"})) return ^^horizontal;
-    if (is_one_of(name, {"y", "h", "height"})) return ^^vertical;
-  }
+  if (std::meta::is_arithmetic_type(t) && t != ^^bool)
+    if (const auto unit = unit_of(prop, name); unit != std::meta::info{}) return unit;
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
 }
-
 
 // Unit types and strict<> hand LVGL their plain value; everything else passes as is.
 template <class T>

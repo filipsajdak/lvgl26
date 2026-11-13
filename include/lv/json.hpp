@@ -1,6 +1,8 @@
 #pragma once
 
 // A small JSON reader that works at compile time and at run time.
+// It is plain C++23 with no contracts and no reflection, so that Clang can compile
+// it too: its fuzz target (fuzz/json_reader.cpp) is built with libFuzzer.
 // It allocates nothing: a value is a view of its text inside the document.
 // Strings are returned as written, without unescaping.
 
@@ -35,41 +37,145 @@ constexpr std::size_t skip_string(std::string_view s, std::size_t i) {
   return npos;
 }
 
-// The index just past the value that starts at s[i], or npos if it is malformed.
-constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth = 0) {
-  if (i >= s.size() || depth > 64) return npos;
-  const char c = s[i];
-  if (c == '"') return skip_string(s, i);
-  if (c == '{' || c == '[') {
-    const char close = c == '{' ? '}' : ']';
-    i = skip_space(s, i + 1);
-    if (i < s.size() && s[i] == close) return i + 1;
-    while (true) {
-      if (c == '{') {
-        if (i >= s.size() || s[i] != '"') return npos;
-        i = skip_string(s, i);
-        if (i == npos) return npos;
-        i = skip_space(s, i);
-        if (i >= s.size() || s[i] != ':') return npos;
-        i = skip_space(s, i + 1);
-      }
-      i = skip_value(s, i, depth + 1);
-      if (i == npos) return npos;
-      i = skip_space(s, i);
-      if (i >= s.size()) return npos;
-      if (s[i] == close) return i + 1;
-      if (s[i] != ',') return npos;
-      i = skip_space(s, i + 1);
-    }
-  }
+constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth = 0);
+
+constexpr bool is_digit(char c) { return c >= '0' && c <= '9'; }
+
+// How many characters at the start of `s` belong to a plain decimal number.
+constexpr std::size_t number_length(std::string_view s) {
+  std::size_t i = 0;
+  while (i < s.size() && (s[i] == '-' || s[i] == '.' || is_digit(s[i]))) ++i;
+  return i;
+}
+
+// The index just past the digits that start at s[i].
+constexpr std::size_t skip_digits(std::string_view s, std::size_t i) {
+  while (i < s.size() && is_digit(s[i])) ++i;
+  return i;
+}
+
+// The index just past an optional ".digits" at s[i], or npos if the dot has no digits.
+constexpr std::size_t skip_fraction(std::string_view s, std::size_t i) {
+  if (i >= s.size() || s[i] != '.') return i;
+  const auto end = skip_digits(s, i + 1);
+  return end == i + 1 ? npos : end;
+}
+
+// The index just past an optional exponent at s[i], or npos if it has no digits.
+constexpr std::size_t skip_exponent(std::string_view s, std::size_t i) {
+  if (i >= s.size() || (s[i] != 'e' && s[i] != 'E')) return i;
+  ++i;
+  if (i < s.size() && (s[i] == '+' || s[i] == '-')) ++i;
+  const auto end = skip_digits(s, i);
+  return end == i ? npos : end;
+}
+
+// The index just past the number that starts at s[i], or npos if there is none.
+// The JSON grammar exactly: -? (0 | [1-9][0-9]*) (.[0-9]+)? ([eE][+-]?[0-9]+)?
+constexpr std::size_t skip_number(std::string_view s, std::size_t i) {
+  if (i < s.size() && s[i] == '-') ++i;
+  const auto whole = skip_digits(s, i);
+  if (whole == i) return npos;                          // no digits
+  if (s[i] == '0' && whole > i + 1) return npos;        // a leading zero
+  const auto fraction = skip_fraction(s, whole);
+  return fraction == npos ? npos : skip_exponent(s, fraction);
+}
+
+// The index just past true, false or null at s[i], or npos.
+constexpr std::size_t skip_word(std::string_view s, std::size_t i) {
   for (std::string_view word : {std::string_view("true"), std::string_view("false"),
                                 std::string_view("null")})
     if (s.substr(i).starts_with(word)) return i + word.size();
-  std::size_t j = i;
-  while (j < s.size() && (s[j] == '-' || s[j] == '+' || s[j] == '.' || s[j] == 'e' ||
-                          s[j] == 'E' || (s[j] >= '0' && s[j] <= '9')))
-    ++j;
-  return j == i ? npos : j;
+  return npos;
+}
+
+// The index of the value of the member whose key starts at s[i], or npos.
+constexpr std::size_t skip_key(std::string_view s, std::size_t i) {
+  if (i >= s.size() || s[i] != '"') return npos;
+  i = skip_string(s, i);
+  if (i == npos) return npos;
+  i = skip_space(s, i);
+  if (i >= s.size() || s[i] != ':') return npos;
+  return skip_space(s, i + 1);
+}
+
+// After one element that ends at s[i]: the index of the next element, the index
+// just past the closing character (with `closed` set), or npos.
+constexpr std::size_t after_element(std::string_view s, std::size_t i, char close, bool& closed) {
+  i = skip_space(s, i);
+  if (i >= s.size()) return npos;
+  closed = s[i] == close;
+  if (closed) return i + 1;
+  return s[i] == ',' ? skip_space(s, i + 1) : npos;
+}
+
+// The index just past one element of a container (a member of an object, or a
+// value of an array) that starts at s[i], or npos.
+constexpr std::size_t skip_element(std::string_view s, std::size_t i, bool object, int depth) {
+  if (object) i = skip_key(s, i);
+  return i == npos ? npos : skip_value(s, i, depth + 1);
+}
+
+// The index just past the object or array that opens at s[i], or npos.
+constexpr std::size_t skip_container(std::string_view s, std::size_t i, int depth) {
+  const bool object = s[i] == '{';
+  const char close = object ? '}' : ']';
+  i = skip_space(s, i + 1);
+  if (i < s.size() && s[i] == close) return i + 1;
+  for (bool closed = false; !closed && i != npos;) {
+    i = skip_element(s, i, object, depth);
+    if (i != npos) i = after_element(s, i, close, closed);
+  }
+  return i;
+}
+
+// The index just past the value that starts at s[i], or npos if it is malformed.
+constexpr std::size_t skip_value(std::string_view s, std::size_t i, int depth) {
+  if (i >= s.size() || depth > 64) return npos;
+  if (s[i] == '"') return skip_string(s, i);
+  if (s[i] == '{' || s[i] == '[') return skip_container(s, i, depth);
+  if (const auto word = skip_word(s, i); word != npos) return word;
+  return skip_number(s, i);
+}
+
+// A run of digits read as a whole number, advancing i past it.
+constexpr double read_digits(std::string_view s, std::size_t& i) {
+  double v = 0;
+  for (; i < s.size() && is_digit(s[i]); ++i) v = v * 10 + (s[i] - '0');
+  return v;
+}
+
+// The digits after a decimal point, as a value below one, advancing i past them.
+constexpr double read_fraction(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || s[i] != '.') return 0;
+  double v = 0, scale = 0.1;
+  for (++i; i < s.size() && is_digit(s[i]); ++i, scale /= 10) v += (s[i] - '0') * scale;
+  return v;
+}
+
+// Reads an optional sign at s[i], advancing i past it. True for a minus.
+constexpr bool read_minus(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || (s[i] != '-' && s[i] != '+')) return false;
+  return s[i++] == '-';
+}
+
+// A run of digits as an exponent, advancing i past it. It stops counting at 999:
+// any larger exponent already gives zero or infinity, and an int must not overflow.
+constexpr int read_exponent_digits(std::string_view s, std::size_t& i) {
+  int e = 0;
+  for (; i < s.size() && is_digit(s[i]); ++i)
+    if (e < 100) e = e * 10 + (s[i] - '0');
+  return e;
+}
+
+// The factor of an exponent part (e-3 gives 0.001), advancing i past it. 1 if there is none.
+constexpr double read_exponent(std::string_view s, std::size_t& i) {
+  if (i >= s.size() || (s[i] != 'e' && s[i] != 'E')) return 1;
+  ++i;
+  const bool down = read_minus(s, i);
+  double factor = 1;
+  for (int e = read_exponent_digits(s, i); e > 0; --e) factor = down ? factor / 10 : factor * 10;
+  return factor;
 }
 
 }  // namespace detail
@@ -95,14 +201,6 @@ class value {
     const auto end = detail::skip_value(doc, begin);
     if (end == detail::npos || detail::skip_space(doc, end) != doc.size()) return std::nullopt;
     return value{doc.substr(begin, end - begin)};
-  }
-
-  // The value that starts at `offset` in `doc`. The offset must come from a value
-  // of the same document.
-  static constexpr value at_offset(std::string_view doc, std::size_t offset)
-    pre(offset < doc.size())
-  {
-    return value{doc.substr(offset, detail::skip_value(doc, offset) - offset)};
   }
 
   constexpr std::string_view text() const { return text_; }
@@ -131,23 +229,10 @@ class value {
 
   constexpr double number() const {
     std::size_t i = 0;
-    const bool negative = !text_.empty() && text_[0] == '-';
-    if (negative) ++i;
-    double v = 0;
-    for (; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i) v = v * 10 + (text_[i] - '0');
-    if (i < text_.size() && text_[i] == '.') {
-      double scale = 0.1;
-      for (++i; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i, scale /= 10)
-        v += (text_[i] - '0') * scale;
-    }
-    if (i < text_.size() && (text_[i] == 'e' || text_[i] == 'E')) {
-      ++i;
-      const bool down = i < text_.size() && text_[i] == '-';
-      if (i < text_.size() && (text_[i] == '-' || text_[i] == '+')) ++i;
-      int e = 0;
-      for (; i < text_.size() && text_[i] >= '0' && text_[i] <= '9'; ++i) e = e * 10 + (text_[i] - '0');
-      for (; e > 0; --e) v = down ? v / 10 : v * 10;
-    }
+    const bool negative = detail::read_minus(text_, i);
+    double v = detail::read_digits(text_, i);
+    v += detail::read_fraction(text_, i);
+    v *= detail::read_exponent(text_, i);
     return negative ? -v : v;
   }
 
@@ -160,6 +245,7 @@ class value {
 
   // Member number `index` of an object, in document order.
   constexpr member member_at(std::size_t index) const {
+    if (!is(kind::object)) return {};
     std::size_t i = first();
     for (; index > 0 && i != detail::npos; --index) i = next(i);
     return i == detail::npos ? member{} : read(i);
@@ -167,6 +253,7 @@ class value {
 
   // Element number `index` of an array.
   constexpr value at(std::size_t index) const {
+    if (!is(kind::array)) return {};  // an object's "elements" would be its keys
     std::size_t i = first();
     for (; index > 0 && i != detail::npos; --index) i = next(i);
     if (i == detail::npos) return {};

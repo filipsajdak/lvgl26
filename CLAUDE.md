@@ -38,6 +38,22 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
   pixels with `lv_test_screenshot_compare`.
 
+## Test adequacy
+
+| Check | How | Limit |
+|---|---|---|
+| Complexity | `lizard`, through `tools/crap.py` | 8 for every function, also compile-time ones |
+| CRAP | `tools/crap.py build/host-v96-coverage` after the coverage preset | 8 for every function that runs at run time |
+| Mutation | `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main` | Every survivor gets a test, or a reason |
+| Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp` (AFL++, GCC) | Every free input has a target; every crash becomes a corpus file |
+
+- A function over complexity 8 is split, not excused. A branch per type is one overload per type.
+- A `consteval` function has no run-time coverage: test it with `static_assert` and compile-fail tests.
+- Test code that only runs in constant evaluation does not count as coverage. Give run-time code a
+  run-time test with values the compiler cannot fold.
+- gcovr does not add up the instantiations of a template; use `tools/crap.py` for coverage numbers.
+- Mull cannot be used: it needs LLVM, and Clang cannot compile the reflection code.
+
 ## Where a requirement goes
 
 | What must hold | Write it as |

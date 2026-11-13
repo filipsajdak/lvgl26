@@ -145,6 +145,17 @@ void observers() {
   check(seen == 10 && captured == 10);
 }
 
+// A state that is a local object: its address is not a constant, so the binding is
+// made at run time and not folded into the program by the compiler.
+void binding_to_a_local_state(lv::obj screen) {
+  lv::state local{lv::counter{2}};
+  auto l = screen.add<"label">().set({.text = lv::bind(local, "n={}")});
+  check(std::strcmp(l.get<"text">(), "n=2") == 0);
+  ++local;
+  check(std::strcmp(l.get<"text">(), "n=3") == 0);
+  lv_obj_delete(l.raw());
+}
+
 void runtime_binding(lv::obj screen) {
   auto l = screen.add<"label">().set({.text = lv::bind(speed, "{}")});
   speed = 5 * km / h;
@@ -176,6 +187,7 @@ int main() {
   c_code_shares_the_subject();
   observers();
   runtime_binding(screen);
+  binding_to_a_local_state(screen);
   survives_a_deleted_tree(screen);
 
   // States outlive LVGL here, so release their subjects first.
