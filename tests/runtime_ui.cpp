@@ -121,6 +121,11 @@ void rejects(lv::obj screen) {
   // Handlers and pointers cannot come from a document.
   expect(R"({"type": "button", "props": {"on_clicked": "reset"}})", lv::load_error::unknown_property, "on_clicked");
   expect(R"({"type": "obj", "props": {"user_data": 1}})", lv::load_error::unknown_property, "user_data");
+  // A text setter that keeps the pointer it is given must not be reachable: the
+  // document's text is gone after the call. The copying one works.
+  expect(R"({"type": "label", "props": {"text_static": "x"}})", lv::load_error::unknown_property, "text_static");
+  expect(R"({"type": "column", "children": [{"type": "label", "id": "a"}, {"type": "arc", "id": "a"}]})",
+         lv::load_error::duplicate_id, "a");
   // A failure deep in the tree removes the widgets built before it.
   expect(R"({"type": "column", "children": [{"type": "label"}, {"type": "arc", "props": {"nope": 1}}]})",
          lv::load_error::unknown_property, "nope");
@@ -132,6 +137,15 @@ void rejects(lv::obj screen) {
     check(!r && r.error().error == lv::load_error::unknown_id && r.error().at == "missing");
     const auto bad = ok->apply(R"({"speedo": {"value": "x"}})");
     check(!bad && bad.error().error == lv::load_error::bad_value);
+
+    // A widget that was deleted behind the loader's back is not touched again, and
+    // the ids of the others still reach the right widgets although positions moved.
+    lv_obj_delete(ok->find("title").raw());
+    check(!ok->find("title"));
+    const auto gone = ok->apply(R"({"title": {"text": "x"}})");
+    check(!gone && gone.error().error == lv::load_error::unknown_id);
+    check(ok->apply(R"({"speedo": {"value": 33}})").has_value());
+    check(lv::view<"arc">{ok->find("speedo").raw()}.get<"value">() == 33);
   }
   ok = {};
   check(free_bytes() == heap);
