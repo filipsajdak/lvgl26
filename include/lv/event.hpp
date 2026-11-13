@@ -2,6 +2,8 @@
 
 #include <lvgl/lvgl.h>
 
+#include <concepts>
+
 namespace lv {
 
 // What an event handler receives.
@@ -15,6 +17,7 @@ class event {
 
   // The widget the handler was added to, as the view type you ask for.
   template <class V>
+    requires std::constructible_from<V, lv_obj_t*>
   V target() const {
     return V{lv_event_get_current_target_obj(e_)};
   }

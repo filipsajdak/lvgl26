@@ -387,8 +387,16 @@ consteval auto load_tokens() {
 
 }  // namespace detail
 
+namespace detail {
+// A document embedded as an array of char: `constexpr char doc[] = { #embed ... , 0 };`
+template <class T>
+concept embedded_text = std::is_bounded_array_v<std::remove_cvref_t<T>> &&
+                        std::same_as<std::remove_cv_t<std::remove_extent_t<std::remove_cvref_t<T>>>, char>;
+}  // namespace detail
+
 // The design tokens of the embedded DTCG document `Doc`, as a typed constant.
 template <const auto& Doc>
+  requires detail::embedded_text<decltype(Doc)>
 inline constexpr auto tokens = detail::load_tokens<Doc>();
 
 }  // namespace lv

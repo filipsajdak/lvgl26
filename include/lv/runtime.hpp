@@ -27,7 +27,8 @@
 // takes several values. Handlers, bindings and pointers cannot come from a document.
 //
 // Limits: text values are at most 127 characters and are not unescaped. The
-// document must stay alive as long as the loaded screen is used with find/apply.
+// document must stay alive as long as the loaded screen is used with find/apply
+// (the ids are views into it). At most 32 nodes of a document can have an id.
 
 #include <lv/json.hpp>
 #include <lv/owned.hpp>
@@ -49,7 +50,9 @@ enum class load_error {
   unknown_property,  // the widget has no such property, or it cannot be set from a document
   bad_value,         // the value does not fit the property
   out_of_memory,     // LVGL could not create a widget
-  unknown_id,        // apply() names an id the document does not have
+  unknown_id,        // apply() names an id the document does not have, or its widget is gone
+  duplicate_id,      // two nodes of one document have the same id
+  too_many_ids,      // the document has more ids than a loaded screen can keep
 };
 
 // What went wrong, and the piece of the document it is about.
@@ -276,12 +279,31 @@ inline constexpr bool arg_is_readable = false;
 template <class... Ts>
 inline constexpr bool arg_is_readable<arg<Ts...>> = all_readable<Ts...>;
 
+// The text setters that are known to copy the text they are given. A document's
+// text lives in a temporary buffer, so a setter that keeps the pointer (the
+// *_static ones, lv_dropdown_set_text, lv_textarea_set_accepted_chars, ...) must
+// never be reachable from a document. Reflection cannot tell the two kinds apart,
+// so this list is written by hand, and a text setter that is not on it is refused.
+consteval bool copies_text(std::meta::info setter) {
+  return is_one_of(std::meta::identifier_of(setter),
+                   {"lv_label_set_text", "lv_checkbox_set_text", "lv_textarea_set_text",
+                    "lv_textarea_set_placeholder_text", "lv_dropdown_set_options"});
+}
+
+consteval bool takes_text(std::meta::info setter) {
+  for (auto p : std::meta::parameters_of(setter))
+    if (std::meta::dealias(std::meta::type_of(p)) == ^^const char*) return true;
+  return false;
+}
+
 // Whether member I of props<W> is a plain property a document can set.
 template <fixed W, std::size_t I>
 consteval bool settable() {
   const auto target = targets<W>[I];
-  return target != std::meta::info{} && std::meta::is_function(target) &&
-         target != ^^lv_obj_add_style;
+  if (target == std::meta::info{} || !std::meta::is_function(target) ||
+      target == ^^lv_obj_add_style)
+    return false;
+  return !takes_text(target) || copies_text(target);
 }
 
 // The properties of widget W that a document can set, by name.
@@ -429,10 +451,23 @@ std::expected<void, load_failure> apply_properties(lv_obj_t* o, json::value prop
 template <detail::fixed... Widgets>
 class runtime {
  public:
+  // How many nodes of one document can have an id.
+  static constexpr std::size_t id_capacity = 32;
+
   // A screen built from a document. Owns its widgets.
   class loaded {
+    // A node that has an id: its widget, which kind it is, and its class when it
+    // was built. The view empties itself if the widget is deleted.
+    struct named_widget {
+      std::string_view id;
+      weak<obj> widget;
+      std::size_t kind = 0;                     // position in Widgets...
+      const lv_obj_class_t* cls = nullptr;
+    };
+
     owned<obj> root_;
-    json::value document_;
+    std::array<named_widget, id_capacity> named_{};
+    std::size_t named_count_ = 0;
 
     friend class runtime;
 
@@ -443,8 +478,12 @@ class runtime {
 
     obj root() const { return root_.get(); }
 
-    // The widget of the node with this "id", or an empty view.
-    obj find(std::string_view id) const { return obj{locate(document_, root_.get().raw(), id).widget}; }
+    // The widget of the node with this "id", or an empty view if there is none or
+    // it has been deleted.
+    obj find(std::string_view id) const {
+      const named_widget* n = entry(id);
+      return n != nullptr ? n->widget.get() : obj{};
+    }
 
     // Changes properties by id: {"speedo": {"value": 60}, "title": {"text": "Trip"}}.
     // The same rules as for a document apply. The change is not undone if a later
@@ -455,56 +494,48 @@ class runtime {
         return std::unexpected(load_failure{load_error::malformed, patch});
       for (std::size_t i = 0; i < parsed->size(); ++i) {
         const auto m = parsed->member_at(i);
-        const auto found = locate(document_, root_.get().raw(), m.key);
-        if (found.widget == nullptr)
+        const named_widget* n = entry(m.key);
+        const obj widget = n != nullptr ? n->widget.get() : obj{};
+        // The widget must still exist and still be what it was built as: its
+        // setters are chosen by kind, and must never run on another class.
+        if (!widget || lv_obj_get_class(widget.raw()) != n->cls)
           return std::unexpected(load_failure{load_error::unknown_id, m.key});
-        if (auto r = runtime::apply_to(found.type, found.widget, json::value{m.text}); !r) return r;
+        if (auto r = runtime::apply_to(n->kind, widget.raw(), json::value{m.text}); !r) return r;
       }
       return {};
     }
 
    private:
-    struct located {
-      lv_obj_t* widget = nullptr;
-      std::string_view type;
-    };
-
-    // Walks the document and the widgets side by side: node number i of a
-    // "children" list is child number i of the widget.
-    static located locate(json::value node, lv_obj_t* widget, std::string_view id) {
-      if (widget == nullptr) return {};
-      if (node["id"].string() == id && !id.empty()) return {widget, node["type"].string()};
-      const auto children = node["children"];
-      for (std::size_t i = 0; i < children.size(); ++i) {
-        const auto found = locate(children.at(i), lv_obj_get_child(widget, static_cast<std::int32_t>(i)), id);
-        if (found.widget != nullptr) return found;
-      }
-      return {};
+    const named_widget* entry(std::string_view id) const {
+      for (std::size_t i = 0; i < named_count_; ++i)
+        if (named_[i].id == id) return &named_[i];
+      return nullptr;
     }
   };
 
   // Builds the document under `parent`. On failure nothing is left on the screen.
-  static std::expected<loaded, load_failure> load(std::string_view document, obj parent) {
-    contract_assert(parent.raw() != nullptr);
+  static std::expected<loaded, load_failure> load(std::string_view document, obj parent)
+    pre(parent.raw() != nullptr)
+  {
     const auto parsed = json::value::parse(document);
     if (!parsed) return std::unexpected(load_failure{load_error::malformed, document});
 
-    lv_obj_t* root = nullptr;
-    const auto built = build(*parsed, parent.raw(), root);
     loaded result;
+    lv_obj_t* root = nullptr;
+    const auto built = build(*parsed, parent.raw(), root, result);
     result.root_ = owned<obj>{obj{root}};  // deletes a half-built tree when we return an error
-    result.document_ = *parsed;
     if (!built) return std::unexpected(built.error());
     return result;
   }
 
  private:
-  static std::expected<void, load_failure> apply_to(std::string_view type, lv_obj_t* o,
+  // Applies properties with the tables of widget number `kind` of Widgets...
+  static std::expected<void, load_failure> apply_to(std::size_t kind, lv_obj_t* o,
                                                     json::value props) {
-    if (type == "column" || type == "row") type = "obj";
     std::expected<void, load_failure> result =
-        std::unexpected(load_failure{load_error::unknown_widget, type});
-    ((type == Widgets.sv() ? (result = detail::apply_properties<Widgets>(o, props), true) : false) || ...);
+        std::unexpected(load_failure{load_error::unknown_widget, {}});
+    std::size_t i = 0;
+    ((i++ == kind ? (result = detail::apply_properties<Widgets>(o, props), true) : false) || ...);
     return result;
   }
 
@@ -514,7 +545,7 @@ class runtime {
   }
 
   static std::expected<void, load_failure> build(json::value node, lv_obj_t* parent,
-                                                 lv_obj_t*& made) {
+                                                 lv_obj_t*& made, loaded& out) {
     const auto type_value = node["type"];
     if (!node.is(json::kind::object) || !type_value.is(json::kind::string))
       return std::unexpected(load_failure{load_error::malformed, node.text()});
@@ -526,21 +557,37 @@ class runtime {
 
     bool known = false;
     lv_obj_t* o = nullptr;
-    ((type == Widgets.sv() ? (o = create<Widgets>(parent), known = true) : false) || ...);
+    std::size_t kind = 0, position = 0;
+    ((type == Widgets.sv() ? (o = create<Widgets>(parent), kind = position, known = true)
+                           : (++position, false)) || ...);
     if (!known) return std::unexpected(load_failure{load_error::unknown_widget, type_value.string()});
     if (o == nullptr) return std::unexpected(load_failure{load_error::out_of_memory, node.text()});
     made = o;
 
+    if (const auto id = node["id"]; id) {
+      if (!id.is(json::kind::string) || id.string().empty())
+        return std::unexpected(load_failure{load_error::malformed, id.text()});
+      if (out.entry(id.string()) != nullptr)
+        return std::unexpected(load_failure{load_error::duplicate_id, id.string()});
+      if (out.named_count_ == id_capacity)
+        return std::unexpected(load_failure{load_error::too_many_ids, id.string()});
+      auto& n = out.named_[out.named_count_++];
+      n.id = id.string();
+      n.widget = weak<obj>{obj{o}};
+      n.kind = kind;
+      n.cls = lv_obj_get_class(o);
+    }
+
     if (column) lv_obj_set_flex_flow(o, LV_FLEX_FLOW_COLUMN);
     if (row) lv_obj_set_flex_flow(o, LV_FLEX_FLOW_ROW);
-    if (auto r = apply_to(type, o, node["props"]); !r) return r;
+    if (auto r = apply_to(kind, o, node["props"]); !r) return r;
 
     const auto children = node["children"];
     if (children && !children.is(json::kind::array))
       return std::unexpected(load_failure{load_error::malformed, children.text()});
     for (std::size_t i = 0; i < children.size(); ++i) {
       lv_obj_t* child = nullptr;
-      if (auto r = build(children.at(i), o, child); !r) return r;
+      if (auto r = build(children.at(i), o, child, out); !r) return r;
     }
     return {};
   }

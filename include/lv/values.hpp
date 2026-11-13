@@ -48,9 +48,9 @@ class strict {
 
   template <detail::integer U>
     requires detail::integer<T>
-  constexpr strict(U u) : v_(static_cast<T>(u)) {
-    contract_assert(std::in_range<T>(u));
-  }
+  constexpr strict(U u)
+    pre(std::in_range<T>(u))
+      : v_(static_cast<T>(u)) {}
 
   template <std::same_as<bool> U>
     requires std::same_as<T, bool>
