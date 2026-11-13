@@ -25,6 +25,7 @@ lvgl26_test(json)
 lvgl26_test(state)
 target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
+lvgl26_test(task)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
