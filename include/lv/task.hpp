@@ -66,7 +66,15 @@ struct widget_watch {
   widget_watch* next;
 };
 
+// What a resume in progress needs to know afterwards, kept on the resumer's stack
+// because the task's frame may be gone by then.
+struct resume_state {
+  bool frame_destroyed = false;  // the task finished and freed itself
+  bool cancel_requested = false; // the task must end once it is suspended again
+};
+
 struct task_promise_base {
+  resume_state* running = nullptr;         // set on the spawned task while its code runs
   std::coroutine_handle<> continuation{};  // who awaits this task, if anyone
   std::coroutine_handle<> self{};          // this task's own frame
   task_promise_base* parent = nullptr;     // the promise of who awaits this task
@@ -78,6 +86,7 @@ struct task_promise_base {
   task_promise_base& operator=(const task_promise_base&) = delete;
 
   ~task_promise_base() {
+    if (running != nullptr) running->frame_destroyed = true;
     while (watches != nullptr) {
       widget_watch* w = watches;
       watches = w->next;
@@ -117,10 +126,39 @@ inline task_promise_base* root_of(task_promise_base* waiting) noexcept {
 
 // Ends the spawned task that `waiting` belongs to, with everything it awaits: its
 // frame is destroyed, which destroys the frames of the tasks it holds.
-// Whatever called this lives in one of those frames and must not touch itself afterwards.
+//
+// A frame must not be destroyed while its code runs. That happens when a task
+// deletes a widget it has waited on. The request is then recorded, and
+// resume_task() destroys the frame as soon as the task is suspended again.
+//
+// Whatever called this may live in one of those frames and must not touch itself
+// afterwards.
 inline void cancel(task_promise_base* waiting) noexcept {
   task_promise_base* root = root_of(waiting);
-  if (root->detached) root->self.destroy();
+  if (!root->detached) return;
+  if (root->running != nullptr)
+    root->running->cancel_requested = true;
+  else
+    root->self.destroy();
+}
+
+// Whether the task that `waiting` belongs to is about to be ended. A task in this
+// state must not start waiting for anything: it only needs to get suspended.
+inline bool cancel_pending(task_promise_base* waiting) noexcept {
+  const task_promise_base* root = root_of(waiting);
+  return root->running != nullptr && root->running->cancel_requested;
+}
+
+// Resumes a coroutine of the spawned task that `owner` belongs to. Every resume
+// goes through here, so that the task knows when its code runs.
+inline void resume_task(task_promise_base* owner, std::coroutine_handle<> frame) noexcept {
+  task_promise_base* root = root_of(owner);
+  resume_state state{};
+  root->running = &state;
+  frame.resume();
+  if (state.frame_destroyed) return;  // the task finished: `root` is gone
+  root->running = nullptr;
+  if (state.cancel_requested) root->self.destroy();
 }
 
 inline void widget_deleted(lv_event_t* e) {
@@ -184,6 +222,7 @@ struct task_awaiter {
   std::coroutine_handle<> await_suspend(std::coroutine_handle<P> waiting) const noexcept {
     frame.promise().continuation = waiting;
     frame.promise().parent = &waiting.promise();
+    if (cancel_pending(&waiting.promise())) return std::noop_coroutine();  // just get suspended
     return frame;  // start the awaited task now
   }
 
@@ -263,7 +302,7 @@ inline bool spawn(task<void> work) noexcept {
   if (!work) return false;
   const auto frame = std::exchange(work.frame_, {});
   frame.promise().detached = true;
-  frame.resume();
+  detail::resume_task(&frame.promise(), frame);
   return true;
 }
 
@@ -300,7 +339,13 @@ struct event_source {
     contract_assert(widget != nullptr && "waiting for an event of an empty view");
     done = done_fn;
     context = done_context;
-    watch(owner, widget, true);
+    // Without the record that ties the task to the widget, a later deletion would
+    // leave the task waiting on freed memory. So if LVGL has no memory for it, the
+    // task ends here instead of waiting unprotected.
+    if (watch(owner, widget, true) == nullptr) {
+      cancel(owner);
+      return true;  // stay suspended, with nothing armed, until the task is ended
+    }
     on_code = lv_obj_add_event_cb(widget, &fired_cb, Code, this);
     return true;
   }
@@ -440,13 +485,16 @@ template <wait_source S>
 struct wait {
   S source;
   std::coroutine_handle<> waiting{};
+  task_promise_base* owner = nullptr;
 
   bool await_ready() const noexcept { return false; }
 
   template <task_promise_type P>
   bool await_suspend(std::coroutine_handle<P> h) noexcept {
     waiting = h;
-    return source.arm(&done, this, &h.promise());
+    owner = &h.promise();
+    if (cancel_pending(owner)) return true;  // the task is ending: just get suspended
+    return source.arm(&done, this, owner);
   }
 
   // Two plain functions instead of one with a computed return type: GCC's analyzer
@@ -460,7 +508,10 @@ struct wait {
     requires(!requires(S& s) { s.value(); })
   {}
 
-  static void done(void* context) { static_cast<wait*>(context)->waiting.resume(); }
+  static void done(void* context) {
+    auto* self = static_cast<wait*>(context);
+    resume_task(self->owner, self->waiting);
+  }
 };
 
 // A source with what to do when it wins: view.next().clicked >> [] { ... }.
@@ -528,6 +579,7 @@ struct first_of {
   std::tuple<Items...> items;
   std::array<slot, sizeof...(Items)> slots{};
   std::coroutine_handle<> waiting{};
+  task_promise_base* owner = nullptr;
   std::size_t winner = none;
 
   explicit first_of(Items... i) : items(std::move(i)...) {}
@@ -537,13 +589,15 @@ struct first_of {
   template <task_promise_type P>
   bool await_suspend(std::coroutine_handle<P> h) noexcept {
     waiting = h;
+    owner = &h.promise();
     template for (constexpr auto i : indices<sizeof...(Items)>) {
-      if (winner == none) {
+      // Stop arming as soon as one is done already, or the task is ending.
+      if (winner == none && !cancel_pending(owner)) {
         slots[i] = {this, i};
-        if (!source_of(std::get<i>(items)).arm(&done, &slots[i], &h.promise()))
-          winner = i;  // done already
+        if (!source_of(std::get<i>(items)).arm(&done, &slots[i], owner)) winner = i;
       }
     }
+    if (cancel_pending(owner)) return true;  // just get suspended
     if (winner == none) return true;
     disarm_others();
     return false;
@@ -567,7 +621,7 @@ struct first_of {
     if (self->winner != none) return;
     self->winner = s->index;
     self->disarm_others();
-    self->waiting.resume();
+    resume_task(self->owner, self->waiting);
   }
 
  private:

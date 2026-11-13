@@ -91,6 +91,52 @@ lv::task<> parent_of_child(lv::view<"button"> button, int* out, bool* ended) {
   *out = co_await wait_click(button);
 }
 
+// A task that deletes the widget it has waited on, while its own code runs.
+lv::task<> deletes_its_own_widget(lv::view<"button"> button, int* steps, bool* ended) {
+  at_exit cleanup{ended};
+  co_await button.next().clicked;
+  *steps = 1;
+  lv_obj_delete(button.raw());  // cancels this task, but not in the middle of this line
+  *steps = 2;                   // still runs: the task ends when it next waits
+  co_await button.next().clicked;  // must not touch the deleted button
+  *steps = 3;
+}
+
+// The same, with the next wait being a sleep, a child task and lv::first.
+lv::task<> deletes_then_waits(lv::view<"button"> button, int kind, int* steps, bool* ended) {
+  at_exit cleanup{ended};
+  co_await button.next().clicked;
+  lv_obj_delete(button.raw());
+  *steps = 2;
+  if (kind == 0) co_await lv::sleep(10 * ms);
+  if (kind == 1) (void)co_await twice(1);
+  if (kind == 2) (void)co_await lv::first(button.next().pressed, lv::sleep(10 * ms));
+  *steps = 3;
+}
+
+void a_task_may_delete_its_own_widget(lv::obj screen) {
+  const auto before = free_bytes();
+  {
+    auto button = screen.add<"button">();
+    int steps = 0;
+    bool ended = false;
+    check(lv::spawn(deletes_its_own_widget(button, &steps, &ended)));
+    click(button);
+    check(steps == 2 && ended);
+  }
+  for (int kind = 0; kind < 3; ++kind) {
+    auto button = screen.add<"button">();
+    int steps = 0;
+    bool ended = false;
+    check(lv::spawn(deletes_then_waits(button, kind, &steps, &ended)));
+    click(button);
+    check(steps == 2 && ended);
+    lv_test_wait(50);
+    check(steps == 2);  // nothing of the ended task ran later
+  }
+  check(free_bytes() == before);
+}
+
 void events_and_timers(lv::obj screen) {
   auto button = screen.add<"button">();
   bool ended = false;
@@ -252,6 +298,7 @@ int main() {
   tasks_await_tasks(screen);
   state_changes();
   first_of_several(screen);
+  a_task_may_delete_its_own_widget(screen);
   nothing_is_left_behind(screen);
 
   clicks.reset();
