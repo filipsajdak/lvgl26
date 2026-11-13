@@ -23,6 +23,12 @@ namespace lv {
 template <lv_event_code_t Code>
 struct event_ref {
   lv_obj_t* widget = nullptr;
+
+  // For lv::first: what to do when this event is the first to happen.
+  //   button.next().clicked.then([] { ... })
+  // Defined in lv/task.hpp.
+  template <class F>
+  auto then(F handler) const;
 };
 
 namespace detail {
