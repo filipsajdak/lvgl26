@@ -102,6 +102,25 @@ lv::spawn(count_clicks(button));
   `view.next().gone` to react to the deletion instead.
 - Everything runs on the UI thread. Coroutine frames come from LVGL's allocator.
 
+Choosing by value is checked at compile time, in the shape of the pattern matching proposed for
+C++29 (P2688):
+
+```cpp
+enum class mode { off, eco, sport };
+
+const char* name = lv::match(m)(
+    lv::is<mode::off>   >> [] { return "Off"; },
+    lv::is<mode::eco>   >> [] { return "Eco"; },
+    lv::is<mode::sport> >> [] { return "Sport"; });
+// leave one out: error: lv::match does not cover: sport. Add an arm for each, or ...
+
+int level = lv::match(n)(lv::is<1, 2> >> [] { return 0; }, lv::otherwise >> [] { return 1; });
+```
+
+For an enum, reflection checks that every enumerator has exactly one arm. A repeated value, an
+`lv::otherwise` that can never match, and a missing `lv::otherwise` on a type whose values cannot be
+listed are compile errors too.
+
 Design tokens come from a W3C Design Tokens (DTCG) JSON file, read at compile time:
 
 ```cpp
