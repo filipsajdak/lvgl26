@@ -80,10 +80,14 @@ namespace detail {
 
 // How to write a value of type `t`, for the error message.
 consteval std::string how_to_write(std::meta::info t) {
-  if (t == ^^length) return "a length (120_px, 50_pct or lv::size_content)";
-  if (t == ^^angle) return "an angle (90_deg)";
-  if (t == ^^duration) return "a time (300_ms)";
-  if (t == ^^opa) return "an opacity (50_pct)";
+  if (t == ^^length) return "a length (120 * lv::px, 50 * lv::pct or lv::size_content)";
+  if (t == std::meta::dealias(^^horizontal))
+    return "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)";
+  if (t == std::meta::dealias(^^vertical))
+    return "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal length)";
+  if (t == ^^angle) return "an angle (90 * lv::deg)";
+  if (t == ^^duration) return "a time (300 * lv::ms)";
+  if (t == ^^opa) return "an opacity (50 * lv::pct)";
   if (t == ^^strict<bool>) return "true or false";
   if (std::meta::has_template_arguments(t) && std::meta::template_of(t) == ^^strict)
     return "a whole number (not bool, not floating point)";
@@ -155,7 +159,34 @@ struct binding {
   lv_subject_t* (*subject)(const void*);
 };
 
-// A text property bound to a state through a printf format: lv::bind(speed, "%d km/h").
+// The format of a text binding: text with exactly one {} where the value goes,
+// as in std::format. It is checked and turned into LVGL's printf form at compile time.
+struct text_format {
+  const char* printf;
+
+  template <std::size_t N>
+  consteval text_format(const char (&text)[N]) : printf(nullptr) {
+    std::string out;
+    int places = 0;
+    for (std::size_t i = 0; i + 1 < N; ++i) {
+      if (text[i] == '{' && text[i + 1] == '}') {
+        out += "%d";
+        ++places;
+        ++i;
+      } else if (text[i] == '%') {
+        out += "%%";
+      } else {
+        out.push_back(text[i]);
+      }
+    }
+    if (places != 1)
+      throw detail::unknown_name("lv: a text binding format needs exactly one {} for the value, "
+                                 "for example \"{} km/h\".");
+    printf = std::define_static_string(out);
+  }
+};
+
+// A text property bound to a state through a format: lv::bind(speed, "{} km/h").
 template <class T>
 struct formatted_binding {
   const void* source;
@@ -267,7 +298,8 @@ consteval std::meta::info value_type(std::string_view prop, std::meta::info para
         has(prop, "period") || has(name, "duration") || has(name, "time") ||
         has(name, "delay") || has(name, "period"))
       return ^^duration;
-    if (is_one_of(name, {"x", "y", "w", "h", "width", "height"})) return ^^length;
+    if (is_one_of(name, {"x", "w", "width"})) return ^^horizontal;
+    if (is_one_of(name, {"y", "h", "height"})) return ^^vertical;
   }
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
@@ -325,7 +357,7 @@ struct raw_value {
 };
 
 // Marks a style value as a deliberate exception to "styles use design tokens":
-// lv::raw(1_px). Easy to search for in a review.
+// lv::raw(1 * lv::px). Easy to search for in a review.
 template <class T>
 constexpr raw_value<T> raw(T value) {
   return {value};

@@ -6,7 +6,7 @@
 
 namespace {
 
-using namespace lv::literals;
+using namespace lv::units;
 
 // Named values: the type says what the number is.
 struct kmh {
@@ -24,9 +24,9 @@ constinit lv::state<bool> hidden{false};
 constinit lv::state<const char*> title{"Trip"};
 constinit lv::state<lv_flex_flow_t> flow{LV_FLEX_FLOW_COLUMN};
 
-constexpr auto ui = lv::column({.flex_flow = lv::bind(flow), .size = {320_px, 240_px}})[
+constexpr auto ui = lv::column({.flex_flow = lv::bind(flow), .size = {320 * px, 240 * px}})[
     lv::label({.id = "title", .text = lv::bind(title)}),
-    lv::label({.id = "reading", .text = lv::bind(speed, "%d km/h")}),
+    lv::label({.id = "reading", .text = lv::bind(speed, "{} km/h")}),
     lv::arc({.id = "dial", .range = {0, 240}, .value = lv::bind(speed)}),
     lv::bar({.id = "bar", .range = {0, 240}, .value = lv::bind(speed)}),
     lv::label({.id = "extra", .text = "x", .user_data = nullptr})];
@@ -101,7 +101,7 @@ void observers() {
 }
 
 void runtime_binding(lv::obj screen) {
-  auto l = screen.add<"label">().set({.text = lv::bind(speed, "%d")});
+  auto l = screen.add<"label">().set({.text = lv::bind(speed, "{}")});
   speed = kmh{5};
   check(std::strcmp(l.get<"text">(), "5") == 0);
 

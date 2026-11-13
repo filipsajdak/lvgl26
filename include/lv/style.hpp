@@ -10,7 +10,7 @@
 // memory: no heap is used, and LVGL only stores a pointer to it.
 //
 // Design values must be design tokens (see lv/tokens.hpp) or lv::raw(...).
-// Set lv::config::raw_style_values (see lv/config.hpp) to accept plain values such as 8_px.
+// Set lv::config::raw_style_values (see lv/config.hpp) to accept plain values such as 8 * lv::px.
 
 #include <lv/token_types.hpp>
 #include <lv/values.hpp>

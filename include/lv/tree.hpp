@@ -2,7 +2,7 @@
 
 // L2: a UI described as a constexpr value, and lv::mount to build it.
 //
-//   constexpr auto ui = lv::column({.size = {320_px, 240_px}})[
+//   constexpr auto ui = lv::column({.size = {320 * lv::px, 240 * lv::px}})[
 //       lv::label({.id = "title", .text = "Speed"}),
 //       lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
 //       lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
