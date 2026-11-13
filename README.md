@@ -2,7 +2,7 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens and state exist. Async and agent tools do not yet.
+Status: early. Typed widget views, the declarative tree, styles, design tokens, state and coroutines exist. Agent tools do not yet.
 
 ```cpp
 #include <lv/lv.hpp>
@@ -52,7 +52,7 @@ speed = 120 * km / h;                                  // the widgets update
 speed = 2 * km / min;                                  // converted: nothing is lost
 speed = 33 * m / s;                                    // error: 118.8 km/h does not fit an int
 speed = 3 * m;                                         // error: not a speed
-clicks.update([](lv::counter c) { return ++c; });
+++clicks;
 ```
 
 What a state can hold:
@@ -71,6 +71,36 @@ choices. `lv::config::raw_integer_state` allows it.
 A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a
 bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a
 generic observer.
+
+Sequences of UI steps are coroutines on LVGL's loop:
+
+```cpp
+lv::task<> count_clicks(lv::view<"button"> button) {
+  for (;;) {                             // ends by itself when the button is deleted
+    co_await button.next().clicked;
+    co_await lv::sleep(100 * ms);
+    ++clicks;
+  }
+}
+
+lv::task<bool> confirm(lv::view<"button"> ok, lv::view<"button"> cancel) {
+  co_return co_await lv::first(
+      ok.next().clicked     >> [] { return true; },
+      cancel.next().clicked >> [] { return false; },
+      lv::sleep(5 * sec)    >> [] { return false; });
+}
+
+lv::spawn(count_clicks(button));
+```
+
+- `view.next()` names every LVGL event of a widget (`clicked`, `value_changed`, ...); the names are
+  generated from LVGL's event list.
+- `lv::first` waits for whichever comes first, cancels the rest, and returns what the winner's
+  handler returns.
+- **A deleted widget cancels the task.** Once a task has waited on a widget it is tied to it:
+  deleting the widget destroys the task, running the destructors of its local objects. Wait for
+  `view.next().gone` to react to the deletion instead.
+- Everything runs on the UI thread. Coroutine frames come from LVGL's allocator.
 
 Design tokens come from a W3C Design Tokens (DTCG) JSON file, read at compile time:
 

@@ -3,15 +3,28 @@
 // Coroutines on LVGL's loop: write a sequence of UI steps as straight code.
 //
 //   lv::task<> count_clicks(lv::view<"button"> button) {
-//     while (co_await lv::next<LV_EVENT_CLICKED>(button)) {   // until the button is deleted
+//     for (;;) {
+//       co_await button.next().clicked;
 //       co_await lv::sleep(100 * lv::ms);
-//       clicks.update([](lv::counter c) { return ++c; });
+//       ++clicks;
 //     }
 //   }
 //
 //   lv::spawn(count_clicks(button));
 //
-// What a wait ended with is an outcome, matched by name: see "outcomes" below.
+// What can be awaited:
+//   view.next().clicked      one event of a widget (any LVGL event, by name)
+//   lv::sleep(300 * lv::ms)  a time span
+//   lv::changed(state)       the next change of a state; gives the new value
+//   another lv::task<T>      gives its result
+//   lv::first(...)           whichever of several comes first; see below
+//
+// A deleted widget cancels the task. Once a task has waited for an event of a
+// widget, it is tied to that widget: when the widget is deleted, the task ends,
+// whatever it is doing at that moment. Its frame is destroyed and the destructors
+// of its local objects run. So the loop above needs no exit condition, and a task
+// never wakes up to a widget that is gone.
+// To react to the deletion instead, wait for it: view.next().gone.
 //
 // Everything runs on the UI thread, inside lv_timer_handler(): a coroutine resumes
 // in the event, timer or observer callback it was waiting for. Nothing here is
@@ -20,6 +33,7 @@
 // A coroutine frame is allocated with lv_malloc. If that fails, the task is empty
 // and lv::spawn returns false; no exception is thrown.
 
+#include <lv/events.hpp>
 #include <lv/state.hpp>
 #include <lv/units.hpp>
 #include <lv/view.hpp>
@@ -41,9 +55,37 @@ class task;
 
 namespace detail {
 
+struct task_promise_base;
+inline void cancel(task_promise_base* waiting) noexcept;
+
+// A widget that a spawned task depends on. Deleting the widget cancels the task.
+struct widget_watch {
+  lv_obj_t* widget;
+  lv_event_dsc_t* on_delete;  // null while the task itself waits for the deletion
+  task_promise_base* task;
+  widget_watch* next;
+};
+
 struct task_promise_base {
   std::coroutine_handle<> continuation{};  // who awaits this task, if anyone
+  std::coroutine_handle<> self{};          // this task's own frame
+  task_promise_base* parent = nullptr;     // the promise of who awaits this task
+  widget_watch* watches = nullptr;         // the widgets this spawned task depends on
   bool detached = false;                   // started by lv::spawn: frees itself
+
+  task_promise_base() = default;
+  task_promise_base(const task_promise_base&) = delete;
+  task_promise_base& operator=(const task_promise_base&) = delete;
+
+  ~task_promise_base() {
+    while (watches != nullptr) {
+      widget_watch* w = watches;
+      watches = w->next;
+      if (w->widget != nullptr && w->on_delete != nullptr)
+        lv_obj_remove_event_dsc(w->widget, w->on_delete);
+      lv_free(w);
+    }
+  }
 
   static void* operator new(std::size_t size) noexcept { return lv_malloc(size); }
   static void operator delete(void* frame) noexcept { lv_free(frame); }
@@ -67,6 +109,49 @@ struct task_promise_base {
   [[noreturn]] void unhandled_exception() noexcept { std::terminate(); }
 };
 
+// The spawned task that `waiting` belongs to.
+inline task_promise_base* root_of(task_promise_base* waiting) noexcept {
+  while (waiting->parent != nullptr) waiting = waiting->parent;
+  return waiting;
+}
+
+// Ends the spawned task that `waiting` belongs to, with everything it awaits: its
+// frame is destroyed, which destroys the frames of the tasks it holds.
+// Whatever called this lives in one of those frames and must not touch itself afterwards.
+inline void cancel(task_promise_base* waiting) noexcept {
+  task_promise_base* root = root_of(waiting);
+  if (root->detached) root->self.destroy();
+}
+
+inline void widget_deleted(lv_event_t* e) {
+  auto* w = static_cast<widget_watch*>(lv_event_get_user_data(e));
+  w->widget = nullptr;  // LVGL frees the widget's event list itself
+  w->on_delete = nullptr;
+  cancel(w->task);
+}
+
+inline widget_watch* find_watch(task_promise_base* root, lv_obj_t* widget) noexcept {
+  for (widget_watch* w = root->watches; w != nullptr; w = w->next)
+    if (w->widget == widget) return w;
+  return nullptr;
+}
+
+// Ties the spawned task to `widget`: from now on, deleting the widget cancels the
+// task, whatever it is waiting for at that moment. Returns the record, or null if
+// LVGL has no memory (the task is then not protected for this widget).
+inline widget_watch* watch(task_promise_base* waiting, lv_obj_t* widget, bool cancel_on_delete) {
+  task_promise_base* root = root_of(waiting);
+  widget_watch* w = find_watch(root, widget);
+  if (w == nullptr) {
+    w = static_cast<widget_watch*>(lv_malloc(sizeof(widget_watch)));
+    if (w == nullptr) return nullptr;
+    *w = {widget, nullptr, root, root->watches};
+    root->watches = w;
+    if (cancel_on_delete) w->on_delete = lv_obj_add_event_cb(widget, &widget_deleted, LV_EVENT_DELETE, w);
+  }
+  return w;
+}
+
 template <class T>
 struct task_promise : task_promise_base {
   T value{};
@@ -82,6 +167,34 @@ struct task_promise<void> : task_promise_base {
   static task<void> get_return_object_on_allocation_failure() noexcept;
   void return_void() noexcept {}
   void result() noexcept {}
+};
+
+// Only a coroutine of ours can wait for these things: cancelling needs its promise.
+template <class P>
+concept task_promise_type = std::derived_from<P, task_promise_base>;
+
+// What co_await on a task does.
+template <class T>
+struct task_awaiter {
+  std::coroutine_handle<task_promise<T>> frame;
+
+  bool await_ready() const noexcept { return !frame || frame.done(); }
+
+  template <task_promise_type P>
+  std::coroutine_handle<> await_suspend(std::coroutine_handle<P> waiting) const noexcept {
+    frame.promise().continuation = waiting;
+    frame.promise().parent = &waiting.promise();
+    return frame;  // start the awaited task now
+  }
+
+  T await_resume() const noexcept {
+    if constexpr (std::is_void_v<T>) {
+      return;
+    } else {
+      contract_assert(frame && "the awaited task could not be allocated");
+      return frame.promise().result();
+    }
+  }
 };
 
 }  // namespace detail
@@ -108,25 +221,7 @@ class [[nodiscard]] task {
   explicit operator bool() const noexcept { return static_cast<bool>(frame_); }
 
   // co_await a task: run it, and continue with its result when it is done.
-  auto operator co_await() const noexcept {
-    struct awaiter {
-      std::coroutine_handle<promise_type> frame;
-      bool await_ready() const noexcept { return !frame || frame.done(); }
-      std::coroutine_handle<> await_suspend(std::coroutine_handle<> waiting) const noexcept {
-        frame.promise().continuation = waiting;
-        return frame;  // start the awaited task now
-      }
-      T await_resume() const noexcept {
-        if constexpr (std::is_void_v<T>) {
-          return;
-        } else {
-          contract_assert(frame && "the awaited task could not be allocated");
-          return frame.promise().result();
-        }
-      }
-    };
-    return awaiter{frame_};
-  }
+  detail::task_awaiter<T> operator co_await() const noexcept { return {frame_}; }
 
  private:
   std::coroutine_handle<promise_type> frame_{};
@@ -143,14 +238,18 @@ namespace detail {
 
 template <class T>
 task<T> task_promise<T>::get_return_object() noexcept {
-  return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)};
+  const auto frame = std::coroutine_handle<task_promise<T>>::from_promise(*this);
+  self = frame;
+  return task<T>{frame};
 }
 template <class T>
 task<T> task_promise<T>::get_return_object_on_allocation_failure() noexcept {
   return {};
 }
 inline task<void> task_promise<void>::get_return_object() noexcept {
-  return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)};
+  const auto frame = std::coroutine_handle<task_promise<void>>::from_promise(*this);
+  self = frame;
+  return task<void>{frame};
 }
 inline task<void> task_promise<void>::get_return_object_on_allocation_failure() noexcept {
   return {};
@@ -168,250 +267,114 @@ inline bool spawn(task<void> work) noexcept {
   return true;
 }
 
-// ---- outcomes ---------------------------------------------------------------
-//
-// What a wait ended with. An outcome is one of a fixed set of cases, and match()
-// takes one handler per case, by name:
-//
-//   auto outcome = co_await lv::first(
-//       lv::next<LV_EVENT_CLICKED>(ok)     | lv::as<"accepted">,
-//       lv::next<LV_EVENT_CLICKED>(cancel) | lv::as<"rejected">,
-//       lv::sleep(5 * lv::sec));
-//
-//   co_return outcome.match<bool>({
-//       .accepted = [] { return true; },
-//       .elapsed  = [] { return false; },   // the time ran out
-//       .gone     = [] { return false; },   // a button was deleted
-//       .rejected = [] { return false; }});
-//
-// The handler struct is generated by reflection from the cases, sorted by name.
-// Every case needs a handler: leaving one out does not compile.
-
-// The event happened. Its case is named after the event: clicked, value_changed, ...
-template <lv_event_code_t Code>
-struct fired {};
-
-// The widget was deleted while something waited on it.
-struct gone {};
-
-// The time of an lv::sleep ran out.
-struct elapsed {};
-
-// A state changed; `value` is its new value.
-template <class T>
-struct changed_to {
-  T value{};
-};
-
-// A case with a name of your choice: see lv::as.
-template <detail::fixed Name>
-struct named {};
-
-namespace detail {
-
-// "LV_EVENT_VALUE_CHANGED" -> "value_changed".
-consteval std::string_view event_case_name(lv_event_code_t code) {
-  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
-    if (std::meta::extract<lv_event_code_t>(e) == code) {
-      std::string out;
-      for (char c : std::meta::identifier_of(e).substr(std::string_view("LV_EVENT_").size()))
-        out.push_back((c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c);
-      return std::define_static_string(out);
-    }
-  throw unknown_name("lv: this event code has no name");
-}
-
-// The member name of a case in match(): the type's name, or what was given to lv::as.
-template <class T>
-inline constexpr std::string_view case_name = std::meta::identifier_of(
-    std::meta::has_template_arguments(^^T) ? std::meta::template_of(^^T) : ^^T);
-template <fixed Name>
-inline constexpr std::string_view case_name<named<Name>> = Name.sv();
-template <lv_event_code_t Code>
-inline constexpr std::string_view case_name<fired<Code>> = event_case_name(Code);
-
-// One handler of a match. It refers to a callable that takes the case, or nothing.
-template <class R, class Case>
-class case_handler {
-  void* callable_;
-  R (*call_)(void*, const Case&);
-
- public:
-  template <class F>
-    requires std::invocable<F&, const Case&> || std::invocable<F&>
-  constexpr case_handler(F&& f)
-      : callable_(const_cast<void*>(static_cast<const void*>(&f))),
-        call_([](void* callable, const Case& c) -> R {
-          auto& g = *static_cast<std::remove_reference_t<F>*>(callable);
-          if constexpr (std::invocable<F&, const Case&>)
-            return g(c);
-          else
-            return g();
-        }) {}
-
-  constexpr R operator()(const Case& c) const { return call_(callable_, c); }
-};
-
-// The handlers of a match: one member per case, named after it, sorted by name.
-template <class R, class... Cases>
-struct handlers_of {
-  struct type;
-  consteval {
-    struct item {
-      std::string_view name;
-      std::meta::info type;
-    };
-    std::vector<item> items{{case_name<Cases>, ^^case_handler<R, Cases>}...};
-    for (std::size_t i = 1; i < items.size(); ++i)
-      for (std::size_t j = i; j > 0 && items[j].name < items[j - 1].name; --j)
-        std::swap(items[j], items[j - 1]);
-    std::vector<std::meta::info> specs;
-    for (std::size_t i = 0; i < items.size(); ++i) {
-      if (i > 0 && items[i].name == items[i - 1].name)
-        throw unknown_name("lv: two cases of one outcome are both called '" + str(items[i].name) +
-                           "'. Give one of them another name with lv::as.");
-      specs.push_back(std::meta::data_member_spec(items[i].type, {.name = str(items[i].name)}));
-    }
-    std::meta::define_aggregate(^^type, specs);
-  }
-};
-
-}  // namespace detail
-
-// One of a fixed set of cases. See the top of this section.
-template <class... Cases>
-class outcome {
-  std::size_t index_ = 0;
-  std::tuple<Cases...> values_{};
-
- public:
-  constexpr outcome() = default;
-
-  template <class C>
-    requires(std::same_as<C, Cases> || ...)
-  constexpr outcome(C c) {
-    std::size_t i = 0;
-    ((std::same_as<C, Cases> ? (index_ = i, std::get<C>(values_) = std::move(c), 0) : 0, ++i), ...);
-  }
-
-  // Calls the handler of the case that happened and returns its result.
-  template <class R = void>
-  constexpr R match(const typename detail::handlers_of<R, Cases...>::type& handlers) const {
-    template for (constexpr auto m :
-                  std::define_static_array(std::meta::nonstatic_data_members_of(
-                      ^^typename detail::handlers_of<R, Cases...>::type,
-                      std::meta::access_context::unchecked()))) {
-      template for (constexpr auto k : detail::indices<sizeof...(Cases)>) {
-        if constexpr (detail::case_name<Cases...[k]> == std::meta::identifier_of(m))
-          if (index_ == k) return handlers.[:m:](std::get<k>(values_));
-      }
-    }
-    std::unreachable();
-  }
-
-  // Whether the case C is the one that happened.
-  template <class C>
-    requires(std::same_as<C, Cases> || ...)
-  constexpr bool is() const {
-    std::size_t i = 0, at = 0;
-    ((std::same_as<C, Cases> ? (at = i, 0) : 0, ++i), ...);
-    return index_ == at;
-  }
-
-  // For an outcome that can be `gone`: true when the widget still exists, so that
-  //   while (co_await lv::next<LV_EVENT_CLICKED>(button)) { ... }
-  // loops until the button is deleted.
-  constexpr explicit operator bool() const
-    requires(std::same_as<gone, Cases> || ...)
-  {
-    return !is<gone>();
-  }
-
-  // The same outcome as a wider one that has all of these cases.
-  template <class Wider>
-  constexpr Wider widen() const {
-    template for (constexpr auto k : detail::indices<sizeof...(Cases)>) {
-      if (index_ == k) return Wider{std::get<k>(values_)};
-    }
-    std::unreachable();
-  }
-};
-
 namespace detail {
 
 // ---- things to wait for ------------------------------------------------------
 //
-// A source can be armed with a function to call when it is done, disarmed before
-// that, and asked for its outcome afterwards. arm() returns false when the source
-// is done already and will not call back.
+// A source can be armed with a function to call when it is done and disarmed
+// before that. arm() returns false when the source is done already and will not
+// call back. A source disarms itself when it is destroyed, which is what makes
+// cancelling a task safe.
 
 template <class S>
-concept wait_source = requires(S s, void (*done)(void*), void* context) {
-  typename S::result_type;
-  { s.arm(done, context) } -> std::same_as<bool>;
-  s.disarm();
-  { s.result() } -> std::same_as<typename S::result_type>;
-};
+concept wait_source =
+    requires(S s, void (*done)(void*), void* context, task_promise_base* owner) {
+      { s.arm(done, context, owner) } -> std::same_as<bool>;
+      s.disarm();
+    };
 
-// One event on a widget, or the widget's deletion.
+// One event of a widget. Waiting for it ties the task to the widget: see watch().
 template <lv_event_code_t Code>
 struct event_source {
-  using result_type = outcome<fired<Code>, gone>;
-
-  lv_obj_t* widget;
+  lv_obj_t* widget = nullptr;
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_event_dsc_t* on_code = nullptr;
-  lv_event_dsc_t* on_gone = nullptr;
-  bool happened = false;
 
-  bool arm(void (*done_fn)(void*), void* done_context) noexcept {
-    if (widget == nullptr) return false;
+  event_source() = default;
+  explicit event_source(lv_obj_t* w) : widget(w) {}
+  event_source(event_source&&) = default;  // only moved before it is armed
+  ~event_source() { disarm(); }
+
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner) noexcept {
+    contract_assert(widget != nullptr && "waiting for an event of an empty view");
     done = done_fn;
     context = done_context;
+    watch(owner, widget, true);
     on_code = lv_obj_add_event_cb(widget, &fired_cb, Code, this);
-    on_gone = lv_obj_add_event_cb(widget, &gone_cb, LV_EVENT_DELETE, this);
     return true;
   }
 
   void disarm() noexcept {
-    if (widget != nullptr && on_code != nullptr) {
-      lv_obj_remove_event_dsc(widget, on_code);
-      lv_obj_remove_event_dsc(widget, on_gone);
-    }
-    on_code = on_gone = nullptr;
-  }
-
-  result_type result() const noexcept {
-    if (happened) return fired<Code>{};
-    return gone{};
+    if (on_code != nullptr) lv_obj_remove_event_dsc(widget, on_code);
+    on_code = nullptr;
   }
 
   static void fired_cb(lv_event_t* e) {
     auto* self = static_cast<event_source*>(lv_event_get_user_data(e));
-    self->happened = true;
     self->disarm();
-    self->done(self->context);  // may free this source: nothing after this line
+    self->done(self->context);  // may destroy this source: nothing after this line
+  }
+};
+
+// The deletion of a widget: view.next().gone. While a task waits for it, deleting
+// the widget does not cancel the task; the wait is done instead.
+template <>
+struct event_source<LV_EVENT_DELETE> {
+  lv_obj_t* widget = nullptr;
+  void (*done)(void*) = nullptr;
+  void* context = nullptr;
+  lv_event_dsc_t* on_code = nullptr;
+  widget_watch* record = nullptr;
+
+  event_source() = default;
+  explicit event_source(lv_obj_t* w) : widget(w) {}
+  event_source(event_source&&) = default;
+  ~event_source() { disarm(); }
+
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner) noexcept {
+    contract_assert(widget != nullptr && "waiting for the deletion of an empty view");
+    done = done_fn;
+    context = done_context;
+    // Take over from the task's own watch of this widget, if there is one.
+    record = watch(owner, widget, false);
+    if (record != nullptr && record->on_delete != nullptr) {
+      lv_obj_remove_event_dsc(widget, record->on_delete);
+      record->on_delete = nullptr;
+    }
+    on_code = lv_obj_add_event_cb(widget, &fired_cb, LV_EVENT_DELETE, this);
+    return true;
   }
 
-  static void gone_cb(lv_event_t* e) {
+  // Stops waiting. If the widget still exists, the task is tied to it again.
+  void disarm() noexcept {
+    if (on_code == nullptr) return;
+    lv_obj_remove_event_dsc(widget, on_code);
+    on_code = nullptr;
+    if (record != nullptr)
+      record->on_delete = lv_obj_add_event_cb(widget, &widget_deleted, LV_EVENT_DELETE, record);
+  }
+
+  static void fired_cb(lv_event_t* e) {
     auto* self = static_cast<event_source*>(lv_event_get_user_data(e));
-    self->disarm();
-    self->widget = nullptr;
+    self->on_code = nullptr;  // LVGL frees the widget's event list itself
+    if (self->record != nullptr) self->record->widget = nullptr;
     self->done(self->context);
   }
 };
 
 // A time span, with a one-shot LVGL timer.
 struct sleep_source {
-  using result_type = outcome<elapsed>;
-
-  std::uint32_t ms;
+  std::uint32_t ms = 0;
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_timer_t* timer = nullptr;
 
-  bool arm(void (*done_fn)(void*), void* done_context) noexcept {
+  explicit sleep_source(std::uint32_t time) : ms(time) {}
+  sleep_source(sleep_source&&) = default;
+  ~sleep_source() { disarm(); }
+
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base*) noexcept {
     done = done_fn;
     context = done_context;
     timer = lv_timer_create(&elapsed_cb, ms, this);
@@ -425,8 +388,6 @@ struct sleep_source {
     timer = nullptr;
   }
 
-  result_type result() const noexcept { return elapsed{}; }
-
   static void elapsed_cb(lv_timer_t* t) {
     auto* self = static_cast<sleep_source*>(lv_timer_get_user_data(t));
     self->timer = nullptr;  // LVGL deletes it when this callback returns
@@ -437,15 +398,17 @@ struct sleep_source {
 // The next change of a state.
 template <class T, class O>
 struct change_source {
-  using result_type = outcome<changed_to<T>>;
-
-  const state<T, O>* source;
+  const state<T, O>* source = nullptr;
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_observer_t* observer = nullptr;
   bool armed = false;
 
-  bool arm(void (*done_fn)(void*), void* done_context) noexcept {
+  explicit change_source(const state<T, O>* s) : source(s) {}
+  change_source(change_source&&) = default;
+  ~change_source() { disarm(); }
+
+  bool arm(void (*done_fn)(void*), void* done_context, task_promise_base*) noexcept {
     if (source->raw() == nullptr) return false;
     done = done_fn;
     context = done_context;
@@ -461,7 +424,8 @@ struct change_source {
     armed = false;
   }
 
-  result_type result() const noexcept { return changed_to<T>{source->get()}; }
+  // What the wait gives: the state's new value.
+  T value() const noexcept { return source->get(); }
 
   static void changed_cb(lv_observer_t* o, lv_subject_t*) {
     auto* self = static_cast<change_source*>(lv_observer_get_user_data(o));
@@ -471,47 +435,12 @@ struct change_source {
   }
 };
 
-// The cases of an outcome type, as a tuple type.
-template <class T>
-struct cases_of_impl;
-template <class... Cases>
-struct cases_of_impl<outcome<Cases...>> {
-  using type = std::tuple<Cases...>;
-};
-template <class T>
-using cases_of = typename cases_of_impl<T>::type;
-
-// The outcome of S with its first case renamed: see lv::as.
-template <fixed Name, class First, class... Rest>
-outcome<named<Name>, Rest...> rename_first(std::type_identity<outcome<First, Rest...>>);
-
-template <fixed Name, wait_source S>
-struct renamed_source {
-  using result_type =
-      decltype(rename_first<Name>(std::type_identity<typename S::result_type>{}));
-
-  S inner;
-
-  bool arm(void (*done_fn)(void*), void* done_context) noexcept {
-    return inner.arm(done_fn, done_context);
-  }
-  void disarm() noexcept { inner.disarm(); }
-
-  result_type result() const noexcept {
-    const auto r = inner.result();
-    if (r.template is<std::tuple_element_t<0, cases_of<typename S::result_type>>>())
-      return named<Name>{};
-    return rest_of(r);
-  }
-
- private:
-  template <class First, class... Rest>
-  static result_type rest_of(const outcome<First, Rest...>& r) {
-    result_type out{};
-    ((r.template is<Rest>() ? (out = result_type{Rest{}}, 0) : 0), ...);
-    return out;
-  }
-};
+// What a wait gives the coroutine: the source's value, or nothing.
+template <class S>
+using value_of = decltype([](S& s) {
+  if constexpr (requires { s.value(); })
+    return s.value();
+}(std::declval<S&>()));
 
 // co_await of one source.
 template <wait_source S>
@@ -521,61 +450,74 @@ struct wait {
 
   bool await_ready() const noexcept { return false; }
 
-  bool await_suspend(std::coroutine_handle<> h) noexcept {
+  template <task_promise_type P>
+  bool await_suspend(std::coroutine_handle<P> h) noexcept {
     waiting = h;
-    return source.arm(&resume, this);
+    return source.arm(&done, this, &h.promise());
   }
 
-  // One case with a value gives the value; one empty case gives nothing; several
-  // cases give the outcome.
-  auto await_resume() const noexcept {
-    using result = typename S::result_type;
-    if constexpr (std::tuple_size_v<cases_of<result>> != 1) {
-      return source.result();
-    } else if constexpr (requires(std::tuple_element_t<0, cases_of<result>> c) { c.value; }) {
-      return source.result().template match<decltype(std::tuple_element_t<0, cases_of<result>>{}.value)>(
-          only_value_handlers<result>());
-    } else {
-      return;
-    }
+  value_of<S> await_resume() noexcept {
+    if constexpr (requires { source.value(); }) return source.value();
   }
 
-  static void resume(void* self) {
-    const auto h = static_cast<wait*>(self)->waiting;
-    h.resume();
-  }
-
- private:
-  // The outcome has one case, changed_to<T>: its only handler returns the value.
-  template <class Result>
-  static auto only_value_handlers() {
-    using only = std::tuple_element_t<0, cases_of<Result>>;
-    using value = decltype(only{}.value);
-    return typename handlers_of<value, only>::type{[](const only& c) { return c.value; }};
-  }
+  static void done(void* context) { static_cast<wait*>(context)->waiting.resume(); }
 };
 
+// A source with what to do when it wins: view.next().clicked >> [] { ... }.
+template <wait_source S, class F>
+struct handled {
+  S source;
+  F handler;
+};
+
+template <class T>
+inline constexpr bool is_handled = false;
+template <class S, class F>
+inline constexpr bool is_handled<handled<S, F>> = true;
+
 template <wait_source S>
-wait<S> operator co_await(S source) noexcept {
-  return {std::move(source)};
+S& source_of(S& s) {
+  return s;
+}
+template <class S, class F>
+S& source_of(handled<S, F>& h) {
+  return h.source;
 }
 
-// The cases of several outcome types together, each once.
-consteval std::meta::info merged_outcome(std::initializer_list<std::meta::info> outcomes) {
-  std::vector<std::meta::info> cases;
-  for (auto o : outcomes)
-    for (auto c : std::meta::template_arguments_of(std::meta::dealias(o))) {
-      bool known = false;
-      for (auto k : cases) known = known || k == c;
-      if (!known) cases.push_back(c);
-    }
-  return std::meta::substitute(^^outcome, cases);
+// Calls the handler of an item that won, with the source's value if it takes one.
+template <class S, class F>
+decltype(auto) run(handled<S, F>& h) {
+  if constexpr (requires { h.handler(h.source.value()); })
+    return h.handler(h.source.value());
+  else
+    return h.handler();
 }
 
-// co_await lv::first(...): the first of several sources to be done.
-template <wait_source... S>
+template <class S, class F>
+using result_of = decltype(run(std::declval<handled<S, F>&>()));
+
+template <class... R>
+struct common_result : std::common_type<R...> {};
+template <class... R>
+  requires(std::is_void_v<R> && ...)
+struct common_result<R...> {
+  using type = void;
+};
+
+// co_await lv::first(...): the first of several to be done. The others are cancelled.
+//
+//   int answer = co_await lv::first(ok.next().clicked     >> [] { return 1; },
+//                                   cancel.next().clicked >> [] { return 2; },
+//                                   lv::sleep(5 * lv::sec) >> [] { return 3; });
+//
+// With handlers, the result is what the winner's handler returns. Without any,
+// the result is the position of the winner, starting at 0.
+template <class... Items>
 struct first_of {
-  using result_type = typename[:merged_outcome({^^typename S::result_type...}):];
+  static constexpr bool with_handlers = (is_handled<Items> && ...);
+  static_assert(with_handlers || (!is_handled<Items> && ...),
+                "lv: in lv::first, give a handler to every item (a >> [] { ... }) or to none.");
+
   static constexpr std::size_t none = static_cast<std::size_t>(-1);
 
   struct slot {
@@ -583,32 +525,40 @@ struct first_of {
     std::size_t index;
   };
 
-  std::tuple<S...> sources;
-  std::array<slot, sizeof...(S)> slots{};
+  std::tuple<Items...> items;
+  std::array<slot, sizeof...(Items)> slots{};
   std::coroutine_handle<> waiting{};
   std::size_t winner = none;
 
+  explicit first_of(Items... i) : items(std::move(i)...) {}
+
   bool await_ready() const noexcept { return false; }
 
-  bool await_suspend(std::coroutine_handle<> h) noexcept {
+  template <task_promise_type P>
+  bool await_suspend(std::coroutine_handle<P> h) noexcept {
     waiting = h;
-    template for (constexpr auto i : indices<sizeof...(S)>) {
+    template for (constexpr auto i : indices<sizeof...(Items)>) {
       if (winner == none) {
         slots[i] = {this, i};
-        if (!std::get<i>(sources).arm(&done, &slots[i])) {
-          winner = i;        // done already: the ones armed before lose
-          disarm_others();
-        }
+        if (!source_of(std::get<i>(items)).arm(&done, &slots[i], &h.promise()))
+          winner = i;  // done already
       }
     }
-    return winner == none;
+    if (winner == none) return true;
+    disarm_others();
+    return false;
   }
 
-  result_type await_resume() const noexcept {
-    template for (constexpr auto i : indices<sizeof...(S)>) {
-      if (winner == i) return std::get<i>(sources).result().template widen<result_type>();
+  auto await_resume() noexcept {
+    if constexpr (with_handlers) {
+      using result = typename common_result<decltype(run(std::declval<Items&>()))...>::type;
+      template for (constexpr auto i : indices<sizeof...(Items)>) {
+        if (winner == i) return static_cast<result>(run(std::get<i>(items)));
+      }
+      std::unreachable();
+    } else {
+      return winner;
     }
-    std::unreachable();
   }
 
   static void done(void* context) {
@@ -617,55 +567,73 @@ struct first_of {
     if (self->winner != none) return;
     self->winner = s->index;
     self->disarm_others();
-    const auto h = self->waiting;
-    h.resume();
+    self->waiting.resume();
   }
 
  private:
   void disarm_others() noexcept {
-    template for (constexpr auto i : indices<sizeof...(S)>) {
-      if (winner != i) std::get<i>(sources).disarm();
+    template for (constexpr auto i : indices<sizeof...(Items)>) {
+      if (winner != i) source_of(std::get<i>(items)).disarm();
     }
   }
 };
 
-template <fixed Name>
-struct as_name {};
+// A named event of a widget, as something to wait for.
+template <lv_event_code_t Code>
+event_source<Code> as_source(event_ref<Code> e) noexcept {
+  return event_source<Code>{e.widget};
+}
+template <wait_source S>
+S as_source(S s) noexcept {
+  return s;
+}
+template <class S, class F>
+handled<S, F> as_source(handled<S, F> h) noexcept {
+  return h;
+}
 
-// source | lv::as<"name">. In this namespace because the sources are, and that is
-// where the compiler looks for the operator.
-template <wait_source S, fixed Name>
-renamed_source<Name, S> operator|(S source, as_name<Name>) noexcept {
+template <class T>
+concept awaitable_item = requires(T t) { as_source(std::move(t)); };
+
+template <wait_source S>
+wait<S> operator co_await(S source) noexcept {
   return {std::move(source)};
+}
+
+// source >> handler, for lv::first. In this namespace because the sources are.
+template <wait_source S, class F>
+handled<S, F> operator>>(S source, F handler) noexcept {
+  return {std::move(source), std::move(handler)};
 }
 
 }  // namespace detail
 
-// co_await lv::next<LV_EVENT_CLICKED>(button): the event came, or the widget was
-// deleted. The outcome converts to bool: true while the widget exists.
-template <lv_event_code_t Code, detail::fixed W>
-detail::event_source<Code> next(view<W> widget) noexcept {
-  return {widget.raw()};
+// co_await button.next().clicked
+template <lv_event_code_t Code>
+detail::wait<detail::event_source<Code>> operator co_await(event_ref<Code> e) noexcept {
+  return {detail::event_source<Code>{e.widget}};
+}
+
+// button.next().clicked >> handler, for lv::first.
+template <lv_event_code_t Code, class F>
+detail::handled<detail::event_source<Code>, F> operator>>(event_ref<Code> e, F handler) noexcept {
+  return {detail::event_source<Code>{e.widget}, std::move(handler)};
 }
 
 // co_await lv::sleep(300 * lv::ms)
-inline detail::sleep_source sleep(duration time) noexcept { return {time.ms}; }
+inline detail::sleep_source sleep(duration time) noexcept { return detail::sleep_source{time.ms}; }
 
 // T now = co_await lv::changed(speed): the value after the state's next change.
 template <class T, class O>
 detail::change_source<T, O> changed(const state<T, O>& source) noexcept {
-  return {&source};
+  return detail::change_source<T, O>{&source};
 }
 
-// Names what a source means: lv::next<LV_EVENT_CLICKED>(ok) | lv::as<"accepted">.
-// Its first case (the event, the time, the change) gets that name in match().
-template <detail::fixed Name>
-inline constexpr detail::as_name<Name> as{};
-
-// co_await lv::first(a, b, c): whichever is done first. The others are cancelled.
-template <detail::wait_source... S>
-detail::first_of<S...> first(S... sources) noexcept {
-  return {{std::move(sources)...}};
+// co_await lv::first(a, b, c): whichever is done first. See detail::first_of.
+template <detail::awaitable_item... Items>
+auto first(Items... items) noexcept {
+  return detail::first_of<decltype(detail::as_source(std::move(items)))...>{
+      detail::as_source(std::move(items))...};
 }
 
 }  // namespace lv

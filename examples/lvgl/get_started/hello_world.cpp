@@ -14,5 +14,5 @@ constexpr auto ui = lv::group({.style = {.bg_color = tok.screen.background,
 }  // namespace
 
 void get_started::hello_world(lv::obj screen) {
-  if (auto mounted = lv::mount<ui>(screen)) mounted->detach();
+  lv::place<ui>(screen);
 }

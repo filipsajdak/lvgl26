@@ -3,6 +3,7 @@
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
+#include <lv/events.hpp>
 #include <lv/props.hpp>
 
 #include <concepts>
@@ -68,6 +69,12 @@ class view {
     pre(parent.raw() != nullptr)
   {
     return view{[:detail::resolve_create(W.sv()):](parent.raw())};
+  }
+
+  // The events of this widget, by name: co_await button.next().clicked.
+  template <class D = void>
+  constexpr auto next() const {
+    return detail::make_events<D>(p_);
   }
 
   // Creates a child of this widget.

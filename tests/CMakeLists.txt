@@ -91,6 +91,4 @@ lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one 
 lvgl26_compile_fail(quantity_wrong_dimension "no match for .operator=")
 lvgl26_compile_fail(quantity_lossy "no match for .operator=")
 lvgl26_compile_fail(quantity_floating "a quantity in a state needs an integer number for now")
-lvgl26_compile_fail(match_missing_case "cannot convert .* to .*handlers_of<int, lv::named<.*accepted.*lv::gone, lv::elapsed")
-lvgl26_compile_fail(match_unknown_case "cannot convert .* to .*handlers_of<int, lv::named<.*accepted.*lv::gone, lv::elapsed")
-lvgl26_compile_fail(match_duplicate_name "two cases of one outcome are both called 'clicked'")
+lvgl26_compile_fail(first_mixed_handlers "in lv::first, give a handler to every item")
