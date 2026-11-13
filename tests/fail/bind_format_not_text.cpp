@@ -1,3 +1,4 @@
 #include <lv/lv.hpp>
-constinit lv::state<int> n{0};
+struct kmh { int value; };
+constinit lv::state<kmh> n{kmh{0}};
 constexpr auto ui = lv::arc({.value = lv::bind(n, "%d")});

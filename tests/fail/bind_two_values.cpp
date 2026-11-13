@@ -1,4 +1,5 @@
 #include <lv/lv.hpp>
-constinit lv::state<int> w{10};
+struct px { int value; };
+constinit lv::state<px> w{px{10}};
 constexpr auto ui = lv::box({.pos = lv::bind(w)});
 void f(lv::obj s) { lv::mount<ui>(s); }

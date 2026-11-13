@@ -18,6 +18,10 @@ namespace lv {
 struct config {
   // Accept plain values such as 8_px in styles, instead of design tokens only.
   bool raw_style_values = false;
+
+  // Accept lv::state<int> and other plain integers, instead of a named type
+  // such as `struct kmh { int value; };`.
+  bool raw_integer_state = false;
 };
 
 struct override {};
