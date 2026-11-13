@@ -10,7 +10,7 @@ using namespace lv::units;
 constinit lv::state clicks{lv::counter{}};
 
 void count_click() {
-  clicks.update([](lv::counter c) { return ++c; });
+  ++clicks;
 }
 
 constexpr auto ui = lv::group[
@@ -20,5 +20,5 @@ constexpr auto ui = lv::group[
 }  // namespace
 
 void get_started::button(lv::obj screen) {
-  if (auto mounted = lv::mount<ui>(screen)) mounted->detach();
+  lv::place<ui>(screen);
 }

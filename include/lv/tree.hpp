@@ -362,4 +362,13 @@ std::expected<mounted<Tree>, mount_error> mount(obj parent) {
   return m;
 }
 
+// Builds the widgets of `Tree` under `parent` and leaves them to it, as widgets
+// made with LVGL's C API are: they live until the parent is deleted.
+// Returns the root, or an empty view if LVGL had no memory.
+template <const auto& Tree>
+obj place(obj parent) {
+  auto built = mount<Tree>(parent);
+  return built ? built->detach() : obj{};
+}
+
 }  // namespace lv

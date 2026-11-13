@@ -131,6 +131,53 @@ class state {
     return *this;
   }
 
+  // A state forwards the operators its value has:
+  //   ++clicks;   speed += 10 * km / h;
+  state& operator++()
+    requires requires(T v) { ++v; }
+  {
+    T v = get();
+    ++v;
+    set(v);
+    return *this;
+  }
+  state& operator--()
+    requires requires(T v) { --v; }
+  {
+    T v = get();
+    --v;
+    set(v);
+    return *this;
+  }
+  template <class U>
+    requires requires(T v, const U& u) { v += u; }
+  state& operator+=(const U& u) {
+    T v = get();
+    v += u;
+    set(v);
+    return *this;
+  }
+  template <class U>
+    requires requires(T v, const U& u) { v -= u; }
+  state& operator-=(const U& u) {
+    T v = get();
+    v -= u;
+    set(v);
+    return *this;
+  }
+
+  // The plain number: of a quantity, in the state's own unit; of a named value,
+  // its member.
+  auto number() const
+    requires detail::integer_quantity<T> || detail::strong_value<T>
+  {
+    const T v = get();
+    if constexpr (detail::integer_quantity<T>)
+      return v.numerical_value_in(T::unit);
+    else
+      return v.[:detail::strong_member<T>():];
+  }
+
   // Changes the value with a function of the current one:
   //   clicks.update([](lv::counter c) { return ++c; });
   template <class F>

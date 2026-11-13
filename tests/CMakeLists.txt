@@ -25,6 +25,7 @@ lvgl26_test(json)
 lvgl26_test(state)
 target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
+lvgl26_test(task)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
@@ -90,3 +91,4 @@ lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one 
 lvgl26_compile_fail(quantity_wrong_dimension "no match for .operator=")
 lvgl26_compile_fail(quantity_lossy "no match for .operator=")
 lvgl26_compile_fail(quantity_floating "a quantity in a state needs an integer number for now")
+lvgl26_compile_fail(first_mixed_handlers "in lv::first, give a handler to every item")

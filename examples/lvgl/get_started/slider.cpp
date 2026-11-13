@@ -17,5 +17,5 @@ constexpr auto ui = lv::group[
 }  // namespace
 
 void get_started::slider(lv::obj screen) {
-  if (auto mounted = lv::mount<ui>(screen)) mounted->detach();
+  lv::place<ui>(screen);
 }

@@ -52,9 +52,13 @@ void counters(lv::obj screen) {
   static_assert(lv::detail::strong_value<lv::counter>);
 
   auto l = screen.add<"label">().set({.text = lv::bind(clicks, "{} clicks")});
-  clicks.update([](lv::counter c) { return ++c; });
-  clicks.update([](lv::counter c) { return c += 4; });
-  check(clicks.get() == lv::counter{5});
+  ++clicks;
+  clicks += 4;
+  check(clicks.get() == lv::counter{5} && clicks.number() == 5);
+  --clicks;
+  clicks -= 1;
+  clicks.update([](lv::counter c) { return c += 2; });
+  check(clicks.number() == 5);
   check(std::strcmp(l.get<"text">(), "5 clicks") == 0);
 
   lv_obj_delete(l.raw());
@@ -89,6 +93,9 @@ void widgets_follow(lv::obj screen) {
   check(mph.numerical_value_in(mp_units::international::mile / h) > 74.5 &&
         mph.numerical_value_in(mp_units::international::mile / h) < 74.6);
   speed = 40 * km / h;
+  speed += 10 * km / h;
+  check(speed.number() == 50);
+  speed -= 10 * km / h;
   check(std::strcmp(root->get<"title">().get<"text">(), "Trip") == 0);
 
   speed = 120 * km / h;
