@@ -16,39 +16,56 @@ constexpr char light_json[] = {
 constexpr auto dark = lv::tokens<dark_json>;
 constexpr auto light = lv::tokens<light_json>;
 
-// Types: every token is the unit type its $type asks for.
-static_assert(std::is_same_v<decltype(dark.color.primary), lv_color_t>);
-static_assert(std::is_same_v<decltype(dark.space.md), lv::length>);
-static_assert(std::is_same_v<decltype(dark.motion.fast), lv::duration>);
-static_assert(std::is_same_v<decltype(dark.font.family), std::string_view>);
+// Types: every token is an lv::token of the type its $type asks for.
+static_assert(std::is_same_v<decltype(dark.color.primary), lv::token<lv_color_t>>);
+static_assert(std::is_same_v<decltype(dark.space.md), lv::token<lv::length>>);
+static_assert(std::is_same_v<decltype(dark.motion.slow), lv::token<lv::duration>>);
+static_assert(std::is_same_v<decltype(dark.primitive.font.family), lv::token<std::string_view>>);
+static_assert(std::is_same_v<decltype(dark.card.shadow), lv::token<lv::shadow_token>>);
+static_assert(std::is_same_v<decltype(dark.text.title), lv::token<lv::typography_token>>);
 
-// Values: hex strings, the object form, px, rem, ms and s.
-static_assert(dark.color.palette.blue_500.red == 0x33 && dark.color.palette.blue_500.blue == 0xff);
-static_assert(dark.color.text.red == 0xe6 && dark.color.text.green == 0xed);
-static_assert(dark.space.sm == 4_px && dark.space.md == 12_px && dark.space.lg == 24_px);
-static_assert(dark.motion.fast == 150_ms && dark.motion.slow == 400_ms);
-static_assert(dark.font.family == "Montserrat" && dark.font.weight == 700);
-static_assert(dark.font.scale == 1.25);
+// Primitive values: hex strings, the object form, px, rem, ms, s, numbers, lists.
+static_assert(dark.primitive.color.blue_500->red == 0x33 && dark.primitive.color.blue_500->blue == 0xff);
+static_assert(dark.primitive.color.paper->red == 0xe6 && dark.primitive.color.paper->green == 0xed);
+static_assert(dark.primitive.space._1 == 4_px && dark.primitive.space._3 == 12_px);
+static_assert(dark.primitive.space._6 == 24_px);
+static_assert(dark.primitive.duration.fast == 150_ms && dark.primitive.duration.slow == 400_ms);
+static_assert(*dark.primitive.font.family == "Montserrat" && *dark.primitive.font.weight_bold == 700);
+static_assert(*dark.primitive.font.scale == 1.25);
+static_assert(*dark.primitive.easing.standard == lv::bezier{0.2, 0, 0, 1});
 
-// Aliases, including one that crosses groups and one that inherits its type.
-static_assert(dark.color.primary.green == dark.color.palette.blue_500.green);
-static_assert(dark.radius.pill == dark.space.lg);
+// Semantic tokens are aliases of primitives, also across groups.
+static_assert(dark.color.primary->green == dark.primitive.color.blue_500->green);
+static_assert(dark.space.lg == dark.primitive.space._6 && dark.motion.slow == 400_ms);
+static_assert(dark.card.padding == dark.space.md);  // an alias of an alias
 
-// A group whose tokens are all of an unsupported type (shadow) is an empty struct.
-static_assert(std::is_empty_v<decltype(dark.elevation)>);
+// Composite tokens, with aliases inside them.
+static_assert(dark.card.shadow->blur == 8_px && dark.card.shadow->offset_y == 2_px);
+static_assert(dark.card.border->width == 1_px && dark.card.border->style == "solid");
+static_assert(dark.card.border->color.red == dark.color.outline->red);
+static_assert(dark.text.title->font_size == 20_px && dark.text.title->font_weight == 700);
+static_assert(dark.text.title->font_family == "Montserrat" && dark.text.body->line_height == 1.4);
+static_assert(dark.motion.enter->duration == 150_ms && dark.motion.enter->timing.x1 == 0.2);
+static_assert(dark.card.fill->count == 2 && dark.card.fill->stops[1].position == 1);
 
-// One screen, written once, themed by a token set.
+// A group whose tokens all have a $type this version does not know is an empty struct.
+static_assert(std::is_empty_v<decltype(dark.unknown)>);
+
+// One screen, written once, themed by a token set. Every style value is a token.
 template <const auto& T>
 constexpr auto themed = lv::column(
     {.flex_align = {LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER},
      .size = {320_px, 240_px},
-     .style = {.bg_color = T.color.surface, .bg_opa = 100_pct, .radius = 0_px}})[
+     .style = {.bg_color = T.color.surface, .bg_opa = T.opacity.opaque, .radius = T.screen.radius}})[
     lv::column({.id = "card",
                 .size = {200_px, lv::size_content},
-                .style = {.bg_color = T.color.card, .bg_opa = 100_pct, .border_width = 0_px,
-                          .pad_all = T.space.md, .radius = T.radius.card}})[
-        lv::label({.style = {.text_color = T.color.text}, .text = "Speed"}),
-        lv::label({.style = {.text_color = T.color.primary}, .text = "120 km/h"})]];
+                .style = lv::style({.bg_color = T.color.card, .bg_opa = T.opacity.opaque,
+                                    .pad_all = T.card.padding, .radius = T.card.radius}) |
+                         T.card.border | T.card.shadow})[
+        lv::label({.id = "title", .style = lv::style({.text_color = T.color.text}) | T.text.title,
+                   .text = "Speed"}),
+        lv::label({.style = {.text_color = T.color.primary, .text_opa = T.opacity.muted},
+                   .text = "120 km/h"})]];
 
 bool same(lv_color_t a, lv_color_t b) {
   return a.red == b.red && a.green == b.green && a.blue == b.blue;
@@ -67,6 +84,17 @@ void applies_tokens(lv::obj screen) {
   CHECK(dc.get<"style_radius">(LV_PART_MAIN) == 8);
   CHECK(lc.get<"style_radius">(LV_PART_MAIN) == 20);
   CHECK(dc.get<"style_pad_left">(LV_PART_MAIN) == 12);
+
+  // The composite tokens merged with | reached the widget.
+  CHECK(dc.get<"style_border_width">(LV_PART_MAIN) == 1);
+  CHECK(same(dc.get<"style_border_color">(LV_PART_MAIN), dark.color.outline));
+  CHECK(dc.get<"style_shadow_width">(LV_PART_MAIN) == 8);
+  CHECK(dc.get<"style_shadow_offset_y">(LV_PART_MAIN) == 2);
+  CHECK(d->get<"title">().get<"style_text_letter_space">(LV_PART_MAIN) == 1);
+
+  // lv::raw marks a deliberate exception and is accepted in strict mode.
+  dc.set({.style = {.radius = lv::raw(3_px)}});
+  CHECK(dc.get<"style_radius">(LV_PART_MAIN) == 3);
 }
 
 // Changing the tokens changes the pixels. Each theme is compared with its own
