@@ -27,6 +27,9 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
 - Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
+- No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
+  optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
+  `#pragma once` are the only preprocessor lines we write.
 - No handwritten per-property code. Properties, styles and events come from reflection.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).

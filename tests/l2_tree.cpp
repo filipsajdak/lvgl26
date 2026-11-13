@@ -34,7 +34,7 @@ static_assert((0x3366ff_rgb).red == 0x33 && (0x3366ff_rgb).blue == 0xff);
 
 void builds_and_names(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  CHECK(root.has_value());
+  check(root.has_value());
   if (!root) return;
 
   auto title = root->get<"title">();
@@ -42,48 +42,48 @@ void builds_and_names(lv::obj screen) {
   static_assert(std::is_same_v<decltype(title), lv::view<"label">>);
   static_assert(std::is_same_v<decltype(speedo), lv::view<"arc">>);
 
-  CHECK(std::strcmp(title.get<"text">(), "Speed") == 0);
-  CHECK(speedo.get<"value">() == 120);
-  CHECK(speedo.get<"max_value">() == 240);
-  CHECK(lv_obj_get_child_count(root->root().raw()) == 3);
-  CHECK(root->root().get<"style_flex_flow">(LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+  check(std::strcmp(title.get<"text">(), "Speed") == 0);
+  check(speedo.get<"value">() == 120);
+  check(speedo.get<"max_value">() == 240);
+  check(lv_obj_get_child_count(root->root().raw()) == 3);
+  check(root->root().get<"style_flex_flow">(LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
 
   resets = 0;
   lv_obj_send_event(root->get<"reset">().raw(), LV_EVENT_CLICKED, nullptr);
-  CHECK(resets == 1);
+  check(resets == 1);
 
   speedo.set({.value = 60});
-  CHECK(speedo.get<"value">() == 60);
+  check(speedo.get<"value">() == 60);
 }
 
 void owns_its_widgets(lv::obj screen) {
   const auto before = lv_obj_get_child_count(screen.raw());
   {
     auto root = lv::mount<ui>(screen);
-    CHECK(lv_obj_get_child_count(screen.raw()) == before + 1);
+    check(lv_obj_get_child_count(screen.raw()) == before + 1);
     auto moved = std::move(*root);
-    CHECK(lv_obj_get_child_count(screen.raw()) == before + 1);
-    CHECK(moved.get<"speedo">().get<"value">() == 120);
+    check(lv_obj_get_child_count(screen.raw()) == before + 1);
+    check(moved.get<"speedo">().get<"value">() == 120);
   }
-  CHECK(lv_obj_get_child_count(screen.raw()) == before);
+  check(lv_obj_get_child_count(screen.raw()) == before);
 
   // The parent deletes first: nothing is deleted twice.
   {
     auto box = screen.add<"obj">();
     auto root = lv::mount<ui>(box);
     lv_obj_delete(box.raw());
-    CHECK(!root->root());
+    check(!root->root());
   }
-  CHECK(lv_obj_get_child_count(screen.raw()) == before);
+  check(lv_obj_get_child_count(screen.raw()) == before);
 }
 
 void renders(lv::obj screen, const char* reference) {
   auto root = lv::mount<ui>(screen);
-  CHECK(lv_test_screenshot_compare(reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
+  check(lv_test_screenshot_compare(reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
 
   // The comparison must notice a change.
   root->get<"speedo">().set({.value = 0});
-  CHECK(lv_test_screenshot_compare(reference) != LV_TEST_SCREENSHOT_RESULT_PASSED);
+  check(lv_test_screenshot_compare(reference) != LV_TEST_SCREENSHOT_RESULT_PASSED);
 }
 
 }  // namespace

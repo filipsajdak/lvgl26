@@ -3,6 +3,7 @@
 // The value types that property structs are made of: strict<T>, handler and arg<...>,
 // and the rule that gives each LVGL setter parameter its C++ type.
 
+#include <lv/config.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
@@ -310,7 +311,7 @@ inline constexpr bool is_token_or_raw<raw_value<T>> = true;
 
 // The type of a design value in a style: a color, length, opacity, time or number.
 // It only accepts a design token or lv::raw(...), so that styles cannot drift away
-// from the design system. Define LV_ALLOW_RAW_STYLE_VALUES to accept plain values.
+// from the design system. Set lv::config::raw_style_values to accept plain values.
 template <class T>
 class styled {
   T v_{};
@@ -339,12 +340,12 @@ class styled {
     requires std::convertible_to<const U&, T>
   constexpr styled(const raw_value<U>& r) : v_(static_cast<T>(r.value)) {}
 
-#ifdef LV_ALLOW_RAW_STYLE_VALUES
-  template <class U>
-    requires(!detail::is_token_or_raw<std::remove_cvref_t<U>>) &&
+  // A plain value, when the project allows it: see lv::config::raw_style_values.
+  // O only delays reading the setting until this constructor is considered.
+  template <class U, class O = override>
+    requires(cfg<O>.raw_style_values) && (!detail::is_token_or_raw<std::remove_cvref_t<U>>) &&
             (!std::same_as<std::remove_cvref_t<U>, styled>) && std::convertible_to<U, T>
   constexpr styled(U&& u) : v_(static_cast<T>(std::forward<U>(u))) {}
-#endif
 
   constexpr decltype(auto) raw() const { return detail::lower(v_); }
 };

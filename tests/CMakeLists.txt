@@ -32,10 +32,8 @@ target_link_libraries(tokens PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_
 add_test(NAME tokens COMMAND tokens A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_dark.png
                                     A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_light.png)
 
-# This test turns the token rule off, to test styles on their own and the switch itself.
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
-target_compile_definitions(styles PRIVATE LV_ALLOW_RAW_STYLE_VALUES)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
@@ -43,7 +41,7 @@ lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
 lvgl26_compile_fail(unknown_id "the tree has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(duplicate_id "the id 'a' is used twice in one tree")
-lvgl26_compile_fail(props_unknown_name "could not convert .*props_of<lv::detail::fixed<4>.\"arc\"")
+lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a length \\(120_px, 50_pct or lv::size_content\\). You gave int")
 lvgl26_compile_fail(props_wrong_unit "It takes an angle \\(90_deg\\). You gave lv::length")
 lvgl26_compile_fail(props_bool_as_int "It takes a whole number \\(not bool, not floating point\\). You gave bool")
@@ -61,3 +59,4 @@ lvgl26_compile_fail(bind_wrong_type "this property cannot be bound to a state of
 lvgl26_compile_fail(bind_format_not_text "is for text properties only")
 lvgl26_compile_fail(state_bad_type "a state holds an integer, a bool, an enum")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
+lvgl26_compile_fail(config_too_late "redefinition of .*lv::cfg<lv::override>")

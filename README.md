@@ -38,7 +38,7 @@ State is typed and lives in ordinary globals. Widgets follow it:
 ```cpp
 constinit lv::state<int> speed{0};
 
-constexpr auto ui = lv::column()[
+constexpr auto ui = lv::column[
     lv::arc({.range = {0, 240}, .value = lv::bind(speed)}),     // follows, and writes back
     lv::label({.text = lv::bind(speed, "%d km/h")})];
 
@@ -75,7 +75,12 @@ token, a broken alias or an unreadable value is a compile error.
 ```
 
 Layout values (`.size`, `.range`, `.value`) and enums stay free. To accept plain values in styles,
-configure with `-DLVGL26_TOKENS_ONLY=OFF` (or define `LV_ALLOW_RAW_STYLE_VALUES`).
+change the project setting. Settings are a C++ specialization, not a macro:
+
+```cpp
+template <>
+inline constexpr lv::config lv::cfg<lv::override>{.raw_style_values = true};
+```
 
 Keep tokens in three tiers: primitive values (`primitive.color.blue-500`), semantic roles that alias
 them (`color.primary`), and component tokens that alias those (`card.radius`). UI code uses the last two.

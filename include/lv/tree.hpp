@@ -10,7 +10,8 @@
 //   auto root = lv::mount<ui>(lv::screen_active());
 //   root->get<"speedo">().set({.value = 0});
 //
-// Properties go in (), in alphabetical order; children go in [].
+// Properties go in (), in alphabetical order; children go in []. A node without
+// properties needs no (): lv::column[lv::label(...)].
 // The tree is read at compile time. Only the calls for the properties that are
 // set end up in the program; the tree itself is not stored in it.
 
@@ -103,48 +104,62 @@ constexpr auto make_flex(lazy_props<"obj", D> p, lv_flex_flow_t flow) {
 
 }  // namespace detail
 
+namespace detail {
+
+// What lv::arc is: call it with properties, index it with children.
+//   lv::arc({.value = 1})      lv::button({...})[lv::label({...})]      lv::box[...]
+template <fixed W>
+struct factory {
+  template <class D = void>
+  constexpr auto operator()(lazy_props<W, D> p = {}) const {
+    return make_node<W, D>(std::move(p));
+  }
+
+  template <tree_node... Kids>
+  constexpr auto operator[](Kids... kids) const {
+    return (*this)()[std::move(kids)...];
+  }
+};
+
+// lv::column and lv::row: a box laid out as a flex container, unless .flex_flow
+// says otherwise.
+struct flex_factory {
+  lv_flex_flow_t flow;
+
+  template <class D = void>
+  constexpr auto operator()(lazy_props<"obj", D> p = {}) const {
+    return make_flex<D>(std::move(p), flow);
+  }
+
+  template <tree_node... Kids>
+  constexpr auto operator[](Kids... kids) const {
+    return (*this)()[std::move(kids)...];
+  }
+};
+
+}  // namespace detail
+
 // Any LVGL widget by name: lv::widget<"spinbox">({...}).
-template <detail::fixed W, class D = void>
-constexpr auto widget(detail::lazy_props<W, D> p = {}) {
-  return detail::make_node<W, D>(std::move(p));
-}
+template <detail::fixed W>
+inline constexpr detail::factory<W> widget{};
 
 // Short names for the common widgets. C++ cannot generate these names, so this
 // list is written by hand; lv::widget<"..."> reaches every other widget.
-// Each has exactly one signature, so a wrong value gets a precise error.
-#define LV_DETAIL_WIDGET(name, kind)                                   \
-  template <class D = void>                                            \
-  constexpr auto name(detail::lazy_props<kind, D> p = {}) {            \
-    return detail::make_node<kind, D>(std::move(p));                   \
-  }
-
-LV_DETAIL_WIDGET(box, "obj")
-LV_DETAIL_WIDGET(label, "label")
-LV_DETAIL_WIDGET(button, "button")
-LV_DETAIL_WIDGET(arc, "arc")
-LV_DETAIL_WIDGET(bar, "bar")
-LV_DETAIL_WIDGET(slider, "slider")
-LV_DETAIL_WIDGET(toggle, "switch")
-LV_DETAIL_WIDGET(checkbox, "checkbox")
-LV_DETAIL_WIDGET(image, "image")
-LV_DETAIL_WIDGET(textarea, "textarea")
-LV_DETAIL_WIDGET(dropdown, "dropdown")
-LV_DETAIL_WIDGET(roller, "roller")
-LV_DETAIL_WIDGET(spinner, "spinner")
-
-#undef LV_DETAIL_WIDGET
-
-// A box laid out as a flex column, unless .flex_flow says otherwise.
-template <class D = void>
-constexpr auto column(detail::lazy_props<"obj", D> p = {}) {
-  return detail::make_flex<D>(std::move(p), LV_FLEX_FLOW_COLUMN);
-}
-
-// A box laid out as a flex row, unless .flex_flow says otherwise.
-template <class D = void>
-constexpr auto row(detail::lazy_props<"obj", D> p = {}) {
-  return detail::make_flex<D>(std::move(p), LV_FLEX_FLOW_ROW);
-}
+inline constexpr detail::factory<"obj"> box{};
+inline constexpr detail::factory<"label"> label{};
+inline constexpr detail::factory<"button"> button{};
+inline constexpr detail::factory<"arc"> arc{};
+inline constexpr detail::factory<"bar"> bar{};
+inline constexpr detail::factory<"slider"> slider{};
+inline constexpr detail::factory<"switch"> toggle{};
+inline constexpr detail::factory<"checkbox"> checkbox{};
+inline constexpr detail::factory<"image"> image{};
+inline constexpr detail::factory<"textarea"> textarea{};
+inline constexpr detail::factory<"dropdown"> dropdown{};
+inline constexpr detail::factory<"roller"> roller{};
+inline constexpr detail::factory<"spinner"> spinner{};
+inline constexpr detail::flex_factory column{LV_FLEX_FLOW_COLUMN};
+inline constexpr detail::flex_factory row{LV_FLEX_FLOW_ROW};
 
 // ---- compile-time facts about a tree ----------------------------------------
 
