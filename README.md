@@ -2,7 +2,22 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: bootstrap. Only the build and a smoke test exist.
+Status: early. Typed widget views (L1) exist. The declarative tree, tokens, state and agent tools do not yet.
+
+```cpp
+#include <lv/lv.hpp>
+
+auto screen = lv::screen_active();
+auto title  = screen.add<"label">().set<"text">("Speed");
+auto dial   = screen.add<"arc">().set<"range">(0, 240).set<"value">(120);
+
+screen.add<"button">().on<LV_EVENT_CLICKED>([dial] { dial.set<"value">(0); });
+```
+
+Widget and property names are checked at compile time against LVGL's own C API, read by reflection.
+`set<"text">` calls `lv_label_set_text`; a wrong name is a compile error that lists the valid ones.
+A view is one pointer and never deletes its widget. `lv::owned<T>` does; `lv::weak<T>` empties itself
+when LVGL deletes the widget.
 
 ## Requirements
 
