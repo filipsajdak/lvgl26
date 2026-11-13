@@ -109,12 +109,12 @@ C++29 (P2688):
 enum class mode { off, eco, sport };
 
 const char* name = lv::match(m)(
-    lv::is<mode::off>   >> [] { return "Off"; },
-    lv::is<mode::eco>   >> [] { return "Eco"; },
-    lv::is<mode::sport> >> [] { return "Sport"; });
+    lv::is<mode::off>.then([] { return "Off"; }),
+    lv::is<mode::eco>.then([] { return "Eco"; }),
+    lv::is<mode::sport>.then([] { return "Sport"; }));
 // leave one out: error: lv::match does not cover: sport. Add an arm for each, or ...
 
-int level = lv::match(n)(lv::is<1, 2> >> [] { return 0; }, lv::otherwise >> [] { return 1; });
+int level = lv::match(n)(lv::is<1, 2>.then([] { return 0; }), lv::otherwise.then([] { return 1; }));
 ```
 
 For an enum, reflection checks that every enumerator has exactly one arm. A repeated value, an

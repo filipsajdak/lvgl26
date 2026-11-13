@@ -5,13 +5,13 @@
 //   enum class mode { off, eco, sport };
 //
 //   const char* name = lv::match(m)(
-//       lv::is<mode::off>   >> [] { return "Off"; },
-//       lv::is<mode::eco>   >> [] { return "Eco"; },
-//       lv::is<mode::sport> >> [] { return "Sport"; });
+//       lv::is<mode::off>.then([] { return "Off"; }),
+//       lv::is<mode::eco>.then([] { return "Eco"; }),
+//       lv::is<mode::sport>.then([] { return "Sport"; }));
 //
 //   int level = lv::match(n)(
-//       lv::is<1, 2>  >> [] { return 0; },    // 1 or 2
-//       lv::otherwise >> [] { return 1; });
+//       lv::is<1, 2>.then([] { return 0; }),    // 1 or 2
+//       lv::otherwise.then([] { return 1; }));
 //
 // It follows the pattern matching proposed for C++29 (P2688, `match` and `case`) as
 // far as a library can: one arm per case, alternatives in one arm, a wildcard, one
@@ -35,27 +35,30 @@ namespace lv {
 
 namespace detail {
 
-// The pattern "equal to one of these values".
-template <auto... Values>
-struct one_of {};
-
-// The pattern "anything else".
-struct anything {};
-
 // A pattern with what to do when it matches.
 template <class Pattern, class F>
 struct arm {
   F handler;
 };
 
-template <auto... Values, class F>
-constexpr arm<one_of<Values...>, F> operator>>(one_of<Values...>, F handler) {
-  return {std::move(handler)};
-}
-template <class F>
-constexpr arm<anything, F> operator>>(anything, F handler) {
-  return {std::move(handler)};
-}
+// The pattern "equal to one of these values".
+template <auto... Values>
+struct one_of {
+  // What to do when the value is one of these: lv::is<1, 2>.then([] { ... }).
+  template <class F>
+  constexpr arm<one_of, F> then(F handler) const {
+    return {std::move(handler)};
+  }
+};
+
+// The pattern "anything else".
+struct anything {
+  // What to do for every other value: lv::otherwise.then([] { ... }).
+  template <class F>
+  constexpr arm<anything, F> then(F handler) const {
+    return {std::move(handler)};
+  }
+};
 
 template <class T>
 inline constexpr bool is_wildcard = false;
@@ -144,7 +147,7 @@ consteval std::string_view match_problem() {
   if (!listable)
     return wildcard ? std::string_view{}
                     : "lv::match on this type cannot list every value, so it needs a last arm "
-                      "`lv::otherwise >> ...`.";
+                      "`lv::otherwise.then(...)`.";
 
   std::string missing;
   for (auto v : all) {
@@ -154,7 +157,7 @@ consteval std::string_view match_problem() {
   }
   if (!wildcard && !missing.empty())
     return std::define_static_string("lv::match does not cover: " + missing +
-                                     ". Add an arm for each, or a last arm `lv::otherwise >> ...`.");
+                                     ". Add an arm for each, or a last arm `lv::otherwise.then(...)`.");
   if (wildcard && missing.empty())
     return "lv::match already covers every value, so its lv::otherwise arm can never match. "
            "Remove it.";
