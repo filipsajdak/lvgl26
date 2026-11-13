@@ -29,12 +29,6 @@ namespace lv {
 
 namespace detail {
 
-consteval bool is_keyword(std::string_view s) {
-  return is_one_of(s, {"class", "default", "delete", "enum", "new", "operator", "static",
-                       "switch", "template", "this", "union", "namespace", "bool", "int",
-                       "char", "long", "short", "float", "double", "void", "auto", "const"});
-}
-
 // "LV_EVENT_CLICKED" -> "on_clicked". Empty for the entries that are not events.
 consteval std::string event_member(std::string_view enumerator) {
   constexpr std::string_view prefix = "LV_EVENT_";

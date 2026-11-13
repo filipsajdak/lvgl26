@@ -141,6 +141,16 @@ consteval bool is_one_of(std::string_view s, std::initializer_list<std::string_v
   return false;
 }
 
+// Names that cannot be used for a generated struct member.
+consteval bool is_keyword(std::string_view s) {
+  return is_one_of(s, {"auto",     "bool",   "break",  "case",     "char",      "class",  "const",
+                       "continue", "default", "delete", "do",       "double",    "else",   "enum",
+                       "export",   "false",  "float",  "for",      "if",        "inline", "int",
+                       "long",     "namespace", "new", "operator", "private",   "public", "return",
+                       "short",    "signed", "static", "struct",   "switch",    "template", "this",
+                       "true",     "union",  "unsigned", "using",  "virtual",   "void",   "while"});
+}
+
 // The C++ type a setter parameter gets in the props struct.
 // The unit is inferred from the names LVGL uses, because C only says int32_t.
 // Style values follow other rules: see style_value_type in style.hpp.
