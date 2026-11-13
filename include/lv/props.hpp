@@ -42,6 +42,13 @@ consteval std::string event_member(std::string_view enumerator) {
   return out;
 }
 
+// Setters that LVGL has deprecated. Reflection cannot see [[deprecated]], so they
+// are listed here and get no property. A newly deprecated setter shows up as a
+// warning in our own build, which is the cue to add it.
+consteval bool is_deprecated_setter(std::string_view name) {
+  return is_one_of(name, {"lv_obj_set_flag"});
+}
+
 // The usable lv_<...>_set_* functions with this prefix.
 consteval std::vector<std::meta::info> setters_with_prefix(std::string_view prefix) {
   std::vector<std::meta::info> out;
@@ -52,6 +59,7 @@ consteval std::vector<std::meta::info> setters_with_prefix(std::string_view pref
     // Styles get their own typed API; they are not plain properties.
     if (prop.starts_with("style_") || prop.starts_with("local_style_")) continue;
     if (is_keyword(prop) || std::meta::is_vararg_function(f)) continue;
+    if (is_deprecated_setter(id)) continue;
 
     const auto params = std::meta::parameters_of(f);
     if (params.size() < 2) continue;
@@ -231,12 +239,6 @@ consteval std::meta::info binder_of(std::meta::info setter) {
   return (plain || with_format) ? f : std::meta::info{};
 }
 
-// The two functions below are instantiated for every member when set() runs at run
-// time, including the few setters LVGL has deprecated; reflection cannot see that
-// attribute, so the warning is off here.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 // Whether member number I of props<W> can follow a state: LVGL has a bind function
 // for it, or it is a setter that takes one value.
 template <fixed W, std::size_t I>
@@ -296,7 +298,6 @@ void apply_member(lv_obj_t* o, const A& a) {
     [:target:](o, lower(x)...);
   }
 }
-#pragma GCC diagnostic pop
 
 // props<W>, named so that it is generated on first use: see props_of.
 template <fixed W, class D>

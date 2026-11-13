@@ -10,7 +10,7 @@
 // memory: no heap is used, and LVGL only stores a pointer to it.
 //
 // Design values must be design tokens (see lv/tokens.hpp) or lv::raw(...).
-// Define LV_ALLOW_RAW_STYLE_VALUES to accept plain values such as 8_px.
+// Set lv::config::raw_style_values (see lv/config.hpp) to accept plain values such as 8_px.
 
 #include <lv/token_types.hpp>
 #include <lv/values.hpp>
@@ -240,9 +240,10 @@ constexpr std::array<lv_style_const_prop_t, const_count<S, D> + 1> const_props()
 // What LVGL's LV_STYLE_CONST_INIT macro expands to, without its C cast.
 constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
   lv_style_t s{};
-#if LV_USE_ASSERT_STYLE
-  s.sentinel = LV_STYLE_SENTINEL_VALUE;
-#endif
+  // lv_style_t has a sentinel member only when LVGL is built with style assertions.
+  [](auto& style) {
+    if constexpr (requires { style.sentinel; }) style.sentinel = LV_STYLE_SENTINEL_VALUE;
+  }(s);
   s.values_and_props = const_cast<void*>(static_cast<const void*>(props));
   s.has_group = 0xFFFFFFFF;
   s.prop_cnt = 255;

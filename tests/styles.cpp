@@ -4,6 +4,10 @@
 
 #include <type_traits>
 
+// This file turns the token rule off, to test styles on their own and the setting itself.
+template <>
+inline constexpr lv::config lv::cfg<lv::override>{.raw_style_values = true};
+
 namespace {
 
 using namespace lv::literals;
@@ -49,22 +53,22 @@ std::size_t free_bytes() {
 
 void applies(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  CHECK(root.has_value());
+  check(root.has_value());
   if (!root) return;
 
   auto c = root->get<"card">();
-  CHECK(same(c.get<"style_bg_color">(LV_PART_MAIN), 0x1b2430_rgb));
-  CHECK(c.get<"style_radius">(LV_PART_MAIN) == 8);
-  CHECK(c.get<"style_border_width">(LV_PART_MAIN) == 0);
-  CHECK(c.get<"style_pad_top">(LV_PART_MAIN) == 12);  // from pad_all, a local style
-  CHECK(c.get<"style_bg_opa">(LV_PART_MAIN) == LV_OPA_COVER);
+  check(same(c.get<"style_bg_color">(LV_PART_MAIN), 0x1b2430_rgb));
+  check(c.get<"style_radius">(LV_PART_MAIN) == 8);
+  check(c.get<"style_border_width">(LV_PART_MAIN) == 0);
+  check(c.get<"style_pad_top">(LV_PART_MAIN) == 12);  // from pad_all, a local style
+  check(c.get<"style_bg_opa">(LV_PART_MAIN) == LV_OPA_COVER);
 
-  CHECK(same(root->get<"title">().get<"style_text_color">(LV_PART_MAIN), 0xe6edf3_rgb));
-  CHECK(root->get<"unit">().get<"style_text_opa">(LV_PART_MAIN) == 204);
+  check(same(root->get<"title">().get<"style_text_color">(LV_PART_MAIN), 0xe6edf3_rgb));
+  check(root->get<"unit">().get<"style_text_opa">(LV_PART_MAIN) == 204);
 
   // Changing a style at run time uses local styles and wins over the const one.
   c.set({.style = {.radius = 2_px}});
-  CHECK(c.get<"style_radius">(LV_PART_MAIN) == 2);
+  check(c.get<"style_radius">(LV_PART_MAIN) == 2);
 }
 
 // A node whose style is all const must not cost more heap than one with no style,
@@ -87,13 +91,13 @@ void const_styles_use_no_heap_for_values(lv::obj screen) {
   const auto local_cost = cost([&] { return lv::mount<local>(screen); });
 
   // Eight const properties cost one small style entry; four local ones cost more.
-  CHECK(styled_cost - bare_cost <= 32);
-  CHECK(local_cost > styled_cost);
+  check(styled_cost - bare_cost <= 32);
+  check(local_cost > styled_cost);
 }
 
 void renders(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
-  CHECK(lv_test_screenshot_compare(reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
+  check(lv_test_screenshot_compare(reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
 }
 
 }  // namespace

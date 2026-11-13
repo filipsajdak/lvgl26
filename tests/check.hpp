@@ -1,14 +1,13 @@
 #pragma once
 
 #include <cstdio>
+#include <source_location>
 
-// A minimal test harness: CHECK records a failure and the test goes on.
+// A minimal test harness: check() records a failure and the test goes on.
 inline int failures = 0;
 
-#define CHECK(cond)                                                      \
-  do {                                                                   \
-    if (!(cond)) {                                                       \
-      ++failures;                                                        \
-      std::printf("%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-    }                                                                    \
-  } while (0)
+inline void check(bool ok, std::source_location where = std::source_location::current()) {
+  if (ok) return;
+  ++failures;
+  std::printf("%s:%lu: check failed\n", where.file_name(), static_cast<unsigned long>(where.line()));
+}

@@ -74,27 +74,27 @@ bool same(lv_color_t a, lv_color_t b) {
 void applies_tokens(lv::obj screen) {
   auto d = lv::mount<themed<dark>>(screen);
   auto l = lv::mount<themed<light>>(screen);
-  CHECK(d.has_value() && l.has_value());
+  check(d.has_value() && l.has_value());
   if (!d || !l) return;
 
   auto dc = d->get<"card">();
   auto lc = l->get<"card">();
-  CHECK(same(dc.get<"style_bg_color">(LV_PART_MAIN), dark.color.card));
-  CHECK(same(lc.get<"style_bg_color">(LV_PART_MAIN), light.color.card));
-  CHECK(dc.get<"style_radius">(LV_PART_MAIN) == 8);
-  CHECK(lc.get<"style_radius">(LV_PART_MAIN) == 20);
-  CHECK(dc.get<"style_pad_left">(LV_PART_MAIN) == 12);
+  check(same(dc.get<"style_bg_color">(LV_PART_MAIN), dark.color.card));
+  check(same(lc.get<"style_bg_color">(LV_PART_MAIN), light.color.card));
+  check(dc.get<"style_radius">(LV_PART_MAIN) == 8);
+  check(lc.get<"style_radius">(LV_PART_MAIN) == 20);
+  check(dc.get<"style_pad_left">(LV_PART_MAIN) == 12);
 
   // The composite tokens merged with | reached the widget.
-  CHECK(dc.get<"style_border_width">(LV_PART_MAIN) == 1);
-  CHECK(same(dc.get<"style_border_color">(LV_PART_MAIN), dark.color.outline));
-  CHECK(dc.get<"style_shadow_width">(LV_PART_MAIN) == 8);
-  CHECK(dc.get<"style_shadow_offset_y">(LV_PART_MAIN) == 2);
-  CHECK(d->get<"title">().get<"style_text_letter_space">(LV_PART_MAIN) == 1);
+  check(dc.get<"style_border_width">(LV_PART_MAIN) == 1);
+  check(same(dc.get<"style_border_color">(LV_PART_MAIN), dark.color.outline));
+  check(dc.get<"style_shadow_width">(LV_PART_MAIN) == 8);
+  check(dc.get<"style_shadow_offset_y">(LV_PART_MAIN) == 2);
+  check(d->get<"title">().get<"style_text_letter_space">(LV_PART_MAIN) == 1);
 
   // lv::raw marks a deliberate exception and is accepted in strict mode.
   dc.set({.style = {.radius = lv::raw(3_px)}});
-  CHECK(dc.get<"style_radius">(LV_PART_MAIN) == 3);
+  check(dc.get<"style_radius">(LV_PART_MAIN) == 3);
 }
 
 // Changing the tokens changes the pixels. Each theme is compared with its own
@@ -102,11 +102,11 @@ void applies_tokens(lv::obj screen) {
 void renders(lv::obj screen, const char* dark_reference, const char* light_reference) {
   {
     auto root = lv::mount<themed<dark>>(screen);
-    CHECK(lv_test_screenshot_compare(dark_reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
+    check(lv_test_screenshot_compare(dark_reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
   }
   auto root = lv::mount<themed<light>>(screen);
-  CHECK(lv_test_screenshot_compare(light_reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
-  CHECK(lv_test_screenshot_compare(dark_reference) != LV_TEST_SCREENSHOT_RESULT_PASSED);
+  check(lv_test_screenshot_compare(light_reference) == LV_TEST_SCREENSHOT_RESULT_PASSED);
+  check(lv_test_screenshot_compare(dark_reference) != LV_TEST_SCREENSHOT_RESULT_PASSED);
 }
 
 }  // namespace
