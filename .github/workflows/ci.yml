@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    container: gcc:16
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [host-v96, host-v10]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends cmake ninja-build python3
+          ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
+          ln -sf "$(command -v g++)" /usr/local/bin/g++-16
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
