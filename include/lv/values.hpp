@@ -19,7 +19,7 @@
 
 namespace lv {
 
-template <class T>
+template <class T, class O>
 class state;
 template <class T>
 class token;
@@ -111,16 +111,55 @@ struct wrong_value {
 
 }  // namespace detail
 
+namespace detail {
+
+template <class T>
+concept plain_state_value = integer<T> || std::same_as<T, bool> || std::is_enum_v<T>;
+
+// The single data member of a class that wraps one plain value, or a null reflection.
+template <class T>
+consteval std::meta::info strong_member() {
+  if (!std::meta::is_class_type(^^T)) return {};
+  const auto members =
+      std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked());
+  if (members.size() != 1 || !std::meta::is_public(members[0])) return {};
+  const auto t = std::meta::remove_cv(std::meta::dealias(std::meta::type_of(members[0])));
+  // Parentheses: `^^char && x` would be read as a reflection of the type char&&.
+  const bool character = t == (^^char) || t == (^^wchar_t) || t == (^^char8_t) ||
+                         t == (^^char16_t) || t == (^^char32_t);
+  const bool plain = (std::meta::is_integral_type(t) || std::meta::is_enum_type(t)) && !character;
+  return plain ? members[0] : std::meta::info{};
+}
+
+// A named value: a struct with exactly one public integer, bool or enum member,
+// such as `struct kmh { int value; };`. lv::angle and lv::duration are of this kind.
+template <class T>
+concept strong_value = strong_member<T>() != std::meta::info{};
+
+// What a widget receives from a state of type T: T itself, or the member of a named value.
+template <class T>
+struct state_payload {
+  using type = T;
+};
+template <strong_value T>
+struct state_payload<T> {
+  using type = typename[:std::meta::type_of(strong_member<T>()):];
+};
+
+}  // namespace detail
+
 // A property bound to a state: lv::bind(speed). See lv/state.hpp.
 template <class T>
 struct binding {
-  const state<T>* source;
+  const void* source;
+  lv_subject_t* (*subject)(const void*);
 };
 
 // A text property bound to a state through a printf format: lv::bind(speed, "%d km/h").
 template <class T>
 struct formatted_binding {
-  const state<T>* source;
+  const void* source;
+  lv_subject_t* (*subject)(const void*);
   const char* format;
 };
 
@@ -132,12 +171,6 @@ template <class T>
 inline constexpr bool is_binding<binding<T>> = true;
 template <class T>
 inline constexpr bool is_binding<formatted_binding<T>> = true;
-
-// The LVGL subject behind a state, created on first use.
-template <class T>
-lv_subject_t* subject_of(const void* source) {
-  return static_cast<const state<T>*>(source)->raw();
-}
 
 }  // namespace detail
 
@@ -163,17 +196,17 @@ struct arg {
   constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
 
   template <class T>
-  constexpr arg(binding<T> b)
-      : set(true), bound(b.source), bound_subject(&detail::subject_of<T>) {
-    static_assert(std::convertible_to<T, std::tuple_element_t<0, std::tuple<Ts...>>>,
+  constexpr arg(binding<T> b) : set(true), bound(b.source), bound_subject(b.subject) {
+    using first = std::tuple_element_t<0, std::tuple<Ts...>>;
+    static_assert(std::convertible_to<T, first> ||
+                      std::convertible_to<typename detail::state_payload<T>::type, first>,
                   "lv: this property cannot be bound to a state of that type. The state's "
-                  "type must be what the property takes.");
+                  "type, or the value inside its named type, must be what the property takes.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), bound(b.source), bound_subject(&detail::subject_of<T>),
-        bound_format(b.format) {
+      : set(true), bound(b.source), bound_subject(b.subject), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }
