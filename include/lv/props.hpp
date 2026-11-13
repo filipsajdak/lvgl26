@@ -49,6 +49,27 @@ consteval bool is_deprecated_setter(std::string_view name) {
   return is_one_of(name, {"lv_obj_set_flag"});
 }
 
+// "LV_STATE_PRESSED" -> "style_pressed". Empty for the entries that select nothing
+// on their own (the default state, the main part, the ANY and user values).
+consteval std::string style_member(std::string_view enumerator, std::string_view prefix) {
+  if (!enumerator.starts_with(prefix)) return {};
+  const auto rest = enumerator.substr(prefix.size());
+  if (is_one_of(rest, {"DEFAULT", "MAIN", "ANY", "CUSTOM_FIRST"}) || rest.starts_with("USER_"))
+    return {};
+  std::string out = "style_";
+  for (char c : rest) out.push_back((c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c);
+  return out;
+}
+
+// The style selector of a style member of props: its part or state.
+template <std::meta::info Target>
+constexpr lv_style_selector_t selector_of() {
+  if constexpr (Target == ^^lv_obj_add_style)
+    return LV_PART_MAIN;
+  else
+    return static_cast<lv_style_selector_t>([:Target:]);
+}
+
 // The usable lv_<...>_set_* functions with this prefix.
 consteval std::vector<std::meta::info> setters_with_prefix(std::string_view prefix) {
   std::vector<std::meta::info> out;
@@ -77,8 +98,9 @@ consteval std::vector<std::meta::info> setters_with_prefix(std::string_view pref
 struct member_item {
   std::string_view name;
   std::meta::info type;    // arg<...>
-  std::meta::info target;  // the setter, the LV_EVENT_* enumerator, lv_obj_add_style
-                           // for `style`, or null for `id`
+  std::meta::info target;  // the setter; the LV_EVENT_* enumerator; lv_obj_add_style for
+                           // `style`; the LV_STATE_* or LV_PART_* enumerator for
+                           // `style_pressed` and the like; or null for `id`
 };
 
 consteval void sort_by_name(std::vector<member_item>& items) {
@@ -101,6 +123,15 @@ consteval std::vector<member_item> scan_base() {
   std::vector<member_item> items;
   items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}});
   items.push_back({"style", ^^style_t<D>, ^^lv_obj_add_style});
+  // style_pressed, style_checked, ... and style_indicator, style_knob, ...: the same
+  // style struct for one state or one part. The target is the LV_STATE_* or LV_PART_*
+  // enumerator, which is the selector.
+  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_state_t)))
+    if (auto name = style_member(std::meta::identifier_of(e), "LV_STATE_"); !name.empty())
+      items.push_back({std::define_static_string(name), ^^style_t<D>, e});
+  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_part_t)))
+    if (auto name = style_member(std::meta::identifier_of(e), "LV_PART_"); !name.empty())
+      items.push_back({std::define_static_string(name), ^^style_t<D>, e});
   for (auto f : setters_with_prefix("lv_obj_set_"))
     items.push_back(setter_item(f, std::string_view("lv_obj_set_").size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
@@ -285,8 +316,8 @@ void apply_member(lv_obj_t* o, const A& a) {
   constexpr auto target = targets<W>[I];
   if constexpr (target == std::meta::info{}) {
     // `id` names the node for lv::mount; there is nothing to apply.
-  } else if constexpr (target == ^^lv_obj_add_style) {
-    apply_style_local(o, a, LV_PART_MAIN);
+  } else if constexpr (a_style<A>) {
+    apply_style_local(o, a, selector_of<target>());
   } else if constexpr (std::meta::is_enumerator(target)) {
     const auto& [... x] = a.v;
     add_handler(o, [:target:], x...);

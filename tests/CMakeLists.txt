@@ -36,6 +36,25 @@ target_link_libraries(tokens PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_
 add_test(NAME tokens COMMAND tokens A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_dark.png
                                     A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_light.png)
 
+# The example ports, each compared pixel for pixel with LVGL's C original.
+set(LVGL26_C_EXAMPLES ${lvgl_SOURCE_DIR}/examples/get_started)
+add_library(lvgl_c_get_started STATIC EXCLUDE_FROM_ALL
+  ${LVGL26_C_EXAMPLES}/get_started_hello_world/lv_example_get_started_hello_world.c
+  ${LVGL26_C_EXAMPLES}/get_started_slider/lv_example_get_started_slider.c
+  ${LVGL26_C_EXAMPLES}/get_started_styles/lv_example_get_started_styles.c
+  ${LVGL26_C_EXAMPLES}/lv_example_get_started_button.c)
+target_link_libraries(lvgl_c_get_started PRIVATE lvgl::lvgl)
+target_compile_definitions(lvgl_c_get_started PRIVATE LV_BUILD_EXAMPLES=1)
+
+set(LVGL26_EXAMPLES ${CMAKE_CURRENT_SOURCE_DIR}/../examples/lvgl/get_started)
+add_executable(examples_get_started examples_get_started.cpp
+  ${LVGL26_EXAMPLES}/hello_world.cpp ${LVGL26_EXAMPLES}/slider.cpp
+  ${LVGL26_EXAMPLES}/styles.cpp ${LVGL26_EXAMPLES}/button.cpp)
+target_compile_options(examples_get_started PRIVATE --embed-dir=${LVGL26_EXAMPLES})
+target_link_libraries(examples_get_started PRIVATE
+  lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_get_started)
+add_test(NAME examples_get_started COMMAND examples_get_started)
+
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)

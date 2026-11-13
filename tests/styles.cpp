@@ -38,8 +38,11 @@ static_assert(std::is_same_v<decltype(style_type{}.transform_rotation),
                              lv::arg<lv::styled<lv::strict<std::int32_t>>>>);
 
 // card sets five properties; pad_all has no LV_STYLE_* id, so four go to the const style.
-static_assert(lv::detail::const_count<card> == 4);
-static_assert(lv::detail::const_props<card>().back().prop == LV_STYLE_PROP_INV);
+struct card_style {
+  static constexpr const auto& get() { return card; }
+};
+static_assert(lv::detail::const_count<card_style> == 4);
+static_assert(lv::detail::const_props<card_style>().back().prop == LV_STYLE_PROP_INV);
 
 bool same(lv_color_t a, lv_color_t b) {
   return a.red == b.red && a.green == b.green && a.blue == b.blue;
