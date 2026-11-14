@@ -79,6 +79,56 @@ def make_mutants(header, lines, out_dir):
     return sorted(p for p in out_dir.iterdir() if p.suffix == ".hpp")
 
 
+TOKEN = re.compile(r"[A-Za-z_]\w*|\d[\w.']*|<=>|<<=|>>=|[-+*/%&|^<>=!]=|&&|\|\||\+\+|--|<<|>>|->|::|\S")
+OPERATORS = set("+ - * / % < > <= >= == != && || ++ -- += -= *= /= & | ^ << >>".split())
+NOT_LOGIC = re.compile(r"^\s*(//|template\b|using\b|requires\b|#|concept\b|namespace\b)|\bstatic_assert\b")
+
+
+def is_logic_mutant(before, after):
+    """True if the mutant swaps one operator for another, or one number for another,
+    on a line of statements. Text-level mutants of declarations, template argument
+    lists and comments rarely compile, and say nothing about the tests when they do."""
+    if NOT_LOGIC.search(before):
+        return False
+    a, b = list(TOKEN.finditer(before)), TOKEN.findall(after)
+    if len(a) != len(b):
+        return False
+    changed = [(x, y) for x, y in zip(a, b) if x.group() != y]
+    if len(changed) != 1:
+        return False
+    x, y = changed[0]
+    if x.group()[0].isdigit():
+        return y[0].isdigit()
+    return x.group() in OPERATORS and y in OPERATORS and is_spaced(before, x)
+
+
+def is_spaced(line, token):
+    """The code is formatted, so a binary operator has a space on each side; a `*`,
+    `&`, `<` or `>` without them is a declarator or a template bracket."""
+    if token.group() in ("++", "--"):
+        return True
+    return line[token.start() - 1:token.start()] == " " and line[token.end():token.end() + 1] == " "
+
+
+def changed_line(original_lines, mutant_text):
+    """The (before, after) pair of the one line a mutant changes, or None."""
+    mutant_lines = mutant_text.splitlines()
+    if len(mutant_lines) != len(original_lines):
+        return None
+    pairs = [(x, y) for x, y in zip(original_lines, mutant_lines) if x != y]
+    return pairs[0] if len(pairs) == 1 else None
+
+
+def logic_only(mutants, original):
+    original_lines = original.splitlines()
+    kept = []
+    for m in mutants:
+        pair = changed_line(original_lines, m.read_text())
+        if pair and is_logic_mutant(*pair):
+            kept.append(m)
+    return kept
+
+
 def run(command, cwd=TREE):
     r = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=cwd)
     return r.returncode, r.stdout + r.stderr
@@ -124,6 +174,9 @@ def main():
     parser.add_argument("--lines", help="only mutate these lines, e.g. 60-120,200")
     parser.add_argument("--sample", type=int, help="judge a random sample of this many mutants")
     parser.add_argument("--seed", type=int, default=1, help="seed of the sample")
+    parser.add_argument("--logic", action="store_true",
+                        help="only mutants that swap one operator or one number on a line of "
+                             "statements; use it for template and reflection headers")
     parser.add_argument("--cmake-args", default="", help="extra arguments for configuring the copy")
     args = parser.parse_args()
 
@@ -136,11 +189,17 @@ def main():
         lines = wanted if lines is None else lines & wanted
     make_copy(args.preset, args.cmake_args)
     original = header.read_text()
+    # The copy keeps the working tree's file times, so after an earlier run the header
+    # looks older than the objects built from that run's last mutant. Writing it again
+    # makes the build system compile the real header for the baseline.
+    header.write_text(original)
 
     if judge(args.preset, args.tests, args.targets) != "survived":
         sys.exit("The tests do not pass on the unchanged header; fix that first.")
 
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / header.stem)
+    if args.logic:
+        mutants = logic_only(mutants, original)
     total = len(mutants)
     if args.sample and args.sample < total:
         mutants = sorted(random.Random(args.seed).sample(mutants, args.sample))
