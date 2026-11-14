@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <lv/lv.hpp>
 
 #include "check.hpp"
@@ -131,6 +132,7 @@ void rejects(lv::obj screen) {
   expect(R"({"type": "arc", "props": {"range": [0]}})", lv::load_error::bad_value, "[0]");
   expect(R"({"type": "obj", "props": {"width": "12em"}})", lv::load_error::bad_value, R"("12em")");
   expect(R"({"type": "obj", "props": {"align": "middle"}})", lv::load_error::bad_value, R"("middle")");
+  expect(R"({"type": "obj", "props": {"align": "centxr"}})", lv::load_error::bad_value, R"("centxr")");
   expect(R"({"type": "obj", "props": {"style": {"bg_color": "red"}}})", lv::load_error::bad_value, R"("red")");
   expect(R"({"type": "obj", "props": {"style": {"colour": "#000000"}}})", lv::load_error::unknown_property, "colour");
   expect(R"({"type": "arc", "props": {"rotation": "90rad"}})", lv::load_error::bad_value, R"("90rad")");
@@ -177,6 +179,16 @@ int main() {
   static_assert(lv::detail::names_enumerator("center", "LV_ALIGN_CENTER"));
   static_assert(lv::detail::names_enumerator("TOP_MID", "LV_ALIGN_TOP_MID"));
   static_assert(lv::detail::names_enumerator("LV_ALIGN_CENTER", "LV_ALIGN_CENTER"));
+  // Every character counts, and the name must follow an underscore.
+  static_assert(!lv::detail::names_enumerator("centxr", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("centeR_", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("enter", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("XLV_ALIGN_CENTER", "LV_ALIGN_CENTER"));
+  // The table of style properties has no empty slot.
+  static_assert(!lv::detail::style_slots<>.empty());
+  static_assert(std::ranges::none_of(lv::detail::style_slots<>,
+                                     [](const auto& slot) { return slot.name.empty(); }));
   static_assert(!lv::detail::names_enumerator("enter", "LV_ALIGN_CENTER"));
 
   lv_init();
