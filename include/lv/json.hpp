@@ -143,15 +143,16 @@ constexpr double read_digits(std::string_view s, std::size_t& i) {
   return v;
 }
 
-// The digits after a decimal point, as a value below one, advancing i past them.
-constexpr double read_fraction(std::string_view s, std::size_t& i) {
-  if (i >= s.size() || s[i] != '.') return 0;
-  double v = 0, scale = 0.1;
-  for (++i; i < s.size() && is_digit(s[i]); ++i, scale /= 10) v += (s[i] - '0') * scale;
-  return v;
+// `whole` with the digits after a decimal point added, advancing i past them.
+// All digits are gathered into one whole number that is divided once, so that
+// "0.3" gives the same double as the literal 0.3 (summing 3 * 0.1 does not).
+constexpr double with_fraction(std::string_view s, std::size_t& i, double whole) {
+  if (i >= s.size() || s[i] != '.') return whole;
+  double scale = 1;
+  for (++i; i < s.size() && is_digit(s[i]); ++i, scale *= 10) whole = whole * 10 + (s[i] - '0');
+  return whole / scale;
 }
 
-// Reads an optional sign at s[i], advancing i past it. True for a minus.
 constexpr bool read_minus(std::string_view s, std::size_t& i) {
   if (i >= s.size() || (s[i] != '-' && s[i] != '+')) return false;
   return s[i++] == '-';
@@ -228,8 +229,7 @@ class value {
   constexpr double number() const {
     std::size_t i = 0;
     const bool negative = detail::read_minus(text_, i);
-    double v = detail::read_digits(text_, i);
-    v += detail::read_fraction(text_, i);
+    double v = detail::with_fraction(text_, i, detail::read_digits(text_, i));
     v *= detail::read_exponent(text_, i);
     return negative ? -v : v;
   }
