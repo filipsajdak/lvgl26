@@ -48,6 +48,25 @@ static_assert(dark.text.title->font_family == "Montserrat" && dark.text.body->li
 static_assert(dark.motion.enter->duration == 150 * ms && dark.motion.enter->timing.x1 == 0.2);
 static_assert(dark.card.fill->count == 2 && dark.card.fill->stops[1].position == 1);
 
+// The value readers on their own, for the forms the token files above do not use.
+constexpr bool is_rgb(lv_color_t c, int r, int g, int b) {
+  return c.red == r && c.green == g && c.blue == b;
+}
+static_assert(is_rgb(lv::detail::color_from_hex("#AbCdEf"), 0xab, 0xcd, 0xef));
+static_assert(is_rgb(lv::detail::color_from_hex("#09afAF"), 0x09, 0xaf, 0xaf));
+static_assert(is_rgb(lv::detail::color_from_hex("#fa0"), 0xff, 0xaa, 0x00));  // #rgb doubles each digit
+static_assert(is_rgb(lv::detail::color_from_hex("#01020380"), 1, 2, 3));      // #rrggbbaa: alpha is not kept
+static_assert(lv::detail::rounded(2.5) == 3 && lv::detail::rounded(2.4) == 2);
+static_assert(lv::detail::rounded(-1.5) == -2 && lv::detail::rounded(-2.4) == -2);
+static_assert(lv::detail::rounded(0.6) == 1 && lv::detail::rounded(-0.4) == 0);
+consteval lv_color_t color_token(std::string_view text) {
+  const auto v = *lv::json::value::parse(text);
+  return lv::detail::read_token(lv::detail::token_of<lv_color_t>{}, v, v);
+}
+static_assert(is_rgb(color_token(R"({"components": [1, 0.5, 0]})"), 255, 128, 0));
+static_assert(is_rgb(color_token(R"({"hex": "#102030"})"), 0x10, 0x20, 0x30));
+static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
+
 // A group whose tokens all have a $type this version does not know is an empty struct.
 static_assert(std::is_empty_v<decltype(dark.unknown)>);
 
