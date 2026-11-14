@@ -148,7 +148,9 @@ def judge(preset, tests, targets):
     """Builds and runs the chosen tests against the header as it is now."""
     code, output = run(f"cmake --build --preset {preset}" + (f" --target {targets}" if targets else ""))
     if code != 0:
-        caught = CAUGHT_AT_COMPILE_TIME.search(output) and not NOT_CPP.search(output)
+        # The first error says what is wrong; later ones often only follow from it.
+        first = next((line for line in output.splitlines() if "error:" in line), "")
+        caught = CAUGHT_AT_COMPILE_TIME.search(output) and not NOT_CPP.search(first)
         return "killed" if caught else "invalid"
     code, _ = run(f"ctest --preset {preset} -R '{tests}'")
     return "survived" if code == 0 else "killed"

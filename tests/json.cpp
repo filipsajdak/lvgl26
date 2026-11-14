@@ -49,6 +49,9 @@ int main() {
   for (const char* good : {"0", "-0", "0.5", "10", "1e5", "1E-5", "-1.25e+10"})
     check(value::parse(std::string(good)).has_value());
 
+  // A decimal gives exactly the double that the same literal gives.
+  check(number("0.3") == 0.3 && number("0.1") == 0.1 && number("12.3") == 12.3);
+  check(number("-0.7") == -0.7 && number("3.14159") == 3.14159 && number("100.001") == 100.001);
   // Cases that mutation testing showed were missing.
   check(number("1.25") == 1.25 && number("0.125") == 0.125);  // each fraction digit has its place
   check(value::parse(std::string("\r\n[\r1\r]\r\n")).has_value());  // a carriage return is space

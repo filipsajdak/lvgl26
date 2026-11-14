@@ -263,6 +263,7 @@ consteval quantity read_quantity(json::value v) {
   if (!v.is(json::kind::string)) token_fail("a dimension or duration must be a string or an object");
   const auto s = v.string();
   const auto n = json::detail::number_length(s);
+  if (n == 0) token_fail("'" + str(s) + "' has no number before its unit");
   return {json::value{s.substr(0, n)}.number(), s.substr(n)};
 }
 
