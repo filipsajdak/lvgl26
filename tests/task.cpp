@@ -3,6 +3,7 @@
 #include "check.hpp"
 
 #include <cstring>
+#include <utility>
 
 namespace {
 
@@ -259,6 +260,68 @@ void first_of_several(lv::obj screen) {
   lv_obj_delete(b.raw());
 }
 
+// Waits on two widgets in turn, then for a long time.
+lv::task<> two_buttons(lv::view<"button"> a, lv::view<"button"> b, bool* ended) {
+  at_exit cleanup{ended};
+  co_await a.next().clicked;
+  co_await b.next().clicked;
+  co_await lv::sleep(60000 * ms);
+}
+
+// Deleting any widget a task has waited on ends it, also the second one, and
+// whichever of the two has the lower address.
+void a_task_is_tied_to_every_widget(lv::obj screen) {
+  for (int order = 0; order < 2; ++order) {
+    lv::view<"button"> pair[2] = {screen.add<"button">(), screen.add<"button">()};
+    const auto first = pair[order];
+    const auto second = pair[1 - order];
+    bool ended = false;
+    check(lv::spawn(two_buttons(first, second, &ended)));
+    click(first);
+    click(second);
+    check(!ended);
+    lv_obj_delete(second.raw());
+    check(ended);
+    lv_obj_delete(first.raw());
+  }
+}
+
+// Waits for the deletion or a timeout, then for a long time.
+lv::task<> gone_or_timeout(lv::view<"button"> button, int* out, bool* ended) {
+  at_exit cleanup{ended};
+  *out = co_await lv::first(button.next().gone.then([] { return 1; }),
+                            lv::sleep(20 * ms).then([] { return 2; }));
+  co_await lv::sleep(60000 * ms);
+}
+
+// A wait for the deletion that lost: the task is tied to the widget again.
+void a_lost_wait_for_deletion(lv::obj screen) {
+  auto button = screen.add<"button">();
+  int out = 0;
+  bool ended = false;
+  check(lv::spawn(gone_or_timeout(button, &out, &ended)));
+  lv_test_wait(40);
+  check(out == 2 && !ended);
+  lv_obj_delete(button.raw());
+  check(ended && out == 2);
+}
+
+// A task can be moved into another, in either direction in memory, and onto itself.
+void moving_a_task() {
+  const auto before = free_bytes();
+  {
+    lv::task<int> pair[2] = {twice(1), twice(2)};
+    pair[0] = std::move(pair[1]);
+    check(pair[0] && !pair[1]);
+    pair[1] = std::move(pair[0]);
+    check(pair[1] && !pair[0]);
+    auto& same = pair[1];
+    pair[1] = std::move(same);
+    check(static_cast<bool>(pair[1]));
+  }
+  check(free_bytes() == before);
+}
+
 void nothing_is_left_behind(lv::obj screen) {
   // Run the main paths once more and compare the heap before and after.
   const auto before = free_bytes();
@@ -299,6 +362,9 @@ int main() {
   state_changes();
   first_of_several(screen);
   a_task_may_delete_its_own_widget(screen);
+  a_task_is_tied_to_every_widget(screen);
+  a_lost_wait_for_deletion(screen);
+  moving_a_task();
   nothing_is_left_behind(screen);
 
   clicks.reset();
