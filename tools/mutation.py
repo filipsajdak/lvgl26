@@ -38,7 +38,15 @@ TREE = pathlib.Path("build/mutation/tree")
 # A compile error with one of these is a test doing its job, not a broken mutant.
 CAUGHT_AT_COMPILE_TIME = re.compile(
     r"static assertion failed|non-constant condition for static assertion|"
-    r"contract predicate is false|uncaught exception of type 'lv::detail::unknown_name'")
+    r"contract predicate is false|uncaught exception of type|"
+    # Code that runs in constant evaluation is tested by compiling: a mutant that
+    # reads out of bounds, overflows or never ends there is caught by the compiler.
+    r"is not a constant expression|in 'constexpr' expansion of|"
+    r"outside the bounds of|overflow in constant expression|"
+    r"'constexpr' loop iteration count exceeds limit|use of deleted function")
+# ...unless the mutant does not even parse.
+NOT_CPP = re.compile(r"error: expected |error: stray |error: missing terminating|"
+                     r"was not declared in this scope|error: template argument .* is invalid")
 
 
 def changed_lines(header, since):
@@ -90,7 +98,8 @@ def judge(preset, tests, targets):
     """Builds and runs the chosen tests against the header as it is now."""
     code, output = run(f"cmake --build --preset {preset}" + (f" --target {targets}" if targets else ""))
     if code != 0:
-        return "killed" if CAUGHT_AT_COMPILE_TIME.search(output) else "invalid"
+        caught = CAUGHT_AT_COMPILE_TIME.search(output) and not NOT_CPP.search(output)
+        return "killed" if caught else "invalid"
     code, _ = run(f"ctest --preset {preset} -R '{tests}'")
     return "survived" if code == 0 else "killed"
 
