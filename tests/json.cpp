@@ -49,6 +49,37 @@ int main() {
   for (const char* good : {"0", "-0", "0.5", "10", "1e5", "1E-5", "-1.25e+10"})
     check(value::parse(std::string(good)).has_value());
 
+  // Cases that mutation testing showed were missing.
+  check(number("1.25") == 1.25 && number("0.125") == 0.125);  // each fraction digit has its place
+  check(value::parse(std::string("\r\n[\r1\r]\r\n")).has_value());  // a carriage return is space
+  for (const char* bad : {"1e 5", "1e*5", "{\"a\" 11}", "{\"a\";1}", "{\"a\"}", "{\"a}"})
+    check(!value::parse(std::string(bad)).has_value());
+  // Nesting: 65 levels are read, 66 are refused (and so is anything deeper).
+  const auto nested = [](std::size_t n) {
+    return value::parse(std::string(n, '[') + std::string(n, ']')).has_value();
+  };
+  check(nested(65) && !nested(66) && !nested(1000));
+  const auto nested_objects = [](std::size_t n) {
+    std::string open;
+    for (std::size_t i = 0; i < n; ++i) open += "{\"k\":";
+    return value::parse(open + "1" + std::string(n, '}')).has_value();
+  };
+  check(nested_objects(64) && !nested_objects(65));
+
+  // An element can start with any character; an index past the end gives nothing.
+  const auto count = [](const char* t) { return value::parse(std::string(t))->size(); };
+  check(count("[true]") == 1 && count("[{}]") == 1 && count("[null, false]") == 2);
+  check(count("{\"a\": {}}") == 1 && count("[]") == 0 && count("{}") == 0);
+  if (parsed) {
+    const auto n = (*parsed)["color"]["n"];
+    check(!n.at(4) && !n.at(100) && n.at(3));
+    check(parsed->member_at(3).key.empty() && parsed->member_at(100).key.empty());
+  }
+  // Only space, tab, line feed and carriage return are space; only the right
+  // character closes a container.
+  for (const char* bad : {"[\v1]", "\f1", "[\x01]", "[1}", "[1 x]", "{\"a\":1]", "{\"a\":1 ~"})
+    check(!value::parse(std::string(bad)).has_value());
+
   // Malformed documents are refused.
   for (const char* bad : {"", "{", "[1, 2", "{\"a\": }", "{\"a\" 1}", "{1: 2}", "[1 2]", "{} x",
                           "\"open", "tru"})

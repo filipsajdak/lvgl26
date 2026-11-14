@@ -92,9 +92,7 @@ constexpr std::size_t skip_word(std::string_view s, std::size_t i) {
 // The index of the value of the member whose key starts at s[i], or npos.
 constexpr std::size_t skip_key(std::string_view s, std::size_t i) {
   if (i >= s.size() || s[i] != '"') return npos;
-  i = skip_string(s, i);
-  if (i == npos) return npos;
-  i = skip_space(s, i);
+  i = skip_space(s, skip_string(s, i));  // npos stays npos
   if (i >= s.size() || s[i] != ':') return npos;
   return skip_space(s, i + 1);
 }
