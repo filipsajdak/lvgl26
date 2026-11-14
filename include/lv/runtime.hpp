@@ -36,6 +36,7 @@
 #include <lv/style.hpp>
 #include <lv/view.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <expected>
@@ -53,6 +54,7 @@ enum class load_error {
   unknown_id,        // apply() names an id the document does not have, or its widget is gone
   duplicate_id,      // two nodes of one document have the same id
   too_many_ids,      // the document has more ids than a loaded screen can keep
+  id_too_long,       // an id is longer than a loaded screen keeps (see id_length)
 };
 
 // What went wrong, and the piece of the document it is about.
@@ -117,7 +119,7 @@ constexpr measured read_measured(json::value v) {
   if (!v.is(json::kind::string)) return {};
   const auto s = v.string();
   const auto n = json::detail::number_length(s);
-  if (n == 0) return {0, s, true};  // a word such as "content"
+  if (n == 0) return {};  // a unit with no number, or any other word
   return {json::value{s.substr(0, n)}.number(), s.substr(n), true};
 }
 
@@ -126,9 +128,9 @@ constexpr std::int32_t rounded_i32(double v) {
 }
 
 constexpr bool read_length(json::value v, length& out) {
+  if (v.is(json::kind::string) && v.string() == "content") return out = size_content, true;
   const auto m = read_measured(v);
   if (!m.ok) return false;
-  if (m.unit == "content") return out = size_content, true;
   if (m.unit == "px" || m.unit.empty()) return out = length::px(rounded_i32(m.number)), true;
   if (m.unit == "%") return out = length{percent{rounded_i32(m.number)}}, true;
   return false;
@@ -474,13 +476,22 @@ class runtime {
  public:
   // How many nodes of one document can have an id.
   static constexpr std::size_t id_capacity = 32;
+  // How long an id can be. A loaded screen keeps its own copy of every id, so it
+  // does not depend on the document's text after load() returns.
+  static constexpr std::size_t id_length = 31;
 
   // A screen built from a document. Owns its widgets.
   class loaded {
     // A node that has an id: its widget, which kind it is, and its class when it
     // was built. The view empties itself if the widget is deleted.
     struct named_widget {
-      std::string_view id;
+      std::array<char, id_length> id_text{};
+      std::size_t id_size = 0;
+      std::string_view id() const { return {id_text.data(), id_size}; }
+      void name(std::string_view text) {
+        id_size = text.size();
+        std::ranges::copy(text, id_text.begin());
+      }
       weak<obj> widget;
       std::size_t kind = 0;                     // position in Widgets...
       const lv_obj_class_t* cls = nullptr;
@@ -532,7 +543,7 @@ class runtime {
 
     const named_widget* entry(std::string_view id) const {
       for (std::size_t i = 0; i < named_count_; ++i)
-        if (named_[i].id == id) return &named_[i];
+        if (named_[i].id() == id) return &named_[i];
       return nullptr;
     }
   };
@@ -594,9 +605,10 @@ class runtime {
     if (!id) return {};
     if (!id.is(json::kind::string) || id.string().empty()) return fail(load_error::malformed, id.text());
     if (out.entry(id.string()) != nullptr) return fail(load_error::duplicate_id, id.string());
+    if (id.string().size() > id_length) return fail(load_error::id_too_long, id.string());
     if (out.named_count_ == id_capacity) return fail(load_error::too_many_ids, id.string());
     auto& n = out.named_[out.named_count_++];
-    n.id = id.string();
+    n.name(id.string());
     n.widget = weak<obj>{obj{made.object}};
     n.kind = made.kind;
     n.cls = lv_obj_get_class(made.object);
