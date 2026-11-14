@@ -70,6 +70,36 @@ void before_binding() {
   lv::state<trip_id> local{trip_id{1}};
   local = trip_id{2};
   check(local.get().value == 2);
+
+  // Releasing a state that has no subject keeps its value.
+  local.reset();
+  check(local.get().value == 2);
+}
+
+// A bool is read from the subject as "not zero", whatever C code wrote there.
+void bool_through_a_subject() {
+  lv::state<bool> on{false};
+  lv_subject_t* s = on.raw();
+  check(!on.get());
+  on = true;
+  check(on.get() && lv_subject_get_int(s) == 1);
+  lv_subject_set_int(s, -1);
+  check(on.get());
+  lv_subject_set_int(s, 0);
+  check(!on.get());
+}
+
+// reset() keeps what C code wrote last and deletes the subject; the next use makes a new one.
+void reset_keeps_the_value() {
+  lv::state<trip_id> local{trip_id{1}};
+  lv_subject_set_int(local.raw(), 8);
+  static int seen = 0;
+  local.observe([](trip_id t) { seen = t.value; });
+  local.reset();
+  check(local.get().value == 8);
+  local = trip_id{9};
+  check(seen == 8);  // the observer went with the old subject
+  check(lv_subject_get_int(local.raw()) == 9);
 }
 
 void widgets_follow(lv::obj screen) {
@@ -182,6 +212,8 @@ int main() {
   auto screen = lv::screen_active();
 
   before_binding();
+  bool_through_a_subject();
+  reset_keeps_the_value();
   counters(screen);
   widgets_follow(screen);
   c_code_shares_the_subject();
