@@ -1,3 +1,4 @@
+#include <string>
 #include <lv/lv.hpp>
 
 #include "check.hpp"
@@ -66,6 +67,63 @@ consteval lv_color_t color_token(std::string_view text) {
 static_assert(is_rgb(color_token(R"({"components": [1, 0.5, 0]})"), 255, 128, 0));
 static_assert(is_rgb(color_token(R"({"hex": "#102030"})"), 0x10, 0x20, 0x30));
 static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
+
+
+// One value of each simple type, in each way it can be written.
+template <class T>
+consteval T read_as(std::string_view text) {
+  const auto v = *lv::json::value::parse(text);
+  return lv::detail::read_token(lv::detail::token_of<T>{}, v, v);
+}
+static_assert(read_as<lv::length>(R"("50%")") == lv::length{50 * lv::pct});
+static_assert(read_as<lv::length>(R"({"value": 25, "unit": "%"})") == lv::length{25 * lv::pct});
+static_assert(read_as<lv::length>(R"("1.5rem")") == lv::length{24 * px});
+static_assert(read_as<lv::length>(R"("8px")") == lv::length{8 * px} && read_as<lv::length>("8") == lv::length{8 * px});
+static_assert(read_as<lv::duration>(R"("2s")") == lv::duration{2000 * ms});
+static_assert(read_as<lv::duration>(R"("150ms")") == lv::duration{150 * ms});
+static_assert(read_as<lv::duration>("40") == lv::duration{40 * ms});
+static_assert(read_as<std::int32_t>(R"("normal")") == 400 && read_as<std::int32_t>(R"("bold")") == 700);
+static_assert(read_as<std::int32_t>("600") == 600);
+
+static_assert(read_as<lv::bezier>("[0.1, 0.2, 0.3, 0.4]") == lv::bezier{0.1, 0.2, 0.3, 0.4});
+// A gradient takes as many stops as it has room for.
+consteval std::size_t gradient_stops(std::size_t n) {
+  std::string doc = "[";
+  for (std::size_t i = 0; i < n; ++i) doc += std::string(i ? "," : "") + R"({"color": "#102030", "position": 0.5})";
+  return read_as<lv::gradient_token>(doc + "]").count;
+}
+static_assert(gradient_stops(8) == 8 && gradient_stops(1) == 1 && gradient_stops(0) == 0);
+
+// Member names: letters, digits and the underscore, at each end of each range.
+static_assert(lv::detail::is_name_char('a') && lv::detail::is_name_char('z'));
+static_assert(lv::detail::is_name_char('A') && lv::detail::is_name_char('Z'));
+static_assert(lv::detail::is_name_char('0') && lv::detail::is_name_char('9') && lv::detail::is_name_char('_'));
+static_assert(!lv::detail::is_name_char('`') && !lv::detail::is_name_char('{') && !lv::detail::is_name_char('~'));
+static_assert(!lv::detail::is_name_char('@') && !lv::detail::is_name_char('[') && !lv::detail::is_name_char('-'));
+static_assert(!lv::detail::is_name_char('/') && !lv::detail::is_name_char(':'));
+
+// Aliases. A chain of `links` aliases that ends in a number; eight links are followed.
+consteval double through_aliases(int links) {  // at most 9, so that a name is one digit
+  const auto digit = [](int i) { return std::string(1, static_cast<char>('0' + i)); };
+  std::string doc = "{\"g\": {";
+  for (int i = 0; i < links; ++i)
+    doc += "\"t" + digit(i) + "\": {\"$value\": \"{g.t" + digit(i + 1) + "}\"}, ";
+  doc += "\"t" + digit(links) + "\": {\"$type\": \"number\", \"$value\": 7}}}";
+  const auto root = *lv::json::value::parse(doc);
+  return lv::detail::follow_alias(root, "{g.t0}", 0).value.number();
+}
+static_assert(through_aliases(0) == 7 && through_aliases(1) == 7 && through_aliases(8) == 7);
+
+// A token's own $type wins over the type of the token it points at.
+consteval lv::detail::token_type type_of(std::string_view name) {
+  const auto root = *lv::json::value::parse(R"({"g": {
+      "color": {"$type": "color", "$value": "#102030"},
+      "typed": {"$type": "string", "$value": "{g.color}"},
+      "plain": {"$value": "{g.color}"}}})");
+  return lv::detail::resolve_token(root, root["g"][name], lv::detail::token_type::none).type;
+}
+static_assert(type_of("typed") == lv::detail::token_type::string);
+static_assert(type_of("plain") == lv::detail::token_type::color);
 
 // A group whose tokens all have a $type this version does not know is an empty struct.
 static_assert(std::is_empty_v<decltype(dark.unknown)>);
