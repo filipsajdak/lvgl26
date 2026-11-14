@@ -1,3 +1,5 @@
+#include <string>
+#include <algorithm>
 #include <lv/lv.hpp>
 
 #include "check.hpp"
@@ -131,6 +133,85 @@ void rejects(lv::obj screen) {
   expect(R"({"type": "arc", "props": {"range": [0]}})", lv::load_error::bad_value, "[0]");
   expect(R"({"type": "obj", "props": {"width": "12em"}})", lv::load_error::bad_value, R"("12em")");
   expect(R"({"type": "obj", "props": {"align": "middle"}})", lv::load_error::bad_value, R"("middle")");
+  expect(R"({"type": "obj", "props": {"align": "centxr"}})", lv::load_error::bad_value, R"("centxr")");
+  // A unit needs its number; a color needs '#' and six hex digits.
+  expect(R"({"type": "arc", "props": {"rotation": "deg"}})", lv::load_error::bad_value, R"("deg")");
+  expect(R"({"type": "obj", "props": {"width": "px"}})", lv::load_error::bad_value, R"("px")");
+  expect(R"({"type": "obj", "props": {"style": {"anim_duration": "ms"}}})", lv::load_error::bad_value, R"("ms")");
+  expect(R"({"type": "obj", "props": {"style": {"bg_color": "x112233"}}})", lv::load_error::bad_value, R"("x112233")");
+  expect(R"({"type": "obj", "props": {"style": {"bg_color": "#11223g"}}})", lv::load_error::bad_value, R"("#11223g")");
+  expect(R"({"type": "obj", "props": {"style": {"bg_color": "!112233"}}})", lv::load_error::bad_value, R"("!112233")");
+  expect(R"({"type": "obj", "props": {"style": {"bg_color": "#1122334"}}})", lv::load_error::bad_value, R"("#1122334")");
+  expect(R"({"type": "obj", "props": {"style": {"bg_color": "#11223"}}})", lv::load_error::bad_value, R"("#11223")");
+  expect(R"({"type": "obj", "props": {"width": "5$"}})", lv::load_error::bad_value, R"("5$")");
+  expect(R"({"type": "obj", "props": {"width": "5!"}})", lv::load_error::bad_value, R"("5!")");
+  {
+    // "row" and "column" are flex containers in that direction; other widgets are not.
+    auto flows = ui::load(R"({"type": "row", "id": "r", "children": [
+        {"type": "column", "id": "c"}, {"type": "label", "id": "s"}]})", screen);
+    check(flows.has_value());
+    if (flows) {
+      check(flows->find("r").get<"style_flex_flow">(LV_PART_MAIN) == LV_FLEX_FLOW_ROW);
+      check(flows->find("c").get<"style_flex_flow">(LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+      check(flows->find("r").get<"style_layout">(LV_PART_MAIN) == LV_LAYOUT_FLEX);
+      check(flows->find("s").get<"style_layout">(LV_PART_MAIN) != LV_LAYOUT_FLEX);
+    }
+  }
+  {
+    // Text up to one less than the buffer is taken; at the buffer size it is refused.
+    const auto label_with = [](std::size_t n) {
+      return R"({"type": "label", "id": "t", "props": {"text": ")" + std::string(n, 'x') + R"("}})";
+    };
+    auto fits = ui::load(label_with(lv::detail::text_capacity - 1), screen);
+    check(fits.has_value());
+    if (fits)
+      check(std::strlen(lv::view<"label">{fits->find("t").raw()}.get<"text">()) ==
+            lv::detail::text_capacity - 1);
+    check(!ui::load(label_with(lv::detail::text_capacity), screen).has_value());
+    check(!ui::load(label_with(lv::detail::text_capacity + 1), screen).has_value());
+
+    // Zero is a time; black is a color; a screen without ids has no widget called "".
+    auto zero = ui::load(R"({"type": "obj", "id": "z", "props": {"style":
+        {"anim_duration": 0, "bg_color": "#00000A", "text_color": "#000000"}}})", screen);
+    check(zero.has_value());
+    if (zero) {
+      check(zero->find("z").get<"style_anim_duration">(LV_PART_MAIN) == 0);
+      check(lv_color_eq(zero->find("z").get<"style_bg_color">(LV_PART_MAIN), lv_color_hex(0x00000A)));
+    }
+    // A loaded screen keeps its ids after the document's text is gone. (The label
+    // above was loaded from a temporary string.) An id has a length limit.
+    const auto with_id = [](std::size_t n) {
+      return R"({"type": "obj", "id": ")" + std::string(n, 'i') + R"("})";
+    };
+    auto longest = ui::load(with_id(ui::id_length), screen);
+    check(longest.has_value() && longest->find(std::string(ui::id_length, 'i')));
+    check(longest.has_value() && !longest->find(std::string(ui::id_length - 1, 'i')));
+    const auto too_long = ui::load(with_id(ui::id_length + 1), screen);
+    check(!too_long.has_value() && too_long.error().error == lv::load_error::id_too_long);
+    // An id is a string that is not empty.
+    for (const char* bad : {R"({"type": "obj", "id": ""})", R"({"type": "obj", "id": 5})"}) {
+      const auto refused = ui::load(bad, screen);
+      check(!refused.has_value() && refused.error().error == lv::load_error::malformed);
+    }
+    // Exactly as many ids as a screen keeps are taken, and all of them are found;
+    // one more is refused.
+    const auto with_ids = [](std::size_t n) {
+      std::string doc = R"({"type": "column", "children": [)";
+      for (std::size_t i = 0; i < n; ++i)
+        doc += (i ? "," : "") + (R"({"type": "obj", "id": "w)" + std::to_string(i) + R"("})");
+      return doc + "]}";
+    };
+    auto full = ui::load(with_ids(ui::id_capacity), screen);
+    check(full.has_value());
+    if (full) {
+      check(full->find("w0") && full->find("w" + std::to_string(ui::id_capacity - 1)));
+      check(!full->find("w" + std::to_string(ui::id_capacity)) && !full->find(""));
+    }
+    const auto over = ui::load(with_ids(ui::id_capacity + 1), screen);
+    check(!over.has_value() && over.error().error == lv::load_error::too_many_ids);
+    auto anonymous = ui::load(R"({"type": "obj"})", screen);
+    check(anonymous.has_value() && !anonymous->find(""));
+  }
   expect(R"({"type": "obj", "props": {"style": {"bg_color": "red"}}})", lv::load_error::bad_value, R"("red")");
   expect(R"({"type": "obj", "props": {"style": {"colour": "#000000"}}})", lv::load_error::unknown_property, "colour");
   expect(R"({"type": "arc", "props": {"rotation": "90rad"}})", lv::load_error::bad_value, R"("90rad")");
@@ -177,6 +258,36 @@ int main() {
   static_assert(lv::detail::names_enumerator("center", "LV_ALIGN_CENTER"));
   static_assert(lv::detail::names_enumerator("TOP_MID", "LV_ALIGN_TOP_MID"));
   static_assert(lv::detail::names_enumerator("LV_ALIGN_CENTER", "LV_ALIGN_CENTER"));
+  // Every character counts, and the name must follow an underscore.
+  static_assert(!lv::detail::names_enumerator("centxr", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("centeR_", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("enter", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("XLV_ALIGN_CENTER", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("centeq", "LV_ALIGN_CENTER"));
+  static_assert(!lv::detail::names_enumerator("centes", "LV_ALIGN_CENTER"));
+  static_assert(lv::detail::lower_char('A') == 'a' && lv::detail::lower_char('Z') == 'z');
+  static_assert(lv::detail::lower_char('@') == '@' && lv::detail::lower_char('[') == '[');
+  // Hex digits, at each end of each range.
+  static_assert(lv::detail::hex_value('0') == 0 && lv::detail::hex_value('9') == 9);
+  static_assert(lv::detail::hex_value('a') == 10 && lv::detail::hex_value('f') == 15);
+  static_assert(lv::detail::hex_value('A') == 10 && lv::detail::hex_value('F') == 15);
+  static_assert(lv::detail::hex_value('g') == -1 && lv::detail::hex_value('`') == -1);
+  static_assert(lv::detail::hex_value('/') == -1 && lv::detail::hex_value(':') == -1);
+  // Rounding is to the nearest whole number, away from zero at one half.
+  static_assert(lv::detail::rounded_i32(2.5) == 3 && lv::detail::rounded_i32(2.4) == 2);
+  static_assert(lv::detail::rounded_i32(-1.5) == -2 && lv::detail::rounded_i32(-2.4) == -2);
+  static_assert(lv::detail::rounded_i32(-0.4) == 0 && lv::detail::rounded_i32(0) == 0);
+  static_assert(lv::detail::rounded_i32(0.6) == 1 && lv::detail::rounded_i32(0.4) == 0);
+  // The tables of properties have no empty slot either.
+  static_assert(std::ranges::none_of(lv::detail::property_table<"obj">,
+                                     [](const auto& e) { return e.name.empty(); }));
+  static_assert(std::ranges::none_of(lv::detail::property_table<"arc">,
+                                     [](const auto& e) { return e.name.empty(); }));
+  // The table of style properties has no empty slot.
+  static_assert(!lv::detail::style_slots<>.empty());
+  static_assert(std::ranges::none_of(lv::detail::style_slots<>,
+                                     [](const auto& slot) { return slot.name.empty(); }));
   static_assert(!lv::detail::names_enumerator("enter", "LV_ALIGN_CENTER"));
 
   lv_init();
