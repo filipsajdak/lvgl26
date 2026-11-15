@@ -97,6 +97,32 @@ target_link_libraries(examples_get_started PRIVATE
   lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_get_started)
 add_test(NAME examples_get_started COMMAND examples_get_started)
 
+# LVGL's examples/widgets, one test per widget folder. The arguments after the
+# folder are the ported examples: lv_example_<folder>_<name>.c is compared with
+# examples/lvgl/widgets/<folder>_<name>.cpp.
+set(LVGL26_C_WIDGETS ${lvgl_SOURCE_DIR}/examples/widgets)
+set(LVGL26_WIDGETS ${CMAKE_CURRENT_SOURCE_DIR}/../examples/lvgl/widgets)
+function(lvgl26_widget_ports folder)
+  set(originals)
+  set(ports)
+  foreach(name ${ARGN})
+    list(APPEND originals ${LVGL26_C_WIDGETS}/${folder}/lv_example_${folder}_${name}.c)
+    list(APPEND ports ${LVGL26_WIDGETS}/${folder}_${name}.cpp)
+  endforeach()
+  add_library(lvgl_c_widgets_${folder} STATIC EXCLUDE_FROM_ALL ${originals})
+  target_link_libraries(lvgl_c_widgets_${folder} PRIVATE lvgl::lvgl)
+  target_compile_definitions(lvgl_c_widgets_${folder} PRIVATE LV_BUILD_EXAMPLES=1)
+
+  add_executable(examples_widgets_${folder} examples_widgets_${folder}.cpp ${ports})
+  target_compile_options(examples_widgets_${folder} PRIVATE --embed-dir=${LVGL26_WIDGETS})
+  target_link_libraries(examples_widgets_${folder} PRIVATE
+    lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_widgets_${folder})
+  add_test(NAME examples_widgets_${folder} COMMAND examples_widgets_${folder})
+endfunction()
+
+lvgl26_widget_ports(label bind_text long_mode recolor set_text_newline styling text_align)
+lvgl26_widget_ports(button basic event states styling)
+
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
