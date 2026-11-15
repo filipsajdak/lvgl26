@@ -1,0 +1,10 @@
+{
+  "title": "lvgl26",
+  "summary": "A C++26 framework over LVGL for embedded user interfaces: screens are checked at compile time, properties are typed, and user code calls no C. GCC 16 or newer.",
+  "for_agents": "Every page below is Markdown. Its code blocks come from files that the project's tests compile and run. Read the quick start first; llms-full.txt holds all pages in one file.",
+  "site": "https://filipsajdak.github.io/lvgl26/",
+  "repository": "https://github.com/filipsajdak/lvgl26",
+  "sections": [
+    {"title": "Start", "pages": ["quick-start.md"]}
+  ]
+}

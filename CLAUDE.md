@@ -119,9 +119,20 @@ A feature pull request also:
 - Adds or updates an example, and the site media in `site/media/` when the feature is visual.
 - Records any new rule in `CLAUDE.md`.
 
+## Documentation
+
+`docs/` is the one source of the documentation: Markdown, read on GitHub, rendered into `site/docs/` and collected into `site/llms.txt` and `site/llms-full.txt` for agents. `docs/research/` is not part of it.
+
+- `python3 tools/docs.py check` must pass. `python3 tools/docs.py build` renders the pages (needs pandoc); then `python3 tools/check_site.py`.
+- A code block that shows a file has the line `<!-- snippet: path name -->` before it and equals that part of the file. A test builds the file. `tools/docs.py sync` rewrites the blocks.
+- A page names no `lv_` function, `lv_..._t` type or `LV_` name in its code. Only a page about `raw()` may, and it says `<!-- c-api: shown -->`.
+- A new page goes into `docs/docs.json`, or it has no place in the sidebar and in `llms.txt`.
+- One line per paragraph. A picture on a page is written by a test (see `quick_start_picture`).
+- `site/docs/`, `site/llms.txt` and `site/llms-full.txt` are generated: do not commit them.
+
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.

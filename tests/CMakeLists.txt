@@ -239,6 +239,40 @@ lvgl26_compile_fail(band_taller_than_screen "Lines is the height of the band, fr
 lvgl26_compile_fail(display_frame_temporary_panel "it is told which area changed, and the pixels are in the frame")
 lvgl26_compile_fail(display_band_panel_without_pixels "it is given each piece of the screen")
 
+# The quick start of the documentation, built the way its page tells a reader to: as
+# a project of its own that fetches lvgl26. It compiles LVGL once more, so it runs
+# where the build is plain: not under a sanitizer, the analyzer or coverage.
+if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
+  set(LVGL26_QUICK_START ${CMAKE_CURRENT_BINARY_DIR}/quick_start)
+  add_test(NAME quick_start
+           COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test
+                   ${PROJECT_SOURCE_DIR}/examples/quick_start ${LVGL26_QUICK_START}
+                   --build-generator ${CMAKE_GENERATOR}
+                   --build-options -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                   -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                                   -DLVGL26_LVGL_REF=${LVGL26_LVGL_REF}
+                                   -DFETCHCONTENT_SOURCE_DIR_LVGL26=${PROJECT_SOURCE_DIR}
+                                   -DFETCHCONTENT_SOURCE_DIR_LVGL=${lvgl_SOURCE_DIR}
+                                   -DFETCHCONTENT_SOURCE_DIR_MP-UNITS=${mp-units_SOURCE_DIR}
+                   --test-command quick_start ${LVGL26_QUICK_START}/quick_start.png)
+  set_tests_properties(quick_start PROPERTIES PASS_REGULAR_EXPRESSION "wrote [^\n]*quick_start.png"
+                       TIMEOUT 900 FIXTURES_SETUP quick_start_picture)
+  # The picture on the page is the one the program writes. LVGL v10 may draw other pixels.
+  if(LVGL26_LVGL_REF STREQUAL "v9.6.0")
+    add_test(NAME quick_start_picture
+             COMMAND ${CMAKE_COMMAND} -E compare_files ${LVGL26_QUICK_START}/quick_start.png
+                     ${PROJECT_SOURCE_DIR}/docs/media/quick-start.png)
+    set_tests_properties(quick_start_picture PROPERTIES FIXTURES_REQUIRED quick_start_picture)
+  endif()
+endif()
+
+# The pages in docs/ show only code that these tests have built, and no C names.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+  add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+endif()
+
 # The fuzz target for runtime documents is also an ordinary program. Building it
 # here keeps it compiling, and replaying its corpus under every preset (including
 # the sanitizers) turns each input a fuzzer ever found into a regression test.
