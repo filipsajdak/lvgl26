@@ -118,6 +118,7 @@ A feature pull request also:
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
 - Add every new finding to its topic file in the same change, with its link, its mark and the date.
 - A decision made from research goes into the code, the design system or this file. The notes hold the evidence, not the rule.
+- A hook in `.claude/settings.json` repeats the first three rules before every `WebSearch` and `WebFetch`.
 
 ## Known tool limits
 
