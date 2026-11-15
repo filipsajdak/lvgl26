@@ -4,12 +4,8 @@ name: pages
 on:
   push:
     branches: [main]
+    paths: ['site/**', 'tools/check_site.py', '.github/workflows/pages.yml']
   workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
 
 # One deployment at a time. A newer one waits for the one that is running.
 concurrency:
@@ -17,11 +13,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Checks the site and stores it as the artifact that the next job publishes.
+  # Two jobs, as GitHub documents it: an artifact is only reliably there for a later
+  # job. With the upload and the deployment in one job, the deployment sometimes
+  # found no artifact.
+  check:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Check links and assets
@@ -29,5 +28,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
