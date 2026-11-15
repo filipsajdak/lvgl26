@@ -117,11 +117,13 @@ struct member_item {
                            // `style_pressed` and the like; or null for `id`
 };
 
+template <class D>
 consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   const auto prop = std::meta::identifier_of(f).substr(prefix_size);
   const auto params = std::meta::parameters_of(f);
   std::vector<std::meta::info> types;
-  for (std::size_t i = 1; i < params.size(); ++i) types.push_back(value_type(prop, params[i]));
+  for (std::size_t i = 1; i < params.size(); ++i)
+    types.push_back(value_type<D>(f, prop, params[i]));
   return {prop, std::meta::substitute(^^arg, types), f};
 }
 
@@ -141,7 +143,7 @@ consteval std::vector<member_item> scan_base() {
     if (auto name = style_member(std::meta::identifier_of(e), "LV_PART_"); !name.empty())
       items.push_back({std::define_static_string(name), ^^style_t<D>, e});
   for (auto f : setters_with_prefix("lv_obj_set_"))
-    items.push_back(setter_item(f, std::string_view("lv_obj_set_").size()));
+    items.push_back(setter_item<D>(f, std::string_view("lv_obj_set_").size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
       items.push_back({std::define_static_string(name), ^^arg<handler>, e});
@@ -168,11 +170,12 @@ inline constexpr std::span<const std::meta::info> base =
     std::define_static_array(pack_base<D>());
 
 // The widget's own setters as members, sorted by name. None for obj itself.
+template <class D>
 consteval std::vector<member_item> own_members(std::string_view widget) {
   std::vector<member_item> own;
   if (widget == "obj") return own;
   const std::string prefix = "lv_" + str(widget) + "_set_";
-  for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item(f, prefix.size()));
+  for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item<D>(f, prefix.size()));
   sort_by_name(own);
   return own;
 }
@@ -183,7 +186,7 @@ consteval std::vector<member_item> own_members(std::string_view widget) {
 template <class D = void>
 consteval std::vector<member_item> members(std::string_view widget) {
   resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
-  const auto own = own_members(widget);
+  const auto own = own_members<D>(widget);
 
   std::vector<member_item> items;
   std::size_t o = 0;
@@ -274,6 +277,10 @@ inline opa from_subject(lv_subject_t* s, as<opa>) {
 }
 
 inline angle from_subject(lv_subject_t* s, as<angle>) { return angle{lv_subject_get_int(s)}; }
+
+inline decidegrees from_subject(lv_subject_t* s, as<decidegrees>) {
+  return decidegrees{lv_subject_get_int(s)};
+}
 
 inline duration from_subject(lv_subject_t* s, as<duration>) {
   return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};

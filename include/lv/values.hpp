@@ -4,6 +4,7 @@
 // and the rule that gives each LVGL setter parameter its C++ type.
 
 #include <lv/config.hpp>
+#include <lv/detail/angle_docs.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
@@ -100,7 +101,8 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
         entry{std::meta::dealias(^^vertical),
               "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal "
               "length)"},
-        entry{^^angle, "an angle (90 * lv::deg)"},
+        entry{^^angle, "an angle in whole degrees (90 * lv::deg)"},
+        entry{^^decidegrees, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
         entry{^^duration, "a time (300 * lv::ms)"},
         entry{^^opa, "an opacity (50 * lv::pct)"},
         entry{^^strict<bool>, "true or false"}})
@@ -295,6 +297,12 @@ struct arg {
                   "lv: this property cannot be bound to a state of that type. The state's "
                   "type, or the number inside its quantity or named type, must be what the "
                   "property takes.");
+    // A subject carries a plain number, and the property would read whole degrees
+    // as tenths.
+    static_assert(!(std::same_as<T, angle> && std::same_as<first, decidegrees>),
+                  "lv: this property is in tenths of a degree, and a state of lv::angle holds "
+                  "whole degrees. Give the state the type of the property: "
+                  "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
   }
 
   template <class T>
@@ -364,28 +372,40 @@ consteval bool named_after(std::string_view prop, std::string_view parameter,
   return false;
 }
 
+// Whether the property or its parameter is named as LVGL names an angle.
+consteval bool is_angle_name(std::string_view prop, std::string_view parameter) {
+  return named_after(prop, parameter, {"angle", "rotation", "skew"});
+}
+
 // The unit type of a numeric setter parameter, judged by the names LVGL uses, or
-// a null reflection if they say nothing.
+// a null reflection if they say nothing. An angle may still be decidegrees: see
+// value_type.
 consteval std::meta::info unit_of(std::string_view prop, std::string_view parameter) {
   if (named_after(prop, parameter, {"opa"})) return ^^opa;
-  if (named_after(prop, parameter, {"angle", "rotation"})) return ^^angle;
+  if (is_angle_name(prop, parameter)) return ^^angle;
   if (named_after(prop, parameter, {"duration", "time", "delay", "period"})) return ^^duration;
   if (is_one_of(parameter, {"x", "w", "width"})) return ^^horizontal;
   if (is_one_of(parameter, {"y", "h", "height"})) return ^^vertical;
   return {};
 }
 
-// The C++ type a setter parameter gets in the props struct.
-// The unit is inferred from the names LVGL uses, because C only says int32_t.
+// The C++ type that the parameter `param` of `setter` gets in the props struct.
+// The unit is inferred from the names LVGL uses, because C only says int32_t. Whether
+// an angle is in degrees or in tenths of a degree is not in the names either: that is
+// read from the setter's doc comment (see lv/detail/angle_docs.hpp).
 // Style values follow other rules: see style_value_type in style.hpp.
-consteval std::meta::info value_type(std::string_view prop, std::meta::info param) {
+// D only delays reading the doc comments until a setter with an angle is met.
+template <class D = void>
+consteval std::meta::info value_type(std::meta::info setter, std::string_view prop,
+                                     std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
   const std::string_view name =
       std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
 
   if (std::meta::is_arithmetic_type(t) && t != ^^bool)
-    if (const auto unit = unit_of(prop, name); unit != std::meta::info{}) return unit;
+    if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
+      return unit == ^^angle ? angle_type_of<D>(setter) : unit;
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
 }
@@ -474,6 +494,12 @@ constexpr R whole_number(double v)
   return static_cast<R>(v);
 }
 
+// A value that a number token can be: the type says how with T::from_number(double).
+template <class T>
+concept made_from_number = requires(double number) {
+  { T::from_number(number) } -> std::same_as<T>;
+};
+
 }  // namespace detail
 
 template <class T>
@@ -495,8 +521,15 @@ class styled {
   // A number token that is a whole number.
   template <std::same_as<double> N>
     requires requires { typename std::type_identity_t<decltype(T{}.raw())>; } &&
-             detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>)
+             detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>) &&
+             (!detail::made_from_number<T>)
   constexpr styled(const token<N>& t) : v_(detail::whole_number<decltype(T{}.raw())>(*t)) {}
+
+  // A number token for a value that says how it is made from a number: an angle
+  // with tenths of a degree is a number of degrees, such as 22.5.
+  constexpr styled(const token<double>& t)
+    requires detail::made_from_number<T>
+      : v_(T::from_number(*t)) {}
 
   template <class U>
     requires std::convertible_to<const U&, T>

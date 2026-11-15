@@ -13,7 +13,7 @@
 // `to` at once, and there is nothing to wait for.
 //
 // The properties are those of lv::props that take one number: a whole number, a
-// length, an angle or an opacity. lv::animatable<"arc"> is the struct that lists
+// length, an angle (in degrees or in tenths) or an opacity. lv::animatable<"arc"> is the struct that lists
 // them; reflection generates it from the same setters as lv::props<"arc">. Both
 // ends have the property's type, so `.width = {0, 100}` does not compile.
 //
@@ -78,6 +78,7 @@ constexpr bool can_run_between(strict<I> from, strict<I> to) {
   return std::in_range<std::int32_t>(from.raw()) && std::in_range<std::int32_t>(to.raw());
 }
 constexpr bool can_run_between(angle, angle) { return true; }
+constexpr bool can_run_between(decidegrees, decidegrees) { return true; }
 constexpr bool can_run_between(opa, opa) { return true; }
 
 template <class T>
@@ -141,7 +142,7 @@ namespace detail {
 // Whether a property of this type can be animated: a number that LVGL can count
 // through. Not bool, not a time, not an enum, not text.
 consteval bool is_animatable_type(std::meta::info t) {
-  for (auto unit : {(^^opa), (^^angle), (^^length), std::meta::dealias(^^horizontal),
+  for (auto unit : {(^^opa), (^^angle), (^^decidegrees), (^^length), std::meta::dealias(^^horizontal),
                     std::meta::dealias(^^vertical)})
     if (t == unit) return true;
   return is_made_from(t, ^^strict) && std::meta::template_arguments_of(t)[0] != ^^bool;

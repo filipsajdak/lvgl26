@@ -22,9 +22,10 @@
 // compile-time tree, so both accept the same names.
 //
 // Values: numbers; true/false; strings for text; "120px", "50%" or "content" for
-// lengths; "90deg"; "300ms"; "#rrggbb"; an enumerator by name, in full
-// ("LV_ALIGN_CENTER") or by its last part ("center"); a list for a property that
-// takes several values. Handlers, bindings and pointers cannot come from a document.
+// lengths; "90deg", and "22.5deg" where LVGL takes tenths of a degree; "300ms";
+// "#rrggbb"; an enumerator by name, in full ("LV_ALIGN_CENTER") or by its last part
+// ("center"); a list for a property that takes several values. Handlers, bindings
+// and pointers cannot come from a document.
 //
 // Limits: text values are at most 127 characters and are not unescaped. The
 // document must stay alive as long as the loaded screen is used with find/apply
@@ -145,7 +146,7 @@ template <class T>
 inline constexpr bool readable = std::is_enum_v<T> || std::same_as<T, const char*> ||
                                  std::same_as<T, length> || std::same_as<T, horizontal> ||
                                  std::same_as<T, vertical> || std::same_as<T, angle> ||
-                                 std::same_as<T, duration> || std::same_as<T, opa> ||
+                                 std::same_as<T, decidegrees> || std::same_as<T, duration> || std::same_as<T, opa> ||
                                  std::same_as<T, lv_color_t>;
 template <class I>
 inline constexpr bool readable<strict<I>> = true;
@@ -187,6 +188,14 @@ inline bool read(json::value v, json_value<angle>& out) {
   const auto m = read_measured(v);
   if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
   return out.value = angle{rounded_i32(m.number)}, true;
+}
+
+// An angle with tenths of a degree: 22.5 or "22.5deg". A finer fraction, or more
+// than the property can hold, does not fit.
+inline bool read(json::value v, json_value<decidegrees>& out) {
+  const auto m = read_measured(v);
+  if (!m.ok || !(m.unit.empty() || m.unit == "deg") || !whole_tenths(m.number)) return false;
+  return out.value = decidegrees::from_number(m.number), true;
 }
 
 // Milliseconds for a measured time, or -1 when the unit is not ms or s.

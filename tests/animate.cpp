@@ -228,6 +228,29 @@ void an_easing_shapes_the_motion(lv::obj screen) {
   lv_obj_delete(arc.raw());
 }
 
+// An angle in tenths of a degree is animated in tenths: an image's rotation.
+static_assert(requires { lv::animatable<"image">{}.rotation; });
+lv::task<> turn(lv::view<"image"> image, outcome* out) {
+  out->finished = co_await lv::animate(image, {.rotation = {0 * deg, 22.5 * deg}}, 200 * ms);
+  out->steps = 1;
+}
+void an_image_turns_in_tenths_of_a_degree(lv::obj screen) {
+  auto image = screen.add<"image">();
+  // LVGL gives a widget its extra attributes at the first rotation, and keeps them.
+  image.set({.rotation = 1 * deg});
+  const auto before = free_bytes();
+  outcome out;
+  check(lv::spawn(turn(image, &out)));
+  lv_test_wait(100);
+  const auto half = lv_image_get_rotation(image.raw());
+  check(half > 60 && half < 165);  // on its way, in tenths
+  lv_test_wait(150);
+  check(lv_image_get_rotation(image.raw()) == 225 && out.steps == 1 && out.finished);
+  check(image.get<"rotation">() == 22.5 * deg);
+  check(free_bytes() == before);
+  lv_obj_delete(image.raw());
+}
+
 void every_kind_of_number_is_animated(lv::obj screen) {
   auto parent = screen.add<"obj">();
   parent.set({.height = 200 * px, .width = 300 * px});
@@ -592,6 +615,7 @@ int main(int argc, char**) {
   an_animation_runs_to_its_end(screen);
   easings_name_lvgl_paths();
   an_easing_shapes_the_motion(screen);
+  an_image_turns_in_tenths_of_a_degree(screen);
   every_kind_of_number_is_animated(screen);
   ends_are_checked(argc + 4, argc + 9);
   first_of_several(screen);

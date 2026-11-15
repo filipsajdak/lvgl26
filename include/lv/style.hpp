@@ -26,7 +26,7 @@ namespace detail {
 
 inline constexpr std::string_view style_prefix = "lv_obj_set_style_";
 
-// Scale, skew and rotation are ratios and tenths of a degree, not lengths.
+// Scale, skew and rotation are ratios and angles, not lengths.
 consteval bool is_ratio_prop(std::string_view prop) {
   return has(prop, "scale") || has(prop, "skew") || has(prop, "rotation");
 }
@@ -56,7 +56,11 @@ consteval std::meta::info style_unit(std::string_view prop) {
 // so the unit comes from the property name alone. Design values (colors, lengths,
 // opacities, times and numbers) are wrapped in styled<>, which asks for a design
 // token. Enums, flags and pointers are structure, not design, and stay plain.
-consteval std::meta::info style_value_type(std::string_view prop, std::meta::info param) {
+// An angle is decidegrees when the setter's doc comment says tenths of a degree
+// (see lv/detail/angle_docs.hpp); D only delays reading the comments.
+template <class D = void>
+consteval std::meta::info style_value_type(std::meta::info setter, std::string_view prop,
+                                           std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
   const auto design = [](std::meta::info inner) { return std::meta::substitute(^^styled, {inner}); };
@@ -64,6 +68,7 @@ consteval std::meta::info style_value_type(std::string_view prop, std::meta::inf
   if (t == std::meta::dealias(^^lv_color_t)) return design(^^lv_color_t);
   if (t == ^^bool) return ^^strict<bool>;
   if (!std::meta::is_arithmetic_type(t)) return raw;
+  if (is_angle_name(prop, {})) return design(angle_type_of<D>(setter));
   if (const auto unit = style_unit(prop); unit != std::meta::info{}) return design(unit);
   if (std::meta::is_integral_type(t)) return design(std::meta::substitute(^^strict, {t}));
   return raw;
@@ -96,11 +101,12 @@ consteval std::meta::info style_id_of(std::string_view prop) {
 }
 
 // The member of lv::style for the setter `f`, called lv_obj_set_style_<prop>.
+template <class D>
 consteval style_item style_item_of(std::meta::info f, std::string_view prop) {
   const auto params = std::meta::parameters_of(f);  // obj, value(s), selector
   std::vector<std::meta::info> types;
   for (std::size_t i = 1; i + 1 < params.size(); ++i)
-    types.push_back(style_value_type(prop, params[i]));
+    types.push_back(style_value_type<D>(f, prop, params[i]));
   // Only a setter with one value can have a style id.
   const auto id = params.size() == 3 ? style_id_of(prop) : std::meta::info{};
   return {prop, std::meta::substitute(^^arg, types), f, id};
@@ -115,7 +121,7 @@ consteval std::vector<style_item> scan_style() {
     const auto name = std::meta::identifier_of(f);
     if (!name.starts_with(style_prefix) || std::meta::is_vararg_function(f)) continue;
     if (std::meta::parameters_of(f).size() < 3) continue;
-    items.push_back(style_item_of(f, name.substr(style_prefix.size())));
+    items.push_back(style_item_of<D>(f, name.substr(style_prefix.size())));
   }
   sort_by_name(items);
   return items;

@@ -154,6 +154,28 @@ void widgets_follow(lv::obj screen) {
   check(root->get<"bar">().get<"value">() == 75);
 }
 
+// mp-units has a `deg` of its own, so lvgl26's is written lv::deg in this file.
+// An angle follows a state of its own kind: tenths of a degree for an image, whole
+// degrees for an arc. (A state of lv::angle on the image's rotation does not
+// compile: see tests/fail/bind_angle_to_decidegrees.cpp.)
+void angles_follow_a_state(lv::obj screen) {
+  lv::state turn{22.5 * lv::deg};
+  static_assert(std::same_as<decltype(turn), lv::state<lv::decidegrees>>);
+  auto image = screen.add<"image">().set({.rotation = lv::bind(turn)});
+  check(lv_image_get_rotation(image.raw()) == 225);
+  turn = 90 * lv::deg;
+  check(lv_image_get_rotation(image.raw()) == 900);
+  check(turn.get() == 90 * lv::deg && turn.number() == 900);
+  lv_obj_delete(image.raw());
+
+  lv::state quarter{90 * lv::deg};
+  auto arc = screen.add<"arc">().set({.rotation = lv::bind(quarter)});
+  check(lv_arc_get_rotation(arc.raw()) == 90);
+  quarter = 180 * lv::deg;
+  check(lv_arc_get_rotation(arc.raw()) == 180);
+  lv_obj_delete(arc.raw());
+}
+
 void c_code_shares_the_subject() {
   lv_observer_t* o = lv_subject_add_observer(speed.raw(), &c_observer, nullptr);
   speed = 33 * km / h;
@@ -224,6 +246,7 @@ int main() {
   c_code_shares_the_subject();
   observers();
   runtime_binding(screen);
+  angles_follow_a_state(screen);
   binding_to_a_local_state(screen);
   survives_a_deleted_tree(screen);
 
