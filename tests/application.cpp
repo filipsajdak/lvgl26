@@ -9,6 +9,7 @@
 
 #include "check.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <span>
@@ -22,6 +23,7 @@ static_assert(!std::is_copy_constructible_v<lv::application>);
 static_assert(!std::is_copy_constructible_v<lv::display>);
 static_assert(lv::frame<64, 48>::width == 64 && lv::frame<64, 48>::height == 48);
 static_assert(lv::band<64, 48, 8>::lines == 8);
+static_assert(lv::area{} == lv::area{0, 0, 0, 0});
 static_assert(sizeof(lv::band<64, 48, 8>) < sizeof(lv::frame<64, 48>));
 
 constexpr auto ui = lv::column({.size = {64 * px, 48 * px}})[lv::label({.id = "title", .text = "Hi"})];
@@ -36,6 +38,11 @@ lv::duration test_clock() { return {now_ms}; }
 void test_idle(lv::duration) {
   ++idled;
   now_ms += 5;
+}
+
+lv::task<> stop_plainly(lv::application& app) {
+  co_await lv::sleep(10 * ms);
+  app.quit();
 }
 
 lv::task<> stop_after(lv::application& app, lv::duration wait, int result) {
@@ -81,6 +88,9 @@ void runs_until_quit() {
 
   lv::spawn(stop_after(app, 20 * ms, 3));  // run() can be called again
   check(app.run() == 3);
+
+  lv::spawn(stop_plainly(app));  // quit() without a result means 0
+  check(app.run() == 0);
 }
 
 void runs_on_the_hosts_clock() {
@@ -89,6 +99,13 @@ void runs_on_the_hosts_clock() {
   lv::spawn(stop_after(app, 30 * ms, 5));
   check(app.run() == 5);
   check(lv_tick_get() - before >= 30);
+}
+
+// The host's wait is short even when nothing is due for long, so that input is seen.
+void the_hosts_wait_is_short() {
+  const auto before = std::chrono::steady_clock::now();
+  lv::host.idle(lv::duration{2000});
+  check(std::chrono::steady_clock::now() - before < std::chrono::milliseconds{500});
 }
 
 bool one_value(std::span<const std::byte> bytes) {
@@ -130,6 +147,10 @@ void a_frame_holds_the_picture() {
     check(display.raw() == lv_display_get_default());
     auto root = lv::mount<ui>(display.screen());
     check(root.has_value());
+    const std::size_t pixel = lv_color_format_get_size(LV_COLOR_FORMAT_NATIVE);
+    check(lv::frame<64, 48>::stride == 64 * pixel);
+    check(frame.bytes().size() == 64 * 48 * pixel);
+    check(frame.bytes().data() == frame.memory);
     check(one_value(frame.bytes()));  // nothing is drawn yet
     refresh(app);
     check(!one_value(frame.bytes()));  // the text on its background
@@ -219,6 +240,9 @@ void the_heap_is_measured() {
   const lv::heap_use before = app.heap();
   check(before.total > 0 && before.used > 0 && before.used < before.total);
   check(before.largest_free <= before.total - before.used);
+  lv_mem_monitor_t lvgl;
+  lv_mem_monitor(&lvgl);
+  check(before.used == lvgl.total_size - lvgl.free_size);
 
   lv::display display{app, frame};
   auto root = lv::mount<ui>(display.screen());
@@ -248,6 +272,7 @@ int main(int argc, char** argv) {
   time_comes_from_a_clock();
   runs_until_quit();
   runs_on_the_hosts_clock();
+  the_hosts_wait_is_short();
   a_frame_holds_the_picture();
   a_frame_names_what_changed();
   a_band_hands_over_pieces();
