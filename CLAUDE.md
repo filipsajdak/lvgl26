@@ -49,6 +49,10 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Application values are strongly typed: a measure is an mp-units quantity (`120 * km / h`), a
   count is `lv::counter`, anything else a one-member struct. Do not add a unit system to lvgl26.
 - No handwritten per-property code. Properties, styles and events come from reflection.
+- A unit that LVGL documents only in a comment (degrees or tenths of a degree) is read from the
+  embedded LVGL headers (`include/lv/detail/angle_docs.hpp`). A hand-written list of setters is not
+  allowed. A new header with an angle goes into `angle_headers`; `tests/angle_units.cpp` checks the
+  reading against the pixels.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
