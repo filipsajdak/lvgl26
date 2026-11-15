@@ -2,8 +2,10 @@
 
 #include "check.hpp"
 
+#include <cstdint>
 #include <cstring>
 #include <type_traits>
+#include <utility>
 
 namespace {
 
@@ -48,6 +50,12 @@ void properties(lv::obj screen) {
   check(!lv::view<"label">{});
 }
 
+// An event is named after its code, in lower case. "delete" is a keyword, so that one is "gone".
+static_assert(lv::detail::event_name("LV_EVENT_CLICKED") == "clicked");
+static_assert(lv::detail::event_name("LV_EVENT_SIZE_CHANGED") == "size_changed");
+static_assert(lv::detail::event_name("LV_EVENT_DELETE") == "gone");
+static_assert(lv::detail::event_name("LV_EVENT_ALL").empty() && lv::detail::event_name("LV_OPA_COVER").empty());
+
 void events(lv::obj screen) {
   auto b = screen.add<"button">();
   stateless_calls = 0;
@@ -65,6 +73,13 @@ void events(lv::obj screen) {
   check(stateless_calls == 2);
   check(captured_calls == 2);
   check(other_calls == 0);
+
+  // A capture smaller than a pointer fits as well.
+  static int small_calls = 0;
+  small_calls = 0;
+  b.on<LV_EVENT_PRESSED>([step = std::uint8_t{2}] { small_calls += step; });
+  lv_obj_send_event(b.raw(), LV_EVENT_PRESSED, nullptr);
+  check(other_calls == 1 && small_calls == 2);
 }
 
 void weak_views(lv::obj screen) {
@@ -119,6 +134,28 @@ void owned_views(lv::obj screen) {
   check(count() == before + 1);
   a.reset();
   check(count() == before);
+
+  // Move assignment takes the other owner's widget and deletes its own, whichever of
+  // the two owners comes first in memory.
+  lv::owned<label_view> pair[2];
+  for (int from : {1, 0}) {
+    const int to = 1 - from;
+    const auto mine = screen.add<"label">();
+    const auto theirs = screen.add<"label">();
+    pair[to] = lv::owned<label_view>{mine};
+    pair[from] = lv::owned<label_view>{theirs};
+    pair[to] = std::move(pair[from]);
+    check(count() == before + 1);
+    check(pair[to].get() == theirs && !pair[from]);
+    pair[to].reset();
+  }
+  check(count() == before);
+
+  // Moving an owner onto itself keeps its widget.
+  lv::owned<label_view> self{screen.add<"label">()};
+  lv::owned<label_view>& same = self;
+  self = std::move(same);
+  check(self && count() == before + 1);
 }
 
 }  // namespace
