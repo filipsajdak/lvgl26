@@ -66,4 +66,12 @@ void arc_set_angles(lv::obj screen);     // lv_example_arc_set_angles
 void arc_styling(lv::obj screen);        // lv_example_arc_styling
 void arc_value_range(lv::obj screen);    // lv_example_arc_value_range
 
+// bar
+void bar_bind_value(lv::obj screen);     // lv_example_bar_bind_value
+void bar_img_indicator(lv::obj screen);  // lv_example_bar_img_indicator
+void bar_modes(lv::obj screen);          // lv_example_bar_modes
+void bar_orientation(lv::obj screen);    // lv_example_bar_orientation
+void bar_styling(lv::obj screen);        // lv_example_bar_styling
+void bar_value_range(lv::obj screen);    // lv_example_bar_value_range
+
 }  // namespace widgets
