@@ -48,10 +48,16 @@ struct text_out {
   void operator()(std::string_view piece) const { write(context, piece); }
 };
 
+// A function, not a lambda: GCC's analyzer takes the call through a lambda's
+// function pointer for a call on a null object.
+template <class S>
+void call_sink(void* context, std::string_view piece) {
+  std::invoke(*static_cast<S*>(context), piece);
+}
+
 template <class S>
 text_out erase_sink(S& sink) {
-  return {const_cast<void*>(static_cast<const void*>(std::addressof(sink))),
-          [](void* context, std::string_view piece) { std::invoke(*static_cast<S*>(context), piece); }};
+  return {const_cast<void*>(static_cast<const void*>(std::addressof(sink))), &call_sink<S>};
 }
 
 // ---- writing values ------------------------------------------------------------
