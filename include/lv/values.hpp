@@ -102,7 +102,7 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
               "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal "
               "length)"},
         entry{^^angle, "an angle in whole degrees (90 * lv::deg)"},
-        entry{^^fine_angle, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
+        entry{^^decidegrees, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
         entry{^^duration, "a time (300 * lv::ms)"},
         entry{^^opa, "an opacity (50 * lv::pct)"},
         entry{^^strict<bool>, "true or false"}})
@@ -299,10 +299,10 @@ struct arg {
                   "property takes.");
     // A subject carries a plain number, and the property would read whole degrees
     // as tenths.
-    static_assert(!(std::same_as<T, angle> && std::same_as<first, fine_angle>),
+    static_assert(!(std::same_as<T, angle> && std::same_as<first, decidegrees>),
                   "lv: this property is in tenths of a degree, and a state of lv::angle holds "
                   "whole degrees. Give the state the type of the property: "
-                  "`lv::state<lv::fine_angle> turn{90 * lv::deg};`.");
+                  "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
   }
 
   template <class T>
@@ -378,7 +378,7 @@ consteval bool is_angle_name(std::string_view prop, std::string_view parameter) 
 }
 
 // The unit type of a numeric setter parameter, judged by the names LVGL uses, or
-// a null reflection if they say nothing. An angle may still be a fine_angle: see
+// a null reflection if they say nothing. An angle may still be decidegrees: see
 // value_type.
 consteval std::meta::info unit_of(std::string_view prop, std::string_view parameter) {
   if (named_after(prop, parameter, {"opa"})) return ^^opa;

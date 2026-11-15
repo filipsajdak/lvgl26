@@ -35,14 +35,14 @@ using std::string_view;
 
 // In tenths of a degree: the rotation of an image, and the three transform angles
 // of a style. Their getters too.
-static_assert(d::angle_type_of(^^lv_image_set_rotation) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_set_style_transform_rotation) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_set_style_transform_skew_x) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_set_style_transform_skew_y) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_image_get_rotation) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_get_style_transform_rotation) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_get_style_transform_skew_x) == ^^lv::fine_angle);
-static_assert(d::angle_type_of(^^lv_obj_get_style_transform_skew_y) == ^^lv::fine_angle);
+static_assert(d::angle_type_of(^^lv_image_set_rotation) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_set_style_transform_rotation) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_set_style_transform_skew_x) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_set_style_transform_skew_y) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_image_get_rotation) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_get_style_transform_rotation) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_get_style_transform_skew_x) == ^^lv::decidegrees);
+static_assert(d::angle_type_of(^^lv_obj_get_style_transform_skew_y) == ^^lv::decidegrees);
 
 // In whole degrees: everything else.
 static_assert(d::angle_type_of(^^lv_arc_set_rotation) == ^^lv::angle);
@@ -58,17 +58,17 @@ static_assert(d::angle_type_of(^^lv_scale_get_rotation) == ^^lv::angle);
 static_assert(d::tenths_functions<>.size() == 8);
 
 // So the properties get these types.
-static_assert(std::is_same_v<decltype(lv::props<"image">{}.rotation), lv::arg<lv::fine_angle>>);
+static_assert(std::is_same_v<decltype(lv::props<"image">{}.rotation), lv::arg<lv::decidegrees>>);
 static_assert(std::is_same_v<decltype(lv::props<"arc">{}.rotation), lv::arg<lv::angle>>);
 static_assert(std::is_same_v<decltype(lv::props<"arc">{}.bg_angles), lv::arg<lv::angle, lv::angle>>);
 static_assert(std::is_same_v<decltype(lv::props<"scale">{}.rotation), lv::arg<lv::angle>>);
 using style_type = d::style_t<>;
 static_assert(std::is_same_v<decltype(style_type{}.transform_rotation),
-                             lv::arg<lv::styled<lv::fine_angle>>>);
+                             lv::arg<lv::styled<lv::decidegrees>>>);
 static_assert(std::is_same_v<decltype(style_type{}.transform_skew_x),
-                             lv::arg<lv::styled<lv::fine_angle>>>);
+                             lv::arg<lv::styled<lv::decidegrees>>>);
 static_assert(std::is_same_v<decltype(style_type{}.transform_skew_y),
-                             lv::arg<lv::styled<lv::fine_angle>>>);
+                             lv::arg<lv::styled<lv::decidegrees>>>);
 // A scale is a ratio, not an angle.
 static_assert(std::is_same_v<decltype(style_type{}.transform_scale_x),
                              lv::arg<lv::styled<lv::strict<std::int32_t>>>>);
@@ -202,8 +202,8 @@ struct target {
 };
 
 consteval bool is_angle(std::meta::info type) {
-  return type == ^^lv::angle || type == ^^lv::fine_angle || type == ^^lv::styled<lv::angle> ||
-         type == ^^lv::styled<lv::fine_angle>;
+  return type == ^^lv::angle || type == ^^lv::decidegrees || type == ^^lv::styled<lv::angle> ||
+         type == ^^lv::styled<lv::decidegrees>;
 }
 
 // lv_<widget>_create(parent), by "lv_<widget>".
@@ -423,7 +423,7 @@ struct findings {
 template <std::size_t I>
 void try_target(lv_obj_t* screen, findings& found) {
   constexpr target t = targets[I];
-  constexpr bool says_tenths = d::angle_type_of(t.setter) == ^^lv::fine_angle;
+  constexpr bool says_tenths = d::angle_type_of(t.setter) == ^^lv::decidegrees;
   const unit said = says_tenths ? unit::tenths : unit::degrees;
   const unit saw = seen<t>(screen);
   std::printf("%-46s comment: %-18s pixels: %s\n", name_of<t>, text_of(said), text_of(saw));
@@ -501,7 +501,7 @@ void image_turns_a_quarter(lv::obj screen) {
   check(pixel(turned, cx - 15, cy) != red && pixel(turned, cx + 15, cy) != blue);
   check(lv_image_get_rotation(image.raw()) == 900);
   check(image.get<"rotation">() == 90 * deg && image.get<"rotation">().tenths == 900);
-  static_assert(std::same_as<decltype(image.get<"rotation">()), lv::fine_angle>);
+  static_assert(std::same_as<decltype(image.get<"rotation">()), lv::decidegrees>);
 
   // The same pixels as LVGL's own call with 900 tenths.
   lv_image_set_rotation(image.raw(), 0);
@@ -537,7 +537,7 @@ void style_rotation_is_in_tenths(lv::obj screen) {
   check(lv_obj_get_style_transform_rotation(box.raw(), LV_PART_MAIN) == 900);
   check(box.get<"style_transform_rotation">(LV_PART_MAIN) == 90 * deg);
   static_assert(std::same_as<decltype(box.get<"style_transform_rotation">(LV_PART_MAIN)),
-                             lv::fine_angle>);
+                             lv::decidegrees>);
   lv_obj_delete(box.raw());
 
   auto root = lv::mount<tilted>(screen);

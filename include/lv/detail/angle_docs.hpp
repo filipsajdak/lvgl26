@@ -6,7 +6,7 @@
 // a degree. Both are `int32_t`, and the names do not differ: the unit is written
 // only in LVGL's doc comment. So the comment is what this file reads. The headers
 // that declare a function named after an angle are embedded, and the functions whose
-// comment says "0.1 degree" take and return an lv::fine_angle; every other angle is
+// comment says "0.1 degree" take and return lv::decidegrees; every other angle is
 // an lv::angle in whole degrees.
 //
 // There is no list of functions here on purpose. A list written by hand is right for
@@ -185,7 +185,7 @@ consteval bool is_declared_in(std::meta::info f, std::span<const doc_header> hea
   return false;
 }
 
-// The type of an angle that the setter or getter `f` takes or returns: lv::fine_angle
+// The type of an angle that the setter or getter `f` takes or returns: lv::decidegrees
 // when its doc comment says tenths of a degree, lv::angle otherwise.
 template <class D = void>
 consteval std::meta::info angle_type_of(std::meta::info f) {
@@ -197,7 +197,7 @@ consteval std::meta::info angle_type_of(std::meta::info f) {
         str(std::meta::source_location_of(f).file_name()) +
         ". Add that header to angle_headers in lv/detail/angle_docs.hpp.");
   for (const char* in_tenths : tenths_functions<D>)
-    if (name == in_tenths) return ^^fine_angle;
+    if (name == in_tenths) return ^^decidegrees;
   return ^^angle;
 }
 

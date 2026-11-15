@@ -60,14 +60,14 @@ constexpr bool whole_tenths(double degrees) {
 
 }  // namespace detail
 
-struct fine_angle;
+struct decidegrees;
 
 // An angle in whole degrees: 90 * deg. It is what most of LVGL takes (an arc, a scale).
-// It converts to a fine_angle, so 90 * deg can be written for every angle.
+// It converts to decidegrees, so 90 * deg can be written for every angle.
 struct angle {
   std::int32_t degrees = 0;
   constexpr std::int32_t raw() const { return degrees; }
-  constexpr operator fine_angle() const
+  constexpr operator decidegrees() const
     pre(detail::fits_tenths(degrees));
   friend constexpr bool operator==(angle, angle) = default;
 };
@@ -76,12 +76,12 @@ struct angle {
 // A few LVGL values have this resolution: the rotation of an image, and the
 // transform rotation and skew of a style. Which ones is read from LVGL's doc
 // comments: see lv/detail/angle_docs.hpp.
-struct fine_angle {
+struct decidegrees {
   std::int32_t tenths = 0;
   constexpr std::int32_t raw() const { return tenths; }
 
   // Degrees as a number, as a design token or a document gives them: 22.5.
-  static constexpr fine_angle from_number(double degrees)
+  static constexpr decidegrees from_number(double degrees)
     pre(detail::whole_tenths(degrees))
   {
     detail::keep_checked(detail::whole_tenths(degrees));
@@ -90,16 +90,16 @@ struct fine_angle {
 
   operator angle() const = delete(
       "lv: this takes an angle in whole degrees, and the value may have a fraction of a degree "
-      "(it is an lv::fine_angle, as 22.5 * lv::deg is). Write whole degrees: 90 * lv::deg.");
+      "(it is lv::decidegrees, as 22.5 * lv::deg is). Write whole degrees: 90 * lv::deg.");
 
-  friend constexpr bool operator==(fine_angle, fine_angle) = default;
+  friend constexpr bool operator==(decidegrees, decidegrees) = default;
   // Without these, comparing the two kinds would be ambiguous.
-  friend constexpr bool operator==(fine_angle a, angle b) {
+  friend constexpr bool operator==(decidegrees a, angle b) {
     return a.tenths == std::int64_t{b.degrees} * 10;
   }
 };
 
-constexpr angle::operator fine_angle() const {
+constexpr angle::operator decidegrees() const {
   detail::keep_checked(detail::fits_tenths(degrees));
   return {degrees * 10};
 }
@@ -205,11 +205,11 @@ constexpr angle operator*(T n, deg_unit) {
 }
 // Degrees with a fraction: 22.5 * deg. The number must be a whole number of tenths.
 template <std::same_as<double> T>
-constexpr fine_angle operator*(T n, deg_unit)
+constexpr decidegrees operator*(T n, deg_unit)
   pre(detail::whole_tenths(n))
 {
   detail::keep_checked(detail::whole_tenths(n));
-  return fine_angle::from_number(n);
+  return decidegrees::from_number(n);
 }
 template <detail::unit_count T>
 constexpr duration operator*(T n, ms_unit)

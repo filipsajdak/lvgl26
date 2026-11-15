@@ -139,7 +139,7 @@ class view {
 
   // get<"text">() calls lv_label_get_text, or lv_obj_get_* as a fallback. It returns
   // what LVGL returns, except for an angle: get<"rotation">() is an lv::angle for an
-  // arc and an lv::fine_angle for an image, so that it compares with 90 * lv::deg.
+  // arc and lv::decidegrees for an image, so that it compares with 90 * lv::deg.
   template <detail::fixed P, class... A>
     requires requires(lv_obj_t* o, A&&... a) {
       [:detail::resolve(W.sv(), "get", P.sv()):](o, std::forward<A>(a)...);

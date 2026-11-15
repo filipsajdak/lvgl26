@@ -38,8 +38,8 @@ static_assert(*dark.primitive.easing.standard == lv::bezier{0.2, 0, 0, 1});
 // An angle token is a number of degrees. A style value in tenths of a degree takes
 // one with a decimal; one in whole degrees takes a whole number.
 static_assert(*dark.primitive.angle.tilt == 22.5 && *dark.primitive.angle.quarter == 90);
-static_assert(lv::styled<lv::fine_angle>{dark.primitive.angle.tilt}.raw() == 225);
-static_assert(lv::styled<lv::fine_angle>{dark.primitive.angle.quarter}.raw() == 900);
+static_assert(lv::styled<lv::decidegrees>{dark.primitive.angle.tilt}.raw() == 225);
+static_assert(lv::styled<lv::decidegrees>{dark.primitive.angle.quarter}.raw() == 900);
 static_assert(lv::styled<lv::angle>{dark.primitive.angle.quarter}.raw() == 90);
 static_assert(std::get<0>(lv::style({.transform_rotation = dark.primitive.angle.tilt})
                               .transform_rotation.v).raw() == 225);

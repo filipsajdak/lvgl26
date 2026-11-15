@@ -56,7 +56,7 @@ consteval std::meta::info style_unit(std::string_view prop) {
 // so the unit comes from the property name alone. Design values (colors, lengths,
 // opacities, times and numbers) are wrapped in styled<>, which asks for a design
 // token. Enums, flags and pointers are structure, not design, and stay plain.
-// An angle is a fine_angle when the setter's doc comment says tenths of a degree
+// An angle is decidegrees when the setter's doc comment says tenths of a degree
 // (see lv/detail/angle_docs.hpp); D only delays reading the comments.
 template <class D = void>
 consteval std::meta::info style_value_type(std::meta::info setter, std::string_view prop,

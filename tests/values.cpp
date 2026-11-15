@@ -23,13 +23,13 @@ static_assert(string_view(lv::text_format("x} {a ~} {~ {}").printf) == "x} {a ~}
 
 // How an error message says what to write for a type.
 static_assert(lv::detail::how_to_write(^^lv::angle) == "an angle in whole degrees (90 * lv::deg)");
-static_assert(lv::detail::how_to_write(^^lv::fine_angle) ==
+static_assert(lv::detail::how_to_write(^^lv::decidegrees) ==
               "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)");
 static_assert(lv::detail::how_to_write(^^lv::duration) == "a time (300 * lv::ms)");
 static_assert(lv::detail::how_to_write(^^lv::opa) == "an opacity (50 * lv::pct)");
 static_assert(lv::detail::how_to_write(^^lv::strict<bool>) == "true or false");
 static_assert(lv::detail::how_to_write(^^lv::strict<int>) == "a whole number (not bool, not floating point)");
-static_assert(lv::detail::how_to_write(^^lv::styled<lv::fine_angle>) ==
+static_assert(lv::detail::how_to_write(^^lv::styled<lv::decidegrees>) ==
               "a design token (for example tok.space.md) or lv::raw(...), holding an angle "
               "(90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)");
 static_assert(lv::detail::how_to_write(^^lv::styled<lv::angle>) ==
@@ -84,15 +84,15 @@ static_assert(lv::styled<lv::angle>{number(-90.0)}.raw() == -90);
 static_assert(lv::detail::whole_number<int>(0.0) == 0 && lv::detail::whole_number<std::int8_t>(-7.0) == -7);
 
 // A number token for an angle in tenths of a degree is a number of degrees.
-static_assert(lv::styled<lv::fine_angle>{number(22.5)}.raw() == 225);
-static_assert(lv::styled<lv::fine_angle>{number(-90.0)}.raw() == -900);
-static_assert(lv::detail::made_from_number<lv::fine_angle> && !lv::detail::made_from_number<lv::angle>);
+static_assert(lv::styled<lv::decidegrees>{number(22.5)}.raw() == 225);
+static_assert(lv::styled<lv::decidegrees>{number(-90.0)}.raw() == -900);
+static_assert(lv::detail::made_from_number<lv::decidegrees> && !lv::detail::made_from_number<lv::angle>);
 static_assert(!lv::detail::made_from_number<int> && !lv::detail::made_from_number<lv::length>);
 // It also takes an angle that is not a token, marked as such, of either kind.
-static_assert(lv::styled<lv::fine_angle>{lv::raw(22.5 * deg)}.raw() == 225);
-static_assert(lv::styled<lv::fine_angle>{lv::raw(90 * deg)}.raw() == 900);
-static_assert(!std::constructible_from<lv::styled<lv::angle>, lv::raw_value<lv::fine_angle>>);
-static_assert(!std::constructible_from<lv::styled<lv::fine_angle>, const lv::token<lv::length>&>);
+static_assert(lv::styled<lv::decidegrees>{lv::raw(22.5 * deg)}.raw() == 225);
+static_assert(lv::styled<lv::decidegrees>{lv::raw(90 * deg)}.raw() == 900);
+static_assert(!std::constructible_from<lv::styled<lv::angle>, lv::raw_value<lv::decidegrees>>);
+static_assert(!std::constructible_from<lv::styled<lv::decidegrees>, const lv::token<lv::length>&>);
 
 // A whole-number token is only for a value whose raw form is an integer.
 struct ratio {

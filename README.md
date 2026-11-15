@@ -28,7 +28,7 @@ How it works:
   `300 * ms`; opacity `50 * pct`. Integers reject `bool`, floating point and values that do not fit.
 - **An angle is in the unit LVGL means.** Most of LVGL takes whole degrees (an arc, a scale): that is an
   `lv::angle`. An image's rotation and a style's `transform_rotation` and `transform_skew_x/y` take tenths
-  of a degree: that is an `lv::fine_angle`. Write `90 * deg` for both; `22.5 * deg` only compiles where
+  of a degree: that is `lv::decidegrees`. Write `90 * deg` for both; `22.5 * deg` only compiles where
   tenths are taken. LVGL says which is which only in its doc comments, so lvgl26 reads them from the
   embedded headers at compile time (`include/lv/detail/angle_docs.hpp`), and a test checks the result
   against the pixels LVGL draws.
@@ -222,7 +222,7 @@ Rules to know:
   GCC does not name the member in that case.
 - `lv::widget<"spinbox">({...})` reaches any widget that has no short name.
 - `view.set<"name">(...)` and `view.get<"name">()` are the untyped escape hatch to any `lv_*_set_*` / `get_*`.
-  One thing is typed there: a getter of an angle returns an `lv::angle` or an `lv::fine_angle`, so
+  One thing is typed there: a getter of an angle returns an `lv::angle` or `lv::decidegrees`, so
   `image.get<"rotation">() == 90 * deg` holds whatever LVGL's number is.
 - In a design token file an angle is a `number` token in degrees (`22.5`). In a run-time document it is
   `22.5` or `"22.5deg"`. A fraction is accepted only where LVGL takes tenths of a degree.

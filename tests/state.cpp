@@ -157,10 +157,10 @@ void widgets_follow(lv::obj screen) {
 // mp-units has a `deg` of its own, so lvgl26's is written lv::deg in this file.
 // An angle follows a state of its own kind: tenths of a degree for an image, whole
 // degrees for an arc. (A state of lv::angle on the image's rotation does not
-// compile: see tests/fail/bind_angle_to_fine_angle.cpp.)
+// compile: see tests/fail/bind_angle_to_decidegrees.cpp.)
 void angles_follow_a_state(lv::obj screen) {
   lv::state turn{22.5 * lv::deg};
-  static_assert(std::same_as<decltype(turn), lv::state<lv::fine_angle>>);
+  static_assert(std::same_as<decltype(turn), lv::state<lv::decidegrees>>);
   auto image = screen.add<"image">().set({.rotation = lv::bind(turn)});
   check(lv_image_get_rotation(image.raw()) == 225);
   turn = 90 * lv::deg;

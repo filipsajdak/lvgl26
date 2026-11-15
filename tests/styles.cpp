@@ -38,7 +38,7 @@ static_assert(std::is_same_v<decltype(style_type{}.transform_scale_x),
                              lv::arg<lv::styled<lv::strict<std::int32_t>>>>);
 // A style's rotation is in tenths of a degree: LVGL's doc comment says so.
 static_assert(std::is_same_v<decltype(style_type{}.transform_rotation),
-                             lv::arg<lv::styled<lv::fine_angle>>>);
+                             lv::arg<lv::styled<lv::decidegrees>>>);
 
 // card sets five properties; pad_all has no LV_STYLE_* id, so four go to the const style.
 struct card_style {

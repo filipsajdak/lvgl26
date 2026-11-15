@@ -278,8 +278,8 @@ inline opa from_subject(lv_subject_t* s, as<opa>) {
 
 inline angle from_subject(lv_subject_t* s, as<angle>) { return angle{lv_subject_get_int(s)}; }
 
-inline fine_angle from_subject(lv_subject_t* s, as<fine_angle>) {
-  return fine_angle{lv_subject_get_int(s)};
+inline decidegrees from_subject(lv_subject_t* s, as<decidegrees>) {
+  return decidegrees{lv_subject_get_int(s)};
 }
 
 inline duration from_subject(lv_subject_t* s, as<duration>) {
