@@ -26,7 +26,7 @@ set(arm_c "-isystem ${LVGL26_ARM_SYSROOT}/include -B${LVGL26_ARM_SYSROOT}/lib/")
 set(arm_cxx "-isystem ${LVGL26_ARM_SYSROOT}/include/c++/16.2.0 -isystem ${LVGL26_ARM_SYSROOT}/include/c++/16.2.0/arm-none-eabi")
 set(CMAKE_C_FLAGS_INIT "${arm_cpu} ${arm_c} -ffunction-sections -fdata-sections")
 # The order matters: the C++ headers come before the C ones.
-set(CMAKE_CXX_FLAGS_INIT "${arm_cpu} ${arm_cxx} ${arm_c} -ffunction-sections -fdata-sections -fno-rtti")
+set(CMAKE_CXX_FLAGS_INIT "${arm_cpu} ${arm_cxx} ${arm_c} -ffunction-sections -fdata-sections -fno-exceptions -fno-rtti")
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-L${LVGL26_ARM_SYSROOT}/lib --specs=rdimon.specs -nostartfiles -Wl,--gc-sections")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

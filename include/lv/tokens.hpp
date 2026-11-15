@@ -90,7 +90,7 @@ consteval std::meta::info token_cpp_type(token_type t) {
 }
 
 [[noreturn]] consteval void token_fail(std::string_view what) {
-  throw unknown_name("lv: design tokens: " + str(what));
+  fail("lv: design tokens: " + str(what));
 }
 
 // The document without the trailing NUL that the #embed idiom adds.

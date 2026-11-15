@@ -21,3 +21,8 @@ kill "${qemu}" 2>/dev/null || true
 cat "${out}"
 arm-none-eabi-size "${elf}"
 grep -q '^ok$' "${out}"
+# Nothing in the program can throw: the exception run-time must not be linked in.
+if arm-none-eabi-nm "${elf}" | grep -E '__cxa_throw|__cxa_allocate_exception|__gxx_personality'; then
+  echo "the exception run-time is linked into ${elf}" >&2
+  exit 1
+fi

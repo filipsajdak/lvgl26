@@ -3,7 +3,17 @@
 // state, and prints what it did and what it cost through the debugger's console.
 #include <lv/lv.hpp>
 
+#include <contracts>
 #include <cstdio>
+#include <cstdlib>
+
+// A contract violation on the device: say what was violated and stop. A program that
+// defines this function does not get the standard library's handler, which brings the
+// whole exception run-time with it.
+void handle_contract_violation(const std::contracts::contract_violation& violation) {
+  std::printf("contract violation: %s\n", violation.comment());
+  std::abort();
+}
 
 namespace {
 
