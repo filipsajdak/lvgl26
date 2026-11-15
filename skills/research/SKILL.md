@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use before any web search or research about LVGL (releases, v10 changes, API, licence, existing C++ wrappers), C++26 (pattern matching, reflection compile time, coroutines on microcontrollers), the examples and licences of Qt, Slint, TouchGFX, emWin and other UI frameworks, device UI standards (touch target sizes, text size by viewing distance, ISA-101, IEC 60601-1-8 alarms, AFIR charger prices), instrument cluster design, or 3D, shaders, shadows and blur on embedded screens. It points to notes that already answer many of these, with sources.
+description: Use before any web search or research about LVGL (releases, v10 changes, API, licence, existing C++ wrappers), C++26 (pattern matching, reflection compile time, coroutines on microcontrollers), the examples and licences of Qt, Slint, TouchGFX, emWin and other UI frameworks, device UI standards (touch target sizes, text size by viewing distance, ISA-101, IEC 60601-1-8 alarms, AFIR charger prices), instrument cluster design, 3D, shaders, shadows and blur on embedded screens, or running in a browser. It points to notes that already answer many of these, with sources.
 version: 0.1.0
 ---
 
@@ -25,6 +25,7 @@ The notes are in the lvgl26 repository, not in this file. Read them from there, 
 | What a device screen must do; touch targets; text size | [device-ui.md](../../docs/research/device-ui.md) |
 | A vehicle instrument cluster | [instrument-cluster.md](../../docs/research/instrument-cluster.md) |
 | 3D models, shaders, shadows, blur | [3d-and-effects.md](../../docs/research/3d-and-effects.md) |
+| Running in a browser, WebAssembly, WebGL | [web-target.md](../../docs/research/web-target.md) |
 
 ## What the marks mean
 
