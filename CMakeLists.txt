@@ -7,6 +7,7 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSIO
 endif()
 
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
+option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset arm-m4)" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
 include(cmake/quality.cmake)
@@ -24,4 +25,8 @@ target_link_libraries(lvgl26 INTERFACE lvgl::lvgl stdc++exp)
 if(LVGL26_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(LVGL26_BUILD_MCU_EXAMPLE)
+  add_subdirectory(examples/mcu)
 endif()
