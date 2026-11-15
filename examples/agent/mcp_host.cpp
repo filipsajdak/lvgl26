@@ -14,8 +14,8 @@
 // transport. The agent can then load a screen, change it, read the widget tree
 // and take screenshots: see lv/mcp.hpp.
 //
-// The display has no window: LVGL draws into memory and the picture is thrown
-// away. Screenshots are drawn on request.
+// The display has no window and no panel: LVGL draws into memory. Screenshots are
+// drawn on request.
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
@@ -28,12 +28,8 @@ namespace {
 constexpr std::int32_t width = 320;
 constexpr std::int32_t height = 240;
 
-// Where LVGL draws. Four bytes cover a pixel of every color depth.
-alignas(std::uint32_t) std::uint8_t frame[width * height * 4];
-
-void discard(lv_display_t* display, const lv_area_t*, std::uint8_t*) {
-  lv_display_flush_ready(display);
-}
+// Where LVGL draws: the display has no panel.
+constinit lv::frame<width, height> frame;
 
 }  // namespace
 
@@ -44,19 +40,16 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  lv_init();
-  lv_display_t* display = lv_display_create(width, height);
-  lv_display_set_buffers(display, frame, nullptr, sizeof frame, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_flush_cb(display, discard);
+  lv::application app;
+  lv::display display{app, frame};
 
   {
     lv::mcp::server<"obj", "label", "button", "arc", "bar", "slider", "switch", "checkbox"> agent{
-        lv::screen_active(),
+        display.screen(),
         {.name = "lvgl26 example host", .screenshot_directory = argc > 2 ? argv[2] : ""}};
     agent.serve(in, stdout);
   }
 
-  lv_deinit();
   if (in != stdin) std::fclose(in);
   return 0;
 }

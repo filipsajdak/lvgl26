@@ -4,8 +4,10 @@
 #include <lv/lv.hpp>
 
 #include <contracts>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <span>
 
 // A contract violation on the device: say what was violated and stop. A program that
 // defines this function does not get the standard library's handler, which brings the
@@ -35,40 +37,32 @@ lv::task<> run(lv::view<"arc"> dial) {
   }
 }
 
-std::size_t heap_used() {
-  lv_mem_monitor_t m;
-  lv_mem_monitor(&m);
-  return m.total_size - m.free_size;
-}
-
-// One line of the display at a time goes nowhere: there is no panel in QEMU.
-std::uint8_t line_buffer[320 * 10 * 2];
-void flush(lv_display_t* display, const lv_area_t*, std::uint8_t*) { lv_display_flush_ready(display); }
+// Ten lines of the display at a time. They go nowhere: there is no panel in QEMU.
+constinit lv::band<320, 240, 10> band;
+void discard(lv::area, std::span<const std::byte>) {}
 
 }  // namespace
 
 int main() {
-  lv_init();
-  lv_display_t* display = lv_display_create(320, 240);
-  lv_display_set_buffers(display, line_buffer, nullptr, sizeof line_buffer, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_flush_cb(display, &flush);
+  lv::application app;
+  lv::display display{app, band, &discard};
 
-  const std::size_t before = heap_used();
-  auto root = lv::mount<ui>(lv::screen_active());
+  const std::size_t before = app.heap().used;
+  auto root = lv::mount<ui>(display.screen());
   if (!root) {
     std::printf("mount failed\n");
     return 1;
   }
-  const std::size_t with_screen = heap_used();
+  const std::size_t with_screen = app.heap().used;
   if (!lv::spawn(run(root->get<"speedo">()))) {
     std::printf("no memory for the task\n");
     return 1;
   }
-  const std::size_t with_task = heap_used();
+  const std::size_t with_task = app.heap().used;
 
   for (int ms_passed = 0; ms_passed < 500; ms_passed += 5) {
-    lv_tick_inc(5);
-    lv_timer_handler();
+    app.advance(5 * ms);
+    app.step();
   }
 
   std::printf("lvgl26 on Cortex-M4\n");
