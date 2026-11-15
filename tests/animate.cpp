@@ -226,6 +226,8 @@ void an_easing_shapes_the_motion(lv::obj screen) {
 
   check(lv_anim_count_running() == 0 && free_bytes() == before);
   lv_obj_delete(arc.raw());
+}
+
 // An angle in tenths of a degree is animated in tenths: an image's rotation.
 static_assert(requires { lv::animatable<"image">{}.rotation; });
 lv::task<> turn(lv::view<"image"> image, outcome* out) {
