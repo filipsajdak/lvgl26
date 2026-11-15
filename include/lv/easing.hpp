@@ -51,6 +51,9 @@ constexpr bool usable(const bezier& curve) {
 class easing {
   lv_anim_path_cb_t path_ = &lv_anim_path_linear;
   bezier curve_{};
+  // Kept as a flag: with -fsanitize=undefined GCC does not treat the comparison of two
+  // function addresses as a constant.
+  bool is_curve_ = false;
 
   constexpr explicit easing(lv_anim_path_cb_t lvgl_path) : path_(lvgl_path) {}
 
@@ -60,7 +63,9 @@ class easing {
 
   // Along a curve. The curve of a straight line is one speed.
   constexpr easing(const bezier& curve)
-      : path_(curve == bezier{} ? &lv_anim_path_linear : &lv_anim_path_custom_bezier3), curve_(curve) {}
+      : path_(curve == bezier{} ? &lv_anim_path_linear : &lv_anim_path_custom_bezier3),
+        curve_(curve),
+        is_curve_(curve != bezier{}) {}
   constexpr easing(const token<bezier>& curve) : easing(*curve) {}
 
   // One of LVGL's own paths, such as lv_anim_path_bounce: what lv::ease::bounce is.
@@ -72,7 +77,7 @@ class easing {
 
   constexpr lv_anim_path_cb_t path() const { return path_; }
   constexpr const bezier& curve() const { return curve_; }
-  constexpr bool is_curve() const { return path_ == &lv_anim_path_custom_bezier3; }
+  constexpr bool is_curve() const { return is_curve_; }
 
   // Gives the animation this easing.
   void apply(lv_anim_t* animation) const {

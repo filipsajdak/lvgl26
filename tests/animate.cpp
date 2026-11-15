@@ -115,15 +115,24 @@ static_assert(!lv::detail::usable(lv::bezier{0, -33, 1, 1}) && !lv::detail::usab
 static_assert(!lv::detail::usable(lv::bezier{0, 0, 1, -33}) && !lv::detail::usable(lv::bezier{0, 0, 1, 33}));
 
 // What an easing is: one speed, a curve, or one of LVGL's paths.
-static_assert(lv::easing{}.path() == &lv_anim_path_linear && !lv::easing{}.is_curve());
-static_assert(lv::ease::linear.path() == &lv_anim_path_linear);
-static_assert(lv::easing{lv::bezier{}}.path() == &lv_anim_path_linear);  // a straight line is one speed
+static_assert(!lv::easing{}.is_curve() && !lv::ease::linear.is_curve());
+static_assert(!lv::easing{lv::bezier{}}.is_curve());  // a straight line is one speed
 constexpr lv::easing fall{lv::bezier{0.33, 0, 0.67, 0.33}};
 static_assert(fall.is_curve() && fall.curve() == lv::bezier{0.33, 0, 0.67, 0.33});
-static_assert(lv::ease::in.path() == &lv_anim_path_ease_in && lv::ease::out.path() == &lv_anim_path_ease_out);
-static_assert(lv::ease::in_out.path() == &lv_anim_path_ease_in_out && !lv::ease::in_out.is_curve());
-static_assert(lv::ease::overshoot.path() == &lv_anim_path_overshoot);
-static_assert(lv::ease::bounce.path() == &lv_anim_path_bounce && lv::ease::step.path() == &lv_anim_path_step);
+static_assert(!lv::ease::in.is_curve() && !lv::ease::in_out.is_curve() && !lv::ease::bounce.is_curve());
+
+// The path LVGL is given. Checked at run time: with -fsanitize=undefined GCC does not
+// compare the addresses of two functions in a constant expression.
+void easings_name_lvgl_paths() {
+  check(lv::easing{}.path() == &lv_anim_path_linear && lv::ease::linear.path() == &lv_anim_path_linear);
+  check(lv::easing{lv::bezier{}}.path() == &lv_anim_path_linear);
+  check(fall.path() == &lv_anim_path_custom_bezier3);
+  check(lv::ease::in_quad.path() == &lv_anim_path_custom_bezier3);
+  check(lv::ease::in.path() == &lv_anim_path_ease_in && lv::ease::out.path() == &lv_anim_path_ease_out);
+  check(lv::ease::in_out.path() == &lv_anim_path_ease_in_out);
+  check(lv::ease::overshoot.path() == &lv_anim_path_overshoot);
+  check(lv::ease::bounce.path() == &lv_anim_path_bounce && lv::ease::step.path() == &lv_anim_path_step);
+}
 
 // Every animation path LVGL has is named in lv::ease. A new one in LVGL fails here.
 consteval std::size_t lvgl_paths() {
@@ -580,6 +589,7 @@ int main(int argc, char**) {
   static_assert(!has_style<lv::animatable<"obj">>);
 
   an_animation_runs_to_its_end(screen);
+  easings_name_lvgl_paths();
   an_easing_shapes_the_motion(screen);
   every_kind_of_number_is_animated(screen);
   ends_are_checked(argc + 4, argc + 9);
