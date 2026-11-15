@@ -10,7 +10,8 @@ RUN apt-get update \
       curl xz-utils make texinfo \
  && rm -rf /var/lib/apt/lists/*
 
-# The compiler and libgcc. One target, so no multilibs.
+# The compiler and libgcc. One target, so no multilibs. The assembler and linker are
+# Debian's: the compiler is told where they are, or it would run the host's `as`.
 WORKDIR /work
 RUN curl -fL --retry 3 -o gcc.tar.xz https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz \
  && tar -xJf gcc.tar.xz && rm gcc.tar.xz \
@@ -19,6 +20,7 @@ RUN curl -fL --retry 3 -o gcc.tar.xz https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-
       --enable-languages=c,c++ --without-headers --with-newlib --disable-shared --disable-threads \
       --disable-nls --disable-libssp --disable-libgomp --disable-libquadmath --disable-multilib \
       --with-cpu=cortex-m4 --with-mode=thumb \
+      --with-as=/usr/bin/arm-none-eabi-as --with-ld=/usr/bin/arm-none-eabi-ld \
  && make -j"$(nproc)" all-gcc all-target-libgcc \
  && make install-gcc install-target-libgcc \
  && cd .. && rm -rf build-gcc gcc-16.2.0
