@@ -1,9 +1,14 @@
 name: image
 
-# Makes sure the CI image for this commit exists, and says what it is called.
+# Makes sure a CI image for this commit exists, and says what it is called.
 # ci.yml and nightly.yml call this first and run their jobs in that image.
 on:
   workflow_call:
+    inputs:
+      name:
+        description: "Which image: ci (the build tools) or ci-arm (the microcontroller toolchain)."
+        type: string
+        default: ci
     outputs:
       image:
         description: The full name of the image, with its tag.
@@ -19,12 +24,19 @@ jobs:
       image: ${{ steps.name.outputs.image }}
     steps:
       - uses: actions/checkout@v4
-      - name: Name the image after its Dockerfile
+      - name: Name the image after what it is built from
         id: name
         run: |
           repository="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
-          tag="$(sha256sum .github/ci-image/Dockerfile | cut -c1-16)"
-          echo "image=ghcr.io/${repository}-ci:${tag}" >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.name }}" = "ci-arm" ]; then
+            dockerfile=.github/ci-image/arm/Dockerfile
+            tag="$(cat "$dockerfile" tools/arm-toolchain.sh | sha256sum | cut -c1-16)"
+          else
+            dockerfile=.github/ci-image/Dockerfile
+            tag="$(sha256sum "$dockerfile" | cut -c1-16)"
+          fi
+          echo "dockerfile=${dockerfile}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${repository}-${{ inputs.name }}:${tag}" >> "$GITHUB_OUTPUT"
       - name: Log in to the registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Build and push the image, unless it exists
@@ -33,6 +45,6 @@ jobs:
           if docker manifest inspect "$image" > /dev/null 2>&1; then
             echo "$image exists"
           else
-            docker build -t "$image" .github/ci-image
+            docker build -t "$image" -f "${{ steps.name.outputs.dockerfile }}" .
             docker push "$image"
           fi
