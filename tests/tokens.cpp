@@ -56,7 +56,6 @@ constexpr bool is_rgb(lv_color_t c, int r, int g, int b) {
 static_assert(is_rgb(lv::detail::color_from_hex("#AbCdEf"), 0xab, 0xcd, 0xef));
 static_assert(is_rgb(lv::detail::color_from_hex("#09afAF"), 0x09, 0xaf, 0xaf));
 static_assert(is_rgb(lv::detail::color_from_hex("#fa0"), 0xff, 0xaa, 0x00));  // #rgb doubles each digit
-static_assert(is_rgb(lv::detail::color_from_hex("#01020380"), 1, 2, 3));      // #rrggbbaa: alpha is not kept
 static_assert(lv::detail::rounded(2.5) == 3 && lv::detail::rounded(2.4) == 2);
 static_assert(lv::detail::rounded(-1.5) == -2 && lv::detail::rounded(-2.4) == -2);
 static_assert(lv::detail::rounded(0.6) == 1 && lv::detail::rounded(-0.4) == 0);

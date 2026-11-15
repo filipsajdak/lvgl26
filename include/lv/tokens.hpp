@@ -234,8 +234,11 @@ consteval int hex_digit(char c) {
 }
 
 consteval lv_color_t color_from_hex(std::string_view s) {
-  if (!s.starts_with("#") || (s.size() != 4 && s.size() != 7 && s.size() != 9))
-    token_fail("the color '" + str(s) + "' is not #rgb, #rrggbb or #rrggbbaa");
+  if (s.starts_with("#") && s.size() == 9)
+    token_fail("the color '" + str(s) + "' has an alpha channel, which a color token does not "
+               "carry. Write it as #rrggbb and give the opacity its own token");
+  if (!s.starts_with("#") || (s.size() != 4 && s.size() != 7))
+    token_fail("the color '" + str(s) + "' is not #rgb or #rrggbb");
   const auto channel = [&](std::size_t i) {
     return s.size() == 4 ? hex_digit(s[1 + i]) * 17
                          : hex_digit(s[1 + 2 * i]) * 16 + hex_digit(s[2 + 2 * i]);
