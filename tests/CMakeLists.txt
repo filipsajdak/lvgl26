@@ -31,6 +31,10 @@ target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
 lvgl26_test(task)
 lvgl26_test(animate)
+# lv::ui_scheduler is the one part that other threads call.
+find_package(Threads REQUIRED)
+lvgl26_test(ui_scheduler)
+target_link_libraries(ui_scheduler PRIVATE Threads::Threads)
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
@@ -141,6 +145,7 @@ lvgl26_compile_fail(animate_mixed_units "contract predicate is false in constant
 lvgl26_compile_fail(animate_mixed_units_folded "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_size_content "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_then_bad_handler "no matching function for call to .*then")
+lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail(match_missing_case "lv::match does not cover: sport. Add an arm for each")
 lvgl26_compile_fail(match_duplicate_case "lv::match has two arms for eco")
 lvgl26_compile_fail(match_redundant_otherwise "already covers every value, so its lv::otherwise arm can never match")
