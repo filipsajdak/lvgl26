@@ -53,6 +53,11 @@ lvgl26_test(state_plain)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(animate)
+lvgl26_test(application)
+# LVGL's state is global: a second application ends the program.
+add_test(NAME application_violation_twice
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:application> -DCASE=twice
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # lv::ui_scheduler is the one part that other threads call.
 find_package(Threads REQUIRED)
 lvgl26_test(ui_scheduler)
@@ -228,6 +233,11 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
+lvgl26_compile_fail(frame_without_size "lv::frame<Width, Height>: both must be greater than 0")
+lvgl26_compile_fail(band_without_screen "lv::band<Width, Height, Lines>: the screen must be larger than 0")
+lvgl26_compile_fail(band_taller_than_screen "Lines is the height of the band, from 1 to Height")
+lvgl26_compile_fail(display_frame_temporary_panel "it is told which area changed, and the pixels are in the frame")
+lvgl26_compile_fail(display_band_panel_without_pixels "it is given each piece of the screen")
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
 # here keeps it compiling, and replaying its corpus under every preset (including

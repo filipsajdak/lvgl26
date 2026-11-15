@@ -15,7 +15,7 @@ constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
     lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 
-auto root = lv::mount<ui>(lv::screen_active());   // std::expected; owns the widgets
+auto root = lv::mount<ui>(display.screen());      // std::expected; owns the widgets
 root->get<"speedo">().set({.value = 0});          // a typed view of the arc
 ```
 
@@ -145,6 +145,30 @@ lv::task<> open(lv::view<"arc"> arc) {
   property took over, or `lv_anim_delete()` removed it.
 - Cancelling the task, or losing in `lv::first`, deletes the animation.
 
+A program starts LVGL with two objects and calls no C function:
+
+```cpp
+constinit lv::frame<320, 240> frame;   // the display's memory
+
+int main() {
+  lv::application app;                 // LVGL starts; it stops when app goes out of scope
+  lv::display display{app, frame};     // no panel: the picture stays in the frame
+
+  auto root = lv::mount<ui>(display.screen());
+  return app.run();                    // timers, animations and input, until app.quit()
+}
+```
+
+- **Time.** `lv::application app{lv::host}` takes the operating system's clock (`#include <lv/host.hpp>`).
+  A device passes its own, `{.clock = &since_start}`, or tells the time from a timer interrupt
+  with `app.advance(5 * ms)`.
+- **A panel.** `lv::display display{app, frame, &changed}` calls `void changed(lv::area)` with the
+  part of the frame that is new. An `lv::band<320, 240, 24>` holds 24 lines instead of the whole
+  screen; its panel function gets each piece: `void send(lv::area, std::span<const std::byte>)`.
+- **The memory is right by its type.** A frame or a band has the size and the alignment LVGL
+  asks for. LVGL ignores a buffer that is not aligned, and the screen stays empty.
+- `app.heap()` says how much of LVGL's heap is in use.
+
 Another thread never calls LVGL. It posts work to the UI thread through `lv::ui_scheduler`
 (`#include <lv/ui_scheduler.hpp>`, hosted only):
 
@@ -257,8 +281,9 @@ tools/arm-toolchain.sh build/_tools/arm                      # builds newlib and
 tools/arm-run.sh                                             # builds the slice, runs it in QEMU
 ```
 
-Measured: 267 KB of code with LVGL's default configuration (every widget and feature on), 1052 bytes
-of LVGL's heap for the screen and 128 for the task. A program for a device should define
+Measured: 269 KB of code with LVGL's default configuration, where every widget and feature is on.
+The screen takes 1052 bytes of LVGL's heap and the task 128. The application and the display
+objects are 1.6 KB of the code. A program for a device should define
 `handle_contract_violation` itself, as the example does: the standard library's handler brings the
 exception run-time with it (12 KB).
 

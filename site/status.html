@@ -78,6 +78,7 @@
 
     <!-- WORKS TODAY: one line per feature. -->
     <ul class="features works">
+      <li><strong>Start-up without C</strong> <span><code>lv::application</code> starts LVGL and stops it when it goes out of scope; <code>run()</code> is the loop. <code>lv::display</code> draws into an <code>lv::frame</code> or an <code>lv::band</code> and tells a panel function what was drawn. A program calls no <code>lv_init</code> and no <code>lv_display_*</code>.</span> <small>application.hpp, display.hpp, host.hpp; application.cpp</small></li>
       <li><strong>Typed views</strong> <span><code>lv::view&lt;"arc"&gt;</code> is one pointer and never deletes. <code>lv::owned&lt;T&gt;</code> owns. <code>lv::weak&lt;T&gt;</code> empties itself when LVGL deletes the widget.</span> <small>view.hpp, owned.hpp; l1_views.cpp</small></li>
       <li><strong>Generated properties</strong> <span><code>lv::props&lt;"arc"&gt;</code>: one member per <code>lv_arc_set_*</code> and <code>lv_obj_set_*</code> function and one per event, built by reflection from LVGL's headers.</span> <small>props.hpp, events.hpp; l1_views.cpp, l2_tree.cpp</small></li>
       <li><strong>Compile-time tree</strong> <span><code>lv::column</code>, <code>lv::row</code>, <code>lv::group</code> and 13 widgets by short name. <code>lv::widget&lt;"spinbox"&gt;</code> reaches every other widget. Ids, <code>lv::mount</code>, typed <code>get&lt;"id"&gt;</code>.</span> <small>tree.hpp; l2_tree.cpp, ref/slice.png</small></li>
@@ -96,7 +97,7 @@
       <li><strong>Agent kit</strong> <span>The widget tree as JSON, a PNG of a widget or a screen, and an MCP server with four tools inside the host program. See <a href="agents.html">Agents</a>.</span> <small>dump.hpp, png.hpp, mcp.hpp; agent_kit.cpp, examples/agent/</small></li>
       <li><strong>Settings</strong> <span>Project settings are a C++ specialization of <code>lv::cfg</code>, not a macro.</span> <small>config.hpp; fail/config_too_late.cpp</small></li>
       <li><strong>Example ports: LVGL get_started</strong> <span>The four LVGL <code>get_started</code> examples, rewritten with lvgl26. Each gives the same pixels as the C original.</span> <small>examples/lvgl/get_started/; examples_get_started.cpp</small></li>
-      <li><strong>Runs on a microcontroller</strong> <span>The slice (a compile-time tree, a label bound to a state, a task) is built for an Arm Cortex-M4 with <code>-fno-exceptions -fno-rtti</code> and run in QEMU every night. Measured: 267 KB of code with LVGL's default configuration, 1052 bytes of LVGL's heap for the screen, 128 for the task.</span> <small>examples/mcu, cmake/arm, tools/arm-run.sh</small></li>
+      <li><strong>Runs on a microcontroller</strong> <span>The slice (a compile-time tree, a label bound to a state, a task) is built for an Arm Cortex-M4 with <code>-fno-exceptions -fno-rtti</code> and run in QEMU every night. Measured: 269 KB of code with LVGL's default configuration, 1052 bytes of LVGL's heap for the screen, 128 for the task.</span> <small>examples/mcu, cmake/arm, tools/arm-run.sh</small></li>
     </ul>
   </div>
 </section>

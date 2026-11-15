@@ -1,7 +1,9 @@
 #pragma once
 
 #include <lv/animate.hpp>
+#include <lv/application.hpp>
 #include <lv/computed.hpp>
+#include <lv/display.hpp>
 #include <lv/match.hpp>
 #include <lv/owned.hpp>
 #include <lv/runtime.hpp>
