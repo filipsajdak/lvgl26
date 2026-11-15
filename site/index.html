@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>lvgl26: a C++26 framework over LVGL</title>
+<meta name="description" content="lvgl26 is an open-source C++26 framework over LVGL. Screens are compile-time trees, mistakes are compile errors, and an AI agent can drive the running screen over MCP. MIT, no licence fees.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23b83a0a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">lvgl26 <span>namespace lv</span></a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="index.html" aria-current="page">Overview</a></li>
+        <li><a href="agents.html">Agents</a></li>
+        <li><a href="status.html">Status</a></li>
+        <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">A C++26 framework over LVGL</p>
+        <h1>Embedded UI that is checked before it runs.</h1>
+        <p class="lede">lvgl26 lets you write an <strong>LVGL screen as one C++ expression</strong>. The compiler checks every property, unit, id and design token. An AI agent can load, change and inspect the running screen. It is open source and free of licence fees.</p>
+        <div class="actions">
+          <a class="btn primary" href="#start">Get started</a>
+          <a class="btn" href="https://github.com/filipsajdak/lvgl26">Source on GitHub</a>
+        </div>
+      </div>
+
+      <div class="stack">
+        <figure class="code">
+          <figcaption><span>tests/l2_tree.cpp</span><span>C++26</span></figcaption>
+<pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/lv.hpp&gt;</span>
+<span class="k">using namespace</span> <span class="t">lv::units</span>;
+
+<span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>(
+    {.flex_align = {LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER},
+     .size = {<span class="n">320</span> * px, <span class="n">240</span> * px}})[
+    <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .text = <span class="s">"Speed"</span>}),
+    <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .size = {<span class="n">110</span> * px, <span class="n">110</span> * px}, .value = <span class="n">120</span>}),
+    <span class="t">lv::button</span>({.id = <span class="s">"reset"</span>, .on_clicked = &amp;reset})[<span class="t">lv::label</span>({.text = <span class="s">"Reset"</span>})]];
+
+<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(screen);        <span class="c">// std::expected; owns the widgets</span>
+<span class="k">auto</span> speedo = root-&gt;get&lt;<span class="s">"speedo"</span>&gt;();     <span class="c">// lv::view&lt;"arc"&gt;, typed by the id</span>
+speedo.set({.value = <span class="n">60</span>});</code></pre>
+        </figure>
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/slice.png" width="320" height="240" alt="The rendered screen: the label Speed, a blue dial at half of its range, and a Reset button, in a column on a white 320 by 240 display.">
+          </div>
+          <figcaption>tests/ref/slice.png, 320 x 240. The tree above right after <code>lv::mount</code>, as the test renders it. Every push compares it pixel for pixel, on both LVGL versions.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <dl class="titleblock">
+      <div><dt>Licence</dt><dd>MIT</dd></div>
+      <div><dt>Language</dt><dd>C++26, reflection</dd></div>
+      <div><dt>Compiler</dt><dd>GCC 16 or newer</dd></div>
+      <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="compile-time">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">01 / 03</div>
+      <div>
+        <h2>The compiler reads your screen.</h2>
+        <p>The tree is a <code>constexpr</code> value. C++26 reflection builds the property structs from LVGL's own C headers, so a wrong name, a wrong unit or a wrong id never reaches the device.</p>
+      </div>
+    </div>
+
+    <div class="three">
+      <figure class="code">
+        <figcaption><span>a misspelled id</span><span>tests/fail/unknown_id.cpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constexpr auto</span> ui = <span class="t">lv::box</span>[<span class="t">lv::label</span>({.id = <span class="s">"title"</span>})];
+<span class="t">lv::mount</span>&lt;ui&gt;(screen)-&gt;get&lt;<span class="s">"titel"</span>&gt;();</code></pre>
+        <div class="out"><pre>error: the tree has no id 'titel'. Its ids: title</pre></div>
+      </figure>
+      <figure class="code">
+        <figcaption><span>a length where an angle goes</span><span>tests/fail/props_wrong_unit.cpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constexpr auto</span> ui =
+    <span class="t">lv::arc</span>({.rotation = <span class="n">120</span> * px});</code></pre>
+        <div class="out"><pre>error: ... It takes an angle (90 * lv::deg). You gave lv::length</pre></div>
+      </figure>
+      <figure class="code">
+        <figcaption><span>a raw value in a style</span><span>tests/fail/style_needs_token.cpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constexpr auto</span> s =
+    <span class="t">lv::style</span>({.radius = <span class="n">8</span> * px});</code></pre>
+        <div class="out"><pre>error: ... It takes a design token (for example tok.space.md) or lv::raw(...), holding a length ... You gave lv::length</pre></div>
+      </figure>
+    </div>
+    <p class="cap">Each message is the text that a compile-fail test in <code>tests/CMakeLists.txt</code> requires. "..." stands for the part of the compiler's line that the test does not pin down. There are 91 such tests.</p>
+
+    <div class="feature two">
+      <div class="prose">
+        <span class="tag">Properties and units</span>
+        <h3>Generated from LVGL, typed by lvgl26</h3>
+        <p><code>lv::props&lt;"arc"&gt;</code> is a struct that reflection builds from LVGL's C API: one member per <code>lv_arc_set_*</code> and <code>lv_obj_set_*</code> function, and one per event. Nothing is written by hand and nothing is generated offline.</p>
+        <ul>
+          <li>Sizes take <code>120 * px</code>, <code>50 * pct</code> or <code>lv::size_content</code>. Angles take <code>90 * deg</code>, times <code>300 * ms</code>.</li>
+          <li>Integers reject <code>bool</code>, floating point and values that do not fit.</li>
+          <li><strong>The tree costs nothing at run time.</strong> An optimized build contains only the LVGL calls for the properties that are set.</li>
+          <li><strong>Views never delete.</strong> <code>lv::view&lt;"arc"&gt;</code> is one pointer. Only <code>lv::mount</code> and <code>lv::owned&lt;T&gt;</code> own widgets.</li>
+        </ul>
+      </div>
+      <div class="prose">
+        <span class="tag">Choosing by value</span>
+        <h3>A match that must cover every case</h3>
+        <p>For an enum, reflection checks that every enumerator has exactly one arm.</p>
+        <figure class="code mt-s">
+          <figcaption><span>README.md</span><span>lv/match.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">enum class</span> mode { off, eco, sport };
+
+<span class="k">const char</span>* name = <span class="t">lv::match</span>(m)(
+    <span class="t">lv::is</span>&lt;mode::off&gt;.then([] { <span class="k">return</span> <span class="s">"Off"</span>; }),
+    <span class="t">lv::is</span>&lt;mode::eco&gt;.then([] { <span class="k">return</span> <span class="s">"Eco"</span>; }),
+    <span class="t">lv::is</span>&lt;mode::sport&gt;.then([] { <span class="k">return</span> <span class="s">"Sport"</span>; }));</code></pre>
+          <div class="out"><pre>leave one out: error: lv::match does not cover: sport. Add an arm for each, or ...</pre></div>
+        </figure>
+      </div>
+    </div>
+
+    <div class="feature two">
+      <div class="prose">
+        <span class="tag">State and bindings</span>
+        <h3>Typed state in ordinary globals</h3>
+        <p>A state says what it holds: a measure with a unit, a count, a bool, an enum, a color. Widgets follow it, and a bound arc writes back. Measures are <a href="https://github.com/mpusz/mp-units">mp-units</a> quantities, so a conversion that would lose something does not compile.</p>
+        <ul>
+          <li><code>lv::state&lt;int&gt;</code> is rejected: a plain integer does not say what it is. The error shows the choices.</li>
+          <li>A state is an <code>lv_subject_t</code> underneath, so C code can share it.</li>
+        </ul>
+      </div>
+      <figure class="code">
+        <figcaption><span>README.md</span><span>lv/state.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constinit</span> <span class="t">lv::state</span> speed{<span class="n">0</span> * km / h};
+<span class="k">constinit</span> <span class="t">lv::state</span> clicks{<span class="t">lv::counter</span>{}};
+
+<span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>[
+    <span class="t">lv::arc</span>({.range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="t">lv::bind</span>(speed)}),   <span class="c">// follows, and writes back</span>
+    <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(speed)}),                     <span class="c">// shows "0 km/h"</span>
+    <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(clicks, <span class="s">"{} clicks"</span>)})];
+
+speed = <span class="n">120</span> * km / h;   <span class="c">// the widgets update</span>
+speed = <span class="n">2</span> * km / min;   <span class="c">// converted: nothing is lost</span>
+speed = <span class="n">33</span> * m / s;     <span class="c">// error: 118.8 km/h does not fit an int</span>
+speed = <span class="n">3</span> * m;          <span class="c">// error: not a speed</span>
+++clicks;</code></pre>
+      </figure>
+    </div>
+
+    <div class="feature two">
+      <div class="stack">
+        <figure class="code">
+          <figcaption><span>tests/tokens.cpp</span><span>lv/tokens.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constexpr char</span> dark_json[] = {
+<span class="k">#embed</span> <span class="s">"tokens.json"</span>
+    , <span class="n">0</span>};
+<span class="k">constexpr auto</span> dark = <span class="t">lv::tokens</span>&lt;dark_json&gt;;
+
+<span class="c">// One screen, written once, themed by a token set.</span>
+<span class="k">template</span> &lt;<span class="k">const auto</span>&amp; T&gt;
+<span class="k">constexpr auto</span> themed = <span class="t">lv::column</span>({<span class="c">/* the screen */</span>})[
+    <span class="t">lv::column</span>({.id = <span class="s">"card"</span>,
+                .size = {<span class="n">200</span> * px, <span class="t">lv::size_content</span>},
+                .style = <span class="t">lv::style</span>({.bg_color = T.color.card, .bg_opa = T.opacity.opaque,
+                                    .pad_all = T.card.padding, .radius = T.card.radius}) |
+                         T.card.border | T.card.shadow})[
+        <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .style = <span class="t">lv::style</span>({.text_color = T.color.text}) | T.text.title,
+                   .text = <span class="s">"Speed"</span>}),
+        <span class="t">lv::label</span>({.style = {.text_color = T.color.primary, .text_opa = T.opacity.muted},
+                   .text = <span class="s">"120 km/h"</span>})]];
+
+<span class="k">auto</span> d = <span class="t">lv::mount</span>&lt;themed&lt;dark&gt;&gt;(screen);
+<span class="k">auto</span> l = <span class="t">lv::mount</span>&lt;themed&lt;light&gt;&gt;(screen);</code></pre>
+        </figure>
+        <p class="cap">Shortened: the properties of the outer column are left out. The full tree is in the test.</p>
+      </div>
+      <div class="stack">
+        <div class="prose">
+          <span class="tag">Design tokens</span>
+          <h3>The design file is part of the program</h3>
+          <p>Tokens come from a W3C Design Tokens (DTCG) JSON file. <code>#embed</code> brings it in and a <code>constexpr</code> parser turns each group into a struct and each token into a typed <code>lv::token&lt;T&gt;</code>. Aliases are resolved. A misspelled token, a broken alias or an unreadable value is a compile error.</p>
+          <ul>
+            <li><strong>Styles take tokens only.</strong> <code>lv::raw(3 * px)</code> marks a deliberate exception that a search finds.</li>
+            <li>Composite tokens (border, shadow, typography) merge into a style with <code>|</code>.</li>
+            <li>Styles of a mounted tree are stored as <code>const lv_style_t</code> in read-only memory.</li>
+          </ul>
+        </div>
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/tokens_dark.png" width="320" height="240" alt="The themed screen with the dark token file: a dark card with a thin border, the title Speed in light text and 120 km/h in blue.">
+            <img src="media/tokens_light.png" width="320" height="240" alt="The same screen with the light token file: a white card with larger rounded corners and a drop shadow on a pale background.">
+          </div>
+          <figcaption>tests/ref/tokens_dark.png and tokens_light.png. The same tree with two token files. The test also checks that the light screen does not match the dark reference.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="feature two">
+      <div class="prose">
+        <span class="tag">Coroutines and animation</span>
+        <h3>A sequence of UI steps reads top to bottom</h3>
+        <p><code>lv::task</code> is a coroutine on LVGL's own loop. It waits for an event, a timer or an animation.</p>
+        <ul>
+          <li><code>view.next()</code> names every LVGL event of a widget. The names are generated from LVGL's event list.</li>
+          <li><code>lv::first</code> waits for whichever comes first and cancels the rest.</li>
+          <li><strong>A deleted widget cancels the task</strong> and runs the destructors of its local objects.</li>
+          <li><code>lv::animate</code> runs one property from one value to another. Both ends have the property's type.</li>
+          <li>Another thread never calls LVGL. It posts work through <code>lv::ui_scheduler</code>.</li>
+        </ul>
+      </div>
+      <figure class="code">
+        <figcaption><span>README.md</span><span>lv/task.hpp, lv/animate.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="t">lv::task</span>&lt;<span class="k">bool</span>&gt; confirm(<span class="t">lv::view</span>&lt;<span class="s">"button"</span>&gt; ok, <span class="t">lv::view</span>&lt;<span class="s">"button"</span>&gt; cancel) {
+  <span class="k">co_return co_await</span> <span class="t">lv::first</span>(
+      ok.next().clicked.then([] { <span class="k">return true</span>; }),
+      cancel.next().clicked.then([] { <span class="k">return false</span>; }),
+      <span class="t">lv::sleep</span>(<span class="n">5</span> * sec).then([] { <span class="k">return false</span>; }));
+}
+
+<span class="t">lv::task</span>&lt;&gt; open(<span class="t">lv::view</span>&lt;<span class="s">"arc"</span>&gt; arc) {
+  <span class="k">co_await</span> <span class="t">lv::animate</span>(arc, {.value = {<span class="n">0</span>, <span class="n">100</span>}}, <span class="n">300</span> * ms);
+  <span class="k">bool</span> finished = <span class="k">co_await</span> <span class="t">lv::animate</span>(arc, {.width = {<span class="n">80</span> * px, <span class="n">120</span> * px}}, <span class="n">200</span> * ms);
+}
+
+<span class="t">lv::ui_scheduler</span> ui;                             <span class="c">// on the UI thread</span>
+ui.post([reading] { temperature = reading; });   <span class="c">// from any thread</span></code></pre>
+      </figure>
+    </div>
+
+    <div class="feature" id="features">
+      <span class="tag">On main today</span>
+      <h3>The feature list</h3>
+      <!-- FEATURE LIST: one line per feature that is on main. Add a line when a feature
+           is delivered, and move its line in status.html from PLANNED to WORKS TODAY. -->
+      <ul class="featlist">
+        <li><strong>Typed views</strong> that never delete a widget</li>
+        <li><strong>Properties, styles and events</strong> generated by reflection from LVGL's headers</li>
+        <li><strong>Compile-time UI trees</strong> with ids and <code>lv::mount</code></li>
+        <li><strong>Units</strong> for lengths, angles, times and opacity, and strict integers</li>
+        <li><strong>Design tokens</strong> from W3C DTCG JSON through <code>#embed</code></li>
+        <li><strong>Token-only styles</strong> in read-only memory</li>
+        <li><strong>Typed state and bindings</strong> over <code>lv_subject_t</code>, with mp-units measures</li>
+        <li><strong>Coroutine tasks</strong> on LVGL's loop: events, timers, <code>lv::first</code></li>
+        <li><strong>Animations</strong> a task can await with <code>lv::animate</code></li>
+        <li><strong>Work from other threads</strong> through <code>lv::ui_scheduler</code></li>
+        <li><strong>Exhaustive matching</strong> with <code>lv::match</code></li>
+        <li><strong>Runtime JSON screens</strong> and patches by id</li>
+        <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
+        <li><strong>Example ports</strong>: LVGL's four <code>get_started</code> examples, pixel for pixel</li>
+      </ul>
+      <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="agents">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">02 / 03</div>
+      <div>
+        <h2>Ready for AI agents.</h2>
+        <p>An agent needs to see what it built. lvgl26 puts a Model Context Protocol server inside the program that shows the UI, so the agent works on the real LVGL screen and checks its own result.</p>
+      </div>
+    </div>
+
+    <ol class="flow" aria-label="The agent loop over MCP">
+      <li><p class="when">Tool 1</p><b>load_document</b><span>Builds a screen from a JSON document. A refused document changes nothing.</span></li>
+      <li><p class="when">Tool 2</p><b>apply_patch</b><span>Changes properties of that screen by id.</span></li>
+      <li><p class="when">Tool 3</p><b>dump_tree</b><span>The widget tree as JSON: type, id, place and properties.</span></li>
+      <li><p class="when">Tool 4</p><b>screenshot</b><span>The screen as a PNG, drawn on request. No display is needed.</span></li>
+    </ol>
+    <p class="flow-note">The agent reads the tree and the picture, then sends the next patch.</p>
+
+    <div class="three mt">
+      <div class="card">
+        <span class="tag">In the host program</span>
+        <h3>Two lines to add</h3>
+        <p>Name the widgets a document may use, then serve. The example host in <code>examples/agent</code> is a complete headless program.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Bounded</span>
+        <h3>Only what the schema allows</h3>
+        <p>A widget that is not in the list, a property that does not exist and a value of the wrong kind are rejected. Handlers and pointers cannot come from a document.</p>
+      </div>
+      <div class="card">
+        <span class="tag">For coding agents too</span>
+        <h3>Errors that say what to do</h3>
+        <p>The messages name what a property takes and what it was given, or list the valid ids. An agent that writes C++ gets the same fix hints as a person.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="agents.html">How agents use lvgl26</a>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="open">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">03 / 03</div>
+      <div>
+        <h2>No licence fees. Not per device, not per seat.</h2>
+        <p>The cost of a UI stack shows up in every unit you ship and every developer you add. lvgl26 and LVGL are both under the MIT licence, and the toolchain is open.</p>
+      </div>
+    </div>
+
+    <div class="three">
+      <div class="card">
+        <span class="tag">Licence</span>
+        <h3>MIT, both layers</h3>
+        <p>lvgl26 is MIT. LVGL, the library underneath, is MIT. You may use, change and ship both in a commercial product.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Per device</span>
+        <h3>No royalties</h3>
+        <p>The licence asks for no fee per unit. Shipping ten devices or ten million costs the same in licences: nothing.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Per developer</span>
+        <h3>No seat licences</h3>
+        <p>There is no account, no licence server and no fee per developer or per build machine. Clone the repository and build.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Hardware</span>
+        <h3>Low-cost microcontrollers</h3>
+        <p>LVGL is written for microcontrollers and small displays. A compile-time tree adds only LVGL calls, and its styles sit in read-only memory.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Toolchain</span>
+        <h3>GCC, CMake, Ninja</h3>
+        <p>The whole build uses open tools. The build and the tests run in the public <code>gcc:16</code> container image, so your CI needs nothing that is sold.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Formats</span>
+        <h3>Nothing to lock you in</h3>
+        <p>Design tokens are W3C DTCG JSON. Runtime screens are JSON. Agents speak MCP. Widgets stay plain <code>lv_obj_t*</code> that C code can use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="quality">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Quality</div>
+      <div>
+        <h2>Built the way firmware should be.</h2>
+        <p>The library throws nothing: a compile error first, then a contract, then <code>std::expected</code>. Every number below comes from the repository.</p>
+      </div>
+    </div>
+
+    <ul class="facts">
+      <li><b>91</b><span>compile-fail tests, each with the message the user must see</span><small>tests/CMakeLists.txt</small></li>
+      <li><b>2</b><span>LVGL versions on every change: v9.6.0 and the v10 pin</span><small>CMakePresets.json</small></li>
+      <li><b>7</b><span>build presets: warnings as errors, sanitizers, analyzer, coverage</span><small>CMakePresets.json</small></li>
+      <li><b>8</b><span>the limit for complexity and for CRAP, for every function</span><small>tools/crap.py</small></li>
+      <li><b>3</b><span>fuzz targets, one for each input that comes from outside</span><small>fuzz/</small></li>
+    </ul>
+
+    <div class="table mt">
+      <table>
+        <thead><tr><th>Check</th><th>What it does</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Compile-fail tests</th><td>A file that must not compile, and the text its error must contain. A new error message gets a new test.</td><td class="path">tests/fail/</td></tr>
+          <tr><th scope="row">Contracts</th><td>C++26 <code>pre</code> and <code>post</code> state what is a bug at run time. Bad input from outside is never a contract: it is a <code>std::expected</code>.</td><td class="path">include/lv/</td></tr>
+          <tr><th scope="row">Sanitizers</th><td>AddressSanitizer and UndefinedBehaviorSanitizer on both LVGL versions, ThreadSanitizer on v9.6.</td><td class="path">host-v96-asan, host-v10-asan, host-v96-tsan</td></tr>
+          <tr><th scope="row">Static analyzer</th><td>GCC's <code>-fanalyzer</code> over the library and its tests.</td><td class="path">host-v96-analyze</td></tr>
+          <tr><th scope="row">Pixel tests</th><td>Screens are rendered headless and compared with reference pictures. The four ported LVGL examples are compared with the C originals.</td><td class="path">tests/ref/, tests/examples_get_started.cpp</td></tr>
+          <tr><th scope="row">Complexity and CRAP</th><td>A function over complexity 8 is split, not excused. CI fails above the limit.</td><td class="path">tools/crap.py, .github/workflows/ci.yml</td></tr>
+          <tr><th scope="row">Mutation testing</th><td>Changed lines are mutated. Every surviving mutant gets a test, or a reason.</td><td class="path">tools/mutation.py</td></tr>
+          <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents and MCP messages each have a target. The 13 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="how">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">How</div>
+      <div>
+        <h2>From a design file to LVGL calls.</h2>
+        <p>Everything left of <code>lv::mount</code> happens in the compiler.</p>
+      </div>
+    </div>
+
+    <ol class="flow" aria-label="How a screen is built">
+      <li>
+        <p class="when">Inputs</p>
+        <div class="pair">
+          <div><b>tokens.json</b><span>W3C design tokens, read with <code>#embed</code></span></div>
+          <div><b>LVGL headers</b><span>v9.6.0 or the v10 pin, read by reflection</span></div>
+        </div>
+      </li>
+      <li><p class="when">Compile time</p><b>constexpr tree</b><span>Typed properties, units, ids, tokens and styles. Mistakes stop here.</span></li>
+      <li><p class="when">Run time, once</p><b>lv::mount&lt;ui&gt;</b><span>Creates the widgets and owns them. Returns <code>std::expected</code>.</span></li>
+      <li><p class="when">Run time</p><b>LVGL</b><span>Ordinary LVGL objects on the display. C code sees the same <code>lv_obj_t*</code>.</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="demo">
+  <div class="wrap">
+    <div class="demo">
+      <figure class="screen">
+        <div class="frame" id="demo-frame" data-src="media/bounce.gif" data-alt="A recording of a ball that falls, squashes as it lands, stretches as it rises, and casts a soft shadow that grows as it nears the floor.">
+          <noscript><img src="media/bounce.gif" width="320" height="480" alt="A recording of a ball that falls, squashes as it lands, stretches as it rises, and casts a soft shadow that grows as it nears the floor."></noscript>
+        </div>
+        <figcaption>media/bounce.gif, 320 x 480, 6 seconds.</figcaption>
+      </figure>
+      <div class="prose">
+        <span class="tag">A demo in development</span>
+        <h2>Motion, written as a coroutine.</h2>
+        <p class="mt-s">A ball bounces with gravity, squashes and stretches, and casts a blurred shadow. The screen is a compile-time tree with design tokens. The motion is a task that awaits one animation after another.</p>
+        <p>This demo runs on a development branch. It uses easing curves for <code>lv::animate</code>, which are not on <code>main</code> yet. The <a href="status.html">status page</a> lists what works today.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="start">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Start</div>
+      <div>
+        <h2>Build it and run the tests.</h2>
+        <p>You need GCC 16 or newer, CMake 3.30 or newer, and Ninja. CMake fetches the pinned LVGL.</p>
+      </div>
+    </div>
+
+    <ol class="steps">
+      <li><div>
+        <h3>Clone, build, test</h3>
+        <p>The presets build with warnings as errors and run the whole suite.</p>
+        <figure class="code">
+          <div class="bar"><span>shell</span></div>
+<pre tabindex="0"><code>git clone https://github.com/filipsajdak/lvgl26
+cd lvgl26
+cmake --preset host-v96 &amp;&amp; cmake --build --preset host-v96 &amp;&amp; ctest --preset host-v96
+cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ctest --preset host-v10</code></pre>
+        </figure>
+      </div></li>
+      <li><div>
+        <h3>Write a screen</h3>
+        <p>One header. Properties go in <code>()</code>, children in <code>[]</code>. Link the CMake target <code>lvgl26::lvgl26</code>.</p>
+        <figure class="code">
+          <figcaption><span>README.md</span><span>C++26</span></figcaption>
+<pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/lv.hpp&gt;</span>
+<span class="k">using namespace</span> <span class="t">lv::units</span>;
+
+<span class="k">void</span> reset();
+
+<span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>({.size = {<span class="n">320</span> * px, <span class="n">240</span> * px}})[
+    <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .text = <span class="s">"Speed"</span>}),
+    <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="n">120</span>}),
+    <span class="t">lv::button</span>({.on_clicked = &amp;reset})[<span class="t">lv::label</span>({.text = <span class="s">"Reset"</span>})]];
+
+<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(<span class="t">lv::screen_active</span>());   <span class="c">// std::expected; owns the widgets</span>
+root-&gt;get&lt;<span class="s">"speedo"</span>&gt;().set({.value = <span class="n">0</span>});          <span class="c">// a typed view of the arc</span></code></pre>
+        </figure>
+      </div></li>
+      <li><div>
+        <h3>Read on</h3>
+        <p>The <a href="https://github.com/filipsajdak/lvgl26#readme">README</a> covers every feature with examples. Each header in <code>include/lv/</code> starts with how to use it. To give the screen to an agent, see <a href="agents.html">Agents</a>. For what is done and what is planned, see <a href="status.html">Status</a>.</p>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>lvgl26 is open source under the MIT licence. It builds on <a href="https://github.com/lvgl/lvgl">LVGL</a>, which is also MIT. This site uses no trackers, no cookies and no third-party resources.</p>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="status.html">Status</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/LICENSE">MIT licence</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script src="site.js" defer></script>
+</body>
+</html>
