@@ -58,10 +58,12 @@ find_package(Threads REQUIRED)
 lvgl26_test(ui_scheduler)
 target_link_libraries(ui_scheduler PRIVATE Threads::Threads)
 
-# The agent kit writes its pictures into the build directory.
+# The agent kit writes its pictures into a directory of its own. It counts the files
+# there, so no other test may write into it.
 add_executable(agent_kit agent_kit.cpp)
 target_link_libraries(agent_kit PRIVATE lvgl26::lvgl26 lvgl26_warnings)
-add_test(NAME agent_kit COMMAND agent_kit ${CMAKE_CURRENT_BINARY_DIR})
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/agent_kit_files)
+add_test(NAME agent_kit COMMAND agent_kit ${CMAKE_CURRENT_BINARY_DIR}/agent_kit_files)
 
 # The example host answers a recorded session: it loads a screen, patches it,
 # dumps the tree with the new value and writes a screenshot.
