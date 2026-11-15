@@ -126,7 +126,7 @@ A feature pull request also:
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, documentation for agents.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
