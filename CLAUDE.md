@@ -43,6 +43,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - No `throw`, `try` or `typeid` in the headers, also not in consteval code: the library must
   build with `-fno-exceptions -fno-rtti` (`tests/no_exceptions.cpp`). A compile-time error with
   a computed message is `detail::fail(message)`.
+- A program starts LVGL with `lv::application` and gets its screen from an `lv::display`. Examples,
+  the README, the site and the docs call no `lv_init`, `lv_deinit`, `lv_display_*`, `lv_tick_*` or
+  `lv_timer_handler`. The tests of the library may. `raw()` is the one door to the C API.
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
 - Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
