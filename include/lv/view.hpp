@@ -82,7 +82,7 @@ class view {
 
   // The events of this widget, by name: co_await button.next().clicked.
   template <class D = void>
-  constexpr auto next() const {
+  auto next() const {
     return detail::make_events<D>(p_);
   }
 
