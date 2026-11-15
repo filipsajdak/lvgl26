@@ -110,6 +110,16 @@ A feature pull request also:
 - Adds or updates an example, and the site media in `site/media/` when the feature is visual.
 - Records any new rule in `CLAUDE.md`.
 
+## Research
+
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects.
+
+- Read `docs/research/README.md` and the topic file before a web search.
+- Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
+- Add every new finding to its topic file in the same change, with its link, its mark and the date.
+- A decision made from research goes into the code, the design system or this file. The notes hold the evidence, not the rule.
+- A hook in `.claude/settings.json` repeats the first three rules before every `WebSearch` and `WebFetch`.
+
 ## Known tool limits
 
 - clang-tidy cannot analyze this code: Clang 23 has no reflection and no `<meta>` header.
