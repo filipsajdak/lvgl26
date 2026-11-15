@@ -108,6 +108,7 @@ static_assert(!lv::detail::fits_bezier(-32.001) && !lv::detail::fits_bezier(32))
 static_assert(!lv::detail::fits_bezier(31.9999));  // rounds to 32768, one more than 16 bits hold
 static_assert(lv::detail::usable(lv::bezier{}) && lv::detail::usable(lv::bezier{0, 0, 1, 1}));
 static_assert(lv::detail::usable(lv::bezier{0.3, -32, 0.7, 31.999}));
+static_assert(lv::detail::usable(lv::bezier{0, 0, 0, 1}) && lv::detail::usable(lv::bezier{1, 0, 1, 1}));  // x at its ends
 static_assert(lv::detail::usable(lv::bezier{0.3, 31.999, 0.7, -32}));  // either y may overshoot either way
 static_assert(!lv::detail::usable(lv::bezier{-0.1, 0, 1, 1}) && !lv::detail::usable(lv::bezier{1.1, 0, 1, 1}));
 static_assert(!lv::detail::usable(lv::bezier{0, 0, -0.1, 1}) && !lv::detail::usable(lv::bezier{0, 0, 1.1, 1}));
