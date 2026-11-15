@@ -306,8 +306,11 @@ void prepare(string_view create, lv_obj_t* o) {
     // tick by a whole turn, and a range would look like an angle in tenths.
     lv_scale_set_total_tick_count(o, 8);
   }
-  if (create == "lv_arclabel_create")
+  if (create == "lv_arclabel_create") {
     lv_arclabel_set_text_static(o, "tenths or degrees, tenths or degrees, tenths or degrees");
+    // LVGL v9.6 divides by the radius when it draws, and the radius starts at zero.
+    lv_arclabel_set_radius(o, 60);
+  }
   lv_obj_center(o);
 }
 
@@ -397,8 +400,8 @@ unit seen(lv_obj_t* screen) {
 //    picture, with the widget missing.
 //  - a scale's angle_range is a span, not a direction: a longer span is another
 //    picture, and it never comes round.
-//  - an arc label's angle_size is a span too, and the label here looks the same
-//    whatever it is.
+//  - an arc label's angle_size is a span too: how much of the circle the text may
+//    take.
 constexpr string_view not_verifiable[] = {
     "lv_arclabel_set_angle_size(size)",
     "lv_obj_set_style_transform_skew_x(value)",
