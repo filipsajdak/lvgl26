@@ -99,6 +99,9 @@ static_assert(!lv::detail::whole_tenths(22.55) && !lv::detail::whole_tenths(-22.
 static_assert(!lv::detail::whole_tenths(0.05) && !lv::detail::whole_tenths(-0.05));
 static_assert(lv::detail::whole_tenths(22.50009) && !lv::detail::whole_tenths(22.5001));
 static_assert(lv::detail::whole_tenths(-22.50009) && !lv::detail::whole_tenths(-22.5001));
+// Exactly a thousandth of a tenth off is already too far, on either side.
+static_assert(!lv::detail::whole_tenths(0.0001) && !lv::detail::whole_tenths(-0.0001));
+static_assert(0.0001 * 10 == 0.001);  // what makes the line above a test of the limit itself
 static_assert(lv::detail::whole_tenths(214'748'364.7) && !lv::detail::whole_tenths(214'748'364.8));
 static_assert(lv::detail::whole_tenths(-214'748'364.8) && !lv::detail::whole_tenths(-214'748'364.9));
 static_assert(!lv::detail::whole_tenths(1e300) && !lv::detail::whole_tenths(-1e300));
