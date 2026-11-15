@@ -47,14 +47,6 @@ consteval std::string event_name(std::string_view enumerator) {
   return out;
 }
 
-// The name of an event code: "clicked" for LV_EVENT_CLICKED.
-consteval std::string_view event_name_of(lv_event_code_t code) {
-  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
-    if (std::meta::extract<lv_event_code_t>(e) == code)
-      return std::define_static_string(event_name(std::meta::identifier_of(e)));
-  throw unknown_name("lv: this event code has no name");
-}
-
 // A template on D only so that the struct is generated on first use.
 template <class D>
 consteval std::vector<std::meta::info> event_specs() {
