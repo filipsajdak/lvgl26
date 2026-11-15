@@ -5,7 +5,7 @@ namespace {
 using namespace widgets;
 using namespace lv::units;
 
-constexpr auto caption = lv::style({.text_color = tok.bar.caption});
+constexpr auto caption = lv::style({.text_color = tok.caption.text});
 
 constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[

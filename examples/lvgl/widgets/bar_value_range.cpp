@@ -5,7 +5,7 @@ namespace {
 using namespace widgets;
 using namespace lv::units;
 
-constexpr auto caption = lv::style({.text_color = tok.bar.caption});
+constexpr auto caption = lv::style({.text_color = tok.caption.text});
 
 // The usual range from 0 to 100, and one that does not start at zero.
 constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,

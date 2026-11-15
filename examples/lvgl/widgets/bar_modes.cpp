@@ -5,7 +5,7 @@ namespace {
 using namespace widgets;
 using namespace lv::units;
 
-constexpr auto caption = lv::style({.text_color = tok.bar.caption});
+constexpr auto caption = lv::style({.text_color = tok.caption.text});
 
 // A bar filled from its start, one filled from zero in the middle, and one that
 // shows a range. The second number of .value says whether the change is animated.

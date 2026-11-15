@@ -74,4 +74,13 @@ void bar_orientation(lv::obj screen);    // lv_example_bar_orientation
 void bar_styling(lv::obj screen);        // lv_example_bar_styling
 void bar_value_range(lv::obj screen);    // lv_example_bar_value_range
 
+// slider
+void slider_bind_state(lv::obj screen);               // lv_example_slider_bind_state
+void slider_bind_value(lv::obj screen);               // lv_example_slider_bind_value
+void slider_event(lv::obj screen);                    // lv_example_slider_event
+void slider_img_indicator(lv::obj screen);            // lv_example_slider_img_indicator
+void slider_modes(lv::obj screen);                    // lv_example_slider_modes
+void slider_reversed_direction(lv::obj screen);       // lv_example_slider_reversed_direction
+void slider_value_range_orientation(lv::obj screen);  // lv_example_slider_value_range_orientation
+
 }  // namespace widgets

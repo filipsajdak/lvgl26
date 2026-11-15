@@ -132,6 +132,9 @@ lvgl26_widget_ports(arc bind_value change_rate event img_indicator mode pie_char
                     ASSETS img_arc_bg img_arc_indicator)
 lvgl26_widget_ports(bar bind_value img_indicator modes orientation styling value_range
                     ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(slider bind_state bind_value event img_indicator modes reversed_direction
+                    value_range_orientation
+                    ASSETS img_bar_bg img_bar_indicator)
 
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
