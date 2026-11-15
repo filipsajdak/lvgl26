@@ -1,0 +1,9 @@
+{
+  "name": "lvgl26",
+  "version": "0.1.0",
+  "description": "Build embedded UIs with lvgl26, a C++26 framework over LVGL: what is already known about LVGL, C++26, device UI standards and 3D, with sources.",
+  "homepage": "https://github.com/filipsajdak/lvgl26",
+  "repository": "https://github.com/filipsajdak/lvgl26",
+  "license": "MIT",
+  "keywords": ["lvgl", "embedded", "ui", "cpp26", "hmi"]
+}

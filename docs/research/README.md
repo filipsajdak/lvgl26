@@ -12,6 +12,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [device-ui.md](device-ui.md) | What drives the UI of each device class. Standards for process panels, medical alarms and charger prices. Touch target sizes. Text size by viewing distance. |
 | [instrument-cluster.md](instrument-cluster.md) | The information hierarchy of a cluster, glance limits, what the steering wheel hides, telltales, warning priority, tyre pressure, speedometer studies. |
 | [3d-and-effects.md](3d-and-effects.md) | 3D in LVGL, the plan for microcontrollers, generating 3D models, shadows and blur. |
+| [web-target.md](web-target.md) | Whether an lvgl26 application can run in a browser, and by which route. |
 
 ## How each claim is marked
 

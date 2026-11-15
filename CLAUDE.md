@@ -112,13 +112,20 @@ A feature pull request also:
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
 - Add every new finding to its topic file in the same change, with its link, its mark and the date.
 - A decision made from research goes into the code, the design system or this file. The notes hold the evidence, not the rule.
 - A hook in `.claude/settings.json` repeats the first three rules before every `WebSearch` and `WebFetch`.
+
+## The plugin
+
+The repository is a Claude Code plugin: `.claude-plugin/` holds the manifests and `skills/` the skills.
+
+- A skill points to files of the repository with relative links. It never copies their content.
+- `tools/check_plugin.py` fails when a skill links to a file that does not exist. Run it after moving a file a skill names.
 
 ## Known tool limits
 
