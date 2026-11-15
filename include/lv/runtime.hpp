@@ -277,7 +277,7 @@ bool call_from_json(lv_obj_t* o, json::value v, std::type_identity<std::tuple<Ts
 template <fixed W, std::size_t I>
 bool set_property_from_json(lv_obj_t* o, json::value v) {
   using member = typename[:std::meta::type_of(members_of_props<W>[I]):];
-  return call_from_json<targets<W>[I]>(o, v, std::type_identity<decltype(member{}.v)>{});
+  return call_from_json<targets<W>[I]>(o, v, std::type_identity<typename member::types>{});
 }
 
 template <class A>
@@ -349,7 +349,7 @@ struct style_entry {
 template <std::size_t I, class D = void>
 bool set_style_from_json(lv_obj_t* o, json::value v, lv_style_selector_t selector) {
   using member = typename[:std::meta::type_of(style_members<D>[I]):];
-  return call_from_json<style_setters<D>[I]>(o, v, std::type_identity<decltype(member{}.v)>{},
+  return call_from_json<style_setters<D>[I]>(o, v, std::type_identity<typename member::types>{},
                                              selector);
 }
 
