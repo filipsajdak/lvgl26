@@ -100,9 +100,11 @@ lv::task<> turn(lv::view<"arc"> arc, int from, int to, bool* done) {
 static_assert(lv::detail::bezier_part(0) == 0 && lv::detail::bezier_part(1) == 1024);
 static_assert(lv::detail::bezier_part(0.5) == 512 && lv::detail::bezier_part(-0.25) == -256);
 static_assert(lv::detail::bezier_part(0.33) == 338 && lv::detail::bezier_part(-0.33) == -338);
+static_assert(lv::detail::bezier_part(0.7) == 717 && lv::detail::bezier_part(-0.7) == -717);  // rounded, not cut
 static_assert(lv::detail::within(0, 0, 1) && lv::detail::within(1, 0, 1) && !lv::detail::within(2, 0, 1));
 static_assert(lv::detail::usable(lv::bezier{}) && lv::detail::usable(lv::bezier{0, 0, 1, 1}));
 static_assert(lv::detail::usable(lv::bezier{0.3, -8, 0.7, 8}));
+static_assert(lv::detail::usable(lv::bezier{0.3, 5, 0.7, -5}));  // either y may overshoot either way
 static_assert(!lv::detail::usable(lv::bezier{-0.1, 0, 1, 1}) && !lv::detail::usable(lv::bezier{1.1, 0, 1, 1}));
 static_assert(!lv::detail::usable(lv::bezier{0, 0, -0.1, 1}) && !lv::detail::usable(lv::bezier{0, 0, 1.1, 1}));
 static_assert(!lv::detail::usable(lv::bezier{0, -8.1, 1, 1}) && !lv::detail::usable(lv::bezier{0, 8.1, 1, 1}));
