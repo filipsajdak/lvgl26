@@ -78,6 +78,15 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
   `constexpr` variable, before any other use of the same arguments. A `static_assert` does not
   evaluate the precondition.
 
+## Definition of done for a feature
+
+A feature pull request also:
+
+- Moves the feature's line from "planned" to "works today" in `site/status.html` (the comment at the top of that file says how).
+- Adds the feature to the feature list in `site/index.html` and in `README.md`.
+- Adds or updates an example, and the site media in `site/media/` when the feature is visual.
+- Records any new rule in `CLAUDE.md`.
+
 ## Known tool limits
 
 - clang-tidy cannot analyze this code: Clang 23 has no reflection and no `<meta>` header.

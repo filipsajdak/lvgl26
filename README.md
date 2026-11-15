@@ -214,3 +214,15 @@ cmake --preset host-v10 && cmake --build --preset host-v10 && ctest --preset hos
 | `host-v10` | master commit `53819fe4`, the v10 development line |
 
 To build against a local LVGL checkout, add `-DFETCHCONTENT_SOURCE_DIR_LVGL=<path>`.
+
+## Website
+
+The public site is the plain HTML and CSS in `site/`: no build step and no dependencies.
+`.github/workflows/pages.yml` publishes it to GitHub Pages on every push to `main`.
+
+```sh
+cd site && python3 -m http.server     # preview at http://localhost:8000
+python3 tools/check_site.py           # every link, asset and anchor resolves
+```
+
+`site/status.html` lists what works today and what is planned. Update it with every feature.
