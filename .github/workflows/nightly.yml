@@ -15,7 +15,8 @@ jobs:
       contents: read
       packages: write
 
-  # The presets that the quick checks leave out, each with the whole test suite.
+  # The presets that the quick checks leave out, with every test that runs a program.
+  # (A compile-fail test only compiles, so a sanitizer has nothing to check in it.)
   host:
     runs-on: ubuntu-latest
     needs: image
@@ -48,7 +49,7 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
           TSAN_OPTIONS: halt_on_error=1
-        run: ctest --preset ${{ matrix.preset }} -j "$(nproc)"
+        run: ctest --preset ${{ matrix.preset }} -LE compile-fail -j "$(nproc)"
 
   # Half an hour of libFuzzer on the JSON reader. An input that crashes it is kept as
   # an artifact, to be added to fuzz/corpus/json with the fix.
