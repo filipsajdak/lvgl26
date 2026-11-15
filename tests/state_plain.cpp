@@ -16,6 +16,14 @@ int main() {
   count = 9;
   check(bar.get<"value">() == 9);
 
+  // The setting also allows a computed whose result is a plain integer.
+  lv::computed twice{[](int n) { return n * 2; }, count};
+  auto other = lv::screen_active().add<"bar">().set({.value = lv::bind(twice)});
+  check(twice.get() == 18 && other.get<"value">() == 18);
+  count = 21;
+  check(other.get<"value">() == 42);
+
+  twice.reset();
   count.reset();
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
