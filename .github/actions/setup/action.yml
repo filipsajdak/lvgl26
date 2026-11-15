@@ -29,3 +29,7 @@ runs:
         path: .ccache
         key: ccache-${{ inputs.cache-key }}-${{ github.sha }}
         restore-keys: ccache-${{ inputs.cache-key }}-
+    # The statistics a job prints after its build then count that build alone.
+    - name: Zero the cache statistics
+      shell: bash
+      run: ccache --zero-stats

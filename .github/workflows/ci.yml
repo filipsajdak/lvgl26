@@ -54,6 +54,8 @@ jobs:
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
+      - name: Compiler cache statistics
+        run: ccache --show-stats --verbose
       - name: Test
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
@@ -109,6 +111,8 @@ jobs:
         run: |
           cmake --preset host-v96-tsan
           cmake --build --preset host-v96-tsan --target ui_scheduler task
+      - name: Compiler cache statistics
+        run: ccache --show-stats --verbose
       - name: Test
         env:
           TSAN_OPTIONS: halt_on_error=1
@@ -137,6 +141,8 @@ jobs:
           cmake --preset host-v96-coverage
           cmake --build --preset host-v96-coverage
           ctest --preset host-v96-coverage -LE compile-fail -j "$(nproc)"
+      - name: Compiler cache statistics
+        run: ccache --show-stats --verbose
       - name: CRAP report
         run: python3 tools/crap.py build/host-v96-coverage
 
