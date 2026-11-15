@@ -278,6 +278,8 @@ void agent_changes_the_screen(lv::obj screen, const std::string& dir) {
   check(one_json_line(list) && lv::json::value{list}["id"].string() == "list-1");
   const auto tools = lv::json::value{list}["result"]["tools"];
   check(tools.size() == 4);
+  // The hints for a cache belong to the 2026-07-28 revision only.
+  check(!lv::json::value{list}["result"]["ttlMs"] && !lv::json::value{list}["result"]["cacheScope"]);
   check(tools.at(0)["name"].string() == "load_document" && tools.at(1)["name"].string() == "apply_patch");
   check(tools.at(2)["name"].string() == "dump_tree" && tools.at(3)["name"].string() == "screenshot");
   for (std::size_t i = 0; i < tools.size(); ++i) {
@@ -418,23 +420,29 @@ void requests_with_their_own_metadata(lv::obj screen) {
   check(result["capabilities"]["tools"].is(lv::json::kind::object));
   check(result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"].string() == "lvgl26");
   check(result["instructions"].is(lv::json::kind::string));
+  check(result["ttlMs"].text() == "0" && result["cacheScope"].string() == "public");
 
   const auto list_text = request("tools/list");
   const lv::json::value list{list_text};
   check(list["result"]["resultType"].string() == "complete" && list["result"]["tools"].size() == 4);
-  check(request("ping") ==
-        R"({"jsonrpc":"2.0","id":"r","result":{"resultType":"complete","_meta":)"
-        R"({"io.modelcontextprotocol/serverInfo":{"name":"lvgl26","version":"0.0.1"}}}})");
+  check(list["result"]["ttlMs"].text() == "0" && list["result"]["cacheScope"].string() == "public");
   const auto loaded_text =
       request("tools/call", R"("name": "load_document", "arguments": {"document": {"type": "label"}}, )");
   const lv::json::value loaded{loaded_text};
   check(loaded["result"]["resultType"].string() == "complete");
   check(loaded["result"]["content"].at(0)["text"].string() == "loaded");
+  check(loaded_text ==
+        R"({"jsonrpc":"2.0","id":"r","result":{"resultType":"complete","_meta":)"
+        R"({"io.modelcontextprotocol/serverInfo":{"name":"lvgl26","version":"0.0.1"}},)"
+        R"("content":[{"type":"text","text":"loaded"}],"isError":false}})");
 
-  // This revision has no handshake.
-  const auto no_handshake_text = request("initialize");
-  const lv::json::value no_handshake{no_handshake_text};
-  check(no_handshake["error"]["code"].number() == -32601);
+  // This revision has no handshake and no ping, and an unknown method is unknown.
+  for (const char* method : {"initialize", "ping", "resources/list", ""}) {
+    const auto gone_text = request(method);
+    const lv::json::value gone{gone_text};
+    check(one_json_line(gone_text) && gone["error"]["code"].number() == -32601);
+    check(gone["error"]["message"].string() == "Method not found" && gone["id"].string() == "r");
+  }
   // server/discover without the metadata is not a request of this revision.
   const auto bare_text = agent.handle(R"({"jsonrpc":"2.0","id":3,"method":"server/discover"})");
   const lv::json::value bare{bare_text};

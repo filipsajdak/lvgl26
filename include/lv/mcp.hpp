@@ -24,9 +24,10 @@
 // Protocol: JSON-RPC 2.0, one message per line. Two revisions are answered:
 //   2026-07-28            no handshake. Every request names the revision and the
 //                         client's capabilities in params._meta; server/discover
-//                         tells what the server can do.
+//                         tells what the server can do. There is no ping.
 //   2025-11-25 and older  a request without that _meta is taken as one of a client
-//                         that starts with initialize.
+//                         that starts with initialize. ping is answered.
+// A method the revision of the request does not have gets "Method not found".
 //
 // Files: a client cannot write files unless the host names a directory:
 //
@@ -228,19 +229,24 @@ inline std::string handshake(json::value params, const options& server) {
   return out;
 }
 
+// What the 2026-07-28 revision requires on a result a client may keep: for how
+// long (not at all: it is asked for again), and that it is the same for every client.
+inline constexpr std::string_view cache_hints = R"(,"ttlMs":0,"cacheScope":"public")";
+
 // The result of server/discover.
 inline std::string discovery() {
   std::string out = R"("supportedVersions":[")";
   out += protocol_version;
   out += R"("],"capabilities":{"tools":{}},"instructions":)";
   append_string(out, instructions);
+  out += cache_hints;
   return out;
 }
 
 // ---- tools ---------------------------------------------------------------------
 
 // The result of tools/list. `widgets` names the widgets a document may use.
-inline std::string tool_list(std::string_view widgets) {
+inline std::string tool_list(std::string_view widgets, bool modern) {
   std::string out =
       R"("tools":[{"name":"load_document","description":"Builds a screen from a document, )"
       R"(in place of the one loaded before. A node is {\"type\": widget, \"id\": text, )"
@@ -264,6 +270,7 @@ inline std::string tool_list(std::string_view widgets) {
       R"(to a new file of that name in the directory the host allows, if it allows one; a file )"
       R"(that exists is not replaced.",)"
       R"("inputSchema":{"type":"object","properties":{"name":{"type":"string"}}}}])";
+  if (modern) out += cache_hints;
   return out;
 }
 
@@ -384,14 +391,20 @@ class server {
 
  private:
   std::string answer(const detail::request& r, bool modern) {
-    const auto result = [&](std::string_view body) {
-      return detail::result_message(r.id, modern, options_, body);
-    };
-    if (r.method == "ping") return result({});
-    if (r.method == "tools/list") return result(detail::tool_list(widget_names()));
+    if (r.method == "tools/list")
+      return detail::result_message(r.id, modern, options_,
+                                    detail::tool_list(widget_names(), modern));
     if (r.method == "tools/call") return call(r, modern);
     if (r.method == "server/discover") return discover(r, modern);
-    if (r.method == "initialize" && !modern) return result(detail::handshake(r.params, options_));
+    if (!modern) return answer_handshake_era(r);
+    return detail::error_message(r.id, detail::method_not_found, "Method not found");
+  }
+
+  // The methods only the revisions with a handshake have.
+  std::string answer_handshake_era(const detail::request& r) const {
+    if (r.method == "ping") return detail::result_message(r.id, false, options_, {});
+    if (r.method == "initialize")
+      return detail::result_message(r.id, false, options_, detail::handshake(r.params, options_));
     return detail::error_message(r.id, detail::method_not_found, "Method not found");
   }
 
