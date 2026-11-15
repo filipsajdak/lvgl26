@@ -134,9 +134,12 @@ struct group_factory {
     return n;
   }
 
+  // The call names a type that depends on Kids. A plain (*this)() does not depend on
+  // anything, so the compiler would work it out, and generate props<"obj">, while it
+  // reads this header.
   template <tree_node... Kids>
   constexpr auto operator[](Kids... kids) const {
-    return (*this)()[std::move(kids)...];
+    return this->operator()<std::void_t<Kids...>>()[std::move(kids)...];
   }
 };
 
@@ -152,7 +155,7 @@ struct flex_factory {
 
   template <tree_node... Kids>
   constexpr auto operator[](Kids... kids) const {
-    return (*this)()[std::move(kids)...];
+    return this->operator()<std::void_t<Kids...>>()[std::move(kids)...];  // see group_factory
   }
 };
 

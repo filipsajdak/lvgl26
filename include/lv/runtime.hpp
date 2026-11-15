@@ -383,23 +383,25 @@ struct style_slot {
   lv_style_selector_t selector;
 };
 
+// D is passed on to the members of props<"obj">: named without it, they would be
+// generated where this template is only read.
 template <class D = void>
 consteval auto make_style_slots() {
   constexpr std::size_t count = [] {
     std::size_t n = 0;
-    template for (constexpr auto i : indices<members_of_props<"obj">.size()>) {
-      using member = typename[:std::meta::type_of(members_of_props<"obj">[i]):];
+    template for (constexpr auto i : indices<members_of_props<"obj", D>.size()>) {
+      using member = typename[:std::meta::type_of(members_of_props<"obj", D>[i]):];
       if (a_style<member, D>) ++n;
     }
     return n;
   }();
   std::array<style_slot, count> slots{};
   std::size_t k = 0;
-  template for (constexpr auto i : indices<members_of_props<"obj">.size()>) {
-    using member = typename[:std::meta::type_of(members_of_props<"obj">[i]):];
+  template for (constexpr auto i : indices<members_of_props<"obj", D>.size()>) {
+    using member = typename[:std::meta::type_of(members_of_props<"obj", D>[i]):];
     if constexpr (a_style<member, D>) {
-      slots[k++] = {std::meta::identifier_of(members_of_props<"obj">[i]),
-                    selector_of<targets<"obj">[i]>()};
+      slots[k++] = {std::meta::identifier_of(members_of_props<"obj", D>[i]),
+                    selector_of<targets<"obj", D>[i]>()};
     }
   }
   return slots;
@@ -409,13 +411,16 @@ template <class D = void>
 inline constexpr auto style_slots = make_style_slots<D>();
 
 // Applies {"bg_color": "#112233", "radius": "8px"} to one part or state of a widget.
-inline std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json::value style,
-                                                              lv_style_selector_t selector) {
+// D only delays the style table until a document is really loaded: as a plain
+// function this built the table in every file that includes this header.
+template <class D = void>
+std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json::value style,
+                                                       lv_style_selector_t selector) {
   if (!style.is(json::kind::object)) return std::unexpected(load_failure{load_error::bad_value, style.text()});
   for (std::size_t i = 0; i < style.size(); ++i) {
     const auto m = style.member_at(i);
     const style_entry* entry = nullptr;
-    for (const auto& e : style_table_json<>)
+    for (const auto& e : style_table_json<D>)
       if (e.name == m.key) entry = &e;
     if (entry == nullptr) return std::unexpected(load_failure{load_error::unknown_property, m.key});
     if (!entry->set(o, json::value{m.text}, selector))
@@ -425,8 +430,10 @@ inline std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json:
 }
 
 // The style member of props called `key` ("style", "style_pressed", ...), or null.
-inline const style_slot* find_style_slot(std::string_view key) {
-  for (const auto& s : style_slots<>)
+// D delays the table as in apply_style_document.
+template <class D = void>
+const style_slot* find_style_slot(std::string_view key) {
+  for (const auto& s : style_slots<D>)
     if (s.name == key) return &s;
   return nullptr;
 }
@@ -440,10 +447,11 @@ const property_entry* find_property(std::string_view key) {
 }
 
 // Applies one member of a "props" object to a widget of kind W.
-template <fixed W>
+template <fixed W, class D = void>
 std::expected<void, load_failure> apply_property(lv_obj_t* o, json::member m) {
   const json::value v{m.text};
-  if (const auto* slot = find_style_slot(m.key)) return apply_style_document(o, v, slot->selector);
+  if (const auto* slot = find_style_slot<D>(m.key))
+    return apply_style_document<D>(o, v, slot->selector);
   const auto* entry = find_property<W>(m.key);
   if (entry == nullptr) return std::unexpected(load_failure{load_error::unknown_property, m.key});
   if (!entry->set(o, v)) return std::unexpected(load_failure{load_error::bad_value, m.text});

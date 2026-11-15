@@ -222,8 +222,10 @@ struct props_of {
   consteval { std::meta::define_aggregate(^^type, member_specs<>(W.sv())); }
 };
 
-// What each member of props<W> stands for, in member order.
-template <fixed W>
+// What each member of props<W> stands for, in member order. The second parameter
+// lets a template name the targets of a widget it knows without generating them
+// where it is only read: targets<"obj", D>.
+template <fixed W, class = void>
 inline constexpr std::span<const std::meta::info> targets =
     std::define_static_array(member_targets<>(W.sv()));
 
@@ -382,7 +384,8 @@ using props = typename detail::props_of<W>::type;
 
 namespace detail {
 
-template <fixed W>
+// The second parameter delays them as that of targets does.
+template <fixed W, class = void>
 inline constexpr auto members_of_props = std::define_static_array(
     std::meta::nonstatic_data_members_of(^^props<W>, std::meta::access_context::unchecked()));
 

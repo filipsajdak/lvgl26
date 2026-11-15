@@ -70,6 +70,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   reading against the pixels.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).
+- Inside a template, name what is generated for one widget through a template parameter
+  (`members_of_props<"obj", D>`, `getter_table<"obj", D>`), never plainly. A name that depends on
+  nothing is generated where the template is read: in every file that includes the header.
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
   pixels with `lv_test_screenshot_compare`.
 
