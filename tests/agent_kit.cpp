@@ -7,6 +7,7 @@
 #include "check.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <string_view>
 
@@ -172,6 +173,23 @@ void pictures(lv::obj screen, const std::string& dir) {
   check(lv::write_png(screen, path.c_str()).has_value());
   check(read_file(path).starts_with(png_signature));
   check(file_shows(path, screen));
+  // write_png replaces a file. write_new_png never does, and does not follow a link.
+  check(lv::write_png(screen, path.c_str()).has_value());
+  const auto again = lv::write_new_png(screen, path.c_str());
+  check(!again && again.error() == lv::png_error::file_exists);
+  const std::string fresh = dir + "/agent_kit_new.png";
+  const std::string link = dir + "/agent_kit_link.png";
+  const std::string target = dir + "/agent_kit_link_target.png";
+  for (const auto& old : {fresh, link, target}) std::filesystem::remove(old);
+  check(lv::write_new_png(screen, fresh.c_str()).has_value() && file_shows(fresh, screen));
+  std::error_code no_link;
+  std::filesystem::create_symlink(target, link, no_link);
+  check(!no_link);
+  const auto through = lv::write_new_png(screen, link.c_str());
+  check(!through && through.error() == lv::png_error::file_exists);
+  check(!std::filesystem::exists(target));
+  const auto missing = lv::write_new_png(screen, (dir + "/no/such/dir/x.png").c_str());
+  check(!missing && missing.error() == lv::png_error::cannot_write);
   // Flat areas make it far smaller than its 320 * 240 * 4 bytes.
   check(read_file(path).size() < 40000);
 
@@ -230,7 +248,7 @@ std::string call(std::string_view id, std::string_view tool, std::string_view ar
 
 // A client that starts with initialize: load, patch, dump, screenshot.
 void agent_changes_the_screen(lv::obj screen, const std::string& dir) {
-  server agent{screen, {.name = "test \"host\"", .version = "1.2"}};
+  server agent{screen, {.name = "test \"host\"", .version = "1.2", .screenshot_directory = dir}};
 
   const auto hello = agent.handle(R"({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params":
       {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}})");
@@ -293,13 +311,21 @@ void agent_changes_the_screen(lv::obj screen, const std::string& dir) {
   check(has(agent.handle(R"({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"dump_tree"}})"),
             R"(\"value\":60)"));
 
-  // A screenshot to a file, which is a PNG of what is on the screen now.
+  // A screenshot to a new file in the directory the host allows: a PNG of what
+  // is on the screen now.
   const std::string path = dir + "/agent_kit_mcp.png";
   std::remove(path.c_str());
-  const auto shot = agent.handle(call("8", "screenshot", R"({"path": ")" + path + R"("})"));
+  const auto shot = agent.handle(call("8", "screenshot", R"({"name": "agent_kit_mcp.png"})"));
   check(one_json_line(shot) && has(shot, "wrote " + path) && has(shot, R"("isError":false)"));
   check(read_file(path).starts_with(png_signature));
   check(file_shows(path, screen));
+  // A file that exists is not replaced, and a link is not followed.
+  const std::string kept = read_file(path);
+  const auto twice = agent.handle(call("8", "screenshot", R"({"name": "agent_kit_mcp.png"})"));
+  check(has(twice, R"("isError":true)") && has(twice, "file_exists") && read_file(path) == kept);
+  const auto linked = agent.handle(call("8", "screenshot", R"({"name": "agent_kit_link.png"})"));
+  check(has(linked, R"("isError":true)") && has(linked, "file_exists"));
+  check(!std::filesystem::exists(dir + "/agent_kit_link_target.png"));
 
   // A screenshot as an image: the same file, in base64.
   const auto image = agent.handle(call("9", "screenshot", "{}"));
@@ -327,18 +353,42 @@ void agent_changes_the_screen(lv::obj screen, const std::string& dir) {
   for (const auto& [tool, arguments] :
        {std::pair{"load_document", R"({})"}, std::pair{"load_document", R"({"document": "x"})"},
         std::pair{"apply_patch", R"({})"}, std::pair{"apply_patch", R"({"patch": 5})"},
-        std::pair{"screenshot", R"({"path": 5})"}, std::pair{"screenshot", R"({"path": ""})"},
-        std::pair{"screenshot", R"({"path": "a\\b.png"})"},
-        std::pair{"screenshot", R"({"path": "/no/such/dir/x.png"})"}}) {
+        std::pair{"screenshot", R"({"name": 5})"}, std::pair{"screenshot", R"({"name": ""})"}}) {
     const auto reply = agent.handle(call("14", tool, arguments));
     check(one_json_line(reply) && has(reply, R"("isError":true)") && !has(reply, R"("error")"));
   }
-  check(has(agent.handle(call("15", "screenshot", R"({"path": "/no/such/dir/x.png"})")), "cannot_write"));
 
-  // A server that may not write files still returns pictures.
-  server careful{screen, {.write_files = false}};
-  const auto no_file = careful.handle(call("16", "screenshot", R"({"path": ")" + path + R"("})"));
+  // A client names a file, never a place: nothing but a plain *.png name is taken.
+  const auto entries = [&] {
+    return std::distance(std::filesystem::directory_iterator{dir}, std::filesystem::directory_iterator{});
+  };
+  const auto files = entries();
+  for (const char* name :
+       {"/tmp/agent_kit_x.png", "../agent_kit_x.png", "a/b.png", "x.txt", "x.png.txt", "x", ".png",
+        ".hidden.png", "..", ".", "a b.png", "a\\b.png", "a\\u002fb.png", "C:x.png", "~x.png",
+        "x.png/", "x.PNG", "a\tb.png", "$HOME.png", "*.png"}) {
+    const auto reply = agent.handle(call("15", "screenshot", std::string{R"({"name": ")"} + name + R"("})"));
+    check(one_json_line(reply) && has(reply, R"("isError":true)") && has(reply, "must be a file name"));
+  }
+  const auto too_long = agent.handle(
+      call("15", "screenshot", R"({"name": ")" + std::string(125, 'n') + R"(.png"})"));
+  check(has(too_long, R"("isError":true)") && has(too_long, "must be a file name"));
+  check(entries() == files && !std::filesystem::exists("/tmp/agent_kit_x.png"));
+  // The longest name, with every kind of character a name may have.
+  const std::string longest = "aZ09_-." + std::string(117, 'n') + ".png";
+  std::filesystem::remove(dir + "/" + longest);
+  check(has(agent.handle(call("15", "screenshot", R"({"name": ")" + longest + R"("})")), "wrote "));
+  check(std::filesystem::remove(dir + "/" + longest));
+
+  // A directory that is not there.
+  server lost{screen, {.screenshot_directory = "/no/such/dir"}};
+  check(has(lost.handle(call("15", "screenshot", R"({"name": "x.png"})")), "cannot_write"));
+
+  // By default a server writes no files. It still returns pictures.
+  server careful{screen};
+  const auto no_file = careful.handle(call("16", "screenshot", R"({"name": "agent_kit_never.png"})"));
   check(has(no_file, R"("isError":true)") && has(no_file, "does not write files"));
+  check(!std::filesystem::exists("agent_kit_never.png") && entries() == files);
   check(has(careful.handle(call("17", "screenshot", "{}")), R"("type":"image")"));
   check(has(careful.handle(R"({"jsonrpc":"2.0","id":1,"method":"initialize"})"),
             R"("serverInfo":{"name":"lvgl26","version":"0.0.1"})"));

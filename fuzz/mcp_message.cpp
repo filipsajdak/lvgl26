@@ -5,8 +5,9 @@
 //
 // The input is a session: one message per line. Whatever the lines are, every
 // answer must be one line of well-formed JSON with "jsonrpc" in it, nothing may
-// crash or trip a sanitizer, and no file may be written: the server under test
-// has write_files off, so a fuzzer cannot reach the file system.
+// crash or trip a sanitizer, and no file may be written. The server under test
+// is allowed a directory that does not exist, so the checks of a file name run,
+// and a name that passes them still writes nothing.
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
@@ -48,7 +49,7 @@ void run(std::string_view input) {
   const auto screen = lv::screen_active();
   const auto before = lv_obj_get_child_count(screen.raw());
   {
-    server agent{screen, {.write_files = false}};
+    server agent{screen, {.screenshot_directory = "/nonexistent/lvgl26-fuzz"}};
     while (!input.empty()) {
       const auto end = input.find('\n');
       answer(agent, input.substr(0, end));

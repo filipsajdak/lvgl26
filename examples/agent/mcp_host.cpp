@@ -1,7 +1,12 @@
 // A headless LVGL program that an agent can drive over the Model Context Protocol.
 //
-//   mcp_host                 answers requests on stdin, one JSON-RPC message per line
-//   mcp_host session.jsonl   answers the requests of a file, then ends
+//   mcp_host                      answers requests on stdin, one JSON-RPC message per line
+//   mcp_host session.jsonl        answers the requests of a file, then ends
+//   mcp_host session.jsonl shots  the same, and lets the client write screenshots
+//                                 into the directory "shots"
+//
+// Without a directory the client gets its screenshots as images and cannot write
+// files. With one it can make new *.png files there, and nothing else.
 //
 // To try it by hand:
 //   echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | mcp_host
@@ -46,7 +51,8 @@ int main(int argc, char** argv) {
 
   {
     lv::mcp::server<"obj", "label", "button", "arc", "bar", "slider", "switch", "checkbox"> agent{
-        lv::screen_active(), {.name = "lvgl26 example host"}};
+        lv::screen_active(),
+        {.name = "lvgl26 example host", .screenshot_directory = argc > 2 ? argv[2] : ""}};
     agent.serve(in, stdout);
   }
 

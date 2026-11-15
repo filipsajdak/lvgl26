@@ -46,10 +46,15 @@ add_test(NAME agent_kit COMMAND agent_kit ${CMAKE_CURRENT_BINARY_DIR})
 set(LVGL26_AGENT_EXAMPLE ${CMAKE_CURRENT_SOURCE_DIR}/../examples/agent)
 add_executable(mcp_host ${LVGL26_AGENT_EXAMPLE}/mcp_host.cpp)
 target_link_libraries(mcp_host PRIVATE lvgl26::lvgl26 lvgl26_warnings)
-add_test(NAME examples_mcp_host COMMAND mcp_host ${LVGL26_AGENT_EXAMPLE}/session.jsonl
-         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(examples_mcp_host PROPERTIES PASS_REGULAR_EXPRESSION
-  "\"id\":1,\"result\":{\"protocolVersion\":\"2025-11-25\".*\"text\":\"loaded\".*\"text\":\"applied\".*value[^0-9]+60.*wrote mcp_host_screen.png")
+add_test(NAME examples_mcp_host
+         COMMAND mcp_host ${LVGL26_AGENT_EXAMPLE}/session.jsonl ${CMAKE_CURRENT_BINARY_DIR})
+# The server only makes new files, so the screenshot of the last run goes first.
+add_test(NAME examples_mcp_host_clean
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/mcp_host_screen.png)
+set_tests_properties(examples_mcp_host_clean PROPERTIES FIXTURES_SETUP mcp_host_files)
+set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_files
+  PASS_REGULAR_EXPRESSION
+  "\"id\":1,\"result\":{\"protocolVersion\":\"2025-11-25\".*\"text\":\"loaded\".*\"text\":\"applied\".*value[^0-9]+60.*wrote [^\"]*/mcp_host_screen.png")
 
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)

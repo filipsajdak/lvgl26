@@ -14,7 +14,8 @@
 //                  server was given, in place of the document loaded before
 //   apply_patch    changes properties of that screen by id
 //   dump_tree      the widget tree under the server's widget as JSON (lv/dump.hpp)
-//   screenshot     that widget as a PNG: written to "path", or returned as an image
+//   screenshot     that widget as a PNG: returned as an image, or written to a new
+//                  file "name" in the directory the host allows
 //
 // handle() takes one message and returns the answer, or an empty text when the
 // message was a notification. It never fails on its input: anything that is not
@@ -27,8 +28,16 @@
 //   2025-11-25 and older  a request without that _meta is taken as one of a client
 //                         that starts with initialize.
 //
+// Files: a client cannot write files unless the host names a directory:
+//
+//   lv::mcp::server<"obj", "label"> agent{screen, {.screenshot_directory = "/tmp/shots"}};
+//
+// screenshot then takes the name of a file, not a path: letters, digits, '.', '_'
+// and '-', ending in ".png", not starting with a dot. The file is made new in
+// that directory; a file or a symbolic link of that name is never written to.
+//
 // Limits: keys and tool names are compared as written, so a client that escapes
-// them ("tools\/call") is not understood. A "path" with a backslash is refused.
+// them ("tools\/call") is not understood.
 // serve() blocks: nothing else of the program runs while it waits for a line.
 // Keep LVGL's log off stdout (LV_LOG_PRINTF), which belongs to the protocol.
 
@@ -53,8 +62,8 @@ namespace lv::mcp {
 struct options {
   std::string_view name = "lvgl26";
   std::string_view version = "0.0.1";
-  // Whether screenshot may write a file where the client says.
-  bool write_files = true;
+  // The directory screenshot may make files in. Empty: it writes no files.
+  std::string_view screenshot_directory = {};
 };
 
 // The revision whose requests carry their own metadata.
@@ -250,9 +259,11 @@ inline std::string tool_list(std::string_view widgets) {
       R"({"name":"dump_tree","description":"The widget tree as JSON. Per widget: type, id, )"
       R"(x, y, width and height in pixels, the properties that can be read, children.",)"
       R"("inputSchema":{"type":"object","additionalProperties":false}},)"
-      R"({"name":"screenshot","description":"The screen as a PNG picture. With \"path\" the file )"
-      R"(is written there; without it the picture is returned.",)"
-      R"("inputSchema":{"type":"object","properties":{"path":{"type":"string"}}}}])";
+      R"({"name":"screenshot","description":"The screen as a PNG picture. Without arguments the )"
+      R"(picture is returned. With \"name\" (letters, digits, . _ -, ending in .png) it is written )"
+      R"(to a new file of that name in the directory the host allows, if it allows one; a file )"
+      R"(that exists is not replaced.",)"
+      R"("inputSchema":{"type":"object","properties":{"name":{"type":"string"}}}}])";
   return out;
 }
 
@@ -298,10 +309,21 @@ inline std::string failure(const load_failure& f) {
 
 inline std::string failure(png_error error) { return text_result(name_of(error), true); }
 
-// A file name that needs no unescaping, which the JSON reader does not do.
-inline bool usable_path(json::value path) {
-  return path.is(json::kind::string) && !path.string().empty() &&
-         path.string().find('\\') == std::string_view::npos && !has_control_character(path.text());
+constexpr bool is_letter_or_digit(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
+
+constexpr bool is_name_character(char c) {
+  return is_letter_or_digit(c) || c == '.' || c == '_' || c == '-';
+}
+
+// Whether `name` is the name of a PNG file and nothing else: no directory, no
+// "." or "..", no hidden file, nothing that a shell or a file system reads specially.
+constexpr bool usable_file_name(std::string_view name) {
+  if (name.size() > 128 || name.starts_with('.') || !name.ends_with(".png")) return false;
+  for (const char c : name)
+    if (!is_name_character(c)) return false;
+  return true;
 }
 
 // ---- the stream ----------------------------------------------------------------
@@ -403,7 +425,7 @@ class server {
     if (name == "load_document") return load(arguments["document"]);
     if (name == "apply_patch") return patch(arguments["patch"]);
     if (name == "dump_tree") return dump();
-    if (name == "screenshot") return screenshot(arguments["path"]);
+    if (name == "screenshot") return screenshot(arguments["name"]);
     return std::nullopt;
   }
 
@@ -430,21 +452,25 @@ class server {
     return detail::text_result(text);
   }
 
-  std::string screenshot(json::value path) const {
-    if (path) return screenshot_file(path);
+  std::string screenshot(json::value name) const {
+    if (name) return screenshot_file(name);
     const auto png = encode_png(parent_);
     if (!png) return detail::failure(png.error());
     return detail::image_result(*png);
   }
 
-  std::string screenshot_file(json::value path) const {
-    if (!detail::usable_path(path))
-      return detail::text_result(R"("path" must be a file name without backslashes)", true);
-    if (!options_.write_files)
+  std::string screenshot_file(json::value name) const {
+    if (options_.screenshot_directory.empty())
       return detail::text_result(
-          "this server does not write files: call screenshot without a path", true);
-    const std::string file{path.string()};
-    const auto written = write_png(parent_, file.c_str());
+          "this server does not write files: call screenshot without a name", true);
+    if (!detail::usable_file_name(name.string()))
+      return detail::text_result(
+          R"("name" must be a file name of letters, digits, '.', '_' and '-' that ends in .png)",
+          true);
+    std::string file{options_.screenshot_directory};
+    file += "/";
+    file += name.string();
+    const auto written = write_new_png(parent_, file.c_str());
     if (!written) return detail::failure(written.error());
     return detail::text_result("wrote " + file);
   }
