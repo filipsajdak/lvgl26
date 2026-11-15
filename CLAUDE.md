@@ -33,6 +33,12 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - The CI jobs run in the image of `.github/ci-image/Dockerfile`. Add a tool there, not as an
   install step in a workflow.
 - A change to `site/` or to a Markdown file alone does not start the pull request run.
+- The CI jobs compile through ccache (`.github/actions/setup`). Each build step prints its
+  hit rate: an unchanged file must be a hit.
+- Module scanning is off (`CMAKE_CXX_SCAN_FOR_MODULES` in `CMakeLists.txt`): ccache refuses a
+  compile that has the module flags. A target with C++ modules turns it on for itself.
+- ccache before 4.14 needs `CCACHE_NODIRECT=1`: its direct mode does not see a changed
+  `#embed` file.
 
 ## Rules
 
