@@ -107,8 +107,10 @@ consteval std::string_view function_after(std::string_view text, std::size_t at)
   const auto end = comment_end(text, at);
   const auto paren = position_of(text, '(', end);
   if (paren == text.size()) return {};
+  // The name ends at the parenthesis and starts after the last character that is
+  // not part of a name: the "*/" of the comment, if nothing else.
   auto start = paren;
-  while (start > end + 2 && is_name_char(text[start - 1])) --start;
+  while (is_name_char(text[start - 1])) --start;
   return text.substr(start, paren - start);
 }
 

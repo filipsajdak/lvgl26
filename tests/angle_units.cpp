@@ -109,6 +109,9 @@ static_assert(d::function_after("/* x */ void f(int); /* y */ int g();", 9) == "
 static_assert(d::function_after("/* x */ void lv_obj_set_x2(int);", 3) == "lv_obj_set_x2");
 static_assert(d::function_after("void f(int);", 0).empty());
 static_assert(d::function_after("/* x */", 0).empty());
+// A name at the very end of the text is not a function: no parenthesis follows.
+static_assert(d::function_after("/* x */ int x", 0).empty());
+static_assert(finds("/** 0.1 degree */ int x", {}));
 // The name stops at the end of the comment, even with nothing between them.
 static_assert(d::function_after("/* x */f(int);", 0) == "f");
 
