@@ -7,6 +7,13 @@ Signal is the look of one family of eight devices: a smart thermostat, a smartwa
 - **Normal has no colour.** A value in its normal range is `reading` on `ground`. There is no green. Colour appears when something needs attention, so that it is seen.
 - **Square and solid.** Corners are `radius-0`. Shapes are filled blocks and bars on the 4 px module (`space-1`). No shadows, no gradients, no blur.
 
+## Themes
+
+- **Dark** is the theme of every indoor device and of anything with an OLED screen.
+- **Day** is for screens read in sunlight: the EV charger and the e-bike display. The ground is white and the ink is black, at the highest contrast the screen can give.
+- The two themes share every name, size and rule. In Day, `active` and `on-active` swap, so the primary action is a black block with lime text, and a `caution` block gets a `stroke-bar` border in `reading`.
+- A device has one theme. Do not switch by the time of day unless the device has a light sensor.
+
 ## Colour
 
 - Put screens on `ground` and group content on `surface`. Show a pressed control or the selected row with `surface-raised`.
@@ -31,7 +38,8 @@ A state is never colour alone. Each priority has a colour, a number of triangles
 ## Type
 
 - Numbers and titles are Barlow Condensed (`display`); everything else is Barlow (`text`). Both are under the SIL Open Font Licence, so they may be embedded in a device.
-- `numeral-xl` (104 px): the one reading of a cluster, a watch face or a thermostat. `numeral-l` (72 px): the reading of a tile. `numeral-m` (40 px): a second value.
+- `numeral-2xl` (208 px): only the speed of a wide instrument cluster and the one reading of a large outdoor panel.
+- `numeral-xl` (104 px): the one reading of a watch face, a thermostat or a small display. `numeral-l` (72 px): the reading of a tile. `numeral-m` (40 px): a second value.
 - `title` and `label` are set in capitals with wide spacing: `TANK 2 LEVEL`, `ECO`. `body` and `caption` are sentence case.
 - A number always has its unit, in `muted`, one step smaller: `87 KM/H`, `4.8 bar`, `21.5°`.
 - Decimals: write a leading zero (`0.5`), never a trailing one (`5`, not `5.0`), on the medical device above all.
@@ -41,7 +49,10 @@ A state is never colour alone. Each priority has a colour, a number of triangles
 - Lay everything out on `space-1`. Pad a tile with `space-4`, separate tiles with `space-6`, set the screen margin to `space-6` on small screens and `space-12` on large panels.
 - A linear bar is `stroke-track` thick; its marker is a `stroke-bar` line that stands taller than the track. A ring on a round face is `stroke-ring` thick.
 - A gauge shows its normal range as a `line` band inside the track, so that "outside normal" is seen without reading the number.
-- A touch target is at least `target`. Where gloves are worn (machine panel, EV charger, e-bike) it is at least `target-glove`.
+- Anything a finger uses is at least `target` in both directions, on every screen however small, with at least `space-2` between two targets. That is above the 24 px minimum and the 44 px enhanced level of WCAG 2.2 (target size). Where gloves are worn (machine panel, EV charger, e-bike) it is at least `target-glove`.
+- Check the size in millimetres on the real panel too: `target` must come out at 9 mm or more. On a dense screen, raise the pixel size until it does.
+- A `chip` shows a state and is never touched. If a mode can be chosen by touch, it is a button of `target` height, not a chip.
+- A control looks like one: a filled block or a `line-strong` border. Text alone is never a control.
 - A round display (`radius-face`) keeps text inside the middle 70 percent of its width; rings hug the edge.
 
 ## Motion
