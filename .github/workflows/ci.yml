@@ -1,16 +1,40 @@
 name: ci
 
+# The quick checks: every pull request and every push to main. The long ones run every
+# night: see nightly.yml.
 on:
   push:
     branches: [main]
+    paths-ignore: ['site/**', '**.md']
   pull_request:
+    paths-ignore: ['site/**', '**.md']
+
+# A new push to a pull request replaces the run of the push before it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every preset builds with warnings as errors and runs the whole test suite.
+  # The container the jobs below run in. It is built only when its Dockerfile changed.
+  image:
+    uses: ./.github/workflows/image.yml
+    permissions:
+      contents: read
+      packages: write
+
+  # Each preset builds with warnings as errors and runs the tests that run a program.
+  # The compile-fail tests are the next job: they need no build.
   host:
     runs-on: ubuntu-latest
+    needs: image
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: gcc:16
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       # The sanitizers need ptrace and an unrestricted address space layout.
       options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
     strategy:
@@ -20,17 +44,12 @@ jobs:
           - host-v96
           - host-v10
           - host-v96-asan      # AddressSanitizer + UndefinedBehaviorSanitizer
-          - host-v10-asan
-          - host-v96-tsan      # ThreadSanitizer
-          - host-v96-analyze   # GCC static analyzer
+          - host-v96-analyze   # GCC static analyzer: what it reports is a build error
     steps:
       - uses: actions/checkout@v4
-      - name: Install build tools
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends cmake ninja-build python3
-          ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
-          ln -sf "$(command -v g++)" /usr/local/bin/g++-16
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: ${{ matrix.preset }}
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
@@ -39,34 +58,90 @@ jobs:
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --preset ${{ matrix.preset }} -LE compile-fail -j "$(nproc)"
+
+  # The compile-fail tests: each compiles one file that must be refused, and checks the
+  # message. They are most of the suite and each is a whole compile, so they are spread
+  # over three runners for each LVGL version. They only need the project configured.
+  compile-errors:
+    needs: image
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [host-v96, host-v10]
+        part: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }} -L compile-fail -I ${{ matrix.part }},,3 -j "$(nproc)"
+
+  # ThreadSanitizer on the tests that use more than one thread. The whole suite runs
+  # under it every night.
+  tsan-threads:
+    runs-on: ubuntu-latest
+    needs: image
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: host-v96-tsan
+      - name: Build the threaded tests
+        run: |
+          cmake --preset host-v96-tsan
+          cmake --build --preset host-v96-tsan --target ui_scheduler task
+      - name: Test
+        env:
           TSAN_OPTIONS: halt_on_error=1
-        run: ctest --preset ${{ matrix.preset }}
+        run: ctest --preset host-v96-tsan -R '^(ui_scheduler|task)$' -j "$(nproc)"
 
   # Complexity and CRAP: every function at complexity 8 or less, and every function
   # that runs at run time at CRAP 8 or less. See tools/crap.py.
   crap:
     runs-on: ubuntu-latest
-    container: gcc:16
+    needs: image
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install build tools
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends cmake ninja-build python3 python3-pip
-          pip3 install --break-system-packages lizard
-          ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
-          ln -sf "$(command -v g++)" /usr/local/bin/g++-16
-          ln -sf "$(command -v gcov)" /usr/local/bin/gcov-16
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: host-v96-coverage
       - name: Build and test with coverage
         run: |
           cmake --preset host-v96-coverage
           cmake --build --preset host-v96-coverage
-          ctest --preset host-v96-coverage
+          ctest --preset host-v96-coverage -LE compile-fail -j "$(nproc)"
       - name: CRAP report
         run: python3 tools/crap.py build/host-v96-coverage
 
   # The JSON reader is plain C++, so Clang's libFuzzer can fuzz it with coverage
-  # feedback. A short run on every push; the corpus is also replayed by ctest above.
+  # feedback. One minute here, half an hour every night; ctest replays the corpus above.
   fuzz-json:
     runs-on: ubuntu-latest
     steps:

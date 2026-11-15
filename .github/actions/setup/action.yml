@@ -1,0 +1,23 @@
+name: Set up the build
+description: Restores the compiler cache. The tools themselves are in the CI image.
+inputs:
+  cache-key:
+    description: Names the compiler cache; one per preset.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Use the compiler cache
+      shell: bash
+      run: |
+        # LVGL's C files are most of a build and never change between runs: ccache
+        # gives them back from the cache.
+        echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+        echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+        echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache" >> "$GITHUB_ENV"
+        echo "CCACHE_MAXSIZE=400M" >> "$GITHUB_ENV"
+    - uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-${{ inputs.cache-key }}-${{ github.sha }}
+        restore-keys: ccache-${{ inputs.cache-key }}-

@@ -11,12 +11,22 @@ function(lvgl26_test name)
 endfunction()
 
 # A file that must not compile, and the message the user must see.
+# The test runs the compiler itself, with the flags of the target fail_<name>, and only
+# as far as the errors (-fsyntax-only). It does not go through `cmake --build`: two of
+# those cannot run in one build directory at once, and these tests are most of the
+# suite, so ctest must be able to run them side by side.
 function(lvgl26_compile_fail name message)
-  add_library(fail_${name} OBJECT EXCLUDE_FROM_ALL fail/${name}.cpp)
-  target_link_libraries(fail_${name} PRIVATE lvgl26::lvgl26 lvgl26_test_data)
-  add_test(NAME fail_${name}
-           COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fail_${name})
-  set_tests_properties(fail_${name} PROPERTIES PASS_REGULAR_EXPRESSION "${message}")
+  set(target fail_${name})
+  add_library(${target} OBJECT EXCLUDE_FROM_ALL fail/${name}.cpp)
+  target_link_libraries(${target} PRIVATE lvgl26::lvgl26 lvgl26_test_data)
+  add_test(NAME ${target}
+           COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX26_EXTENSION_COMPILE_OPTION} -fsyntax-only
+                   "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>,PREPEND,-I>"
+                   "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${target},COMPILE_DEFINITIONS>,PREPEND,-D>"
+                   "$<TARGET_PROPERTY:${target},COMPILE_OPTIONS>"
+                   ${CMAKE_CURRENT_SOURCE_DIR}/fail/${name}.cpp
+           COMMAND_EXPAND_LISTS)
+  set_tests_properties(${target} PROPERTIES PASS_REGULAR_EXPRESSION "${message}" LABELS compile-fail)
 endfunction()
 
 lvgl26_test(smoke)

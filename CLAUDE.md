@@ -16,7 +16,23 @@ cmake --preset host-v96 && cmake --build --preset host-v96 && ctest --preset hos
 | `host-v96-analyze` | GCC static analyzer (`-fanalyzer`) |
 | `host-v96-coverage` | Coverage; report with `gcovr --filter include/lv/ build/host-v96-coverage` |
 
-Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
+Every change must pass `host-v96` and `host-v10` locally. Run the tests side by side:
+`ctest --preset host-v96 -j 8`.
+
+| Where | What runs |
+|---|---|
+| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, CRAP, one minute of fuzzing |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing. A failure opens an issue |
+
+- A check belongs in the pull request run if it takes a few minutes and a change can
+  plausibly break it. Anything long goes to the nightly run.
+- A test must be safe to run next to every other test: no shared file, no fixed port.
+- The compile-fail tests have the ctest label `compile-fail`. They need no build:
+  `ctest --preset host-v96 -L compile-fail -j 8` after configuring. The other tests are
+  `-LE compile-fail`.
+- The CI jobs run in the image of `.github/ci-image/Dockerfile`. Add a tool there, not as an
+  install step in a workflow.
+- A change to `site/` or to a Markdown file alone does not start the pull request run.
 
 ## Rules
 
