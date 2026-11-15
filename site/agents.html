@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Agents: lvgl26</title>
+<meta name="description" content="How an AI agent drives an LVGL screen with lvgl26: an MCP server inside the host program, runtime JSON documents and patches, a tree dump and PNG screenshots, and the rules that bound what the agent can do.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23b83a0a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">lvgl26 <span>namespace lv</span></a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="agents.html" aria-current="page">Agents</a></li>
+        <li><a href="status.html">Status</a></li>
+        <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero plain">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">AI-agent ready</p>
+        <h1>An agent that can see the screen it builds.</h1>
+        <p class="lede">lvgl26 puts a <strong>Model Context Protocol server inside the program that shows the UI</strong>. An agent loads a screen, changes it, reads the widget tree and takes a screenshot. It works on real LVGL widgets, and only within the limits the host sets.</p>
+        <div class="actions">
+          <a class="btn primary" href="#host">Add it to a program</a>
+          <a class="btn" href="#rules">What an agent cannot do</a>
+        </div>
+      </div>
+    </div>
+    <dl class="titleblock">
+      <div><dt>Header</dt><dd>lv/mcp.hpp</dd></div>
+      <div><dt>Protocol</dt><dd>MCP, JSON-RPC 2.0</dd></div>
+      <div><dt>Transport</dt><dd>stdio, one line each</dd></div>
+      <div><dt>Tools</dt><dd>4</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="loop">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">01</div>
+      <div>
+        <h2>The loop: load, patch, dump, screenshot.</h2>
+        <p>Four tools close the loop between what an agent intends and what LVGL draws.</p>
+      </div>
+    </div>
+
+    <ol class="flow" aria-label="The agent loop over MCP">
+      <li><p class="when">Tool 1</p><b>load_document</b><span>Builds a screen from a JSON document, in place of the one loaded before. A refused document changes nothing.</span></li>
+      <li><p class="when">Tool 2</p><b>apply_patch</b><span>Changes properties of the loaded screen by id.</span></li>
+      <li><p class="when">Tool 3</p><b>dump_tree</b><span>The widget tree as JSON: type, id, place in pixels, readable properties, children.</span></li>
+      <li><p class="when">Tool 4</p><b>screenshot</b><span>The screen as a PNG. Returned as an image, or written to a new file if the host allows it.</span></li>
+    </ol>
+    <p class="flow-note">The agent compares the tree and the picture with what it wanted, then sends the next patch.</p>
+
+    <div class="two mt">
+      <div class="stack">
+        <figure class="code">
+          <figcaption><span>the agent sends</span><span>examples/agent/session.jsonl</span></figcaption>
+<pre tabindex="0"><code>{<span class="s">"jsonrpc"</span>:<span class="s">"2.0"</span>,<span class="s">"id"</span>:<span class="n">3</span>,<span class="s">"method"</span>:<span class="s">"tools/call"</span>,<span class="s">"params"</span>:{<span class="s">"name"</span>:<span class="s">"load_document"</span>,
+ <span class="s">"arguments"</span>:{<span class="s">"document"</span>:{<span class="s">"type"</span>:<span class="s">"column"</span>,<span class="s">"props"</span>:{<span class="s">"size"</span>:[<span class="s">"100%"</span>,<span class="s">"100%"</span>]},<span class="s">"children"</span>:[
+  {<span class="s">"type"</span>:<span class="s">"label"</span>,<span class="s">"id"</span>:<span class="s">"title"</span>,<span class="s">"props"</span>:{<span class="s">"text"</span>:<span class="s">"Speed"</span>}},
+  {<span class="s">"type"</span>:<span class="s">"arc"</span>,<span class="s">"id"</span>:<span class="s">"speedo"</span>,<span class="s">"props"</span>:{<span class="s">"range"</span>:[<span class="n">0</span>,<span class="n">240</span>],<span class="s">"value"</span>:<span class="n">120</span>}},
+  {<span class="s">"type"</span>:<span class="s">"button"</span>,<span class="s">"id"</span>:<span class="s">"reset"</span>,<span class="s">"children"</span>:[{<span class="s">"type"</span>:<span class="s">"label"</span>,<span class="s">"props"</span>:{<span class="s">"text"</span>:<span class="s">"Reset"</span>}}]}]}}}}
+
+{<span class="s">"jsonrpc"</span>:<span class="s">"2.0"</span>,<span class="s">"id"</span>:<span class="n">4</span>,<span class="s">"method"</span>:<span class="s">"tools/call"</span>,<span class="s">"params"</span>:{<span class="s">"name"</span>:<span class="s">"apply_patch"</span>,
+ <span class="s">"arguments"</span>:{<span class="s">"patch"</span>:{<span class="s">"speedo"</span>:{<span class="s">"value"</span>:<span class="n">60</span>},<span class="s">"title"</span>:{<span class="s">"text"</span>:<span class="s">"Trip"</span>}}}}}
+
+{<span class="s">"jsonrpc"</span>:<span class="s">"2.0"</span>,<span class="s">"id"</span>:<span class="n">5</span>,<span class="s">"method"</span>:<span class="s">"tools/call"</span>,<span class="s">"params"</span>:{<span class="s">"name"</span>:<span class="s">"dump_tree"</span>,<span class="s">"arguments"</span>:{}}}
+
+{<span class="s">"jsonrpc"</span>:<span class="s">"2.0"</span>,<span class="s">"id"</span>:<span class="n">6</span>,<span class="s">"method"</span>:<span class="s">"tools/call"</span>,<span class="s">"params"</span>:{<span class="s">"name"</span>:<span class="s">"screenshot"</span>,
+ <span class="s">"arguments"</span>:{<span class="s">"name"</span>:<span class="s">"mcp_host_screen.png"</span>}}}</code></pre>
+        </figure>
+        <p class="cap">Wrapped here to fit. On the wire each message is one line.</p>
+      </div>
+      <div class="prose">
+        <span class="tag">A recorded session, run as a test</span>
+        <h3>What the host answers</h3>
+        <p>The test <code>examples_mcp_host</code> feeds this session to the example host on every build and checks the answers in order:</p>
+        <ul class="yesno yes">
+          <li><strong>id 3</strong> answers with the text <code>loaded</code>.</li>
+          <li><strong>id 4</strong> answers with the text <code>applied</code>.</li>
+          <li><strong>id 5</strong> answers with the tree, where the arc now has the value 60.</li>
+          <li><strong>id 6</strong> answers <code>wrote .../mcp_host_screen.png</code>, and the file is there.</li>
+        </ul>
+        <p class="mt-s">A refused call is not a protocol error. It is a tool result with <code>"isError": true</code> and a text such as <code>unknown_widget: chart</code> or <code>bad_value: 5</code>, which the agent can read and act on.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="host">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">02</div>
+      <div>
+        <h2>The server lives in your program.</h2>
+        <p>There is no separate tool to install and no simulator to keep in step. The program that shows the UI answers the agent.</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <figure class="code">
+        <figcaption><span>the whole integration</span><span>lv/mcp.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/lv.hpp&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;lv/mcp.hpp&gt;</span>
+
+<span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"arc"</span>&gt; agent{<span class="t">lv::screen_active</span>()};
+agent.serve();   <span class="c">// answers requests on stdin until it is closed</span></code></pre>
+      </figure>
+      <div class="prose">
+        <span class="tag">How it fits</span>
+        <h3>You list the widgets. Reflection does the rest.</h3>
+        <p>The widgets in <code>&lt;&gt;</code> are the ones a document may use. Their property tables are generated by reflection from the same structs as the compile-time tree, so a document and C++ code accept the same names.</p>
+        <ul>
+          <li><code>handle()</code> takes one message and returns the answer. <code>serve()</code> is <code>handle()</code> for every line of a stream.</li>
+          <li>To give the program to an agent, register it as an MCP server with the stdio transport.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="two mt">
+      <div class="prose">
+        <span class="tag">examples/agent/mcp_host.cpp</span>
+        <h3>A complete headless host</h3>
+        <p>The example draws into memory and has no window. Screenshots are drawn on request. It allows eight widget kinds, plus <code>column</code> and <code>row</code>.</p>
+        <p>The test build makes it. Try it by hand:</p>
+        <figure class="code mt-s">
+          <div class="bar"><span>shell</span></div>
+<pre tabindex="0"><code>echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | build/host-v96/tests/mcp_host</code></pre>
+        </figure>
+      </div>
+      <figure class="code">
+        <figcaption><span>the server of the example host</span><span>examples/agent/mcp_host.cpp</span></figcaption>
+<pre tabindex="0"><code><span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"button"</span>, <span class="s">"arc"</span>, <span class="s">"bar"</span>, <span class="s">"slider"</span>, <span class="s">"switch"</span>, <span class="s">"checkbox"</span>&gt; agent{
+    <span class="t">lv::screen_active</span>(),
+    {.name = <span class="s">"lvgl26 example host"</span>, .screenshot_directory = argc &gt; <span class="n">2</span> ? argv[<span class="n">2</span>] : <span class="s">""</span>}};
+agent.serve(in, stdout);</code></pre>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="runtime">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">03</div>
+      <div>
+        <h2>Screens from JSON, at run time.</h2>
+        <p>The MCP tools sit on <code>lv::runtime</code>, which you can also use directly: for UI sent by a tool, a server or a test.</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <figure class="code">
+        <figcaption><span>a document and a patch</span><span>lv/runtime.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="k">constexpr</span> std::string_view doc = <span class="s">R"({
+  "type": "column",
+  "props": {"size": ["320px", "240px"]},
+  "children": [
+    {"type": "label", "id": "title", "props": {"text": "Speed"}},
+    {"type": "arc", "id": "speedo", "props": {"range": [0, 240], "value": 120}}
+  ]})"</span>;
+
+<span class="k">using</span> ui = <span class="t">lv::runtime</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"arc"</span>&gt;;      <span class="c">// the widgets a document may use</span>
+<span class="k">auto</span> screen = ui::load(doc, <span class="t">lv::screen_active</span>());   <span class="c">// std::expected</span>
+screen-&gt;apply(<span class="s">R"({"speedo": {"value": 60}})"</span>);      <span class="c">// change properties by id</span></code></pre>
+      </figure>
+      <div class="prose">
+        <span class="tag">The document format</span>
+        <h3>A node is a type, an id, properties and children</h3>
+        <p>Values are written the way a person would write them:</p>
+        <ul>
+          <li>numbers, <code>true</code> or <code>false</code>, and strings for text</li>
+          <li><code>"120px"</code>, <code>"50%"</code> or <code>"content"</code> for lengths</li>
+          <li><code>"90deg"</code>, <code>"300ms"</code>, <code>"#rrggbb"</code></li>
+          <li>an enumerator by name, in full (<code>"LV_ALIGN_CENTER"</code>) or by its last part (<code>"center"</code>)</li>
+          <li>a list for a property that takes several values</li>
+        </ul>
+        <p class="mt-s">A document that is refused leaves nothing on the screen. The error says which of nine kinds it is, and names the piece of the document it is about.</p>
+      </div>
+    </div>
+
+    <div class="two mt">
+      <div class="prose">
+        <span class="tag">lv/dump.hpp</span>
+        <h3>The tree, without looking at pixels</h3>
+        <p>Per widget the dump gives its type, its id if a document gave it one, its place on the screen in pixels, and its properties. A property is listed when reflection finds the getter of its setter: <code>lv_arc_get_value</code> for <code>lv_arc_set_value</code>.</p>
+        <p>The text goes to a sink, piece by piece. Nothing is allocated and nothing is thrown.</p>
+      </div>
+      <figure class="code">
+        <figcaption><span>the shape of a dump</span><span>lv/dump.hpp</span></figcaption>
+<pre tabindex="0"><code>{<span class="s">"type"</span>:<span class="s">"obj"</span>,<span class="s">"x"</span>:<span class="n">0</span>,<span class="s">"y"</span>:<span class="n">0</span>,<span class="s">"width"</span>:<span class="n">320</span>,<span class="s">"height"</span>:<span class="n">240</span>,<span class="s">"props"</span>:{...},<span class="s">"children"</span>:[
+  {<span class="s">"type"</span>:<span class="s">"arc"</span>,<span class="s">"id"</span>:<span class="s">"speedo"</span>,<span class="s">"x"</span>:<span class="n">105</span>,<span class="s">"y"</span>:<span class="n">65</span>,<span class="s">"width"</span>:<span class="n">110</span>,<span class="s">"height"</span>:<span class="n">110</span>,
+   <span class="s">"props"</span>:{<span class="s">"value"</span>:<span class="n">120</span>,<span class="s">"rotation"</span>:<span class="n">90</span>,...}}]}</code></pre>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="rules">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">04</div>
+      <div>
+        <h2>What an agent can and cannot do.</h2>
+        <p>An agent gets a small, typed surface. The host decides how large it is.</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="prose">
+        <h3>It can</h3>
+        <ul class="yesno yes">
+          <li><strong>Build a screen</strong> from the widgets the host listed, under the widget the server was given.</li>
+          <li><strong>Change properties by id</strong> on the screen it loaded.</li>
+          <li><strong>Read the widget tree</strong> with places, sizes and property values.</li>
+          <li><strong>Get a PNG</strong> of the screen as an image in the answer.</li>
+          <li><strong>Write a new PNG file</strong> into one directory, if the host named one.</li>
+          <li><strong>Read why a call was refused</strong>: the kind of error and the piece of the document, cut to 200 characters.</li>
+        </ul>
+      </div>
+      <div class="prose">
+        <h3>It cannot</h3>
+        <ul class="yesno no">
+          <li><strong>Use a widget the host did not list.</strong> The answer is <code>unknown_widget</code>.</li>
+          <li><strong>Set a property that does not exist</strong>, or give a value of the wrong kind.</li>
+          <li><strong>Attach code.</strong> Handlers, bindings and pointers cannot come from a document.</li>
+          <li><strong>Leave a broken screen behind</strong> with a bad document: nothing of a refused document stays.</li>
+          <li><strong>Call anything else.</strong> There are four tools. Another name gets <code>Unknown tool</code>.</li>
+          <li><strong>Make the handler fail with a bad message.</strong> Anything that is not a request gets a JSON-RPC error on one line. A fuzz target feeds the handler whatever a client could send.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="screenshot">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">05</div>
+      <div>
+        <h2>The security rules of the screenshot tool.</h2>
+        <p>It is the only tool that can touch the file system, so it has the strictest rules.</p>
+      </div>
+    </div>
+
+    <div class="table">
+      <table>
+        <thead><tr><th>Rule</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">No files by default</th><td>A server writes no files unless the host names a directory in <code>.screenshot_directory</code>. Without one, a call with a name answers <code>this server does not write files</code>. A call without a name still returns the picture.</td></tr>
+          <tr><th scope="row">A name, never a path</th><td>The client gives the name of a file: letters, digits, <code>.</code>, <code>_</code> and <code>-</code>, ending in <code>.png</code>, not starting with a dot, at most 128 characters. The host's directory is put in front of it.</td></tr>
+          <tr><th scope="row">New files only</th><td>The file is made new. A file of that name that exists is not replaced, and a symbolic link of that name is not followed. The answer is <code>file_exists</code>.</td></tr>
+          <tr><th scope="row">One directory</th><td>With a directory, the client can make new <code>*.png</code> files there, and nothing else.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two mt">
+      <figure class="code">
+        <figcaption><span>a host that allows files</span><span>lv/mcp.hpp</span></figcaption>
+<pre tabindex="0"><code><span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>&gt; agent{screen, {.screenshot_directory = <span class="s">"/tmp/shots"</span>}};</code></pre>
+      </figure>
+      <div class="prose">
+        <span class="tag">tests/agent_kit.cpp</span>
+        <h3>Tested with 20 names that must be refused</h3>
+        <p>Among them an absolute path, <code>../</code>, a subdirectory, a hidden file, a space, a backslash, an escaped slash, a drive letter, <code>~</code>, <code>$HOME</code> and <code>*</code>. The test checks that each is refused and that no file appears in the directory.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="protocol">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">06</div>
+      <div>
+        <h2>Protocol and limits.</h2>
+        <p>Plain facts for the person who wires it up.</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="prose">
+        <h3>Protocol</h3>
+        <ul class="yesno dot">
+          <li><strong>JSON-RPC 2.0</strong>, one message per line, over stdin and stdout. Batches are refused.</li>
+          <li><strong>Revision 2026-07-28:</strong> no handshake. Every request names the revision and the client's capabilities in <code>params._meta</code>. <code>server/discover</code> tells what the server can do.</li>
+          <li><strong>Revisions 2025-11-25, 2025-06-18, 2025-03-26 and 2024-11-05:</strong> a client that starts with <code>initialize</code>. <code>ping</code> is answered.</li>
+          <li>A notification is never answered. A method the revision does not have gets <code>Method not found</code>.</li>
+        </ul>
+      </div>
+      <div class="prose">
+        <h3>Limits today</h3>
+        <ul class="yesno dot">
+          <li><strong>Hosted only.</strong> The server allocates and uses <code>&lt;cstdio&gt;</code>. It is for a development host, not for a microcontroller.</li>
+          <li><strong><code>serve()</code> blocks.</strong> Nothing else of the program runs while it waits for a line.</li>
+          <li><strong>stdout belongs to the protocol.</strong> Keep LVGL's log off it.</li>
+          <li><strong>Screenshots need <code>LV_USE_SNAPSHOT</code></strong> in the LVGL build.</li>
+          <li><strong>Documents:</strong> text values are at most 127 characters and are not unescaped. At most 32 nodes can have an id.</li>
+          <li><strong>Keys are compared as written.</strong> A client that escapes them (<code>"tools\/call"</code>) is not understood.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="index.html#start">Get started</a>
+      <a class="btn" href="status.html">What works today</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>lvgl26 is open source under the MIT licence. It builds on <a href="https://github.com/lvgl/lvgl">LVGL</a>, which is also MIT. This site uses no trackers, no cookies and no third-party resources.</p>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="status.html">Status</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/LICENSE">MIT licence</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>

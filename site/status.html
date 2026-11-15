@@ -1,0 +1,222 @@
+<!doctype html>
+<!--
+  How to update this page when a feature is delivered:
+  1. Find the feature's line in the list marked PLANNED (one <li> per feature).
+  2. Move that line, as it is, into the list marked WORKS TODAY.
+  3. Remove data-state="..." from it, and put its header and its test in <small>.
+  The label at the end of a row ("Works", "Planned") comes from the list it is in.
+  data-state replaces it for one row ("In review", "In development").
+  A new idea goes into PLANNED as one line of the same shape:
+    <li><strong>Name</strong> <span>What it is.</span> <small>where</small></li>
+  Then update the numbers under "What runs on every push" if tests were added
+  (tools/check_site.py does not check them), and run python3 tools/check_site.py.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Status: lvgl26</title>
+<meta name="description" content="What works in lvgl26 today, what is planned, and the known limits. Every row names the header and the test behind it.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23b83a0a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">lvgl26 <span>namespace lv</span></a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="agents.html">Agents</a></li>
+        <li><a href="status.html" aria-current="page">Status</a></li>
+        <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero plain">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">Status</p>
+        <h1>What works today, and what does not yet.</h1>
+        <p class="lede">lvgl26 is early: version 0.0.1. This page lists what is on the <code>main</code> branch, with the header and the test behind each row, then what is planned, then the limits you should know before you start.</p>
+        <div class="actions">
+          <a class="btn primary" href="#today">Works today</a>
+          <a class="btn" href="#planned">Planned</a>
+          <a class="btn" href="#limits">Known limits</a>
+        </div>
+      </div>
+    </div>
+    <dl class="titleblock">
+      <div><dt>Version</dt><dd>0.0.1</dd></div>
+      <div><dt>Compiler</dt><dd>GCC 16 or newer</dd></div>
+      <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
+      <div><dt>Tested on</dt><dd>Linux host, in CI</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="today">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Today</div>
+      <div>
+        <h2>On main, with tests.</h2>
+        <p>Each row names its header in <code>include/lv/</code>, then its test in <code>tests/</code>.</p>
+      </div>
+    </div>
+
+    <!-- WORKS TODAY: one line per feature. -->
+    <ul class="features works">
+      <li><strong>Typed views</strong> <span><code>lv::view&lt;"arc"&gt;</code> is one pointer and never deletes. <code>lv::owned&lt;T&gt;</code> owns. <code>lv::weak&lt;T&gt;</code> empties itself when LVGL deletes the widget.</span> <small>view.hpp, owned.hpp; l1_views.cpp</small></li>
+      <li><strong>Generated properties</strong> <span><code>lv::props&lt;"arc"&gt;</code>: one member per <code>lv_arc_set_*</code> and <code>lv_obj_set_*</code> function and one per event, built by reflection from LVGL's headers.</span> <small>props.hpp, events.hpp; l1_views.cpp, l2_tree.cpp</small></li>
+      <li><strong>Compile-time tree</strong> <span><code>lv::column</code>, <code>lv::row</code>, <code>lv::group</code> and 13 widgets by short name. <code>lv::widget&lt;"spinbox"&gt;</code> reaches every other widget. Ids, <code>lv::mount</code>, typed <code>get&lt;"id"&gt;</code>.</span> <small>tree.hpp; l2_tree.cpp, ref/slice.png</small></li>
+      <li><strong>Units and values</strong> <span><code>px</code>, <code>pct</code>, <code>deg</code>, <code>ms</code>, <code>sec</code>, <code>lv::size_content</code>. Horizontal and vertical lengths are different kinds. Integers reject <code>bool</code>, floating point and values that do not fit.</span> <small>units.hpp, values.hpp; units.cpp, values.cpp</small></li>
+      <li><strong>Styles</strong> <span>Style properties in the tree, merged with <code>|</code>, stored as <code>const lv_style_t</code>. A design value must be a token, or <code>lv::raw(...)</code>.</span> <small>style.hpp; styles.cpp, ref/styled.png</small></li>
+      <li><strong>Design tokens</strong> <span>W3C DTCG JSON read at compile time through <code>#embed</code>: colors, dimensions, durations, numbers, font family and weight, easing curves, shadow, border, typography, transition and gradient. Aliases are resolved.</span> <small>tokens.hpp, token_types.hpp; tokens.cpp, ref/tokens_dark.png, ref/tokens_light.png</small></li>
+      <li><strong>State and bindings</strong> <span><code>lv::state</code> holds a measure (an mp-units quantity with an integer number), an <code>lv::counter</code>, a one-member struct, a bool, an enum, a color or a pointer. <code>lv::bind</code> ties a property to it. A state is an <code>lv_subject_t</code> underneath.</span> <small>state.hpp; state.cpp, state_plain.cpp</small></li>
+      <li><strong>Coroutine tasks</strong> <span><code>lv::task&lt;T&gt;</code> on LVGL's loop. <code>view.next().clicked</code> and every other event, <code>lv::sleep</code>, <code>lv::first</code>, <code>lv::spawn</code>. A deleted widget cancels the task.</span> <small>task.hpp; task.cpp</small></li>
+      <li><strong>Animation</strong> <span><code>lv::animate(widget, {.property = {from, to}}, time)</code> for a property that takes one number: a whole number, a length, an angle or an opacity. The result says whether it ran to its end.</span> <small>animate.hpp; animate.cpp</small></li>
+      <li><strong>Other threads</strong> <span><code>lv::ui_scheduler</code>: <code>post()</code> from any thread, <code>co_await ui.schedule()</code> in a task. Hosted only. Needs no LVGL build option.</span> <small>ui_scheduler.hpp; ui_scheduler.cpp, under ThreadSanitizer</small></li>
+      <li><strong>Match</strong> <span><code>lv::match</code> with <code>lv::is&lt;...&gt;</code> and <code>lv::otherwise</code>. For an enum, every enumerator needs exactly one arm.</span> <small>match.hpp; match.cpp</small></li>
+      <li><strong>Runtime JSON and patches</strong> <span><code>lv::runtime&lt;...&gt;::load</code> builds a screen from a document. <code>apply</code> changes properties by id. A refused document leaves nothing behind.</span> <small>runtime.hpp, json.hpp; runtime_ui.cpp, json.cpp</small></li>
+      <li><strong>Agent kit</strong> <span>The widget tree as JSON, a PNG of a widget or a screen, and an MCP server with four tools inside the host program. See <a href="agents.html">Agents</a>.</span> <small>dump.hpp, png.hpp, mcp.hpp; agent_kit.cpp, examples/agent/</small></li>
+      <li><strong>Settings</strong> <span>Project settings are a C++ specialization of <code>lv::cfg</code>, not a macro.</span> <small>config.hpp; fail/config_too_late.cpp</small></li>
+      <li><strong>Example ports: LVGL get_started</strong> <span>The four LVGL <code>get_started</code> examples, rewritten with lvgl26. Each gives the same pixels as the C original.</span> <small>examples/lvgl/get_started/; examples_get_started.cpp</small></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="checks">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Checks</div>
+      <div>
+        <h2>What runs on every push.</h2>
+        <p>From <code>.github/workflows/ci.yml</code>, <code>CMakePresets.json</code> and <code>tests/CMakeLists.txt</code>.</p>
+      </div>
+    </div>
+
+    <div class="table">
+      <table>
+        <thead><tr><th>Check</th><th>Count</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">LVGL versions</th><td class="num">2</td><td>v9.6.0 and a pinned commit of the v10 development line. One reference picture serves both, because they render the same pixels.</td></tr>
+          <tr><th scope="row">Build presets</th><td class="num">7</td><td><span class="path">host-v96, host-v10, host-v96-asan, host-v10-asan, host-v96-tsan, host-v96-analyze, host-v96-coverage</span>. All with warnings as errors.</td></tr>
+          <tr><th scope="row">Compile-fail tests</th><td class="num">91</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
+          <tr><th scope="row">Test programs</th><td class="num">18</td><td>Run-time tests of the library, the agent kit and the examples.</td></tr>
+          <tr><th scope="row">Reference pictures</th><td class="num">4</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png</span></td></tr>
+          <tr><th scope="row">Fuzz targets</th><td class="num">3</td><td>The JSON reader (libFuzzer, one minute on every push), runtime documents and MCP messages (AFL++).</td></tr>
+          <tr><th scope="row">Corpus inputs replayed</th><td class="num">13</td><td>7 for JSON, 2 for documents, 4 for MCP messages. They run as tests under every preset, sanitizers included.</td></tr>
+          <tr><th scope="row">Complexity and CRAP limit</th><td class="num">8</td><td>For every function. <code>tools/crap.py</code> runs in CI after the coverage build.</td></tr>
+          <tr><th scope="row">Mutation testing</th><td class="num">-</td><td>Run on changed lines before a change is merged, with <code>tools/mutation.py</code>. It is advice, not a CI job.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="planned">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Planned</div>
+      <div>
+        <h2>Not on main yet.</h2>
+        <p>None of this is available today. The order may change.</p>
+      </div>
+    </div>
+
+    <!-- PLANNED: one line per feature. Move a line up to WORKS TODAY when its pull request merges. -->
+    <ul class="features planned">
+      <li data-state="In review"><strong><code>lv::computed</code> and <code>lv::effect</code></strong> <span>State that is derived from other states, and code that runs when a state changes.</span> <small><a href="https://github.com/filipsajdak/lvgl26/pull/30">pull request 30</a></small></li>
+      <li data-state="In development"><strong>Easing curves for animations</strong> <span>An easing argument for <code>lv::animate</code>, also from an easing token. The bounce demo on the front page uses it.</span> <small>on a development branch</small></li>
+      <li><strong>A finer angle type</strong> <span>Angles in steps smaller than a whole degree.</span> <small></small></li>
+      <li><strong>Example ports: more of LVGL</strong> <span>LVGL's own <code>widgets</code>, <code>layouts</code>, <code>styles</code>, <code>event</code>, <code>anim</code> and <code>scroll</code> examples, each compared pixel for pixel with the C original. Then larger demo screens.</span> <small>examples/README.md</small></li>
+      <li><strong>Importers</strong> <span>Offline host tools that convert existing UI descriptions to the lvgl26 JSON schema.</span> <small></small></li>
+      <li><strong><code>import lv;</code></strong> <span>The library as a C++ module, next to the headers.</span> <small></small></li>
+      <li><strong>ARM build and QEMU run</strong> <span>A freestanding <code>arm-none-eabi</code> build of a screen that runs in QEMU, with a report of flash and RAM against a budget.</span> <small></small></li>
+      <li><strong>Linter, profiler, debugger</strong> <span>Tools that a person or an agent can drive, exposed through the agent kit.</span> <small></small></li>
+      <li><strong>More for coding agents</strong> <span>Skills and a generated <code>llms.txt</code> that describe the framework to an agent that writes C++.</span> <small></small></li>
+      <li><strong>Components and assets</strong> <span>Components that hold state and a view. Images and fonts brought in with <code>#embed</code>.</span> <small></small></li>
+      <li><strong>Design tool adapters</strong> <span>Adapters that write <code>tokens.json</code> from a design tool, so that tokens are never copied by hand.</span> <small></small></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="limits">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Limits</div>
+      <div>
+        <h2>Known limits.</h2>
+        <p>Read these before you plan a product on it.</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="prose">
+        <h3>Compiler and platform</h3>
+        <ul class="yesno dot">
+          <li><strong>GCC 16 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
+          <li><strong>CMake 3.30 or newer</strong> and Ninja.</li>
+          <li><strong>Headers only.</strong> There is no <code>import lv;</code> yet.</li>
+          <li><strong>No microcontroller build is proven yet.</strong> The tests run on a Linux host. The ARM cross build and the size report are planned.</li>
+          <li><strong>ThreadSanitizer runs on Linux only.</strong></li>
+          <li><strong>The v10 line is a pinned commit.</strong> LVGL v10 has no release yet and keeps moving.</li>
+          <li><strong>Early.</strong> Version 0.0.1. Names and signatures can still change.</li>
+        </ul>
+      </div>
+      <div class="prose">
+        <h3>Language and library</h3>
+        <ul class="yesno dot">
+          <li><strong>Designated initializers must be in alphabetical order</strong> (<code>.id</code>, <code>.range</code>, <code>.value</code>). This is a C++ rule for members in declaration order.</li>
+          <li><strong>A misspelled or misordered member</strong> is reported as <code>could not convert '{...}' to props&lt;"arc"&gt;</code>. GCC does not name the member in that case.</li>
+          <li><strong>A quantity in a state needs an integer number</strong> for now.</li>
+          <li><strong>mp-units is yours to add.</strong> lvgl26 has no unit system for application values and does not include one.</li>
+          <li><strong>Animations take one number</strong> per property and have no easing argument yet.</li>
+          <li><strong>Hosted parts:</strong> <code>lv::ui_scheduler</code>, the PNG writer and the MCP server allocate or use the C library's files. They are not for a freestanding build.</li>
+          <li><strong>Runtime documents:</strong> text values are at most 127 characters and are not unescaped. At most 32 nodes can have an id. Handlers, bindings and pointers cannot come from a document.</li>
+          <li><strong>The MCP server blocks</strong> while it waits for a line, and speaks over stdin and stdout only.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="index.html#start">Get started</a>
+      <a class="btn" href="https://github.com/filipsajdak/lvgl26/issues">Report a problem</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>lvgl26 is open source under the MIT licence. It builds on <a href="https://github.com/lvgl/lvgl">LVGL</a>, which is also MIT. This site uses no trackers, no cookies and no third-party resources.</p>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="status.html">Status</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/LICENSE">MIT licence</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>
