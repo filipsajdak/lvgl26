@@ -38,6 +38,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <memory>
 #include <mutex>
 #include <new>
 #include <utility>
@@ -62,13 +63,20 @@ class ui_queue {
   std::size_t size_ = 0;
 
  public:
+  // lock() and unlock() by hand, not a std::lock_guard: with a guard, GCC 16.2's
+  // analyzer loses sight of the entry and reports it as leaked. Nothing between the
+  // two can throw.
   void push(queued* entry) {
-    const std::lock_guard lock{mutex_};
+    mutex_.lock();
     entry->next = nullptr;
     entry->previous = last_;
-    (last_ != nullptr ? last_->next : first_) = entry;
+    if (last_ != nullptr)
+      last_->next = entry;
+    else
+      first_ = entry;
     last_ = entry;
     ++size_;
+    mutex_.unlock();
   }
 
   // Takes the oldest entry out, or returns null.
@@ -92,8 +100,14 @@ class ui_queue {
 
  private:
   void unlink(queued* entry) {
-    (entry->previous != nullptr ? entry->previous->next : first_) = entry->next;
-    (entry->next != nullptr ? entry->next->previous : last_) = entry->previous;
+    if (entry->previous != nullptr)
+      entry->previous->next = entry->next;
+    else
+      first_ = entry->next;
+    if (entry->next != nullptr)
+      entry->next->previous = entry->previous;
+    else
+      last_ = entry->previous;
     --size_;
   }
 };
@@ -193,9 +207,11 @@ class ui_scheduler {
   // Returns false if there is no memory to queue it; `work` is then destroyed.
   template <detail::postable F>
   bool post(F work) {
-    auto* entry = new (std::nothrow) detail::posted<F>{std::move(work)};
+    // Owned here until it is in the queue: locking the mutex can throw.
+    std::unique_ptr<detail::posted<F>> entry{new (std::nothrow) detail::posted<F>{std::move(work)}};
     if (entry == nullptr) return false;
-    queue_.push(entry);
+    queue_.push(entry.get());
+    static_cast<void>(entry.release());
     return true;
   }
 
