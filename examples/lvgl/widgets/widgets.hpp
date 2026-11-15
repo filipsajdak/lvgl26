@@ -83,4 +83,26 @@ void slider_modes(lv::obj screen);                    // lv_example_slider_modes
 void slider_reversed_direction(lv::obj screen);       // lv_example_slider_reversed_direction
 void slider_value_range_orientation(lv::obj screen);  // lv_example_slider_value_range_orientation
 
+// switch
+void switch_event(lv::obj screen);        // lv_example_switch_event
+void switch_orientation(lv::obj screen);  // lv_example_switch_orientation
+void switch_state(lv::obj screen);        // lv_example_switch_state
+
+// checkbox
+void checkbox_bind_checked(lv::obj screen);  // lv_example_checkbox_bind_checked
+void checkbox_event(lv::obj screen);         // lv_example_checkbox_event
+void checkbox_states(lv::obj screen);        // lv_example_checkbox_states
+void checkbox_text(lv::obj screen);          // lv_example_checkbox_text
+
+// led
+void led_brightness(lv::obj screen);  // lv_example_led_brightness
+void led_color(lv::obj screen);       // lv_example_led_color
+void led_styling(lv::obj screen);     // lv_example_led_styling
+
+// line
+void line_points(lv::obj screen);  // lv_example_line_points
+
+// obj
+void obj_bind_style(lv::obj screen);  // lv_example_obj_bind_style
+
 }  // namespace widgets

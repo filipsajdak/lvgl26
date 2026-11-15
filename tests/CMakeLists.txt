@@ -135,6 +135,11 @@ lvgl26_widget_ports(bar bind_value img_indicator modes orientation styling value
 lvgl26_widget_ports(slider bind_state bind_value event img_indicator modes reversed_direction
                     value_range_orientation
                     ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(switch event orientation state)
+lvgl26_widget_ports(checkbox bind_checked event states text)
+lvgl26_widget_ports(led brightness color styling)
+lvgl26_widget_ports(line points)
+lvgl26_widget_ports(obj bind_style)
 
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
