@@ -4,15 +4,23 @@
 // it reads one input file, which is how AFL++ drives it (fuzz/afl.sh mcp_message).
 //
 // The input is a session: one message per line. Whatever the lines are, every
-// answer must be one line of well-formed JSON with "jsonrpc" in it, nothing may
-// crash or trip a sanitizer, and no file may be written. The server under test
-// is allowed a directory that does not exist, so the checks of a file name run,
-// and a name that passes them still writes nothing.
+// answer must be one line of well-formed JSON with "jsonrpc" in it, and nothing may
+// crash or trip a sanitizer.
+//
+// Files: every line goes to two servers. One is as a host gets it by default and
+// may write no files. The other may make screenshots in a directory made for this
+// run, next to a second directory it must never reach. The first holds a file
+// (taken.png) and a symbolic link into the second (link.png). After the session
+// the file is as it was, the link is still a link, the second directory is empty,
+// and everything new in the first has the name of a PNG file.
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
 
 #include <cstdio>
+#include <filesystem>
+#include <iterator>
+#include <random>
 #include <string>
 #include <string_view>
 
@@ -35,6 +43,44 @@ std::string read_file(const char* path) {
   return text;
 }
 
+// The two directories of a run. They go when the run ends.
+struct places {
+  std::filesystem::path base = std::filesystem::temp_directory_path() /
+                               ("lvgl26-mcp-fuzz-" + std::to_string(std::random_device{}()));
+  std::filesystem::path shots = base / "shots";
+  std::filesystem::path outside = base / "outside";
+
+  places() {
+    std::error_code failed;
+    require(std::filesystem::create_directory(base, failed));  // false if it was there
+    require(std::filesystem::create_directory(shots, failed));
+    require(std::filesystem::create_directory(outside, failed));
+    std::FILE* taken = std::fopen((shots / "taken.png").c_str(), "wb");
+    require(taken != nullptr);
+    std::fputs("kept", taken);
+    std::fclose(taken);
+    std::filesystem::create_symlink(outside / "target.png", shots / "link.png", failed);
+    require(!failed);
+  }
+  places(const places&) = delete;
+  places& operator=(const places&) = delete;
+  ~places() {
+    std::error_code ignored;
+    std::filesystem::remove_all(base, ignored);
+  }
+
+  // What must hold whatever the client asked for.
+  void untouched() const {
+    require(read_file((shots / "taken.png").c_str()) == "kept");
+    require(std::filesystem::is_symlink(shots / "link.png"));
+    require(std::filesystem::is_empty(outside));
+    require(std::distance(std::filesystem::directory_iterator{base},
+                          std::filesystem::directory_iterator{}) == 2);
+    for (const auto& entry : std::filesystem::directory_iterator{shots})
+      require(lv::mcp::detail::usable_file_name(entry.path().filename().string()));
+  }
+};
+
 void answer(server& agent, std::string_view message) {
   const std::string reply = agent.handle(message);
   if (reply.empty()) return;  // a notification
@@ -48,14 +94,19 @@ void answer(server& agent, std::string_view message) {
 void run(std::string_view input) {
   const auto screen = lv::screen_active();
   const auto before = lv_obj_get_child_count(screen.raw());
+  const places files;
+  const std::string shots = files.shots.string();
   {
-    server agent{screen, {.screenshot_directory = "/nonexistent/lvgl26-fuzz"}};
+    server careful{screen};
+    server agent{screen, {.screenshot_directory = shots}};
     while (!input.empty()) {
       const auto end = input.find('\n');
+      answer(careful, input.substr(0, end));
       answer(agent, input.substr(0, end));
       input.remove_prefix(end == std::string_view::npos ? input.size() : end + 1);
     }
   }
+  files.untouched();
   require(lv_obj_get_child_count(screen.raw()) == before);  // the screen goes with the server
 }
 
