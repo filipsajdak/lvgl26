@@ -4,6 +4,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <meta>
 
 namespace {
 
@@ -123,6 +124,16 @@ static_assert(lv::ease::in.path() == &lv_anim_path_ease_in && lv::ease::out.path
 static_assert(lv::ease::in_out.path() == &lv_anim_path_ease_in_out && !lv::ease::in_out.is_curve());
 static_assert(lv::ease::overshoot.path() == &lv_anim_path_overshoot);
 static_assert(lv::ease::bounce.path() == &lv_anim_path_bounce && lv::ease::step.path() == &lv_anim_path_step);
+
+// Every animation path LVGL has is named in lv::ease. A new one in LVGL fails here.
+consteval std::size_t lvgl_paths() {
+  std::size_t n = 0;
+  for (auto f : lv::detail::api)
+    if (std::meta::identifier_of(f).starts_with("lv_anim_path_")) ++n;
+  return n;
+}
+// linear, in, out, in_out, overshoot, bounce and step, and the one behind every curve.
+static_assert(lvgl_paths() == 8);
 
 // A named curve has the numbers LVGL gives it.
 constexpr bool has_parts(const lv::easing& e, int x1, int y1, int x2, int y2) {
