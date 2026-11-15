@@ -10,6 +10,12 @@ option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
 option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset arm-m4)" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
+# lvgl26 has no C++ modules. CMake would still scan every C++ source for them and pass
+# -fmodules-ts with a module mapper to the compiler, and ccache refuses to cache such a
+# call. A target that gets modules turns the scan on for itself with its CXX_SCAN_FOR_MODULES
+# property.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 include(cmake/quality.cmake)
 include(cmake/lvgl.cmake)
 
