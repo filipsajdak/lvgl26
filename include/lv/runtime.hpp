@@ -519,6 +519,10 @@ class runtime {
       else
         std::invoke(sink, std::string_view{"null"});
     }
+    template <class S>
+    void dump(S&&) const = delete(
+        "dump takes a sink: something to call with a std::string_view, for example "
+        "[&](std::string_view piece) { text += piece; }");
 
     // Changes properties by id: {"speedo": {"value": 60}, "title": {"text": "Trip"}}.
     // The same rules as for a document apply. The change is not undone if a later
@@ -578,6 +582,10 @@ class runtime {
     detail::dump_tree<Widgets...>(root.raw(), sink,
                                   ids != nullptr ? detail::id_lookup{ids, id_of} : detail::id_lookup{});
   }
+  template <class S>
+  static void dump(obj, S&&, const loaded* = nullptr) = delete(
+      "dump takes a sink: something to call with a std::string_view, for example "
+      "[&](std::string_view piece) { text += piece; }");
 
  private:
   // Applies properties with the tables of widget number `kind` of Widgets...
