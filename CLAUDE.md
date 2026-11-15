@@ -45,7 +45,7 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
 | Complexity | `lizard`, through `tools/crap.py` | 8 for every function, also compile-time ones |
 | CRAP | `tools/crap.py build/host-v96-coverage` after the coverage preset | 8 for every function that runs at run time |
 | Mutation | `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main` | Every survivor gets a test, or a reason |
-| Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp` (AFL++, GCC) | Every free input has a target; every crash becomes a corpus file |
+| Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp` (AFL++ with its GCC plugin: `fuzz/afl.sh`) | Every free input has a target; every crash becomes a corpus file |
 
 - A function over complexity 8 is split, not excused. A branch per type is one overload per type.
 - A `consteval` function has no run-time coverage: test it with `static_assert` and compile-fail tests.

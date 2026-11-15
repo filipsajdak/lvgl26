@@ -1,9 +1,8 @@
 // Fuzz target for runtime documents and patches (include/lv/runtime.hpp).
 //
 // This code needs reflection, so it is built with GCC. It is a plain program that
-// reads one input file, which is how AFL++ drives it:
-//   afl-g++-fast (or g++-16) ... fuzz/runtime_document.cpp -o build/fuzz/runtime_document
-//   afl-fuzz -i fuzz/corpus/document -o build/fuzz/out -- build/fuzz/runtime_document @@
+// reads one input file, which is how AFL++ drives it. fuzz/afl.sh builds it with
+// AFL++'s GCC plugin and runs afl-fuzz on it.
 //
 // The input is a document, optionally followed by a line with only "---" and a
 // patch. The program loads the document and applies the patch. Whatever the input
