@@ -30,6 +30,9 @@ function(lvgl26_compile_fail name message)
 endfunction()
 
 lvgl26_test(smoke)
+# The library in a program without exceptions and run-time type information.
+lvgl26_test(no_exceptions)
+target_compile_options(no_exceptions PRIVATE -fno-exceptions -fno-rtti)
 lvgl26_test(l1_views)
 lvgl26_test(json)
 lvgl26_test(runtime_ui)

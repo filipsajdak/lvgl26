@@ -22,7 +22,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Where | What runs |
 |---|---|
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, CRAP, one minute of fuzzing |
-| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing. A failure opens an issue |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
 
 - A check belongs in the pull request run if it takes a few minutes and a change can
   plausibly break it. Anything long goes to the nightly run.
@@ -40,6 +40,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Mistakes should be compile errors with a message that says how to fix them. Add a
   compile-fail test in `tests/fail/` for every new one.
 - The library throws nothing: compile error first, then contracts, then `std::expected`.
+- No `throw`, `try` or `typeid` in the headers, also not in consteval code: the library must
+  build with `-fno-exceptions -fno-rtti` (`tests/no_exceptions.cpp`). A compile-time error with
+  a computed message is `detail::fail(message)`.
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
 - Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
   reasoned exception. Use semantic or component tokens in UI code, not primitives.

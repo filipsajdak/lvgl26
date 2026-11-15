@@ -246,6 +246,22 @@ cmake --preset host-v10 && cmake --build --preset host-v10 && ctest --preset hos
 
 To build against a local LVGL checkout, add `-DFETCHCONTENT_SOURCE_DIR_LVGL=<path>`.
 
+## On a microcontroller
+
+The library builds with `-fno-exceptions -fno-rtti`, and `examples/mcu/slice.cpp` runs on an Arm
+Cortex-M4 in QEMU: a compile-time tree, a label bound to a state, and a task.
+
+```sh
+brew install arm-none-eabi-binutils arm-none-eabi-gcc qemu   # GCC 16.2, without its libraries
+tools/arm-toolchain.sh build/_tools/arm                      # builds newlib and libstdc++, once
+tools/arm-run.sh                                             # builds the slice, runs it in QEMU
+```
+
+Measured: 267 KB of code with LVGL's default configuration (every widget and feature on), 1052 bytes
+of LVGL's heap for the screen and 128 for the task. A program for a device should define
+`handle_contract_violation` itself, as the example does: the standard library's handler brings the
+exception run-time with it (12 KB).
+
 ## Website
 
 The public site is the plain HTML and CSS in `site/`: no build step and no dependencies.

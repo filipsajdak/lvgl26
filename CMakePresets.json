@@ -61,6 +61,18 @@
       "cacheVariables": {
         "LVGL26_COVERAGE": "ON"
       }
+    },
+    {
+      "name": "arm-m4",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/cmake/arm/toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "LVGL26_LVGL_REF": "v9.6.0",
+        "LVGL26_BUILD_TESTS": "OFF",
+        "LVGL26_BUILD_MCU_EXAMPLE": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -91,6 +103,10 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage"
+    },
+    {
+      "name": "arm-m4",
+      "configurePreset": "arm-m4"
     }
   ],
   "testPresets": [

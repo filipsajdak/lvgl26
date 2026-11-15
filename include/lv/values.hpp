@@ -241,7 +241,7 @@ struct text_format {
       }
     }
     if (places != 1)
-      throw detail::unknown_name("lv: a text binding format needs exactly one {} for the value, "
+      detail::fail("lv: a text binding format needs exactly one {} for the value, "
                                  "for example \"{} km/h\".");
     printf = std::define_static_string(out);
   }

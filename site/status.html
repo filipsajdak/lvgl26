@@ -95,6 +95,7 @@
       <li><strong>Agent kit</strong> <span>The widget tree as JSON, a PNG of a widget or a screen, and an MCP server with four tools inside the host program. See <a href="agents.html">Agents</a>.</span> <small>dump.hpp, png.hpp, mcp.hpp; agent_kit.cpp, examples/agent/</small></li>
       <li><strong>Settings</strong> <span>Project settings are a C++ specialization of <code>lv::cfg</code>, not a macro.</span> <small>config.hpp; fail/config_too_late.cpp</small></li>
       <li><strong>Example ports: LVGL get_started</strong> <span>The four LVGL <code>get_started</code> examples, rewritten with lvgl26. Each gives the same pixels as the C original.</span> <small>examples/lvgl/get_started/; examples_get_started.cpp</small></li>
+      <li><strong>Runs on a microcontroller</strong> <span>The slice (a compile-time tree, a label bound to a state, a task) is built for an Arm Cortex-M4 with <code>-fno-exceptions -fno-rtti</code> and run in QEMU every night. Measured: 267 KB of code with LVGL's default configuration, 1052 bytes of LVGL's heap for the screen, 128 for the task.</span> <small>examples/mcu, cmake/arm, tools/arm-run.sh</small></li>
     </ul>
   </div>
 </section>
@@ -147,7 +148,6 @@
       <li><strong>Example ports: more of LVGL</strong> <span>LVGL's own <code>widgets</code>, <code>layouts</code>, <code>styles</code>, <code>event</code>, <code>anim</code> and <code>scroll</code> examples, each compared pixel for pixel with the C original. Then larger demo screens.</span> <small>examples/README.md</small></li>
       <li><strong>Importers</strong> <span>Offline host tools that convert existing UI descriptions to the lvgl26 JSON schema.</span> <small></small></li>
       <li><strong><code>import lv;</code></strong> <span>The library as a C++ module, next to the headers.</span> <small></small></li>
-      <li><strong>ARM build and QEMU run</strong> <span>A freestanding <code>arm-none-eabi</code> build of a screen that runs in QEMU, with a report of flash and RAM against a budget.</span> <small></small></li>
       <li><strong>Linter, profiler, debugger</strong> <span>Tools that a person or an agent can drive, exposed through the agent kit.</span> <small></small></li>
       <li><strong>More for coding agents</strong> <span>Skills and a generated <code>llms.txt</code> that describe the framework to an agent that writes C++.</span> <small></small></li>
       <li><strong>Components and assets</strong> <span>Components that hold state and a view. Images and fonts brought in with <code>#embed</code>.</span> <small></small></li>
@@ -175,7 +175,7 @@
           <li><strong>GCC 16 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
           <li><strong>CMake 3.30 or newer</strong> and Ninja.</li>
           <li><strong>Headers only.</strong> There is no <code>import lv;</code> yet.</li>
-          <li><strong>No microcontroller build is proven yet.</strong> The tests run on a Linux host. The ARM cross build and the size report are planned.</li>
+          <li><strong>One microcontroller is proven, in an emulator.</strong> The slice runs on a Cortex-M4 in QEMU. No real board, no display driver and no other processor family has been tried, and there is no size budget yet.</li>
           <li><strong>ThreadSanitizer runs on Linux only.</strong></li>
           <li><strong>The v10 line is a pinned commit.</strong> LVGL v10 has no release yet and keeps moving.</li>
           <li><strong>Early.</strong> Version 0.0.1. Names and signatures can still change.</li>

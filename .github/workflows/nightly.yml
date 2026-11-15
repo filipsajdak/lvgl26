@@ -75,9 +75,47 @@ jobs:
             timeout-*
             oom-*
 
+  # The microcontroller check: the slice built for an Arm Cortex-M4 without exceptions
+  # and run in QEMU. Its sizes go to the run's summary.
+  image-arm:
+    uses: ./.github/workflows/image.yml
+    with:
+      name: ci-arm
+    permissions:
+      contents: read
+      packages: write
+
+  arm:
+    runs-on: ubuntu-latest
+    needs: image-arm
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image-arm.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the slice for Cortex-M4 and run it in QEMU
+        shell: bash
+        run: |
+          set -o pipefail
+          tools/arm-run.sh 2>&1 | tee arm-run.txt
+      - name: Report what it printed and its sizes
+        if: always()
+        run: |
+          {
+            echo '### The slice on Cortex-M4 (QEMU mps2-an386)'
+            echo '```'
+            cat arm-run.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
-    needs: [host, fuzz-json]
+    needs: [host, fuzz-json, arm]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
