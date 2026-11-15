@@ -17,6 +17,7 @@
 //   lv::sleep(300 * lv::ms)  a time span
 //   lv::changed(state)       the next change of a state; gives the new value
 //   another lv::task<T>      gives its result
+//   lv::animate(...)         an animation of a widget's property: see lv/animate.hpp
 //   lv::first(...)           whichever of several comes first; see below
 //
 // A deleted widget cancels the task. Once a task has waited for an event of a

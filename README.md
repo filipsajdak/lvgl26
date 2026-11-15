@@ -102,6 +102,35 @@ lv::spawn(count_clicks(button));
   `view.next().gone` to react to the deletion instead.
 - Everything runs on the UI thread. Coroutine frames come from LVGL's allocator.
 
+A task can also wait for an animation of one property of a widget:
+
+```cpp
+lv::task<> open(lv::view<"arc"> arc) {
+  co_await lv::animate(arc, {.value = {0, 100}}, 300 * ms);
+  bool finished = co_await lv::animate(arc, {.width = {80 * px, 120 * px}}, 200 * ms);
+}
+```
+
+- `lv::animatable<"arc">` lists the properties that take one number (a whole number, a length, an
+  angle, an opacity), generated from the same setters as `lv::props<"arc">`. Both ends have the
+  property's type: `.width = {0, 100}` is a compile error, and so is `{10 * px, 50 * pct}`.
+- The result is `false` when something stopped the animation: a newer animation of the same
+  property took over, or `lv_anim_delete()` removed it.
+- Cancelling the task, or losing in `lv::first`, deletes the animation.
+
+Another thread never calls LVGL. It posts work to the UI thread through `lv::ui_scheduler`
+(`#include <lv/ui_scheduler.hpp>`, hosted only):
+
+```cpp
+lv::ui_scheduler ui;                             // on the UI thread
+
+ui.post([reading] { temperature = reading; });   // from any thread
+co_await ui.schedule();                          // in a task: go on in a later turn of the loop
+```
+
+`post()` only locks a mutex and queues the work; the UI thread runs the queue from an LVGL timer,
+in the order of posting. It needs no LVGL build option (`LV_USE_OS` may stay off).
+
 Choosing by value is checked at compile time, in the shape of the pattern matching proposed for
 C++29 (P2688):
 
