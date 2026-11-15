@@ -322,6 +322,39 @@ void moving_a_task() {
   check(free_bytes() == before);
 }
 
+lv::task<> one_click(lv::view<"button"> button) { co_await button.next().clicked; }
+lv::task<> one_sleep() { co_await lv::sleep(1 * sec); }
+
+// What a waiting task takes from LVGL's heap, in pointers, so that the limit holds on
+// a 32-bit target as on this one: its frame, and LVGL's timer or event registration.
+// The limits are a little above what an unoptimized build measures (29 and 39 pointers,
+// on both LVGL versions); a change that makes a task larger must raise them on purpose.
+void a_task_is_small(lv::obj screen) {
+  // Naming an event costs one pointer, whatever the number of events LVGL has.
+  static_assert(sizeof(screen.next()) == sizeof(void*));
+  static_assert(sizeof(screen.next().clicked) == sizeof(void*));
+
+  const auto nothing = free_bytes();
+  auto button = screen.add<"button">();
+  // LVGL makes a widget's event list at the first handler, and keeps it.
+  check(lv::spawn(one_click(button)));
+  click(button);
+
+  const auto before = free_bytes();
+  check(lv::spawn(one_sleep()));
+  const auto sleeping = before - free_bytes();
+  check(lv::spawn(one_click(button)));
+  const auto waiting = before - sleeping - free_bytes();
+  check(sleeping <= 32 * sizeof(void*));
+  check(waiting <= 44 * sizeof(void*));
+  if (sleeping > 32 * sizeof(void*) || waiting > 44 * sizeof(void*))
+    std::printf("a sleeping task takes %zu bytes, one that waits for a click %zu\n", sleeping, waiting);
+
+  lv_obj_delete(button.raw());  // ends the task that waits for the click
+  lv_test_wait(1100);           // and the sleep ends by itself
+  check(free_bytes() == nothing);
+}
+
 void nothing_is_left_behind(lv::obj screen) {
   // Run the main paths once more and compare the heap before and after.
   const auto before = free_bytes();
@@ -365,6 +398,7 @@ int main() {
   a_task_is_tied_to_every_widget(screen);
   a_lost_wait_for_deletion(screen);
   moving_a_task();
+  a_task_is_small(screen);
   nothing_is_left_behind(screen);
 
   clicks.reset();
