@@ -6,16 +6,27 @@ on:
     - cron: '17 2 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
 
 jobs:
+  # The container the jobs below run in. It is built only when its Dockerfile changed.
+  image:
+    uses: ./.github/workflows/image.yml
+    permissions:
+      contents: read
+      packages: write
+
   # The presets that the quick checks leave out, each with the whole test suite.
   host:
     runs-on: ubuntu-latest
+    needs: image
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: gcc:16
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
     strategy:
       fail-fast: false
@@ -68,6 +79,8 @@ jobs:
     needs: [host, fuzz-json]
     if: failure()
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Open an issue
         env:
