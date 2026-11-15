@@ -17,6 +17,13 @@
 // them; reflection generates it from the same setters as lv::props<"arc">. Both
 // ends have the property's type, so `.width = {0, 100}` does not compile.
 //
+// The value moves at one speed unless a fourth argument gives an easing curve: an
+// lv::bezier, the two control points of a cubic Bezier curve as in CSS and in a
+// "cubicBezier" design token.
+//
+//   co_await lv::animate(ball, {.y = {top, floor}}, 400 * lv::ms, *tok.motion.fall);
+//   co_await lv::animate(ball, {.y = {floor, top}}, 400 * lv::ms, lv::bezier{0.33, 0.67, 0.67, 1});
+//
 // co_await gives true when the animation ran to its end, and false when something
 // stopped it before that: a newer animation of the same property of the same
 // widget took over (as in LVGL, the newer one wins), or lv_anim_delete() removed
@@ -30,6 +37,7 @@
 #include <lv/detail/checked.hpp>
 #include <lv/props.hpp>
 #include <lv/task.hpp>
+#include <lv/token_types.hpp>
 #include <lv/units.hpp>
 #include <lv/values.hpp>
 #include <lv/view.hpp>
@@ -226,12 +234,28 @@ void animation_step(void* widget, std::int32_t value) {
 // one of them run: starting a second one deletes the first. So at most one source
 // owns the animation of a property at any time, and disarm() can delete it by
 // those two.
+// A control point of an easing curve as LVGL counts it: 0 to 1 is 0 to 1024.
+constexpr std::int16_t bezier_part(double v) {
+  return static_cast<std::int16_t>(v * 1024 + (v < 0 ? -0.5 : 0.5));
+}
+
+// Whether `v` is from `low` to `high`.
+constexpr bool within(double v, double low, double high) { return v >= low && v <= high; }
+
+// Whether LVGL can follow this curve: time only moves forward, so both x are from 0
+// to 1, as in CSS; a y may go beyond its ends, for a curve that overshoots.
+constexpr bool usable(const bezier& curve) {
+  return within(curve.x1, 0, 1) && within(curve.x2, 0, 1) && within(curve.y1, -8, 8) &&
+         within(curve.y2, -8, 8);
+}
+
 struct animation_source {
   lv_obj_t* widget = nullptr;
   lv_anim_exec_xcb_t step = nullptr;
   std::int32_t from = 0;
   std::int32_t to = 0;
   std::uint32_t ms = 0;
+  bezier curve{};  // how the value moves between its ends; the default is a straight line
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_anim_t* running = nullptr;  // the animation, while it runs
@@ -323,6 +347,11 @@ struct animation_source {
     lv_anim_set_exec_cb(&a, step);
     lv_anim_set_values(&a, from, to);
     lv_anim_set_duration(&a, ms);
+    if (curve != bezier{}) {
+      lv_anim_set_path_cb(&a, &lv_anim_path_custom_bezier3);
+      lv_anim_set_bezier3_param(&a, bezier_part(curve.x1), bezier_part(curve.y1), bezier_part(curve.x2),
+                                bezier_part(curve.y2));
+    }
     lv_anim_set_completed_cb(&a, &completed_cb);
     lv_anim_set_deleted_cb(&a, &deleted_cb);
     lv_anim_set_user_data(&a, this);
@@ -342,8 +371,10 @@ constexpr std::size_t count_set(const animatable<W>& what) {
 
 // The animation of the property that is set in `what`.
 template <fixed W>
-animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, duration time) {
+animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, duration time,
+                              const bezier& curve) {
   animation_source source{widget, time.ms};
+  source.curve = curve;
   template for (constexpr auto i : indices<members_of_animatable<W>.size()>) {
     const auto& ends = what.[:members_of_animatable<W>[i]:];
     if (ends.is_set()) {
@@ -358,15 +389,17 @@ animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, durat
 }  // namespace detail
 
 // bool finished = co_await lv::animate(arc, {.value = {0, 100}}, 300 * lv::ms);
-// Runs one property of a widget from one value to another. See the top of this file.
+// Runs one property of a widget from one value to another, at one speed or along an
+// easing curve. See the top of this file.
 template <detail::fixed W, class D = void>
 detail::animation_source animate(view<W> widget, const detail::lazy_animatable<W, D>& what,
-                                 duration time)
+                                 duration time, const bezier& curve = {})
   pre(widget.raw() != nullptr)
   pre(detail::count_set<W>(what) == 1)             // one property for each animation
   pre(std::in_range<std::int32_t>(time.ms))        // LVGL counts an animation's time in 31 bits
+  pre(detail::usable(curve))                       // both x of the curve are from 0 to 1
 {
-  return detail::animation_of<W>(widget.raw(), what, time);
+  return detail::animation_of<W>(widget.raw(), what, time, curve);
 }
 
 }  // namespace lv

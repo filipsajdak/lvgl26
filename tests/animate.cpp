@@ -96,6 +96,54 @@ lv::task<> turn(lv::view<"arc"> arc, int from, int to, bool* done) {
   *done = true;
 }
 
+// An easing curve as LVGL counts it, and which curves it can follow.
+static_assert(lv::detail::bezier_part(0) == 0 && lv::detail::bezier_part(1) == 1024);
+static_assert(lv::detail::bezier_part(0.5) == 512 && lv::detail::bezier_part(-0.25) == -256);
+static_assert(lv::detail::bezier_part(0.33) == 338 && lv::detail::bezier_part(-0.33) == -338);
+static_assert(lv::detail::within(0, 0, 1) && lv::detail::within(1, 0, 1) && !lv::detail::within(2, 0, 1));
+static_assert(lv::detail::usable(lv::bezier{}) && lv::detail::usable(lv::bezier{0, 0, 1, 1}));
+static_assert(lv::detail::usable(lv::bezier{0.3, -8, 0.7, 8}));
+static_assert(!lv::detail::usable(lv::bezier{-0.1, 0, 1, 1}) && !lv::detail::usable(lv::bezier{1.1, 0, 1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, 0, -0.1, 1}) && !lv::detail::usable(lv::bezier{0, 0, 1.1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, -8.1, 1, 1}) && !lv::detail::usable(lv::bezier{0, 8.1, 1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, 0, 1, -8.1}) && !lv::detail::usable(lv::bezier{0, 0, 1, 8.1}));
+
+lv::task<> eased(lv::view<"arc"> arc, lv::bezier curve, outcome* out) {
+  out->finished = co_await lv::animate(arc, {.value = {0, 1000}}, 400 * ms, curve);
+  out->steps = 1;
+}
+
+// The value half way through an animation from 0 to 1000 along `curve`. The curve
+// changes how the value moves, never where it ends.
+std::int32_t half_way(lv::view<"arc"> arc, lv::bezier curve) {
+  outcome out;
+  check(lv::spawn(eased(arc, curve, &out)));
+  lv_test_wait(200);
+  const std::int32_t middle = value_of(arc);
+  check(out.steps == 0);
+  lv_test_wait(250);
+  check(value_of(arc) == 1000 && out.steps == 1 && out.finished);
+  return middle;
+}
+
+void an_easing_curve_shapes_the_motion(lv::obj screen) {
+  auto arc = screen.add<"arc">();
+  arc.set({.range = {0, 1000}});
+  const auto before = free_bytes();
+
+  const auto straight = half_way(arc, lv::bezier{});
+  check(straight > 440 && straight < 560);
+  // Like a fall under gravity: slow first. The curve is the parabola t * t.
+  const auto falling = half_way(arc, lv::bezier{0.33, 0, 0.67, 0.33});
+  check(falling > 180 && falling < 330);
+  // Like a rise: fast first.
+  const auto rising = half_way(arc, lv::bezier{0.33, 0.67, 0.67, 1});
+  check(rising > 670 && rising < 820);
+
+  check(lv_anim_count_running() == 0 && free_bytes() == before);
+  lv_obj_delete(arc.raw());
+}
+
 void every_kind_of_number_is_animated(lv::obj screen) {
   auto parent = screen.add<"obj">();
   parent.set({.height = 200 * px, .width = 300 * px});
@@ -458,6 +506,7 @@ int main(int argc, char**) {
   static_assert(!has_style<lv::animatable<"obj">>);
 
   an_animation_runs_to_its_end(screen);
+  an_easing_curve_shapes_the_motion(screen);
   every_kind_of_number_is_animated(screen);
   ends_are_checked(argc + 4, argc + 9);
   first_of_several(screen);
