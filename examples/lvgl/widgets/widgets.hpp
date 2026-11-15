@@ -5,8 +5,13 @@
 // the C original does. tests/examples_widgets_*.cpp check that each one renders
 // the same pixels as the original.
 //
-// The C examples lay out the screen itself. A port puts one lv::group that fills
-// the screen in its place, and the group carries the layout.
+// The C examples lay out the screen itself. A tree cannot have an existing widget
+// as its root, so a port does one of two things:
+// - It puts one lv::group that fills the screen in the screen's place, and the group
+//   carries the layout. This is the usual way.
+// - Where the picture depends on what the theme gives a screen (the gap between
+//   the widgets of a row, the scrollbar), it sets the layout on the screen with
+//   screen.set({...}) and places each widget as a tree of its own.
 
 #include <lv/lv.hpp>
 
@@ -23,6 +28,10 @@ inline constexpr auto tok = lv::tokens<tokens_json>;
 inline constexpr auto centered = lv::style({.flex_cross_place = LV_FLEX_ALIGN_CENTER,
                                             .flex_main_place = LV_FLEX_ALIGN_CENTER,
                                             .flex_track_place = LV_FLEX_ALIGN_CENTER});
+
+// Children spread evenly along a row, each in the middle of the row's height.
+inline constexpr auto spread_out = lv::style({.flex_main_place = LV_FLEX_ALIGN_SPACE_EVENLY,
+                                              .flex_track_place = LV_FLEX_ALIGN_CENTER});
 
 // An opacity that the C example gives as a step of 255 (80, 120, 180). An opacity
 // token is a number from 0 to 1 that is rounded to a whole percent, and no whole
@@ -44,5 +53,17 @@ void button_basic(lv::obj screen);    // lv_example_button_basic
 void button_event(lv::obj screen);    // lv_example_button_event
 void button_states(lv::obj screen);   // lv_example_button_states
 void button_styling(lv::obj screen);  // lv_example_button_styling
+
+// arc
+void arc_bind_value(lv::obj screen);     // lv_example_arc_bind_value
+void arc_change_rate(lv::obj screen);    // lv_example_arc_change_rate
+void arc_event(lv::obj screen);          // lv_example_arc_event
+void arc_img_indicator(lv::obj screen);  // lv_example_arc_img_indicator
+void arc_mode(lv::obj screen);           // lv_example_arc_mode
+void arc_pie_chart(lv::obj screen);      // lv_example_arc_pie_chart
+void arc_rotation(lv::obj screen);       // lv_example_arc_rotation
+void arc_set_angles(lv::obj screen);     // lv_example_arc_set_angles
+void arc_styling(lv::obj screen);        // lv_example_arc_styling
+void arc_value_range(lv::obj screen);    // lv_example_arc_value_range
 
 }  // namespace widgets

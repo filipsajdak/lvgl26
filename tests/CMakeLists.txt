@@ -99,15 +99,20 @@ add_test(NAME examples_get_started COMMAND examples_get_started)
 
 # LVGL's examples/widgets, one test per widget folder. The arguments after the
 # folder are the ported examples: lv_example_<folder>_<name>.c is compared with
-# examples/lvgl/widgets/<folder>_<name>.cpp.
+# examples/lvgl/widgets/<folder>_<name>.cpp. ASSETS names the pictures they use.
 set(LVGL26_C_WIDGETS ${lvgl_SOURCE_DIR}/examples/widgets)
 set(LVGL26_WIDGETS ${CMAKE_CURRENT_SOURCE_DIR}/../examples/lvgl/widgets)
 function(lvgl26_widget_ports folder)
+  cmake_parse_arguments(arg "" "" "ASSETS" ${ARGN})
   set(originals)
   set(ports)
-  foreach(name ${ARGN})
+  foreach(name ${arg_UNPARSED_ARGUMENTS})
     list(APPEND originals ${LVGL26_C_WIDGETS}/${folder}/lv_example_${folder}_${name}.c)
     list(APPEND ports ${LVGL26_WIDGETS}/${folder}_${name}.cpp)
+  endforeach()
+  # The pictures an example draws with come from LVGL's examples/assets.
+  foreach(asset ${arg_ASSETS})
+    list(APPEND originals ${lvgl_SOURCE_DIR}/examples/assets/${asset}.c)
   endforeach()
   add_library(lvgl_c_widgets_${folder} STATIC EXCLUDE_FROM_ALL ${originals})
   target_link_libraries(lvgl_c_widgets_${folder} PRIVATE lvgl::lvgl)
@@ -122,6 +127,9 @@ endfunction()
 
 lvgl26_widget_ports(label bind_text long_mode recolor set_text_newline styling text_align)
 lvgl26_widget_ports(button basic event states styling)
+lvgl26_widget_ports(arc bind_value change_rate event img_indicator mode pie_chart rotation
+                    set_angles styling value_range
+                    ASSETS img_arc_bg img_arc_indicator)
 
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
