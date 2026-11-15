@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Design: lvgl26</title>
+<meta name="description" content="From mood board to firmware: Signal, a design system for a family of eight devices, and how its tokens become lvgl26 screens.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23b83a0a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<style>
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("media/fonts/BarlowCondensed-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("media/fonts/BarlowCondensed-SemiBold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Barlow"; font-weight: 500; src: url("media/fonts/Barlow-Medium.ttf") format("truetype"); font-display: swap; }
+/* The Signal specimen keeps its own colours in both site themes: it shows a device screen. */
+.signal { background: #0A0A0C; color: #FFFFFF; font-family: "Barlow", system-ui, sans-serif; font-weight: 500; padding: 32px; display: grid; gap: 32px; }
+.signal h3 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700; font-size: 16px; letter-spacing: 0.12em; color: #B4B7C0; margin: 0 0 12px; text-transform: uppercase; }
+.signal .name { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700; font-size: clamp(64px, 14vw, 120px); line-height: 0.9; margin: 0; }
+.signal .motto { color: #B4B7C0; margin: 24px 0 0; font-size: 15px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; list-style: none; margin: 0; padding: 0; }
+.swatches li { display: grid; gap: 6px; font-size: 13px; }
+.swatches i { display: block; height: 56px; border: 1px solid #34353D; }
+.swatches code { color: #B4B7C0; background: none; padding: 0; font-size: 12px; }
+.numerals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 16px 32px; }
+.numerals b { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700; line-height: 0.9; }
+.numerals small { color: #B4B7C0; font-size: 13px; display: block; font-weight: 500; }
+.alarms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.alarms div { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 0.04em; padding: 10px 14px; text-transform: uppercase; }
+.stages { counter-reset: stage; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.stages li { counter-increment: stage; padding-left: 3rem; position: relative; }
+.stages li::before { content: counter(stage); position: absolute; left: 0; top: 0; font-family: var(--mono); color: var(--muted, inherit); }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">lvgl26 <span>namespace lv</span></a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="agents.html">Agents</a></li>
+        <li><a href="design.html" aria-current="page">Design</a></li>
+        <li><a href="status.html">Status</a></li>
+        <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero plain">
+  <div class="wrap">
+    <p class="eyebrow">From mood board to firmware</p>
+    <h1>One design system, eight devices.</h1>
+    <p class="lead">A product is designed before it is programmed. This page follows one family of devices from its first mood boards to screens that run on a microcontroller, with lvgl26 reading the design system's tokens at compile time.</p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>The path</h2>
+    <ol class="stages">
+      <li><strong>Research.</strong> What each device demands: a thermostat read from across a room, a watch read in a second, a machine panel where colour is kept for alarms, a charger that must show its price, a medical screen whose alarms have priorities.</li>
+      <li><strong>Mood boards.</strong> Three directions for the whole family. One was chosen: Signal.</li>
+      <li><strong>Design system.</strong> Signal's tokens and rules, below. Done.</li>
+      <li><strong>Screens.</strong> The key screens of all eight devices, drawn with Signal. In progress.</li>
+      <li><strong>Firmware.</strong> The same tokens, read by lvgl26 at compile time; the screens as compile-time trees; sizes measured on a Cortex-M4. Planned.</li>
+    </ol>
+    <p class="cap">The devices: smart thermostat, smartwatch, kitchen appliance, e-bike display, machine panel, EV charger, medical device, vehicle instrument cluster.</p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>Signal</h2>
+    <p>Black ground, tall condensed numbers, square corners, and one loud colour that marks what the person chose. A value in its normal range has no colour at all, so that an alarm is seen.</p>
+    <div class="signal">
+      <div>
+        <p class="name">Signal</p>
+        <p class="motto">One loud colour. Everything else stays out of the way.</p>
+      </div>
+      <div>
+        <h3>Colour</h3>
+        <ul class="swatches">
+          <li><i style="background:#0A0A0C"></i>ground <code>#0A0A0C</code></li>
+          <li><i style="background:#1B1C22"></i>surface <code>#1B1C22</code></li>
+          <li><i style="background:#34353D"></i>line <code>#34353D</code></li>
+          <li><i style="background:#FFFFFF"></i>reading <code>#FFFFFF</code></li>
+          <li><i style="background:#B4B7C0"></i>muted <code>#B4B7C0</code></li>
+          <li><i style="background:#D4FF3A"></i>active <code>#D4FF3A</code></li>
+          <li><i style="background:#FF4438"></i>alarm <code>#FF4438</code></li>
+          <li><i style="background:#FFC531"></i>caution <code>#FFC531</code></li>
+          <li><i style="background:#9DB4FF"></i>advice <code>#9DB4FF</code></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Numbers</h3>
+        <div class="numerals">
+          <div><b style="font-size:104px">87</b><small>numeral-xl, 104 px</small></div>
+          <div><b style="font-size:72px">21.5°</b><small>numeral-l, 72 px</small></div>
+          <div><b style="font-size:40px">68 %</b><small>numeral-m, 40 px</small></div>
+        </div>
+      </div>
+      <div>
+        <h3>Alarms: a colour, a mark and a word</h3>
+        <div class="alarms">
+          <div style="background:#FF4438;color:#0A0A0C">▲▲▲ Occlusion</div>
+          <div style="background:#FFC531;color:#0A0A0C">▲▲ High pressure</div>
+          <div style="border:4px solid #9DB4FF;color:#9DB4FF">▲ Service due</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">The fonts are Barlow and Barlow Condensed, under the SIL Open Font Licence, so a device may embed them.</p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>Rules made for a microcontroller</h2>
+    <ul>
+      <li><strong>Fill, do not blend.</strong> Square blocks are the fastest thing to draw. There are no shadows, gradients or blur.</li>
+      <li><strong>Large numbers get a font of their own</strong> that holds only the digits and a few signs.</li>
+      <li><strong>Redraw the number, not the screen.</strong> A reading sits in its own block, so only that block changes.</li>
+      <li><strong>Touch targets are tokens:</strong> 48 px for a bare finger, 80 px where gloves are worn.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>The files</h2>
+    <p>The design system is in the repository, under the MIT licence like everything else:</p>
+    <ul>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/design/signal/README.md">design/signal/README.md</a>: the rules, written so that a person or an AI agent can design a new screen with them.</li>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/design/signal/tokens.design.json">design/signal/tokens.design.json</a>: the tokens as the design tool keeps them. lvgl26 reads design tokens in the W3C format; the converter between the two is the next step.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>lvgl26 is open source under the MIT licence. It builds on <a href="https://github.com/lvgl/lvgl">LVGL</a>, which is also MIT. This site uses no trackers, no cookies and no third-party resources.</p>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="agents.html">Agents</a></li>
+        <li><a href="design.html">Design</a></li>
+      <li><a href="status.html">Status</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26">GitHub</a></li>
+      <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/LICENSE">MIT licence</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>
