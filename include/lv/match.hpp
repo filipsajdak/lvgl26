@@ -22,6 +22,7 @@
 // A handler takes the matched value, or nothing.
 
 #include <lv/detail/api.hpp>
+#include <lv/detail/checked.hpp>
 
 #include <concepts>
 #include <meta>
@@ -227,6 +228,7 @@ struct matcher {
     // A check in the body, not pre(): on GCC 16.2, pre() crashes with a deduced
     // return type, and a fold over the parameters in pre() is not a constant.
     contract_assert((matches(arms) || ...));
+    keep_checked((matches(arms) || ...));
     using result = typename match_result<decltype(run_arm(arms, subject))...>::type;
     return choose<result>(arms...);
   }

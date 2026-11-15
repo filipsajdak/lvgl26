@@ -70,6 +70,13 @@ Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
   parameters inside `pre`. Use `contract_assert` as the first statement there, with a comment that
   says so.
 - Every new error message gets a compile-fail test in `tests/fail/`.
+- GCC 16.2 folds a call with constant arguments without its contracts when the call is part of
+  a larger expression. A constexpr function with a contract on its values repeats the condition
+  as its first statement with `detail::keep_checked(...)` (see `include/lv/detail/checked.hpp`),
+  and gets two compile-fail tests: the call as a whole initializer, and inside an expression.
+- To test that a valid value passes a precondition, make the call the whole initializer of a
+  `constexpr` variable, before any other use of the same arguments. A `static_assert` does not
+  evaluate the precondition.
 
 ## Known tool limits
 
