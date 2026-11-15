@@ -132,9 +132,9 @@ lv::task<> open(lv::view<"arc"> arc) {
 - `lv::animatable<"arc">` lists the properties that take one number (a whole number, a length, an
   angle, an opacity), generated from the same setters as `lv::props<"arc">`. Both ends have the
   property's type: `.width = {0, 100}` is a compile error, and so is `{10 * px, 50 * pct}`.
-- A fourth argument gives an easing curve, an `lv::bezier` as in CSS and in a `cubicBezier` design
-  token: `lv::animate(ball, {.y = {top, floor}}, 400 * ms, *tok.motion.fall)`. Without it the value
-  moves at one speed.
+- A fourth argument says how the value moves: a name from `lv::ease` (LVGL's own paths and named
+  curves, such as `lv::ease::in_quad`, `out_back`, `bounce`), a `cubicBezier` design token
+  (`tok.motion.fall`), or an `lv::bezier` as in CSS. Without it the value moves at one speed.
 - The result is `false` when something stopped the animation: a newer animation of the same
   property took over, or `lv_anim_delete()` removed it.
 - Cancelling the task, or losing in `lv::first`, deletes the animation.
