@@ -144,7 +144,7 @@ def make_copy(preset, cmake_args):
         sys.exit("Configuring the copy failed:\n" + output[-2000:])
 
 
-def judge(preset, tests, targets):
+def judge(preset, tests, targets, limit):
     """Builds and runs the chosen tests against the header as it is now."""
     code, output = run(f"cmake --build --preset {preset}" + (f" --target {targets}" if targets else ""))
     if code != 0:
@@ -152,7 +152,9 @@ def judge(preset, tests, targets):
         first = next((line for line in output.splitlines() if "error:" in line), "")
         caught = CAUGHT_AT_COMPILE_TIME.search(output) and not NOT_CPP.search(first)
         return "killed" if caught else "invalid"
-    code, _ = run(f"ctest --preset {preset} -R '{tests}'")
+    # A mutant can turn a loop into an endless one. The limit ends such a test, and
+    # a test that is ended has failed: the mutant is killed.
+    code, _ = run(f"ctest --preset {preset} -R '{tests}' --timeout {limit}")
     return "survived" if code == 0 else "killed"
 
 
@@ -179,6 +181,8 @@ def main():
     parser.add_argument("--logic", action="store_true",
                         help="only mutants that swap one operator or one number on a line of "
                              "statements; use it for template and reflection headers")
+    parser.add_argument("--test-timeout", type=int, default=60,
+                        help="seconds a test may run against a mutant before it counts as failed")
     parser.add_argument("--cmake-args", default="", help="extra arguments for configuring the copy")
     args = parser.parse_args()
 
@@ -196,7 +200,7 @@ def main():
     # makes the build system compile the real header for the baseline.
     header.write_text(original)
 
-    if judge(args.preset, args.tests, args.targets) != "survived":
+    if judge(args.preset, args.tests, args.targets, args.test_timeout) != "survived":
         sys.exit("The tests do not pass on the unchanged header; fix that first.")
 
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / header.stem)
@@ -211,7 +215,7 @@ def main():
     try:
         for index, mutant in enumerate(mutants, start=1):
             header.write_text(mutant.read_text())
-            verdict = judge(args.preset, args.tests, args.targets)
+            verdict = judge(args.preset, args.tests, args.targets, args.test_timeout)
             counts[verdict] += 1
             if verdict == "survived":
                 survivors.append(describe(original, mutant))
