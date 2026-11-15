@@ -37,7 +37,7 @@ void properties(lv::obj screen) {
   // Typed properties: units and strict integers.
   a.set({.rotation = 90 * deg, .value = 30});
   check(a.get<"value">() == 30);
-  check(a.get<"rotation">() == 90);
+  check(a.get<"rotation">() == 90 * deg);
   l.set({.text = "km/h", .width = 80 * px});
   check(std::strcmp(l.get<"text">(), "km/h") == 0);
   lv_obj_update_layout(l.raw());

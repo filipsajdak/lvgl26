@@ -157,10 +157,6 @@ consteval bool token_member_used(json::value root, json::member m, token_type in
   return token_cpp_type(resolve_token(root, child, inherited).type) != std::meta::info{};
 }
 
-consteval bool is_name_char(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
-}
-
 // The value that starts at `offset` in `doc`. The offset comes from a value of the
 // same document.
 consteval json::value value_at(std::string_view doc, std::size_t offset)

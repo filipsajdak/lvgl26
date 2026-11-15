@@ -28,6 +28,11 @@ constexpr std::string str(std::string_view v) {
   return s;
 }
 
+// A character of a C or C++ name.
+consteval bool is_name_char(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+}
+
 consteval std::vector<std::meta::info> scan_api() {
   std::vector<std::meta::info> v;
   for (auto m : std::meta::members_of(^^::, std::meta::access_context::unchecked()))
