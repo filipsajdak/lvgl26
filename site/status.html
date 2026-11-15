@@ -87,6 +87,7 @@
       <li><strong><code>lv::computed</code> and <code>lv::effect</code></strong> <span>A value derived from states, bound to a widget like a state, and code that runs when states change. The dependencies are fixed at compile time; nothing is registered at run time.</span> <small>computed.hpp; computed.cpp</small></li>
       <li><strong>Coroutine tasks</strong> <span><code>lv::task&lt;T&gt;</code> on LVGL's loop. <code>view.next().clicked</code> and every other event, <code>lv::sleep</code>, <code>lv::first</code>, <code>lv::spawn</code>. A deleted widget cancels the task.</span> <small>task.hpp; task.cpp</small></li>
       <li><strong>Animation</strong> <span><code>lv::animate(widget, {.property = {from, to}}, time)</code> for a property that takes one number: a whole number, a length, an angle or an opacity. The result says whether it ran to its end.</span> <small>animate.hpp; animate.cpp</small></li>
+      <li><strong>Easing curves for animations</strong> <span>A fourth argument of <code>lv::animate</code>: a name from <code>lv::ease</code> (LVGL\'s six animation paths and its 24 named curves), a <code>cubicBezier</code> design token, or an <code>lv::bezier</code> as in CSS. Without it the value moves at one speed.</span> <small>easing.hpp, animate.hpp; animate.cpp</small></li>
       <li><strong>Other threads</strong> <span><code>lv::ui_scheduler</code>: <code>post()</code> from any thread, <code>co_await ui.schedule()</code> in a task. Hosted only. Needs no LVGL build option.</span> <small>ui_scheduler.hpp; ui_scheduler.cpp, under ThreadSanitizer</small></li>
       <li><strong>Match</strong> <span><code>lv::match</code> with <code>lv::is&lt;...&gt;</code> and <code>lv::otherwise</code>. For an enum, every enumerator needs exactly one arm.</span> <small>match.hpp; match.cpp</small></li>
       <li><strong>Runtime JSON and patches</strong> <span><code>lv::runtime&lt;...&gt;::load</code> builds a screen from a document. <code>apply</code> changes properties by id. A refused document leaves nothing behind.</span> <small>runtime.hpp, json.hpp; runtime_ui.cpp, json.cpp</small></li>
@@ -142,7 +143,6 @@
 
     <!-- PLANNED: one line per feature. Move a line up to WORKS TODAY when its pull request merges. -->
     <ul class="features planned">
-      <li data-state="In development"><strong>Easing curves for animations</strong> <span>An easing argument for <code>lv::animate</code>, also from an easing token. The bounce demo on the front page uses it.</span> <small>on a development branch</small></li>
       <li><strong>A finer angle type</strong> <span>Angles in steps smaller than a whole degree.</span> <small></small></li>
       <li><strong>Example ports: more of LVGL</strong> <span>LVGL's own <code>widgets</code>, <code>layouts</code>, <code>styles</code>, <code>event</code>, <code>anim</code> and <code>scroll</code> examples, each compared pixel for pixel with the C original. Then larger demo screens.</span> <small>examples/README.md</small></li>
       <li><strong>Importers</strong> <span>Offline host tools that convert existing UI descriptions to the lvgl26 JSON schema.</span> <small></small></li>
@@ -188,7 +188,7 @@
           <li><strong>A misspelled or misordered member</strong> is reported as <code>could not convert '{...}' to props&lt;"arc"&gt;</code>. GCC does not name the member in that case.</li>
           <li><strong>A quantity in a state needs an integer number</strong> for now.</li>
           <li><strong>mp-units is yours to add.</strong> lvgl26 has no unit system for application values and does not include one.</li>
-          <li><strong>Animations take one number</strong> per property and have no easing argument yet.</li>
+          <li><strong>Animations take one number</strong> per property, and one property for each call.</li>
           <li><strong>Hosted parts:</strong> <code>lv::ui_scheduler</code>, the PNG writer and the MCP server allocate or use the C library's files. They are not for a freestanding build.</li>
           <li><strong>Runtime documents:</strong> text values are at most 127 characters and are not unescaped. At most 32 nodes can have an id. Handlers, bindings and pointers cannot come from a document.</li>
           <li><strong>The MCP server blocks</strong> while it waits for a line, and speaks over stdin and stdout only.</li>

@@ -262,7 +262,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Typed state and bindings</strong> over <code>lv_subject_t</code>, with mp-units measures</li>
         <li><strong>Derived state and effects</strong> with <code>lv::computed</code> and <code>lv::effect</code></li>
         <li><strong>Coroutine tasks</strong> on LVGL's loop: events, timers, <code>lv::first</code></li>
-        <li><strong>Animations</strong> a task can await with <code>lv::animate</code></li>
+        <li><strong>Animations</strong> a task can await with <code>lv::animate</code>, with easing curves</li>
         <li><strong>Work from other threads</strong> through <code>lv::ui_scheduler</code></li>
         <li><strong>Exhaustive matching</strong> with <code>lv::match</code></li>
         <li><strong>Runtime JSON screens</strong> and patches by id</li>
@@ -445,7 +445,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <span class="tag">A demo in development</span>
         <h2>Motion, written as a coroutine.</h2>
         <p class="mt-s">A ball bounces with gravity, squashes and stretches, and casts a blurred shadow. The screen is a compile-time tree with design tokens. The motion is a task that awaits one animation after another.</p>
-        <p>This demo runs on a development branch. It uses easing curves for <code>lv::animate</code>, which are not on <code>main</code> yet. The <a href="status.html">status page</a> lists what works today.</p>
+        <p>The demo program itself is on a development branch. What it uses is on <code>main</code>: the tree, the tokens, the tasks and the easing curves of <code>lv::animate</code>. The <a href="status.html">status page</a> lists what works today.</p>
       </div>
     </div>
   </div>
