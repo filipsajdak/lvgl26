@@ -1,0 +1,7 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"session","version":"1"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"load_document","arguments":{"document":{"type":"column","props":{"size":["100%","100%"]},"children":[{"type":"label","id":"title","props":{"text":"Speed"}},{"type":"arc","id":"speedo","props":{"range":[0,240],"value":120}},{"type":"button","id":"reset","children":[{"type":"label","props":{"text":"Reset"}}]}]}}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"apply_patch","arguments":{"patch":{"speedo":{"value":60},"title":{"text":"Trip"}}}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"dump_tree","arguments":{}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"screenshot","arguments":{"path":"mcp_host_screen.png"}}}

@@ -1,0 +1,550 @@
+// The agent kit: the tree dump, the PNG of a screen, and the MCP server that
+// lets an agent load a screen, change it and check the result.
+
+#include <lv/lv.hpp>
+#include <lv/mcp.hpp>
+
+#include "check.hpp"
+
+#include <cstring>
+#include <string>
+#include <string_view>
+
+namespace {
+
+using ui = lv::runtime<"obj", "label", "arc", "button">;
+using server = lv::mcp::server<"obj", "label", "arc", "button">;
+
+bool has(std::string_view text, std::string_view part) {
+  return text.find(part) != std::string_view::npos;
+}
+
+// A reply is one line of JSON.
+bool one_json_line(std::string_view reply) {
+  return !has(reply, "\n") && lv::json::value::parse(reply).has_value();
+}
+
+std::string read_file(const std::string& path) {
+  std::string bytes;
+  if (std::FILE* f = std::fopen(path.c_str(), "rb")) {
+    for (int c = std::fgetc(f); c != EOF; c = std::fgetc(f)) bytes.push_back(static_cast<char>(c));
+    std::fclose(f);
+  }
+  return bytes;
+}
+
+constexpr std::string_view png_signature = "\x89PNG\r\n\x1a\n";
+
+// The pixels LVGL draws for a widget.
+struct picture {
+  lv_draw_buf_t* buf;
+  explicit picture(lv_obj_t* of) : buf(lv_snapshot_take(of, LV_COLOR_FORMAT_ARGB8888)) {}
+  picture(const picture&) = delete;
+  picture& operator=(const picture&) = delete;
+  ~picture() {
+    if (buf) lv_draw_buf_destroy(buf);
+  }
+  bool same_as(const picture& other) const {
+    if (!buf || !other.buf || buf->header.w != other.buf->header.w ||
+        buf->header.h != other.buf->header.h)
+      return false;
+    const auto size = static_cast<std::size_t>(buf->header.stride) * buf->header.h;
+    return std::memcmp(buf->data, other.buf->data, size) == 0;
+  }
+};
+
+// Whether the PNG file at `path`, read by LVGL's own decoder, has the pixels of `of`.
+bool file_shows(const std::string& path, lv::obj of) {
+  const picture expected{of.raw()};
+  lv_obj_t* image = lv_image_create(lv_layer_top());
+  lv_image_set_src(image, ("A:" + path).c_str());
+  const picture decoded{image};
+  lv_obj_delete(image);
+  return decoded.same_as(expected);
+}
+
+void json_text() {
+  std::string text;
+  auto sink = [&](std::string_view piece) { text += piece; };
+  lv::json::write_string(sink, std::string{"a\"b\\c\n\r\t\x01z"});
+  check(text == R"("a\"b\\c\n\r\t\u0001z")");
+  text.clear();
+  lv::json::write_string(sink, std::string{"\x1f \x7f"});
+  check(text == "\"\\u001f \x7f\"");
+  text.clear();
+  lv::json::write_number(sink, std::stoll("-9223372036854775807"));
+  check(text == "-9223372036854775807");
+}
+
+void tree_dump(lv::obj screen) {
+  auto loaded = ui::load(R"({"type": "column", "id": "root", "props": {"size": [200, 100]}, "children": [
+      {"type": "label", "id": "title", "props": {"text": "say \"hi\""}},
+      {"type": "arc", "id": "speedo", "props": {"range": [0, 240], "value": 120, "size": [50, 60]}},
+      {"type": "button"}]})", screen);
+  check(loaded.has_value());
+  if (!loaded) return;
+
+  std::string text;
+  loaded->dump([&](std::string_view piece) { text += piece; });
+  check(lv::json::value::parse(text).has_value());
+  const lv::json::value root{text};
+  check(root["type"].string() == "obj" && root["id"].string() == "root");
+  check(root["x"].number() == 0 && root["y"].number() == 0);
+  check(root["width"].number() == 200 && root["height"].number() == 100);
+  check(root["children"].size() == 3);
+
+  const auto title = root["children"].at(0);
+  check(title["type"].string() == "label" && title["id"].string() == "title");
+  // The label holds the text as the document wrote it; the dump escapes it again.
+  check(title["props"]["text"].text() == R"("say \\\"hi\\\"")");
+  check(title["props"]["recolor"].text() == "false");
+  check(title["props"]["long_mode"].string() == "LV_LABEL_LONG_MODE_WRAP");
+
+  const auto speedo = root["children"].at(1);
+  check(speedo["type"].string() == "arc" && speedo["id"].string() == "speedo");
+  check(speedo["props"]["value"].number() == 120 && speedo["props"]["max_value"].number() == 240);
+  check(speedo["width"].number() == 50 && speedo["height"].number() == 60);
+  check(speedo["x"].number() > 0 && speedo["y"].number() > title["y"].number());
+  // What obj has, every widget has.
+  check(speedo["props"]["width"].number() == 50);
+  check(speedo["props"]["state"].string() == "LV_STATE_DEFAULT");
+
+  const auto button = root["children"].at(2);
+  check(button["type"].string() == "button" && !button["id"] && !button["children"]);
+
+  // A state made of two flags is not one enumerator: it is written as a number.
+  lv_obj_add_state(loaded->find("speedo").raw(),
+                   static_cast<lv_state_t>(LV_STATE_CHECKED | LV_STATE_FOCUSED));
+  text.clear();
+  loaded->dump([&](std::string_view piece) { text += piece; });
+  check(lv::json::value{text}["children"].at(1)["props"]["state"].number() ==
+        (LV_STATE_CHECKED | LV_STATE_FOCUSED));
+
+  // From the screen down, without ids; a widget of a kind that is not listed has
+  // no type and the properties of obj.
+  using few = lv::runtime<"label">;
+  text.clear();
+  few::dump(screen, [&](std::string_view piece) { text += piece; });
+  check(lv::json::value::parse(text).has_value());
+  const auto first = lv::json::value{text}["children"].at(0);
+  check(lv::json::value{text}["type"].text() == "null" && !first["id"]);
+  check(first["children"].at(0)["type"].string() == "label");
+  const auto arc = first["children"].at(1);
+  check(arc["type"].text() == "null" && !arc["props"]["value"] && arc["props"]["width"].number() == 50);
+
+  // With the ids of a screen that is given.
+  text.clear();
+  ui::dump(screen, [&](std::string_view piece) { text += piece; }, &*loaded);
+  check(lv::json::value{text}["children"].at(0)["id"].string() == "root");
+  check(loaded->id_of(loaded->find("speedo")) == "speedo");
+  check(loaded->id_of(screen).empty() && loaded->id_of(lv::obj{}).empty());
+
+  // A deleted screen is null.
+  lv_obj_delete(loaded->root().raw());
+  check(loaded->id_of(lv::obj{}).empty());
+  text.clear();
+  loaded->dump([&](std::string_view piece) { text += piece; });
+  check(text == "null");
+}
+
+// A color and a text that is missing, which no getter of the widgets above returns.
+void values() {
+  std::string text;
+  auto sink = [&](std::string_view piece) { text += piece; };
+  const auto out = lv::detail::erase_sink(sink);
+  lv::detail::write_value(out, lv_color_hex(static_cast<std::uint32_t>(std::stoul("1193722"))));
+  check(text == R"("#1236fa")");
+  text.clear();
+  const char* missing = std::strlen(text.c_str()) == 0 ? nullptr : "x";
+  lv::detail::write_value(out, missing);
+  check(text == "null");
+}
+
+void pictures(lv::obj screen, const std::string& dir) {
+  auto loaded = ui::load(R"({"type": "column", "props": {"size": ["100%", "100%"]}, "children": [
+      {"type": "label", "props": {"text": "Speed"}},
+      {"type": "arc", "id": "speedo", "props": {"value": 40}}]})", screen);
+  check(loaded.has_value());
+
+  // LVGL's own decoder reads the file back to the pixels of the screen.
+  const std::string path = dir + "/agent_kit_screen.png";
+  std::remove(path.c_str());
+  check(lv::write_png(screen, path.c_str()).has_value());
+  check(read_file(path).starts_with(png_signature));
+  check(file_shows(path, screen));
+  // Flat areas make it far smaller than its 320 * 240 * 4 bytes.
+  check(read_file(path).size() < 40000);
+
+  // One widget, with its own size.
+  const auto arc = lv::encode_png(loaded->find("speedo"));
+  check(arc.has_value());
+  if (arc) {
+    const std::string_view bytes{reinterpret_cast<const char*>(arc->data()), arc->size()};
+    check(bytes.starts_with(png_signature) && bytes.substr(12, 4) == "IHDR");
+    // As wide as the arc and what it draws around itself: less than the screen.
+    check((*arc)[18] == 0 && (*arc)[19] >= lv_obj_get_width(loaded->find("speedo").raw()));
+    check((*arc)[19] < 200);
+    check(bytes.ends_with(std::string_view{"IEND\xae\x42\x60\x82"}));
+  }
+
+  // A file that cannot be written; a widget with nothing to draw.
+  const auto nowhere = lv::write_png(screen, (dir + "/no/such/dir/x.png").c_str());
+  check(!nowhere && nowhere.error() == lv::png_error::cannot_write);
+  auto empty = screen.add<"obj">();
+  lv_obj_set_size(empty.raw(), 0, 0);
+  const auto nothing = lv::write_png(empty, path.c_str());
+  check(!nothing && nothing.error() == lv::png_error::no_picture);
+  lv_obj_delete(empty.raw());
+}
+
+// Runs of every length the encoder treats differently, read back by LVGL.
+void picture_runs(lv::obj screen, const std::string& dir) {
+  lv_obj_set_style_bg_color(screen.raw(), lv_color_hex(0x102030), 0);
+  int x = 0;
+  for (const int width : {1, 2, 3, 4, 63, 64, 65, 66, 1}) {
+    auto box = screen.add<"obj">();
+    lv_obj_remove_style_all(box.raw());
+    lv_obj_set_style_bg_opa(box.raw(), LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(box.raw(), lv_color_hex(0xF09000U + static_cast<std::uint32_t>(x)), 0);
+    lv_obj_set_pos(box.raw(), x, width);
+    lv_obj_set_size(box.raw(), width, 3);
+    x += width + (width % 3) + 1;
+  }
+  const std::string path = dir + "/agent_kit_runs.png";
+  std::remove(path.c_str());
+  check(lv::write_png(screen, path.c_str()).has_value());
+  check(file_shows(path, screen));
+  lv_obj_clean(screen.raw());
+}
+
+std::string call(std::string_view id, std::string_view tool, std::string_view arguments) {
+  std::string m = R"({"jsonrpc": "2.0", "id": )";
+  m += id;
+  m += R"(, "method": "tools/call", "params": {"name": ")";
+  m += tool;
+  m += R"(", "arguments": )";
+  m += arguments;
+  m += "}}";
+  return m;
+}
+
+// A client that starts with initialize: load, patch, dump, screenshot.
+void agent_changes_the_screen(lv::obj screen, const std::string& dir) {
+  server agent{screen, {.name = "test \"host\"", .version = "1.2"}};
+
+  const auto hello = agent.handle(R"({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params":
+      {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}})");
+  check(one_json_line(hello));
+  const auto hello_result = lv::json::value{hello}["result"];
+  check(lv::json::value{hello}["id"].text() == "1");
+  check(hello_result["protocolVersion"].string() == "2025-06-18");
+  check(hello_result["capabilities"]["tools"].is(lv::json::kind::object));
+  check(hello_result["serverInfo"]["name"].text() == R"("test \"host\"")");
+  check(hello_result["serverInfo"]["version"].string() == "1.2");
+  check(!hello_result["resultType"] && hello_result["instructions"].is(lv::json::kind::string));
+  // A revision we do not know is answered with the newest one that has a handshake.
+  check(has(agent.handle(R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"1999-01-01"}})"),
+            R"("protocolVersion":"2025-11-25")"));
+  check(has(agent.handle(R"({"jsonrpc":"2.0","id":1,"method":"initialize"})"),
+            R"("protocolVersion":"2025-11-25")"));
+  check(has(agent.handle(R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}})"),
+            R"("protocolVersion":"2024-11-05")"));
+
+  // Notifications are never answered, known or not.
+  check(agent.handle(R"({"jsonrpc": "2.0", "method": "notifications/initialized"})").empty());
+  check(agent.handle(R"({"jsonrpc": "2.0", "method": "notifications/whatever", "params": [1]})").empty());
+  check(agent.handle(R"({"jsonrpc":"2.0","id":"p","method":"ping"})") ==
+        R"({"jsonrpc":"2.0","id":"p","result":{}})");
+
+  const auto list = agent.handle(R"({"jsonrpc": "2.0", "id": "list-1", "method": "tools/list"})");
+  check(one_json_line(list) && lv::json::value{list}["id"].string() == "list-1");
+  const auto tools = lv::json::value{list}["result"]["tools"];
+  check(tools.size() == 4);
+  check(tools.at(0)["name"].string() == "load_document" && tools.at(1)["name"].string() == "apply_patch");
+  check(tools.at(2)["name"].string() == "dump_tree" && tools.at(3)["name"].string() == "screenshot");
+  for (std::size_t i = 0; i < tools.size(); ++i) {
+    check(tools.at(i)["description"].is(lv::json::kind::string));
+    check(tools.at(i)["inputSchema"]["type"].string() == "object");
+  }
+  check(has(tools.at(0)["description"].string(), "Widgets: column, row, obj, label, arc, button."));
+
+  // Before a document is loaded there is nothing to patch.
+  const auto early = agent.handle(call("2", "apply_patch", R"({"patch": {"speedo": {"value": 1}}})"));
+  check(has(early, R"("isError":true)") && has(early, "unknown_id: speedo"));
+
+  const auto before = lv_obj_get_child_count(screen.raw());
+  const auto loaded = agent.handle(call("3", "load_document", R"({"document": {"type": "column", "children": [
+      {"type": "label", "id": "title", "props": {"text": "Speed"}},
+      {"type": "arc", "id": "speedo", "props": {"range": [0, 240], "value": 120}}]}})"));
+  check(one_json_line(loaded) && has(loaded, R"("text":"loaded")") && has(loaded, R"("isError":false)"));
+  check(lv_obj_get_child_count(screen.raw()) == before + 1);
+
+  const auto dump = agent.handle(call("4", "dump_tree", "{}"));
+  check(one_json_line(dump) && has(dump, R"(\"id\":\"speedo\")") && has(dump, R"(\"value\":120)"));
+  check(has(dump, R"(\"text\":\"Speed\")") && has(dump, R"("isError":false)"));
+
+  const auto patched = agent.handle(call("5", "apply_patch",
+                                         R"({"patch": {"speedo": {"value": 60}, "title": {"text": "Trip"}}})"));
+  check(has(patched, R"("text":"applied")") && has(patched, R"("isError":false)"));
+  const auto after = agent.handle(call("6", "dump_tree", "{}"));
+  check(has(after, R"(\"value\":60)") && !has(after, R"(\"value\":120)"));
+  check(has(after, R"(\"text\":\"Trip\")"));
+  // Arguments may be left out when a tool takes none.
+  check(has(agent.handle(R"({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"dump_tree"}})"),
+            R"(\"value\":60)"));
+
+  // A screenshot to a file, which is a PNG of what is on the screen now.
+  const std::string path = dir + "/agent_kit_mcp.png";
+  std::remove(path.c_str());
+  const auto shot = agent.handle(call("8", "screenshot", R"({"path": ")" + path + R"("})"));
+  check(one_json_line(shot) && has(shot, "wrote " + path) && has(shot, R"("isError":false)"));
+  check(read_file(path).starts_with(png_signature));
+  check(file_shows(path, screen));
+
+  // A screenshot as an image: the same file, in base64.
+  const auto image = agent.handle(call("9", "screenshot", "{}"));
+  check(one_json_line(image));
+  const auto content = lv::json::value{image}["result"]["content"].at(0);
+  check(content["type"].string() == "image" && content["mimeType"].string() == "image/png");
+  std::string encoded;
+  const std::string file = read_file(path);
+  lv::mcp::detail::append_base64(
+      encoded, {reinterpret_cast<const std::uint8_t*>(file.data()), file.size()});
+  check(content["data"].string() == encoded && content["data"].string().starts_with("iVBORw0KGgo"));
+
+  // A second document takes the place of the first; a refused one changes nothing.
+  check(has(agent.handle(call("10", "load_document", R"({"document": {"type": "label", "id": "only"}})")),
+            R"("text":"loaded")"));
+  check(lv_obj_get_child_count(screen.raw()) == before + 1);
+  const auto refused = agent.handle(call("11", "load_document", R"({"document": {"type": "chart"}})"));
+  check(has(refused, R"("isError":true)") && has(refused, "unknown_widget: chart"));
+  const auto bad_value = agent.handle(call("12", "apply_patch", R"({"patch": {"only": {"text": 5}}})"));
+  check(has(bad_value, R"("isError":true)") && has(bad_value, "bad_value: 5"));
+  check(has(agent.handle(call("13", "dump_tree", "{}")), R"(\"id\":\"only\")"));
+  check(lv_obj_get_child_count(screen.raw()) == before + 1);
+
+  // Arguments a tool cannot use are the tool's error, which the agent can read.
+  for (const auto& [tool, arguments] :
+       {std::pair{"load_document", R"({})"}, std::pair{"load_document", R"({"document": "x"})"},
+        std::pair{"apply_patch", R"({})"}, std::pair{"apply_patch", R"({"patch": 5})"},
+        std::pair{"screenshot", R"({"path": 5})"}, std::pair{"screenshot", R"({"path": ""})"},
+        std::pair{"screenshot", R"({"path": "a\\b.png"})"},
+        std::pair{"screenshot", R"({"path": "/no/such/dir/x.png"})"}}) {
+    const auto reply = agent.handle(call("14", tool, arguments));
+    check(one_json_line(reply) && has(reply, R"("isError":true)") && !has(reply, R"("error")"));
+  }
+  check(has(agent.handle(call("15", "screenshot", R"({"path": "/no/such/dir/x.png"})")), "cannot_write"));
+
+  // A server that may not write files still returns pictures.
+  server careful{screen, {.write_files = false}};
+  const auto no_file = careful.handle(call("16", "screenshot", R"({"path": ")" + path + R"("})"));
+  check(has(no_file, R"("isError":true)") && has(no_file, "does not write files"));
+  check(has(careful.handle(call("17", "screenshot", "{}")), R"("type":"image")"));
+  check(has(careful.handle(R"({"jsonrpc":"2.0","id":1,"method":"initialize"})"),
+            R"("serverInfo":{"name":"lvgl26","version":"0.0.1"})"));
+}
+
+// A client of the 2026-07-28 revision: no handshake, every request says who asks.
+void requests_with_their_own_metadata(lv::obj screen) {
+  server agent{screen};
+  constexpr std::string_view meta =
+      R"("_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                   "io.modelcontextprotocol/clientCapabilities": {}})";
+  const auto request = [&](std::string_view method, std::string_view more = {}) {
+    std::string m = R"({"jsonrpc": "2.0", "id": "r", "method": ")";
+    m += method;
+    m += R"(", "params": {)";
+    m += more;
+    m += meta;
+    m += "}}";
+    return agent.handle(m);
+  };
+
+  const auto discovered = request("server/discover");
+  check(one_json_line(discovered));
+  const auto result = lv::json::value{discovered}["result"];
+  check(result["resultType"].string() == "complete");
+  check(result["supportedVersions"].size() == 1 && result["supportedVersions"].at(0).string() == "2026-07-28");
+  check(result["capabilities"]["tools"].is(lv::json::kind::object));
+  check(result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"].string() == "lvgl26");
+  check(result["instructions"].is(lv::json::kind::string));
+
+  const auto list_text = request("tools/list");
+  const lv::json::value list{list_text};
+  check(list["result"]["resultType"].string() == "complete" && list["result"]["tools"].size() == 4);
+  check(request("ping") ==
+        R"({"jsonrpc":"2.0","id":"r","result":{"resultType":"complete","_meta":)"
+        R"({"io.modelcontextprotocol/serverInfo":{"name":"lvgl26","version":"0.0.1"}}}})");
+  const auto loaded_text =
+      request("tools/call", R"("name": "load_document", "arguments": {"document": {"type": "label"}}, )");
+  const lv::json::value loaded{loaded_text};
+  check(loaded["result"]["resultType"].string() == "complete");
+  check(loaded["result"]["content"].at(0)["text"].string() == "loaded");
+
+  // This revision has no handshake.
+  const auto no_handshake_text = request("initialize");
+  const lv::json::value no_handshake{no_handshake_text};
+  check(no_handshake["error"]["code"].number() == -32601);
+  // server/discover without the metadata is not a request of this revision.
+  const auto bare_text = agent.handle(R"({"jsonrpc":"2.0","id":3,"method":"server/discover"})");
+  const lv::json::value bare{bare_text};
+  check(bare["error"]["code"].number() == -32602 && bare["id"].text() == "3");
+
+  // Another revision is refused with the ones we speak; so is a version that is no text.
+  const auto other = agent.handle(R"({"jsonrpc":"2.0","id":4,"method":"tools/list","params":{"_meta":
+      {"io.modelcontextprotocol/protocolVersion":"2027-01-01","io.modelcontextprotocol/clientCapabilities":{}}}})");
+  check(one_json_line(other));
+  const auto error = lv::json::value{other}["error"];
+  check(error["code"].number() == -32022 && error["message"].string() == "Unsupported protocol version");
+  check(error["data"]["supported"].at(0).string() == "2026-07-28");
+  check(error["data"]["requested"].string() == "2027-01-01" && lv::json::value{other}["id"].text() == "4");
+  const auto number_text = agent.handle(
+      R"({"jsonrpc":"2.0","id":4,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":7}}})");
+  const lv::json::value number{number_text};
+  check(number["error"]["code"].number() == -32022 && number["error"]["data"]["requested"].string().empty());
+  // The capabilities are required.
+  const auto no_capabilities_text = agent.handle(
+      R"({"jsonrpc":"2.0","id":5,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}})");
+  const lv::json::value no_capabilities{no_capabilities_text};
+  check(no_capabilities["error"]["code"].number() == -32602 && no_capabilities["id"].text() == "5");
+  // A notification of another revision is still not answered.
+  check(agent.handle(R"({"jsonrpc":"2.0","method":"x","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"1"}}})").empty());
+}
+
+// Whatever arrives, the answer is a JSON-RPC error on one line.
+void refuses(lv::obj screen) {
+  server agent{screen};
+  const auto expect = [&](std::string_view message, int code, std::string_view id) {
+    const auto reply = agent.handle(message);
+    check(one_json_line(reply));
+    const lv::json::value r{reply};
+    check(r["jsonrpc"].string() == "2.0" && r["error"]["code"].number() == code);
+    check(r["id"].text() == id && r["error"]["message"].is(lv::json::kind::string) && !r["result"]);
+  };
+  expect("", -32700, "null");
+  expect("{", -32700, "null");
+  expect(R"({"jsonrpc": "2.0", "id": 1, "method": "ping"} x)", -32700, "null");
+  expect("[]", -32600, "null");
+  expect("5", -32600, "null");
+  expect(R"([{"jsonrpc": "2.0", "id": 1, "method": "ping"}])", -32600, "null");  // no batches
+  expect(R"({"id": 1, "method": "ping"})", -32600, "1");
+  expect(R"({"jsonrpc": "1.0", "id": 1, "method": "ping"})", -32600, "1");
+  expect(R"({"jsonrpc": 2.0, "id": 1, "method": "ping"})", -32600, "1");
+  expect(R"({"jsonrpc": "2.0", "id": 1})", -32600, "1");
+  expect(R"({"jsonrpc": "2.0", "id": 1, "method": 5})", -32600, "1");
+  expect(R"({"jsonrpc": "2.0", "id": 1, "result": {}})", -32600, "1");  // a response is not ours to get
+  expect(R"({"jsonrpc": "2.0"})", -32600, "null");
+  // An id is a string or a number.
+  expect(R"({"jsonrpc": "2.0", "id": null, "method": "ping"})", -32600, "null");
+  expect(R"({"jsonrpc": "2.0", "id": {}, "method": "ping"})", -32600, "null");
+  expect(R"({"jsonrpc": "2.0", "id": [1], "method": "ping"})", -32600, "null");
+  expect(R"({"jsonrpc": "2.0", "id": true, "method": "ping"})", -32600, "null");
+  expect("{\"jsonrpc\": \"2.0\", \"id\": \"a\nb\", \"method\": \"ping\"}", -32600, "null");
+  expect("{\"jsonrpc\": \"2.0\", \"id\": \"a\x1f\", \"method\": \"ping\"}", -32600, "null");
+  check(agent.handle("{\"jsonrpc\":\"2.0\",\"id\":\"a b\",\"method\":\"ping\"}") ==
+        R"({"jsonrpc":"2.0","id":"a b","result":{}})");
+  check(agent.handle(R"({"jsonrpc":"2.0","id":-1.5e3,"method":"ping"})") ==
+        R"({"jsonrpc":"2.0","id":-1.5e3,"result":{}})");
+  check(agent.handle(R"({"jsonrpc":"2.0","id":"q\"é","method":"ping"})") ==
+        R"({"jsonrpc":"2.0","id":"q\"é","result":{}})");
+
+  expect(R"({"jsonrpc": "2.0", "id": 2, "method": "resources/list"})", -32601, "2");
+  expect(R"({"jsonrpc": "2.0", "id": 2, "method": ""})", -32601, "2");
+  expect(R"({"jsonrpc": "2.0", "id": 3, "method": "tools/call"})", -32602, "3");
+  expect(R"({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": [1]})", -32602, "3");
+  expect(R"({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": 5}})", -32602, "3");
+  expect(R"({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "dump_tree", "arguments": []}})",
+         -32602, "3");
+  expect(R"({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "dump_tree", "arguments": "x"}})",
+         -32602, "3");
+  expect(call("4", "format_disk", "{}"), -32602, "4");
+  check(has(agent.handle(call("4", "format_disk", "{}")), R"("message":"Unknown tool: format_disk")"));
+  // A name with a line feed in it comes back on one line.
+  expect(call("4", "a\nb", "{}"), -32602, "4");
+  check(has(agent.handle(call("4", "a\nb", "{}")), R"(Unknown tool: a\nb)"));
+
+  // What a refused document is about is cut short, and escaped.
+  const auto long_error = agent.handle(call("5", "load_document",
+      R"({"document": {"type": "label", "props": {"text": [")" + std::string(500, 'x') + "\"]}}}"));
+  check(one_json_line(long_error) && has(long_error, R"(bad_value: [\")" + std::string(198, 'x') + "\"}"));
+  check(!has(long_error, std::string(199, 'x')));
+}
+
+// The loop over a stream: one answer per request, none for the rest.
+void lines() {
+  std::FILE* in = std::tmpfile();
+  std::FILE* out = std::tmpfile();
+  check(in != nullptr && out != nullptr);
+  if (in == nullptr || out == nullptr) return;
+  std::fputs("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n"
+             "\n"
+             " \t\r\n"
+             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n"
+             "nonsense\r\n"
+             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\"}",  // the last line has no line feed
+             in);
+  std::rewind(in);
+  server agent{lv::screen_active()};
+  agent.serve(in, out);
+  std::rewind(out);
+  std::string written;
+  for (int c = std::fgetc(out); c != EOF; c = std::fgetc(out)) written.push_back(static_cast<char>(c));
+  check(written ==
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n"
+        "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32700,\"message\":\"Parse error: not JSON\"}}\n"
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n");
+  std::fclose(in);
+  std::fclose(out);
+
+  // An empty stream ends at once.
+  std::FILE* nothing = std::tmpfile();
+  std::FILE* silence = std::tmpfile();
+  if (nothing != nullptr && silence != nullptr) {
+    agent.serve(nothing, silence);
+    check(std::ftell(silence) == 0);
+  }
+  if (nothing != nullptr) std::fclose(nothing);
+  if (silence != nullptr) std::fclose(silence);
+}
+
+void base64() {
+  const auto encode = [](std::string_view text) {
+    std::string out;
+    lv::mcp::detail::append_base64(
+        out, {reinterpret_cast<const std::uint8_t*>(text.data()), text.size()});
+    return out;
+  };
+  check(encode(std::string{}) == "");
+  check(encode(std::string{"f"}) == "Zg==" && encode(std::string{"fo"}) == "Zm8=");
+  check(encode(std::string{"foo"}) == "Zm9v" && encode(std::string{"foob"}) == "Zm9vYg==");
+  check(encode(std::string{"\xfb\xff\xfe"}) == "+//+" && encode(std::string{"\x00\x10\x83", 3}) == "ABCD");
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::printf("usage: agent_kit <directory to write pictures to>\n");
+    return 2;
+  }
+  const std::string dir = argv[1];
+
+  lv_init();
+  lv_test_display_create(320, 240);
+  auto screen = lv::screen_active();
+
+  json_text();
+  values();
+  base64();
+  tree_dump(screen);
+  pictures(screen, dir);
+  picture_runs(screen, dir);
+  agent_changes_the_screen(screen, dir);
+  requests_with_their_own_metadata(screen);
+  refuses(screen);
+  lines();
+
+  lv_deinit();
+  if (failures == 0) std::printf("ok\n");
+  return failures == 0 ? 0 : 1;
+}

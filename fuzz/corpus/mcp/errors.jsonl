@@ -1,0 +1,8 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2027-01-01"}}}
+{"jsonrpc":"2.0","id":null,"method":"ping"}
+[{"jsonrpc":"2.0","id":1,"method":"ping"}]
+{"jsonrpc":"2.0","id":"x","method":"tools/call","params":{"name":"nope","arguments":{}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"load_document","arguments":{"document":{"type":"chart"}}}}
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"apply_patch","arguments":{"patch":{"nobody":{"value":1}}}}}
+{"jsonrpc":"2.0","id":9,"method":"resources/list"}
+not json
