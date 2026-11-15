@@ -3,3 +3,6 @@ build/
 compile_commands.json
 .DS_Store
 *_err.png
+site/docs/
+site/llms.txt
+site/llms-full.txt
