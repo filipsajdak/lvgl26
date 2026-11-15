@@ -36,6 +36,26 @@ find_package(Threads REQUIRED)
 lvgl26_test(ui_scheduler)
 target_link_libraries(ui_scheduler PRIVATE Threads::Threads)
 
+# The agent kit writes its pictures into the build directory.
+add_executable(agent_kit agent_kit.cpp)
+target_link_libraries(agent_kit PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME agent_kit COMMAND agent_kit ${CMAKE_CURRENT_BINARY_DIR})
+
+# The example host answers a recorded session: it loads a screen, patches it,
+# dumps the tree with the new value and writes a screenshot.
+set(LVGL26_AGENT_EXAMPLE ${CMAKE_CURRENT_SOURCE_DIR}/../examples/agent)
+add_executable(mcp_host ${LVGL26_AGENT_EXAMPLE}/mcp_host.cpp)
+target_link_libraries(mcp_host PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME examples_mcp_host
+         COMMAND mcp_host ${LVGL26_AGENT_EXAMPLE}/session.jsonl ${CMAKE_CURRENT_BINARY_DIR})
+# The server only makes new files, so the screenshot of the last run goes first.
+add_test(NAME examples_mcp_host_clean
+         COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/mcp_host_screen.png)
+set_tests_properties(examples_mcp_host_clean PROPERTIES FIXTURES_SETUP mcp_host_files)
+set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_files
+  PASS_REGULAR_EXPRESSION
+  "\"id\":1,\"result\":{\"protocolVersion\":\"2025-11-25\".*\"text\":\"loaded\".*\"text\":\"applied\".*value[^0-9]+60.*wrote [^\"]*/mcp_host_screen.png")
+
 # LVGL v9.6 and the v10 pin render the same pixels, so one reference serves both.
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -69,6 +89,8 @@ add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
+lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
+lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
 lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
@@ -179,3 +201,13 @@ add_executable(fuzz_json_replay ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/json_reader.
 target_link_libraries(fuzz_json_replay PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 file(GLOB LVGL26_JSON_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/json/*)
 add_test(NAME fuzz_corpus_json COMMAND fuzz_json_replay ${LVGL26_JSON_CORPUS})
+
+# The MCP message handler takes whatever a client sends. Its fuzz target replays
+# its corpus here in the same way.
+add_executable(fuzz_mcp_message ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/mcp_message.cpp)
+target_link_libraries(fuzz_mcp_message PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(GLOB LVGL26_MCP_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/mcp/*)
+foreach(input ${LVGL26_MCP_CORPUS})
+  get_filename_component(name ${input} NAME)
+  add_test(NAME fuzz_corpus_mcp_${name} COMMAND fuzz_mcp_message ${input})
+endforeach()

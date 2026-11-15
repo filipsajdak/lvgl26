@@ -2,7 +2,7 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, state and coroutines exist. Agent tools do not yet.
+Status: early. Typed widget views, the declarative tree, styles, design tokens, state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>

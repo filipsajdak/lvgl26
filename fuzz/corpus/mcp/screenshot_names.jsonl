@@ -1,0 +1,21 @@
+{"jsonrpc":"2.0","id":0,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"/tmp/x.png"}}}
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"../x.png"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"a/b.png"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"x.txt"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":".png"}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":".."}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"a\\b.png"}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"ok-name_1.png"}}}
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"x.png/../y.png"}}}
+{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"C:x.png"}}}
+{"jsonrpc":"2.0","id":99,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":5}}}
+{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"."}}}
+{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"taken.png"}}}
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"link.png"}}}
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":".hidden.png"}}}
+{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"x.png.txt"}}}
+{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"x.PNG"}}}
+{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"a b.png"}}}
+{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":""}}}
+{"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"ok-name_1.png"}}}
+{"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"screenshot","arguments":{"name":"a\u002fb.png"}}}
