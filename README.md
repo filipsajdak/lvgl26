@@ -72,6 +72,24 @@ A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
 bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a
 generic observer.
 
+A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
+The dependencies are part of the type, so both can be constant-initialized globals:
+
+```cpp
+constinit lv::state limit{50 * km / h};
+constinit lv::computed over_limit{[](auto s, auto l) { return s > l; }, speed, limit};
+constinit lv::effect log{[](auto s) { std::printf("%d\n", s.numerical_value_in(km / h)); }, speed};
+
+lv::label({.hidden = lv::bind(over_limit), .text = "Within the limit"})   // bound like a state
+
+log.start();                                           // runs now, and after every change
+```
+
+`over_limit.get()` calls the function with the current values; nothing is stored. Binding a computed
+creates its `lv_subject_t` and one observer on each dependency. The result follows the rules of a
+state, so a function that returns a plain `int` is rejected. See `include/lv/computed.hpp` for how
+changes travel and who owns what.
+
 Sequences of UI steps are coroutines on LVGL's loop:
 
 ```cpp
