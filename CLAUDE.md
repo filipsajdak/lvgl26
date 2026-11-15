@@ -16,7 +16,18 @@ cmake --preset host-v96 && cmake --build --preset host-v96 && ctest --preset hos
 | `host-v96-analyze` | GCC static analyzer (`-fanalyzer`) |
 | `host-v96-coverage` | Coverage; report with `gcovr --filter include/lv/ build/host-v96-coverage` |
 
-Every change must pass `host-v96` and `host-v10` locally, and all presets in CI.
+Every change must pass `host-v96` and `host-v10` locally. Run the tests side by side:
+`ctest --preset host-v96 -j 8`.
+
+| Where | What runs |
+|---|---|
+| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, ThreadSanitizer on the threaded tests, CRAP, one minute of fuzzing |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing. A failure opens an issue |
+
+- A check belongs in the pull request run if it takes a few minutes and a change can
+  plausibly break it. Anything long goes to the nightly run.
+- A test must be safe to run next to every other test: no shared file, no fixed port.
+- A change to `site/` or to a Markdown file alone does not start the pull request run.
 
 ## Rules
 

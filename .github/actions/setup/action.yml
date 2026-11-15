@@ -1,0 +1,27 @@
+name: Set up the build
+description: Installs the build tools in the gcc:16 container and restores the compiler cache.
+inputs:
+  cache-key:
+    description: Names the compiler cache; one per preset.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install build tools
+      shell: bash
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends cmake ninja-build python3 ccache
+        ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16
+        ln -sf "$(command -v g++)" /usr/local/bin/g++-16
+        # LVGL's C files are most of a build and never change between runs: ccache
+        # gives them back from the cache.
+        echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+        echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+        echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache" >> "$GITHUB_ENV"
+        echo "CCACHE_MAXSIZE=400M" >> "$GITHUB_ENV"
+    - uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-${{ inputs.cache-key }}-${{ github.sha }}
+        restore-keys: ccache-${{ inputs.cache-key }}-
