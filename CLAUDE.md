@@ -120,6 +120,13 @@ A feature pull request also:
 - A decision made from research goes into the code, the design system or this file. The notes hold the evidence, not the rule.
 - A hook in `.claude/settings.json` repeats the first three rules before every `WebSearch` and `WebFetch`.
 
+## The plugin
+
+The repository is a Claude Code plugin: `.claude-plugin/` holds the manifests and `skills/` the skills.
+
+- A skill points to files of the repository with relative links. It never copies their content.
+- `tools/check_plugin.py` fails when a skill links to a file that does not exist. Run it after moving a file a skill names.
+
 ## Known tool limits
 
 - clang-tidy cannot analyze this code: Clang 23 has no reflection and no `<meta>` header.

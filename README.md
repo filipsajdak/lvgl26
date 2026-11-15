@@ -262,6 +262,17 @@ of LVGL's heap for the screen and 128 for the task. A program for a device shoul
 `handle_contract_violation` itself, as the example does: the standard library's handler brings the
 exception run-time with it (12 KB).
 
+## With Claude Code
+
+The repository is also a Claude Code plugin. It gives an agent what is already known about LVGL, C++26, device UI standards and 3D, with sources. The agent then does not search for it again.
+
+```
+/plugin marketplace add filipsajdak/lvgl26
+/plugin install lvgl26@lvgl26
+```
+
+`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: building a screen, designing with the Signal system, and porting from another framework.
+
 ## Website
 
 The public site is the plain HTML and CSS in `site/`: no build step and no dependencies.
