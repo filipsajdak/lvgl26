@@ -87,6 +87,16 @@ lv_subject_t* subject_of(const void* source) {
   return static_cast<const state<T, O>*>(source)->raw();
 }
 
+// For lv::computed and lv::effect (lv/computed.hpp): how many subjects a state or a
+// computed has deleted so far. Deleting a subject frees the observers on it, so
+// whoever keeps one of them compares this number before it deletes the observer.
+struct graph_access {
+  template <class D>
+  static std::uint32_t epoch(const D& d) {
+    return d.epoch_;
+  }
+};
+
 }  // namespace detail
 
 // A value that widgets can follow. See the top of this file.
@@ -109,6 +119,8 @@ class state {
 
   T value_{};
   mutable lv_subject_t* subject_ = nullptr;
+  std::uint32_t epoch_ = 0;  // see detail::graph_access
+  friend detail::graph_access;
 
  public:
   constexpr state() = default;
@@ -217,12 +229,15 @@ class state {
     }
   }
 
-  // Deletes the subject. Widgets bound to it stop following. Called by the destructor.
+  // Deletes the subject. Widgets bound to it stop following, and so does every
+  // lv::computed and lv::effect that depends on this state (see lv/computed.hpp).
+  // Called by the destructor.
   void reset() {
     if (subject_ != nullptr && lv_is_initialized()) {
       value_ = detail::read_subject<T>(subject_);
       lv_subject_delete(subject_);
     }
+    if (subject_ != nullptr) ++epoch_;
     subject_ = nullptr;
   }
 
