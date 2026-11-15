@@ -4,6 +4,7 @@
 #include "check.hpp"
 
 #include <cstring>
+#include <vector>
 
 namespace {
 
@@ -14,6 +15,26 @@ constexpr const char* name_of(mode m) {
                       lv::is<mode::eco>.then([] { return "Eco"; }),
                       lv::is<mode::sport>.then([] { return "Sport"; }));
 }
+
+// How error messages write a value.
+static_assert(lv::detail::number_text(0) == "0" && lv::detail::number_text(1) == "1");
+static_assert(lv::detail::number_text(7) == "7" && lv::detail::number_text(10) == "10");
+static_assert(lv::detail::number_text(105) == "105" && lv::detail::number_text(-42) == "-42");
+static_assert(lv::detail::value_text(mode::eco) == "eco" && lv::detail::value_text(static_cast<mode>(9)) == "(not an enumerator)");
+static_assert(lv::detail::value_text(true) == "true" && lv::detail::value_text(false) == "false");
+static_assert(lv::detail::value_text(-3) == "-3" && lv::detail::value_text(nullptr) == "(a value)");
+
+// An enumerator is found by its value, whatever the order of declaration.
+enum class unordered { high = 2, low = 1 };
+static_assert(lv::detail::value_text(unordered::low) == "low" && lv::detail::value_text(unordered::high) == "high");
+static_assert(lv::detail::value_text(mode::off) == "off" && lv::detail::value_text(mode::sport) == "sport");
+
+// The checks behind the error messages.
+static_assert(lv::detail::contains(std::vector<int>{3, 1}, 1) && !lv::detail::contains(std::vector<int>{3, 1}, 2));
+static_assert(lv::detail::duplicate_problem(std::vector<int>{4, 5}).empty());
+static_assert(lv::detail::duplicate_problem(std::vector<int>{4, 5, 4}) == "lv::match has two arms for 4. Each value needs exactly one.");
+static_assert(lv::detail::duplicate_problem(std::vector<int>{5, 4, 4}) == "lv::match has two arms for 4. Each value needs exactly one.");
+
 static_assert(std::string_view(name_of(mode::off)) == "Off");
 static_assert(std::string_view(name_of(mode::sport)) == "Sport");
 

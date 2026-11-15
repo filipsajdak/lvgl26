@@ -6,6 +6,7 @@
 #include "check.hpp"
 
 #include <cstring>
+#include <string_view>
 
 namespace {
 
@@ -18,6 +19,10 @@ inline constexpr struct rpm final : mp_units::named_unit<"rpm", mp_units::one / 
 } rpm;
 using speed_t = mp_units::quantity<mp_units::si::kilo<mp_units::si::metre> / mp_units::si::hour, int>;
 static_assert(lv::detail::integer_quantity<speed_t>);
+// A text binding shows a quantity with its unit; a percent sign in the unit is escaped.
+static_assert(std::string_view(lv::detail::quantity_format<speed_t>) == "%d km/h");
+static_assert(std::string_view(
+                  lv::detail::quantity_format<mp_units::quantity<mp_units::percent, int>>) == "%d %%");
 static_assert(!lv::detail::unit_quantity<int> && !lv::detail::unit_quantity<lv::angle>);
 
 // A count or an index is a struct with one member.
