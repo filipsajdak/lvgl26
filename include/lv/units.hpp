@@ -5,6 +5,8 @@
 
 #include <lvgl/lvgl.h>
 
+#include <lv/detail/checked.hpp>
+
 #include <compare>
 #include <concepts>
 #include <cstdint>
@@ -107,6 +109,7 @@ template <unit_count T>
 constexpr std::int32_t count(T n)
   pre(std::in_range<std::int32_t>(n))
 {
+  keep_checked(std::in_range<std::int32_t>(n));
   return static_cast<std::int32_t>(n);
 }
 
@@ -143,12 +146,14 @@ template <detail::unit_count T>
 constexpr duration operator*(T n, ms_unit)
   pre(n >= 0)
 {
+  detail::keep_checked(n >= 0);
   return {static_cast<std::uint32_t>(detail::count(n))};
 }
 template <detail::unit_count T>
 constexpr duration operator*(T n, sec_unit)
   pre(n >= 0 && n <= 2'000'000)
 {
+  detail::keep_checked(n >= 0 && n <= 2'000'000);
   return {static_cast<std::uint32_t>(detail::count(n)) * 1000};
 }
 
@@ -184,6 +189,7 @@ struct counter {
 constexpr lv_color_t rgb(std::uint32_t hex)
   pre(hex <= 0xffffff)
 {
+  detail::keep_checked(hex <= 0xffffff);
   lv_color_t c{};
   c.red = static_cast<std::uint8_t>(hex >> 16);
   c.green = static_cast<std::uint8_t>(hex >> 8);

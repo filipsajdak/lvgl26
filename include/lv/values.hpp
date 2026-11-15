@@ -51,7 +51,9 @@ class strict {
     requires detail::integer<T>
   constexpr strict(U u)
     pre(std::in_range<T>(u))
-      : v_(static_cast<T>(u)) {}
+      : v_(static_cast<T>(u)) {
+    detail::keep_checked(std::in_range<T>(u));
+  }
 
   template <std::same_as<bool> U>
     requires std::same_as<T, bool>
@@ -459,6 +461,21 @@ inline constexpr bool is_token_or_raw<raw_value<T>> = true;
 // The type of a design value in a style: a color, length, opacity, time or number.
 // It only accepts a design token or lv::raw(...), so that styles cannot drift away
 // from the design system. Set lv::config::raw_style_values to accept plain values.
+namespace detail {
+
+// A number token as a whole number. A fraction is a contract violation, and so a
+// compile error for a token. This is a function of its own because GCC 16.2 cannot
+// evaluate a contract_assert in a constructor whose argument is a temporary.
+template <integer R>
+constexpr R whole_number(double v)
+  pre(static_cast<double>(static_cast<R>(v)) == v)
+{
+  keep_checked(static_cast<double>(static_cast<R>(v)) == v);
+  return static_cast<R>(v);
+}
+
+}  // namespace detail
+
 template <class T>
 class styled {
   T v_{};
@@ -479,9 +496,7 @@ class styled {
   template <std::same_as<double> N>
     requires requires { typename std::type_identity_t<decltype(T{}.raw())>; } &&
              detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>)
-  constexpr styled(const token<N>& t) : v_(static_cast<decltype(T{}.raw())>(*t)) {
-    contract_assert(static_cast<double>(static_cast<decltype(T{}.raw())>(*t)) == *t);
-  }
+  constexpr styled(const token<N>& t) : v_(detail::whole_number<decltype(T{}.raw())>(*t)) {}
 
   template <class U>
     requires std::convertible_to<const U&, T>
