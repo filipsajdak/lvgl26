@@ -30,6 +30,8 @@
 // document must stay alive as long as the loaded screen is used with find/apply
 // (the ids are views into it). At most 32 nodes of a document can have an id.
 
+#include <lv/detail/enum_names.hpp>
+#include <lv/dump.hpp>
 #include <lv/json.hpp>
 #include <lv/owned.hpp>
 #include <lv/props.hpp>
@@ -75,23 +77,6 @@ struct json_value {
   T value{};
   char text[std::is_pointer_v<T> ? text_capacity : 1]{};
 };
-
-struct enum_name {
-  const char* name;  // the enumerator, in full
-  std::int64_t value;
-};
-
-// The enumerators of E by name.
-template <class E>
-consteval std::vector<enum_name> scan_enum() {
-  std::vector<enum_name> out;
-  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^E)))
-    out.push_back({std::define_static_string(std::meta::identifier_of(e)),
-                   static_cast<std::int64_t>(std::meta::extract<E>(e))});
-  return out;
-}
-template <class E>
-inline constexpr std::span<const enum_name> enum_names = std::define_static_array(scan_enum<E>());
 
 constexpr char lower_char(char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c; }
 
@@ -517,6 +502,24 @@ class runtime {
       return n != nullptr ? n->widget.get() : obj{};
     }
 
+    // The id the document gave this widget. Empty if it gave none, or the widget
+    // is not from this document. The text lives as long as this loaded screen.
+    std::string_view id_of(obj widget) const {
+      for (std::size_t i = 0; i < named_count_; ++i)
+        if (widget && named_[i].widget.get() == widget) return named_[i].id();
+      return {};
+    }
+
+    // Writes this screen as JSON, with its ids: see lv/dump.hpp. Writes null if
+    // the screen has been deleted.
+    template <json::sink S>
+    void dump(S&& sink) const {
+      if (root())
+        runtime::dump(root(), sink, this);
+      else
+        std::invoke(sink, std::string_view{"null"});
+    }
+
     // Changes properties by id: {"speedo": {"value": 60}, "title": {"text": "Trip"}}.
     // The same rules as for a document apply. The change is not undone if a later
     // entry of the same patch is rejected.
@@ -561,6 +564,19 @@ class runtime {
     result.root_ = owned<obj>{obj{root}};  // deletes a half-built tree when we return an error
     if (!built) return std::unexpected(built.error());
     return result;
+  }
+
+  // Writes the tree under `root` as JSON: see lv/dump.hpp. The widgets that came
+  // from the document of `ids` are written with their ids.
+  template <json::sink S>
+  static void dump(obj root, S&& sink, const loaded* ids = nullptr)
+    pre(root.raw() != nullptr)
+  {
+    const auto id_of = [](const void* screen, lv_obj_t* o) {
+      return static_cast<const loaded*>(screen)->id_of(obj{o});
+    };
+    detail::dump_tree<Widgets...>(root.raw(), sink,
+                                  ids != nullptr ? detail::id_lookup{ids, id_of} : detail::id_lookup{});
   }
 
  private:
