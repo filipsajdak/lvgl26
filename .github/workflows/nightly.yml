@@ -116,7 +116,8 @@ jobs:
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
     needs: [host, fuzz-json, arm]
-    if: failure()
+    # Only for main: a run started by hand on a branch is watched by whoever started it.
+    if: failure() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       issues: write
