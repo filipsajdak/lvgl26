@@ -11,7 +11,7 @@ cmake --preset host-v96 && cmake --build --preset host-v96 && ctest --preset hos
 | Preset | What it checks |
 |---|---|
 | `host-v96`, `host-v10` | LVGL v9.6.0 and the v10 pin, warnings as errors |
-| `host-v96-asan`, `host-v10-asan` | AddressSanitizer and UndefinedBehaviorSanitizer |
+| `host-v96-asan`, `host-v10-asan` | AddressSanitizer and UndefinedBehaviorSanitizer, with `float-cast-overflow`, which GCC leaves out of `undefined` |
 | `host-v96-tsan` | ThreadSanitizer (Linux only; GCC has no TSan on macOS) |
 | `host-v96-analyze` | GCC static analyzer (`-fanalyzer`) |
 | `host-v96-coverage` | Coverage; report with `gcovr --filter include/lv/ build/host-v96-coverage` |

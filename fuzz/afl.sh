@@ -37,7 +37,7 @@ if [ "$(uname)" = Darwin ]; then
   extra=$out/afl_prev_loc.o
 fi
 
-g++-16 -std=gnu++26 -freflection -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all \
+g++-16 -std=gnu++26 -freflection -O1 -g -fsanitize=address,undefined,float-cast-overflow -fno-sanitize-recover=all \
   -fplugin="$plugin" \
   -DLV_CONF_SKIP -DLV_LVGL_H_INCLUDE_SIMPLE -DLV_MEM_SIZE=4194304 -DLV_USE_TEST=1 \
   -DLV_USE_SNAPSHOT=1 -DLV_USE_LODEPNG=1 -DLV_USE_FS_STDIO=1 -DLV_FS_STDIO_LETTER=65 \
