@@ -49,7 +49,7 @@
 <span class="k">using namespace</span> <span class="t">lv::units</span>;
 
 <span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>(
-    {.flex_align = {LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER},
+    {.flex_align = {<span class="s">"center"</span>, <span class="s">"center"</span>, <span class="s">"center"</span>},
      .size = {<span class="n">320</span> * px, <span class="n">240</span> * px}})[
     <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .text = <span class="s">"Speed"</span>}),
     <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .size = {<span class="n">110</span> * px, <span class="n">110</span> * px}, .value = <span class="n">120</span>}),

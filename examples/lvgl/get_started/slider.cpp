@@ -10,8 +10,8 @@ using namespace lv::units;
 constinit lv::state level{50 * mp_units::percent};
 
 constexpr auto ui = lv::group[
-    lv::label({.align = LV_ALIGN_CENTER, .text = lv::bind(level, "{}"), .y = -20 * px}),
-    lv::slider({.align = LV_ALIGN_CENTER, .value = lv::bind(level), .width = 90 * pct,
+    lv::label({.align = "center", .text = lv::bind(level, "{}"), .y = -20 * px}),
+    lv::slider({.align = "center", .value = lv::bind(level), .width = 90 * pct,
                 .y = 20 * px})];
 
 }  // namespace

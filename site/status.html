@@ -78,6 +78,7 @@
 
     <!-- WORKS TODAY: one line per feature. -->
     <ul class="features works">
+      <li><strong>Enumerators by name</strong> <span>An LVGL enumerator is a name in quotes, in a tree, a style or <code>set()</code>: <code>.align = "center"</code>. A wrong name is a compile error that lists the names. The examples name nothing of LVGL's C API, and a test keeps it so.</span> <small>detail/enum_names.hpp, values.hpp; enum_names.cpp, fail/enumerator_unknown_name.cpp, examples_check</small></li>
       <li><strong>Start-up without C</strong> <span><code>lv::application</code> starts LVGL and stops it when it goes out of scope; <code>run()</code> is the loop. <code>lv::display</code> draws into an <code>lv::frame</code> or an <code>lv::band</code> and tells a panel function what was drawn. A program calls no <code>lv_init</code> and no <code>lv_display_*</code>.</span> <small>application.hpp, display.hpp, host.hpp; application.cpp</small></li>
       <li><strong>Typed views</strong> <span><code>lv::view&lt;"arc"&gt;</code> is one pointer and never deletes. <code>lv::owned&lt;T&gt;</code> owns. <code>lv::weak&lt;T&gt;</code> empties itself when LVGL deletes the widget.</span> <small>view.hpp, owned.hpp; l1_views.cpp</small></li>
       <li><strong>Generated properties</strong> <span><code>lv::props&lt;"arc"&gt;</code>: one member per <code>lv_arc_set_*</code> and <code>lv_obj_set_*</code> function and one per event, built by reflection from LVGL's headers.</span> <small>props.hpp, events.hpp; l1_views.cpp, l2_tree.cpp</small></li>
