@@ -36,7 +36,7 @@ static_assert(lv::length{50 * pct}.raw() == LV_PCT(50));
 static_assert((2 * sec) == (2000 * ms) && (90 * deg).degrees == 90);
 constexpr lv::horizontal wide{100 * px};
 constexpr auto kinds = lv::box({.width = wide, .x = wide, .y = 5 * px});
-static_assert(std::get<0>(kinds.p.width.v).raw() == 100);
+static_assert(kinds.p.width.v.v0 == 100);
 static_assert(lv::opa{50 * pct}.raw() == 127);
 static_assert((lv::rgb(0x3366ff)).red == 0x33 && (lv::rgb(0x3366ff)).blue == 0xff);
 

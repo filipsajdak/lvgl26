@@ -164,7 +164,9 @@ consteval auto make_getter_table() {
   return table;
 }
 
-template <fixed W>
+// The second parameter lets a template name the table of a widget it knows, such as
+// getter_table<"obj", D>, without building it where the template is only read.
+template <fixed W, class = void>
 inline constexpr auto getter_table = make_getter_table<W>();
 
 // ---- which widget an object is -------------------------------------------------
@@ -303,7 +305,8 @@ struct tree_dump {
 template <fixed... Widgets, json::sink S>
 void dump_tree(lv_obj_t* root, S& sink, id_lookup ids) {
   lv_obj_update_layout(root);  // so that the places are those of the next frame
-  tree_dump{erase_sink(sink), widget_table<Widgets...>, getter_table<"obj">, ids}.node(root);
+  tree_dump{erase_sink(sink), widget_table<Widgets...>, getter_table<"obj", std::void_t<S>>, ids}
+      .node(root);
 }
 
 }  // namespace lv::detail

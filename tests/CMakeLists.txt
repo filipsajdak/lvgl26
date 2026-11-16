@@ -91,6 +91,21 @@ add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
 
+# A tree of 112 widgets, and the guard of its compile time. The limit is the number of
+# steps the compiler may take in one constant evaluation; GCC's default is 33554432.
+# This file needs 5.9 million, on both LVGL versions. With nodes that held a whole
+# props struct, as they first did, it needed more than 170 million, and a tree of 100
+# widgets took the compiler 8 GB of memory. The limit leaves room for LVGL to grow,
+# not for that to come back.
+add_executable(large_tree large_tree.cpp)
+target_link_libraries(large_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+target_compile_options(large_tree PRIVATE -fconstexpr-ops-limit=9000000)
+# Not for the analyzer: it follows every path through the 112 functions that build this
+# tree, which takes it minutes. They are the functions the small trees are built with,
+# and those it does check. A source file's options come last, after -fanalyzer.
+set_source_files_properties(large_tree.cpp PROPERTIES COMPILE_OPTIONS -fno-analyzer)
+add_test(NAME large_tree COMMAND large_tree)
+
 add_executable(tokens tokens.cpp)
 target_link_libraries(tokens PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME tokens COMMAND tokens A:${CMAKE_CURRENT_SOURCE_DIR}/ref/tokens_dark.png
@@ -126,6 +141,7 @@ lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
 lvgl26_compile_fail(unknown_id "the tree has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(duplicate_id "the id 'a' is used twice in one tree")
+lvgl26_compile_fail(props_without_braces "made_with_braces")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(props_wrong_unit "It takes an angle in whole degrees \\(90 \\* lv::deg\\). You gave lv::length")

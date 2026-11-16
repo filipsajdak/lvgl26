@@ -9,6 +9,9 @@
 // Members are in alphabetical order, which is the order designated initializers
 // must follow. Every member is typed: a wrong name, a wrong unit, a bool where an
 // integer is expected and a narrowing conversion are all compile errors.
+//
+// A props struct is made with braces, also an empty one: `lv::props<"arc"> p{};`.
+// `lv::props<"arc"> p;` does not compile: see detail::made_with_braces.
 
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
@@ -128,8 +131,12 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
 }
 
 // What every widget has: `id`, `style`, the lv_obj_set_* properties and the events.
+// `prefix` is "lv_obj_set_". It is a parameter, and the scans are handed on as
+// arguments, because of GCC 16.2: a call whose arguments are all constants, written
+// inside a function template, is run when the template is instantiated and again
+// when the function runs. That doubled the cost of every scan.
 template <class D>
-consteval std::vector<member_item> scan_base() {
+consteval std::vector<member_item> scan_base(std::string_view prefix) {
   std::vector<member_item> items;
   items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}});
   items.push_back({"style", ^^style_t<D>, ^^lv_obj_add_style});
@@ -142,8 +149,7 @@ consteval std::vector<member_item> scan_base() {
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_part_t)))
     if (auto name = style_member(std::meta::identifier_of(e), "LV_PART_"); !name.empty())
       items.push_back({std::define_static_string(name), ^^style_t<D>, e});
-  for (auto f : setters_with_prefix("lv_obj_set_"))
-    items.push_back(setter_item<D>(f, std::string_view("lv_obj_set_").size()));
+  for (auto f : setters_with_prefix(prefix)) items.push_back(setter_item<D>(f, prefix.size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
       items.push_back({std::define_static_string(name), ^^arg<handler>, e});
@@ -153,11 +159,9 @@ consteval std::vector<member_item> scan_base() {
 
 // The base is found and sorted once, on first use, and stored as one array of
 // triples: the name (a reflected string), the type and the target.
-// A template only so that nothing here runs until a props struct is needed.
-template <class D>
-consteval std::vector<std::meta::info> pack_base() {
+consteval std::vector<std::meta::info> pack_base(const std::vector<member_item>& items) {
   std::vector<std::meta::info> out;
-  for (const auto& it : scan_base<D>()) {
+  for (const auto& it : items) {
     out.push_back(std::meta::reflect_constant_string(it.name));
     out.push_back(it.type);
     out.push_back(it.target);
@@ -165,9 +169,10 @@ consteval std::vector<std::meta::info> pack_base() {
   return out;
 }
 
+// A template only so that nothing here runs until a props struct is needed.
 template <class D = void>
 inline constexpr std::span<const std::meta::info> base =
-    std::define_static_array(pack_base<D>());
+    std::define_static_array(pack_base(scan_base<D>("lv_obj_set_")));
 
 // The widget's own setters as members, sorted by name. None for obj itself.
 template <class D>
@@ -200,32 +205,52 @@ consteval std::vector<member_item> members(std::string_view widget) {
   return items;
 }
 
-template <class D = void>
-consteval std::vector<std::meta::info> member_specs(std::string_view widget) {
-  std::vector<std::meta::info> specs;
-  for (const auto& it : members<D>(widget))
-    specs.push_back(std::meta::data_member_spec(it.type, {.name = str(it.name)}));
-  return specs;
+// Members as pairs: what std::meta::define_aggregate needs for the member, then its
+// target.
+consteval std::vector<std::meta::info> member_pairs(const std::vector<member_item>& items) {
+  std::vector<std::meta::info> out;
+  for (const auto& it : items) {
+    out.push_back(std::meta::data_member_spec(it.type, {.name = str(it.name)}));
+    out.push_back(it.target);
+  }
+  return out;
 }
 
-template <class D = void>
-consteval std::vector<std::meta::info> member_targets(std::string_view widget) {
+// The members of props<W> as such pairs. The struct and its targets both come from
+// this table, so the setters of a widget are looked up once.
+template <fixed W>
+inline constexpr std::span<const std::meta::info> member_table =
+    std::define_static_array(member_pairs(members<>(W.sv())));
+
+// Every second entry of member_table<W> from `first` on: 0 for the members, 1 for
+// their targets.
+template <fixed W>
+consteval std::vector<std::meta::info> member_column(std::size_t first) {
   std::vector<std::meta::info> out;
-  for (const auto& it : members<D>(widget)) out.push_back(it.target);
+  for (std::size_t i = first; i < member_table<W>.size(); i += 2) out.push_back(member_table<W>[i]);
   return out;
+}
+
+template <fixed W>
+consteval std::vector<std::meta::info> member_specs() {
+  auto specs = member_column<W>(0);
+  specs.push_back(braces_member());
+  return specs;
 }
 
 // The second parameter lets a signature name props lazily: see detail::make.
 template <fixed W, class = void>
 struct props_of {
   struct type;
-  consteval { std::meta::define_aggregate(^^type, member_specs<>(W.sv())); }
+  consteval { std::meta::define_aggregate(^^type, member_specs<W>()); }
 };
 
-// What each member of props<W> stands for, in member order.
-template <fixed W>
+// What each member of props<W> stands for, in member order. The second parameter
+// lets a template name the targets of a widget it knows without generating them
+// where it is only read: targets<"obj", D>.
+template <fixed W, class = void>
 inline constexpr std::span<const std::meta::info> targets =
-    std::define_static_array(member_targets<>(W.sv()));
+    std::define_static_array(member_column<W>(1));
 
 inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
   // A function pointer travels in user_data, so nothing is allocated.
@@ -340,11 +365,11 @@ void bind_member(lv_obj_t* o, const A& a) {
     [:native:](o, subject, a.bound_format);
   } else if constexpr (native != std::meta::info{}) {
     [:native:](o, subject);
-  } else if constexpr (std::tuple_size_v<decltype(a.v)> != 1) {
+  } else if constexpr (std::tuple_size_v<typename A::types> != 1) {
     // lv::mount rejects this at compile time; set() at run time ends up here.
     contract_assert(false && "this property takes several values and cannot follow a state");
   } else {
-    using value_type = std::tuple_element_t<0, decltype(a.v)>;
+    using value_type = std::tuple_element_t<0, typename A::types>;
     lv_subject_add_observer_obj(subject, &follow_subject<W, I, value_type>, o, nullptr);
   }
 }
@@ -382,9 +407,78 @@ using props = typename detail::props_of<W>::type;
 
 namespace detail {
 
+// The second parameter delays them as that of targets does.
+template <fixed W, class = void>
+inline constexpr auto members_of_props = std::define_static_array(members_before_braces(^^props<W>));
+
+// A style of a node of a tree: none, or one style. An empty one is two zeros to the
+// compiler, where a style with nothing set is 139 unset members.
+template <class S>
+struct maybe {
+  bool has;
+  union {
+    char nothing;
+    S value;
+  };
+};
+
+template <class T>
+inline constexpr bool is_maybe = false;
+template <class S>
+inline constexpr bool is_maybe<maybe<S>> = true;
+
+template <class S>
+constexpr bool is_set(const maybe<S>& m) {
+  return m.has;
+}
+
+// The members of kept<W>: those of props<W>, with every style in a maybe<>.
+template <fixed W, class D>
+consteval std::vector<std::meta::info> kept_specs() {
+  std::vector<std::meta::info> specs;
+  for (auto m : members_of_props<W>) {
+    const auto type = std::meta::type_of(m);
+    const bool style = std::meta::dealias(type) == std::meta::dealias(^^style_t<D>);
+    specs.push_back(std::meta::data_member_spec(style ? ^^maybe<style_t<D>> : type,
+                                                {.name = std::meta::identifier_of(m)}));
+  }
+  return specs;
+}
+
+// The properties of a widget as a node of a tree keeps them. props<W> is what is
+// written; it has a full style for each of the 25 states and parts, which makes it
+// thousands of members that the compiler walks every time a node is copied. A node
+// is copied at every level of the tree above it, so it keeps this smaller form.
+// The second parameter delays it like that of props_of.
+template <fixed W, class D = void>
+struct kept_of {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, kept_specs<W, D>()); }
+};
+
+template <fixed W, class D = void>
+using kept = typename kept_of<W, D>::type;
+
 template <fixed W>
-inline constexpr auto members_of_props = std::define_static_array(
-    std::meta::nonstatic_data_members_of(^^props<W>, std::meta::access_context::unchecked()));
+inline constexpr auto members_of_kept = std::define_static_array(
+    std::meta::nonstatic_data_members_of(^^kept<W>, std::meta::access_context::unchecked()));
+
+// `p` in the form a node keeps.
+template <fixed W, class D>
+constexpr kept<W, D> keep(const lazy_props<W, D>& p) {
+  kept<W, D> out{};
+  template for (constexpr auto i : indices<members_of_props<W>.size()>) {
+    const auto& given = p.[:members_of_props<W>[i]:];
+    auto& held = out.[:members_of_kept<W>[i]:];
+    if (is_set(given)) {
+      if constexpr (is_maybe<std::remove_cvref_t<decltype(held)>>)
+        held = {.has = true, .value = given};
+      else
+        held = given;
+    }
+  }
+  return out;
+}
 
 // Applies every set member of `p`, read at run time.
 template <fixed W>
