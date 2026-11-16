@@ -253,6 +253,12 @@ struct text_format {
   }
 };
 
+// A font property bound to a font that is drawn on the device: lv::bind(title).
+// See lv/scaled_font.hpp.
+struct font_binding {
+  const void* source;  // the lv::scaled_font
+};
+
 // A text property bound to a state through a format: lv::bind(speed, "{} km/h").
 template <class T>
 struct formatted_binding {
@@ -269,6 +275,8 @@ template <class T>
 inline constexpr bool is_binding<binding<T>> = true;
 template <class T>
 inline constexpr bool is_binding<formatted_binding<T>> = true;
+template <>
+inline constexpr bool is_binding<font_binding> = true;
 
 }  // namespace detail
 
@@ -386,6 +394,11 @@ struct arg {
                   "lv: this property is in tenths of a degree, and a state of lv::angle holds "
                   "whole degrees. Give the state the type of the property: "
                   "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
+  }
+
+  constexpr arg(font_binding b) : set(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+    static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
+                  "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>

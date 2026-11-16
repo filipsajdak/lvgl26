@@ -73,6 +73,29 @@ typography token (`type(tok.text.title)` with an lv::typeface, see lv/font.hpp),
 lv::raw(font) for a font that no token names. You gave const _lv_font_t*.
 ```
 
+## A size that changes while the program runs
+
+A font made by the compiler has one size. Where the size is only known on the device, `lv::scaled_font` lets the device draw the glyphs. A style binds to it, as a property binds to a state:
+
+<!-- snippet: examples/scaled_font/main.cpp font -->
+```cpp
+constinit lv::scaled_font reading{barlow_ttf, tok.text.label};  // the size of the token: 16 px
+
+constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
+    lv::label({.id = "reading", .style = {.text_font = lv::bind(reading)}, .text = "21.5"})];
+```
+
+<!-- snippet: examples/scaled_font/main.cpp resize -->
+```cpp
+  reading.resize(tok.text.title);     // 28 px: the label follows
+  reading.resize(lv::raw(31 * px));   // a size that no token names
+```
+
+- Its size comes from a typography token too. A size that no token names is `lv::raw(...)`.
+- It needs LVGL's TinyTTF, which is off by default. Turn it on before lvgl26 is added: `set(LVGL26_TTF ON)`.
+- The device pays for it: the whole font file in flash, TinyTTF's code, and heap for the glyphs it has drawn.
+- A theme cannot hold such a font, because a theme is a constant.
+
 ## What a font costs
 
 Barlow Medium with its 95 characters, measured once on one machine:

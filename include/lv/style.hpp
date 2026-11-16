@@ -204,6 +204,20 @@ template <class D = void>
 inline constexpr std::span<const std::meta::info> style_ids =
     std::define_static_array(style_column<D>(2));
 
+// The font of a font property that follows an lv::scaled_font. Defined in
+// lv/scaled_font.hpp, which a program that binds a font has included.
+const lv_font_t* bound_font(const void* source);
+
+// Calls a style setter with the value of one member: what it holds, or the font it follows.
+template <class A, class Setter>
+void set_style_value(lv_obj_t* o, const A& a, Setter setter, lv_style_selector_t selector) {
+  if constexpr (std::same_as<A, arg<styled<const lv_font_t*>>>) {
+    if (a.bound != nullptr) return setter(o, bound_font(a.bound), selector);
+  }
+  const auto& [... x] = a.v;
+  setter(o, lower(x)..., selector);
+}
+
 // True when at least one property of the style is set.
 template <class S, class D = void>
   requires a_style<S, D>
@@ -219,10 +233,7 @@ template <class S, class D = void>
 void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector) {
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     constexpr auto m = style_members<D>[i];
-    if (s.[:m:].set) {
-      const auto& [... x] = s.[:m:].v;
-      [:style_setters<D>[i]:](o, lower(x)..., selector);
-    }
+    if (s.[:m:].set) set_style_value(o, s.[:m:], [:style_setters<D>[i]:], selector);
   }
 }
 
@@ -250,12 +261,18 @@ template <class Where, class D = void>
 inline constexpr std::span<const std::size_t> set_in =
     std::define_static_array(set_style_members<std::remove_cvref_t<decltype(Where::get())>, D>(Where::get()));
 
+// Whether member i of the constant style can live in a const lv_style_t: LVGL has an
+// id for it, and it holds a value. A font that is drawn on the device is not a constant.
+template <class Where, std::size_t I, class D = void>
+inline constexpr bool is_const_member =
+    style_ids<D>[I] != std::meta::info{} && Where::get().[:style_members<D>[I]:].bound == nullptr;
+
 // How many set properties of a constant style can live in a const lv_style_t.
 template <class Where, class D = void>
 inline constexpr std::size_t const_count = [] {
   std::size_t n = 0;
   template for (constexpr auto i : set_in<Where, D>) {
-    if constexpr (style_ids<D>[i] != std::meta::info{}) ++n;
+    if constexpr (is_const_member<Where, i, D>) ++n;
   }
   return n;
 }();
@@ -286,7 +303,7 @@ consteval std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_pro
   std::array<lv_style_const_prop_t, const_count<Where, D> + 1> out{};
   std::size_t k = 0;
   template for (constexpr auto i : set_in<Where, D>) {
-    if constexpr (style_ids<D>[i] != std::meta::info{}) {
+    if constexpr (is_const_member<Where, i, D>) {
       out[k].prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
       out[k].value = style_value(Where::get().[:style_members<D>[i]:].v.v0);
       ++k;
@@ -310,8 +327,8 @@ constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
 }
 
 // Adds a constant style to a widget. What LVGL can keep in a const style goes to
-// read-only memory; the few shorthands without a style id (pad_all, size, ...) are
-// set as local styles.
+// read-only memory; the few shorthands without a style id (pad_all, size, ...) and a
+// font that follows an lv::scaled_font are set as local styles.
 template <class Where, class D = void>
 void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
   if constexpr (const_count<Where, D> > 0) {
@@ -320,10 +337,9 @@ void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
     lv_obj_add_style(o, &st, selector);
   }
   template for (constexpr auto i : set_in<Where, D>) {
-    if constexpr (style_ids<D>[i] == std::meta::info{}) {
+    if constexpr (!is_const_member<Where, i, D>) {
       constexpr auto a = Where::get().[:style_members<D>[i]:];
-      const auto& [... x] = a.v;
-      [:style_setters<D>[i]:](o, lower(x)..., selector);
+      set_style_value(o, a, [:style_setters<D>[i]:], selector);
     }
   }
 }
