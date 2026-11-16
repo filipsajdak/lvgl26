@@ -4,7 +4,7 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT
 
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -273,6 +273,19 @@ lv::label({.style = {.text_font = title}, .text = "Wake up"})
 ```
 
 [docs/fonts.md](docs/fonts.md) has the costs and the limits.
+
+A picture works the same way. The compiler decodes an embedded PNG file into the display's own
+pixels, so the device needs no decoder:
+
+```cpp
+constexpr unsigned char logo_png[] = {
+#embed "logo.png"
+};
+
+lv::image({.src = lv::image_file<logo_png>})
+```
+
+[docs/images.md](docs/images.md) says how a picture is stored and what it costs.
 
 Rules to know:
 

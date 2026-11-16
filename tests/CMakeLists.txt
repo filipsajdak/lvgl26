@@ -140,6 +140,10 @@ target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LV
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
 
+add_executable(image image.cpp)
+target_link_libraries(image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME image COMMAND image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/image.png)
+
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
@@ -180,6 +184,12 @@ lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example to
 lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
 lvgl26_compile_fail(theme_needs_token "It takes a design token .*You gave lv::length")
 lvgl26_compile_fail(theme_not_a_value "a theme cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
+lvgl26_compile_fail(image_not_a_png "this is not a PNG file. Embed one")
+lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise lv::config::compile_time_image_pixels")
+lvgl26_compile_fail(image_deep "this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced")
+lvgl26_compile_fail(image_interlaced "this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced")
+lvgl26_compile_fail(image_short "this PNG file is damaged: it does not hold as many pixels as it says")
+lvgl26_compile_fail(image_bad_filter "this PNG file is damaged: a row has a filter that the format does not know")
 lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
 lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
 lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
@@ -322,6 +332,20 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
                      ${PROJECT_SOURCE_DIR}/docs/media/theme-${look}.png)
     set_tests_properties(example_theme_picture_${look} PROPERTIES FIXTURES_REQUIRED example_theme_pictures)
   endforeach()
+endif()
+
+# The example of docs/images.md. Its picture is the one on the page.
+add_executable(example_images ${PROJECT_SOURCE_DIR}/examples/images/main.cpp)
+target_compile_options(example_images PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/images)
+target_link_libraries(example_images PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_images_out)
+add_test(NAME example_images COMMAND example_images WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_images_out)
+set_tests_properties(example_images PROPERTIES FIXTURES_SETUP example_images_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_images_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_images_out/images.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/images.png)
+  set_tests_properties(example_images_picture PROPERTIES FIXTURES_REQUIRED example_images_picture)
 endif()
 
 # The example of docs/fonts.md. Its picture is the one on the page.

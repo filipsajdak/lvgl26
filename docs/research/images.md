@@ -158,6 +158,19 @@ Checked 2026-11-16. Question: which stored forms should the compile-time image p
 | Nearest prior art for compression: consteval-huffman compresses strings at compile time and decodes at run time. It is not DEFLATE. | [consteval-huffman](https://code.bitgloo.com/clyne/consteval-huffman) | `summary` |
 | In a native PNG decoder, time splits about evenly between inflate and unfiltering. Expect both to matter in the interpreter. | [PNGdec README](https://github.com/bitbank2/PNGdec) | `source` |
 
+## Our measurements: a PNG decoded by the compiler
+
+GCC 16.2.0, macOS arm64, 2026-11-16. Work of `cc1plus` in instructions (`/usr/bin/time -l`), one run each. About 10 billion instructions are a second on this machine.
+
+| Finding | How | Mark |
+|---|---|---|
+| A plain decoder (a call for each bit and each byte): 48 x 48 RGBA 44 billion; 320 x 240 RGBA 361 to 548 billion, 2 to 4 GB of memory. | The first spike | `measured` |
+| Written for the interpreter (code tables, sized buffers, pointers, a loop for each filter): 4 billion, and 45 to 115 billion. | `include/lv/detail/png_reader.hpp` in its spike form | `measured` |
+| File to stored RGB565 with alpha: 8 billion for 48 x 48; 71 to 142 billion for 320 x 240. | With `std::define_static_array` | `measured` |
+| Returning the 230 KB as a `std::array` instead costs 200 to 400 billion more. | Three variants of the store | `measured` |
+| `std::define_static_array` puts the data into a symbol name. Apple's linker fails on 230 KB (`name.size() <= maxLength`); 48 KB links. | Linking the spike | `measured` |
+| In the library: a 32 x 32 picture adds 1.3 billion to a file that includes `lv/lv.hpp` (33 billion), a 128 x 128 picture 13 to 14 billion. | `lv::image_file` | `measured` |
+
 ## Not confirmed
 
 - emWin's formats and rules. The manual was too large to fetch. Recalled: RLE4/8/16/32 bitmaps drawn from ROM without a buffer. `recalled`
