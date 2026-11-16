@@ -326,15 +326,22 @@ constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
   return s;
 }
 
+// The constant style of a node: one object for every node whose style has these values.
+template <class Where, class D = void>
+consteval const lv_style_t* shared_const_style() {
+  // Equal values give one object, so two nodes with the same style share their style.
+  const auto* props = std::define_static_array(const_props<Where, D>()).data();
+  return std::define_static_object(const_style(props));
+}
+
 // Adds a constant style to a widget. What LVGL can keep in a const style goes to
 // read-only memory; the few shorthands without a style id (pad_all, size, ...) and a
 // font that follows an lv::scaled_font are set as local styles.
 template <class Where, class D = void>
 void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
   if constexpr (const_count<Where, D> > 0) {
-    static constexpr auto props = const_props<Where, D>();
-    static constexpr lv_style_t st = const_style(props.data());
-    lv_obj_add_style(o, &st, selector);
+    constexpr const lv_style_t* st = shared_const_style<Where, D>();
+    lv_obj_add_style(o, st, selector);
   }
   template for (constexpr auto i : set_in<Where, D>) {
     if constexpr (!is_const_member<Where, i, D>) {
