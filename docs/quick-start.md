@@ -30,15 +30,15 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .s
     lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 ```
 
-**A main.** Two objects start LVGL and give it a display. `lv::mount` creates the widgets.
+**A main.** Two objects start LVGL and give it a display. The display takes a theme: Signal, which comes with lvgl26. `lv::mount` creates the widgets.
 
 <!-- snippet: examples/quick_start/main.cpp main -->
 ```cpp
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;              // LVGL starts; it stops when app goes out of scope
-  lv::display display{app, frame};  // no panel: the picture stays in the frame
+  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them
   if (!root) return 1;
@@ -53,6 +53,7 @@ Above them go the includes and two `using` lines for the units:
 ```cpp
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
+#include <lv/signal.hpp>
 
 #include <mp-units/systems/si.h>
 
@@ -102,6 +103,7 @@ In the container, leave the two `-D` options out. The first build takes a minute
 | Typed values | `120 * km / h`, `320 * px` | A length is not a speed, and a number is not a length. |
 | State and binding | `lv::state`, `lv::bind(speed)` | Change the value; the dial and the text follow. |
 | Names, not C | `.align = "center"` | An LVGL value is its name in quotes. A wrong name lists the right ones. |
+| A theme | `lv::signal::dark` | One look for every widget. The screen has no style in it. |
 | Objects own things | `lv::application`, `lv::display`, `root` | Nothing to shut down or delete by hand. |
 
 ## Try a mistake
@@ -124,5 +126,6 @@ error: static assertion failed: lv: wrong value for this property. It takes a wi
 
 ## Where next
 
+- [Themes](themes.md) shows Signal's other form, and how to make a theme of your own.
 - The [README](../README.md) tours the rest: styles and design tokens, derived values, coroutines, animation.
 - [examples](../examples/README.md) holds LVGL's own examples, rewritten with lvgl26.
