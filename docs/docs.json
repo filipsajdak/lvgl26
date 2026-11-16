@@ -6,6 +6,6 @@
   "repository": "https://github.com/filipsajdak/lvgl26",
   "sections": [
     {"title": "Start", "pages": ["quick-start.md"]},
-    {"title": "Guides", "pages": ["themes.md", "fonts.md"]}
+    {"title": "Guides", "pages": ["themes.md", "fonts.md", "images.md"]}
   ]
 }

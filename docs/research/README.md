@@ -16,6 +16,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [agent-docs.md](agent-docs.md) | How a library gives its documentation to AI coding agents: measurements, formats, what other projects ship. |
 | [lsp.md](lsp.md) | Editor support for code that only GCC compiles: clangd and reflection, stub headers, completion inside a string, GCC's diagnostics, what agents can use. |
 | [fonts.md](fonts.md) | LVGL's font format, what its converter does, the TrueType a rasteriser needs, SDF and MSDF, and our spike that rasterises a TTF in the compiler. |
+| [image-formats.md](image-formats.md) | Web and embedded image formats: ratio, decoder size and RAM, what decodes line by line, and whether an own format is justified. |
 | [images.md](images.md) | What LVGL draws from read-only memory, its compression and decoders, what other frameworks choose at build time, and a rule for the compile-time path. |
 
 ## How each claim is marked

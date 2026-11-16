@@ -68,6 +68,12 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
 - `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
   draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
+- Code that runs in the compiler is written for its interpreter: look codes up in tables, give a
+  buffer its size once and write through pointers, avoid a call for each byte
+  (`include/lv/detail/png_reader.hpp` needs an eighth of the work of its first form).
+- A large result of constant evaluation is stored with `std::define_static_array`: returning a
+  `std::array` of 200 KB costs several times the decoding. Its data becomes part of a symbol name,
+  and Apple's linker refuses a very long one, so sizes are limited (`compile_time_image_pixels`).
 - `docs/reference/lvgl-<version>.json` is the reference as data: widgets, properties, what each takes,
   enumerator names, style members. `tools/reference/reference.cpp` prints it by reflection, and the
   test `reference_data` fails when a committed file is stale. Write it again with the program the
