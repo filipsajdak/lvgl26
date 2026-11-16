@@ -26,10 +26,18 @@ set_target_properties(lvgl PROPERTIES SYSTEM TRUE)
 target_compile_definitions(lvgl PUBLIC LV_USE_SNAPSHOT=1)
 
 # LVGL's own heap. LVGL's default is 64 KB: enough for a small screen on a
-# microcontroller, too little for a picture of a whole screen.
-set(LVGL26_LVGL_HEAP_BYTES "" CACHE STRING "The size of LVGL's own heap in bytes; empty keeps LVGL's default")
-if(LVGL26_LVGL_HEAP_BYTES)
-  target_compile_definitions(lvgl PUBLIC LV_MEM_SIZE=${LVGL26_LVGL_HEAP_BYTES})
+# microcontroller, too little for a picture of a whole screen. So a build for the
+# machine you work on gets 1 MB, and a cross build keeps LVGL's default.
+set(LVGL26_LVGL_HEAP_BYTES "" CACHE STRING
+    "The size of LVGL's own heap in bytes; empty means 1 MB on a hosted build and LVGL's default on a cross build")
+set(LVGL26_HEAP "${LVGL26_LVGL_HEAP_BYTES}")
+if(NOT LVGL26_HEAP AND LVGL26_BUILD_TESTS)
+  set(LVGL26_HEAP 4194304)  # the tests draw screens of every size
+elseif(NOT LVGL26_HEAP AND NOT CMAKE_CROSSCOMPILING)
+  set(LVGL26_HEAP 1048576)
+endif()
+if(LVGL26_HEAP)
+  target_compile_definitions(lvgl PUBLIC LV_MEM_SIZE=${LVGL26_HEAP})
 endif()
 
 # Any other LVGL setting, as LVGL names it: -DLVGL26_LVGL_DEFINITIONS="LV_USE_LOG=1;LV_COLOR_DEPTH=32".
@@ -43,14 +51,15 @@ if(LVGL26_BUILD_TESTS)
   target_compile_definitions(lvgl PUBLIC
     LV_USE_TEST=1 LV_USE_TEST_SCREENSHOT_COMPARE=1 LV_USE_LODEPNG=1
     LV_USE_LOG=1 LV_LOG_PRINTF=1 LV_LOG_LEVEL=LV_LOG_LEVEL_WARN
-    LV_MEM_SIZE=4194304
     LV_USE_FS_STDIO=1 LV_FS_STDIO_LETTER=65
     LV_TEST_SCREENSHOT_CREATE_REFERENCE_IMAGE=$<BOOL:${LVGL26_UPDATE_REFERENCES}>)
 endif()
 
-# mp-units provides the units of application values in the tests. lvgl26's headers
-# do not include it: they accept any quantity of its shape.
-if(LVGL26_BUILD_TESTS)
+# mp-units gives application values their units (120 * km / h). lvgl26's headers do
+# not include it: they accept any quantity of its shape. LVGL26_UNITS fetches it and
+# links it to lvgl26, so a project needs no lines of its own for it. The tests fetch
+# it and link it themselves, which keeps the headers honest.
+if(LVGL26_UNITS OR LVGL26_BUILD_TESTS)
   set(MP_UNITS_API_CONTRACTS NONE CACHE STRING "" FORCE)
   set(MP_UNITS_API_STD_FORMAT TRUE CACHE STRING "" FORCE)
   set(MP_UNITS_BUILD_INSTALL OFF CACHE BOOL "" FORCE)
