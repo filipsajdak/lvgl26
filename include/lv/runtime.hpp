@@ -30,6 +30,7 @@
 // Limits: text values are at most 127 characters and are not unescaped. The
 // document must stay alive as long as the loaded screen is used with find/apply
 // (the ids are views into it). At most 32 nodes of a document can have an id.
+// A table has at most 64 rows and columns, a chart 1024 points (detail::count_limits).
 
 #include <lv/detail/enum_names.hpp>
 #include <lv/dump.hpp>
@@ -43,6 +44,7 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <limits>
 #include <span>
 #include <string_view>
 
@@ -254,24 +256,103 @@ struct property_entry {
 template <class... Ts>
 inline constexpr bool all_readable = (readable<Ts> && ...);
 
-// Reads the arguments of a setter and calls it. One argument comes from the value
-// itself; several come from a list of that length.
+// Reads the arguments of a setter. One argument comes from the value itself;
+// several come from a list of that length.
+template <class... Ts>
+bool read_arguments(json::value v, std::tuple<json_value<Ts>...>& args) {
+  if constexpr (sizeof...(Ts) == 1) {
+    return read(v, std::get<0>(args));
+  } else {
+    if (!v.is(json::kind::array) || v.size() != sizeof...(Ts)) return false;
+    bool ok = true;
+    template for (constexpr auto i : indices<sizeof...(Ts)>) {
+      ok = ok && read(v.at(i), std::get<i>(args));
+    }
+    return ok;
+  }
+}
+
+// The setters whose whole numbers make LVGL allocate once per unit, and the most a
+// document may give them. LVGL does not report a failed allocation there:
+// lv_table_set_row_count(t, 4000000000) leaves a null array that the next layout
+// reads, and rows times columns can overflow. Reflection cannot tell a count from
+// any other number, so this list is written by hand, like copies_text below. It
+// holds every setter that a sweep of each whole-number property at the extremes
+// of its type made crash, alone or on a chart that its program gave a series.
+// A limit makes a failure unlikely, not impossible: enough tables at their limit
+// still use up a small heap.
+struct count_limit {
+  std::string_view setter;  // a literal: static storage
+  std::uint32_t most;
+};
+
+// Rows and columns of a table, and the index of one (an index past the end adds
+// rows or columns): at the limit a table has 65 x 65 cells, 33 KB of cell
+// pointers on a 64-bit host.
+inline constexpr std::uint32_t most_table_rows_or_columns = 64;
+// Points of a chart: LVGL reallocates each series to this many values, 4 KB each
+// at the limit, and draws from a null array when that fails.
+inline constexpr std::uint32_t most_chart_points = 1024;
+
+inline constexpr count_limit count_limits[] = {
+    {"lv_table_set_row_count", most_table_rows_or_columns},
+    {"lv_table_set_column_count", most_table_rows_or_columns},
+    {"lv_table_set_column_width", most_table_rows_or_columns},
+    {"lv_table_set_cell_ctrl", most_table_rows_or_columns},
+    {"lv_chart_set_point_count", most_chart_points},
+};
+
+// The most a whole-number argument of `setter` may be.
+consteval std::uint64_t most_for(std::meta::info setter) {
+  for (const auto& limit : count_limits)
+    if (limit.setter == std::meta::identifier_of(setter)) return limit.most;
+  return std::numeric_limits<std::uint64_t>::max();
+}
+
+// Whether T is a whole number of a document, strict<I>.
+template <class T>
+inline constexpr bool is_strict = false;
+template <class I>
+inline constexpr bool is_strict<strict<I>> = true;
+
+// The C type of value argument I of a setter: its parameter after the widget.
+template <std::meta::info Setter, std::size_t I>
+using parameter_t = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[I + 1]):];
+
+// Whether a value read from a document fits argument I of the setter: the C type
+// of the parameter (a negative length for an unsigned one does not), and, for a
+// whole number, the setter's count limit. A length or an angle is not a count.
+template <std::meta::info Setter, std::size_t I, class T>
+constexpr bool fits_argument(const T& value) {
+  using P = parameter_t<Setter, I>;
+  const auto& v = lower(value);
+  using V = std::remove_cvref_t<decltype(v)>;
+  if constexpr (integer<V> && integer<P>)
+    return std::in_range<P>(v) && (!is_strict<T> || std::cmp_less_equal(v, most_for(Setter)));
+  else
+    return true;
+}
+
+// A value that fits_argument accepted, as the parameter's type.
+template <class P, class V>
+constexpr P as_argument(const V& v) {
+  if constexpr (integer<V> && integer<P> && !std::same_as<P, V>)
+    return static_cast<P>(v);
+  else
+    return v;
+}
+
+// Reads the arguments of a setter and calls it, if they fit its parameters.
 template <std::meta::info Setter, class... Ts, class... Extra>
 bool call_from_json(lv_obj_t* o, json::value v, std::type_identity<std::tuple<Ts...>>,
                     Extra... extra) {
   std::tuple<json_value<Ts>...> args;
-  bool ok = true;
-  if constexpr (sizeof...(Ts) == 1) {
-    ok = read(v, std::get<0>(args));
-  } else {
-    if (!v.is(json::kind::array) || v.size() != sizeof...(Ts)) return false;
-    template for (constexpr auto i : indices<sizeof...(Ts)>) {
-      ok = ok && read(v.at(i), std::get<i>(args));
-    }
-  }
-  if (!ok) return false;
-  std::apply([&](const json_value<Ts>&... a) { [:Setter:](o, lower(a.value)..., extra...); }, args);
-  return true;
+  if (!read_arguments(v, args)) return false;
+  return [&]<std::size_t... I>(std::index_sequence<I...>) {
+    if (!(fits_argument<Setter, I>(std::get<I>(args).value) && ...)) return false;
+    [:Setter:](o, as_argument<parameter_t<Setter, I>>(lower(std::get<I>(args).value))..., extra...);
+    return true;
+  }(std::index_sequence_for<Ts...>{});
 }
 
 template <fixed W, std::size_t I>
