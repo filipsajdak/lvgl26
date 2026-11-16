@@ -257,9 +257,8 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
                                    -DFETCHCONTENT_SOURCE_DIR_LVGL26=${PROJECT_SOURCE_DIR}
                                    -DFETCHCONTENT_SOURCE_DIR_LVGL=${lvgl_SOURCE_DIR}
                                    -DFETCHCONTENT_SOURCE_DIR_MP-UNITS=${mp-units_SOURCE_DIR}
-                   --test-command quick_start ${LVGL26_QUICK_START}/quick_start.png)
-  set_tests_properties(quick_start PROPERTIES PASS_REGULAR_EXPRESSION "wrote [^\n]*quick_start.png"
-                       TIMEOUT 900 FIXTURES_SETUP quick_start_picture)
+                   --test-command quick_start)
+  set_tests_properties(quick_start PROPERTIES TIMEOUT 900 FIXTURES_SETUP quick_start_picture)
   # The picture on the page is the one the program writes. LVGL v10 may draw other pixels.
   if(LVGL26_LVGL_REF STREQUAL "v9.6.0")
     add_test(NAME quick_start_picture

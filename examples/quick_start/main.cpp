@@ -1,21 +1,12 @@
-// The quick start of the documentation: a speedometer, drawn into memory and
-// saved as a picture. docs/quick-start.md shows this file piece by piece, and
-// tools/docs.py checks that the page and the file agree.
-//
-//   quick_start            writes quick_start.png
-//   quick_start out.png    writes out.png
+// The quick start of the documentation: docs/quick-start.md shows this file piece by piece.
 
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 
 #include <mp-units/systems/si.h>
 
-#include <cstdio>
-
 using namespace lv::units;
 using namespace mp_units::si::unit_symbols;
-
-namespace {
 
 //! [state]
 constinit lv::state speed{0 * km / h};
@@ -23,76 +14,25 @@ constinit lv::state speed{0 * km / h};
 void reset() { speed = 0 * km / h; }
 //! [state]
 
-//! [tokens]
-constexpr char tokens_json[] = {
-#embed "tokens.json"
-    , 0};
-
-constexpr auto tok = lv::tokens<tokens_json>;
-//! [tokens]
-
-//! [styles]
-// The looks of the screen, named once. Every value is a token.
-constexpr auto screen_look = lv::style({.bg_color = tok.color.ground,
-                                        .bg_opa = tok.opacity.opaque,
-                                        .border_width = tok.space.none,
-                                        .pad_all = tok.space.edge,
-                                        .pad_row = tok.space.gap,
-                                        .radius = tok.space.none,
-                                        .text_color = tok.color.muted});
-
-constexpr auto track = lv::style({.arc_color = tok.color.line,
-                                  .arc_rounded = false,
-                                  .arc_width = tok.stroke.track});
-constexpr auto progress = track | lv::style({.arc_color = tok.color.active});
-constexpr auto no_knob = lv::style({.bg_opa = tok.opacity.none, .pad_all = tok.space.none});
-
-constexpr auto reading_look = lv::style({.text_color = tok.color.reading});
-
-constexpr auto button_look = lv::style({.bg_color = tok.color.active,
-                                        .pad_hor = tok.space.button_x,
-                                        .pad_ver = tok.space.button_y,
-                                        .radius = tok.space.none,
-                                        .shadow_width = tok.space.none,
-                                        .text_color = tok.color.on_active});
-//! [styles]
-
 //! [tree]
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
-                                .size = {320 * px, 240 * px},
-                                .style = screen_look})[
-    lv::label({.id = "title", .text = "SPEED"}),
-    lv::arc({.id = "speedo",
-             .range = {0, 240},
-             .size = {108 * px, 108 * px},
-             .style = track,
-             .style_indicator = progress,
-             .style_knob = no_knob,
-             .value = lv::bind(speed)})[
-        lv::label({.align = "center", .id = "reading", .style = reading_look, .text = lv::bind(speed)})],
-    lv::button({.id = "reset", .on_clicked = &reset, .style = button_look})[
-        lv::label({.text = "RESET"})]];
+constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
+    lv::label({.text = "Speed"}),
+    lv::arc({.range = {0, 240}, .size = {120 * px, 120 * px}, .value = lv::bind(speed)})[
+        lv::label({.align = "center", .text = lv::bind(speed)})],
+    lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 //! [tree]
-
-//! [display]
-constinit lv::frame<320, 240> frame;  // the display's memory
-//! [display]
-
-}  // namespace
 
 //! [main]
-int main(int argc, char** argv) {
+constinit lv::frame<320, 240> frame;  // the display's memory
+
+int main() {
   lv::application app;              // LVGL starts; it stops when app goes out of scope
   lv::display display{app, frame};  // no panel: the picture stays in the frame
 
-  auto root = lv::mount<ui>(display.screen());  // std::expected; owns the widgets
+  auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them
   if (!root) return 1;
 
-  speed = 120 * km / h;  // the arc and the label follow
-
-  const char* path = argc > 1 ? argv[1] : "quick_start.png";
-  if (!lv::write_png(display.screen(), path)) return 2;
-  std::printf("wrote %s\n", path);
-  return 0;
+  speed = 120 * km / h;  // the dial and the text follow
+  return lv::write_png(display.screen(), "quick_start.png") ? 0 : 2;
 }
 //! [main]
