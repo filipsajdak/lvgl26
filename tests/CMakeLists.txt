@@ -59,6 +59,10 @@ lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(application)
 lvgl26_test(theme)
+# Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
+if(LVGL26_NO_DEFAULT_THEME)
+  lvgl26_test(no_default_theme)
+endif()
 lvgl26_test(scaled_font)
 target_link_libraries(scaled_font PRIVATE lvgl26_test_data)
 # A font size is more than nothing.

@@ -165,9 +165,19 @@ int main() {
 - **No heap.** The compiler works the theme out, and its styles are constants in read-only memory. LVGL keeps a pointer to each.
 - **Compile time.** A file that makes a theme compiles about a second longer. `lv/signal.hpp` makes two themes: about two seconds. Include it in one file.
 
+## Drop LVGL's own theme
+
+LVGL builds its default theme when the first display is made. It takes 2532 bytes of heap on a Cortex-M4.
+LVGL's simple and mono themes would take its place, so the option turns off all three.
+A theme that sets every look you need makes them dead weight.
+Turn it off in CMake, before lvgl26 is added: `set(LVGL26_NO_DEFAULT_THEME ON)`.
+A widget then has only the look your theme gives it, and a display without a theme shows LVGL's bare styles.
+Check each widget you use: a kind that your theme leaves out looks plain.
+The option is off by default.
+
 ## Rules
 
-- A theme is applied after LVGL's own theme. It only says what differs.
+- A theme is applied after LVGL's own theme. It only says what differs. Without LVGL's theme (see above) it is the whole look.
 - A node still has the last word: its `.style` wins over the theme.
 - A widget gets the styles of its own kind only. A slider does not get those of `bar`.
 - A member styles one part or one state. A part in a state (the indicator of a checked switch) is not there yet.

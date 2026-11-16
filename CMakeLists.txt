@@ -11,6 +11,7 @@ option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset a
 option(LVGL26_PNG "Build LVGL with its PNG decoder, for PNG files decoded on the device (lv::encoded_image)" OFF)
 option(LVGL26_JPEG "Build LVGL with its JPEG decoder, for JPEG files decoded on the device (lv::encoded_image)" OFF)
 option(LVGL26_TTF "Build LVGL with TinyTTF, for fonts drawn on the device (lv::scaled_font)" OFF)
+option(LVGL26_NO_DEFAULT_THEME "Build LVGL without its own themes (default, simple, mono): 2.5 KB less heap on a microcontroller. Give the display a theme of your own (lv::theme)" OFF)
 option(LVGL26_UNITS "Fetch mp-units and link it to lvgl26, for values with a unit" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
