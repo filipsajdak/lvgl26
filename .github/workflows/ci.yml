@@ -46,7 +46,7 @@ jobs:
           - host-v96-asan      # AddressSanitizer + UndefinedBehaviorSanitizer
           - host-v96-analyze   # GCC static analyzer: what it reports is a build error
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: ${{ matrix.preset }}
@@ -82,7 +82,7 @@ jobs:
         preset: [host-v96, host-v10]
         part: [1, 2, 3]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
       - name: Test
@@ -103,7 +103,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-tsan
@@ -132,7 +132,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-no-theme
@@ -170,7 +170,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-editor
@@ -214,7 +214,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-coverage
@@ -235,7 +235,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build the fuzz target
         run: |
           clang++ -std=c++23 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
