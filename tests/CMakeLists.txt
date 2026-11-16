@@ -204,6 +204,7 @@ lvgl26_widget_ports(checkbox bind_checked event states text)
 lvgl26_widget_ports(led brightness color styling)
 lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
+lvgl26_widget_ports(buttonmatrix event map)
 
 add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
