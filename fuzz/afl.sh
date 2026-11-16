@@ -4,7 +4,8 @@
 #
 #   fuzz/afl.sh [seconds] [target]     (default 600, runtime_document)
 #
-# Targets: runtime_document (corpus/document), mcp_message (corpus/mcp).
+# Targets: runtime_document (corpus/document), mcp_message (corpus/mcp),
+# mcp_stream (corpus/stream).
 # AFL_PLUGIN and LVGL_SRC say where the plugin and LVGL's source are, if not in build/.
 #
 # Needs: the host-v96-asan preset built (for LVGL), afl-fuzz on the PATH, and the
@@ -21,7 +22,8 @@ target=${2:-runtime_document}
 case $target in
   runtime_document) corpus=fuzz/corpus/document ;;
   mcp_message) corpus=fuzz/corpus/mcp ;;
-  *) echo "afl.sh: no target '$target'. Targets: runtime_document, mcp_message" >&2; exit 2 ;;
+  mcp_stream) corpus=fuzz/corpus/stream ;;
+  *) echo "afl.sh: no target '$target'. Targets: runtime_document, mcp_message, mcp_stream" >&2; exit 2 ;;
 esac
 plugin=${AFL_PLUGIN:-$PWD/build/_tools/afl/afl-gcc-pass.so}
 source=${LVGL_SRC:-build/_src/lvgl-v9.6.0}
