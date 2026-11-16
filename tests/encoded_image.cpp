@@ -19,6 +19,16 @@ constexpr unsigned char gradient_jpg[] = {
 #embed "images/gradient.jpg"
 };  // 48 x 32, baseline: red grows to the right, green downwards
 
+constexpr unsigned char wide_jpg[] = {
+#embed "images/wide.jpg"
+};  // 300 x 8: a size that needs both bytes of its number
+constexpr unsigned char wide_png[] = {
+#embed "images/wide_grey.png"
+};  // 300 x 2
+constexpr unsigned char tallest_jpg[] = {
+#embed "images/tallest.jpg"
+};  // only a header, which says 1 x 65535: the most LVGL holds
+
 constexpr auto ring = lv::encoded_image<ring_png>;
 constexpr auto gradient = lv::encoded_image<gradient_jpg>;
 
@@ -33,6 +43,15 @@ void names_the_file() {
   check(ring->data == ring_png && ring->data_size == sizeof(ring_png));
   check(gradient->header.cf == LV_COLOR_FORMAT_RAW && gradient->header.w == 48 && gradient->header.h == 32);
   check(gradient->data == gradient_jpg && gradient->data_size == sizeof(gradient_jpg));
+}
+
+void reads_sizes_of_two_bytes() {
+  static constexpr auto wide = lv::encoded_image<wide_jpg>;
+  static constexpr auto wide_grey = lv::encoded_image<wide_png>;
+  static constexpr auto tallest = lv::encoded_image<tallest_jpg>;
+  check(wide->header.w == 300 && wide->header.h == 8);
+  check(wide_grey->header.w == 300 && wide_grey->header.h == 2);
+  check(tallest->header.w == 1 && tallest->header.h == 65535);
 }
 
 void is_decoded_and_drawn(const char* reference) {
@@ -56,6 +75,7 @@ int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   names_the_file();
+  reads_sizes_of_two_bytes();
   is_decoded_and_drawn(argv[1]);
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
