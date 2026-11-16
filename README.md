@@ -31,13 +31,13 @@ How it works:
 - **An angle is in the unit LVGL means.** Most of LVGL takes whole degrees (an arc, a scale): that is an
   `lv::angle`. An image's rotation and a style's `transform_rotation` and `transform_skew_x/y` take tenths
   of a degree: that is `lv::decidegrees`. Write `90 * deg` for both; `22.5 * deg` only compiles where
-  tenths are taken. LVGL says which is which only in its doc comments, so lvgl26 reads them from the
-  embedded headers at compile time (`include/lv/detail/angle_docs.hpp`), and a test checks the result
-  against the pixels LVGL draws.
+  tenths are taken. LVGL says which is which only in its doc comments.
+  lvgl26 reads them from the embedded headers at compile time (`include/lv/detail/angle_docs.hpp`).
+  A test checks the result against the pixels LVGL draws.
 - **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
-  `.flex_align = {"center", "center", "start"}`. The name is the enumerator without what all of its
-  enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`. A wrong name is a compile error
-  that lists the names.
+  `.flex_align = {"center", "center", "start"}`.
+  The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.
+  A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
 - **The tree costs nothing at run time.** `lv::mount<ui>` reads it at compile time; an optimized build
@@ -80,9 +80,8 @@ What a state can hold:
 `lv::state<int>` is rejected, because a plain integer does not say what it is; the error shows these
 choices. `lv::config::raw_integer_state` allows it.
 
-A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a
-bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a
-generic observer.
+A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
+Where LVGL has a bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a generic observer.
 
 A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
 The dependencies are part of the type, so both can be constant-initialized globals:
@@ -97,10 +96,10 @@ lv::label({.hidden = lv::bind(over_limit), .text = "Within the limit"})   // bou
 log.start();                                           // runs now, and after every change
 ```
 
-`over_limit.get()` calls the function with the current values; nothing is stored. Binding a computed
-creates its `lv_subject_t` and one observer on each dependency. The result follows the rules of a
-state, so a function that returns a plain `int` is rejected. See `include/lv/computed.hpp` for how
-changes travel and who owns what.
+`over_limit.get()` calls the function with the current values; nothing is stored.
+Binding a computed creates its `lv_subject_t` and one observer on each dependency.
+The result follows the rules of a state, so a function that returns a plain `int` is rejected.
+See `include/lv/computed.hpp` for how changes travel and who owns what.
 
 Sequences of UI steps are coroutines on LVGL's loop:
 
@@ -219,9 +218,10 @@ constexpr auto tok = lv::tokens<tokens_json>;
 lv::box({.style = {.bg_color = tok.color.surface, .radius = tok.radius.card}})
 ```
 
-Each token group becomes a struct and each token a typed `lv::token<T>`: colors, dimensions
-(spacing, radius, sizes), durations, numbers (opacity), font family and weight, easing curves, and the
-composite types shadow, border, typography, transition and gradient. Aliases are resolved. A misspelled
+Each token group becomes a struct and each token a typed `lv::token<T>`.
+The types are colors, dimensions (spacing, radius, sizes), durations, numbers (opacity), font family and weight, and easing curves.
+The composite types are shadow, border, typography, transition and gradient.
+Aliases are resolved. A misspelled
 token, a broken alias or an unreadable value is a compile error.
 
 **Styles use tokens.** A design value in a style (color, length, opacity, time, number) must be a token:
@@ -336,10 +336,9 @@ tools/arm-run.sh                                             # builds the slice,
 ```
 
 Measured: 269 KB of code with LVGL's default configuration, where every widget and feature is on.
-The screen takes 1052 bytes of LVGL's heap and the task 128. The application and the display
-objects are 1.6 KB of the code. A program for a device should define
-`handle_contract_violation` itself, as the example does: the standard library's handler brings the
-exception run-time with it (12 KB).
+The screen takes 1052 bytes of LVGL's heap and the task 128.
+The application and the display objects are 1.6 KB of the code.
+A program for a device should define `handle_contract_violation` itself, as the example does: the standard library's handler brings the exception run-time with it (12 KB).
 
 ## With Claude Code
 
