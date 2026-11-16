@@ -1,0 +1,81 @@
+name: toolchain-image
+
+# Builds the toolchain image (.github/ci-image/toolchain/Dockerfile) on a runner of each
+# architecture, compiles a reflection program in it, and publishes one image for both:
+#
+#   ghcr.io/<owner>/lvgl26-toolchain:16        moves with the newest build
+#   ghcr.io/<owner>/lvgl26-toolchain:<version> the version of the g++-16 package, e.g. 16.2.0-4
+#
+# The template repository and its dev container use it. The runners build natively: GCC
+# does not have to run under emulation.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/ci-image/toolchain/**
+      - .github/workflows/toolchain-image.yml
+  workflow_dispatch:
+
+concurrency:
+  group: toolchain-image
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: lvgl26-toolchain
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the image
+        run: |
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE=ghcr.io/${owner}/${IMAGE_NAME}:build-${GITHUB_SHA}-${ARCH}" >> "$GITHUB_ENV"
+          docker build -t "ghcr.io/${owner}/${IMAGE_NAME}:build-${GITHUB_SHA}-${ARCH}" -f .github/ci-image/toolchain/Dockerfile .
+      - name: Compile a reflection program in it
+        run: |
+          docker run --rm -i "$IMAGE" sh -c 'cat > /tmp/t.cpp && cd /tmp && g++ -std=c++26 -freflection t.cpp -o t && ./t' <<'SOURCE'
+          #include <meta>
+          #include <string_view>
+          struct s { int a; int b; };
+          consteval std::string_view first() {
+            return std::meta::identifier_of(std::meta::nonstatic_data_members_of(^^s, std::meta::access_context::unchecked())[0]);
+          }
+          int main() { return first() == "a" ? 0 : 1; }
+          SOURCE
+      - name: Log in to the registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Push the image of this architecture
+        run: docker push "$IMAGE"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to the registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Join the two images and tag them
+        run: |
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          image="ghcr.io/${owner}/${IMAGE_NAME}"
+          docker pull "${image}:build-${GITHUB_SHA}-amd64"
+          version="$(docker run --rm "${image}:build-${GITHUB_SHA}-amd64" dpkg-query -W -f='${Version}' g++-16)"
+          docker buildx imagetools create -t "${image}:16" -t "${image}:${version}" \
+            "${image}:build-${GITHUB_SHA}-amd64" "${image}:build-${GITHUB_SHA}-arm64"
+          docker buildx imagetools inspect "${image}:16"
