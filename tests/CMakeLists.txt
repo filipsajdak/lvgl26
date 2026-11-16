@@ -206,6 +206,7 @@ lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
 lvgl26_widget_ports(buttonmatrix event map)
 lvgl26_widget_ports(dropdown bind_value direction event text)
+lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 
 add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files

@@ -115,4 +115,11 @@ void dropdown_direction(lv::obj screen);   // lv_example_dropdown_direction
 void dropdown_event(lv::obj screen);       // lv_example_dropdown_event
 void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
 
+// spinbox
+void spinbox_bind_value(lv::obj screen);  // lv_example_spinbox_bind_value
+void spinbox_format(lv::obj screen);      // lv_example_spinbox_format
+void spinbox_rollover(lv::obj screen);    // lv_example_spinbox_rollover
+void spinbox_styling(lv::obj screen);     // lv_example_spinbox_styling
+void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
+
 }  // namespace widgets
