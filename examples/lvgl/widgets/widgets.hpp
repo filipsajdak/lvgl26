@@ -109,4 +109,10 @@ void obj_bind_style(lv::obj screen);  // lv_example_obj_bind_style
 void buttonmatrix_event(lv::obj screen);  // lv_example_buttonmatrix_event
 void buttonmatrix_map(lv::obj screen);    // lv_example_buttonmatrix_map
 
+// dropdown
+void dropdown_bind_value(lv::obj screen);  // lv_example_dropdown_bind_value
+void dropdown_direction(lv::obj screen);   // lv_example_dropdown_direction
+void dropdown_event(lv::obj screen);       // lv_example_dropdown_event
+void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
+
 }  // namespace widgets
