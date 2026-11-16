@@ -519,8 +519,7 @@ template <class D = void>
 std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json::value style,
                                                        lv_style_selector_t selector) {
   if (!style.is(json::kind::object)) return std::unexpected(load_failure{load_error::bad_value, style.text()});
-  for (std::size_t i = 0; i < style.size(); ++i) {
-    const auto m = style.member_at(i);
+  for (const json::member m : style.members()) {
     const style_entry* entry = nullptr;
     for (const auto& e : style_table_json<D>)
       if (e.name == m.key) entry = &e;
@@ -566,8 +565,8 @@ std::expected<void, load_failure> apply_properties(lv_obj_t* o, json::value prop
   if (!props) return {};
   if (!props.is(json::kind::object))
     return std::unexpected(load_failure{load_error::malformed, props.text()});
-  for (std::size_t i = 0; i < props.size(); ++i)
-    if (auto r = apply_property<W>(o, props.member_at(i)); !r) return r;
+  for (const json::member m : props.members())
+    if (auto r = apply_property<W>(o, m); !r) return r;
   return {};
 }
 
@@ -650,8 +649,8 @@ class runtime {
       const auto parsed = json::value::parse(patch);
       if (!parsed || !parsed->is(json::kind::object))
         return std::unexpected(load_failure{load_error::malformed, patch});
-      for (std::size_t i = 0; i < parsed->size(); ++i)
-        if (auto r = apply_one(parsed->member_at(i)); !r) return r;
+      for (const json::member m : parsed->members())
+        if (auto r = apply_one(m); !r) return r;
       return {};
     }
 
@@ -760,9 +759,9 @@ class runtime {
 
   static result build_children(json::value children, lv_obj_t* parent, loaded& out) {
     if (children && !children.is(json::kind::array)) return fail(load_error::malformed, children.text());
-    for (std::size_t i = 0; i < children.size(); ++i) {
+    for (const json::value node : children.elements()) {
       lv_obj_t* child = nullptr;
-      if (auto r = build(children.at(i), parent, child, out); !r) return r;
+      if (auto r = build(node, parent, child, out); !r) return r;
     }
     return {};
   }

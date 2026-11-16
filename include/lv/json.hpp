@@ -7,8 +7,10 @@
 // Strings are returned as written, without unescaping.
 
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 namespace lv::json {
 
@@ -186,6 +188,9 @@ struct member {
   std::string_view text;  // the member's value
 };
 
+template <class Item>
+class items;
+
 // A JSON value: a view of its text.
 class value {
   std::string_view text_;
@@ -234,6 +239,14 @@ class value {
     return negative ? -v : v;
   }
 
+  // The members of an object, in document order; none for anything else.
+  // Walking them reads the text once: for (json::member m : v.members()).
+  constexpr items<member> members() const;
+
+  // The elements of an array, in order; none for anything else (an object's
+  // "elements" would be its keys). Walking them reads the text once.
+  constexpr items<value> elements() const;
+
   // How many members an object has, or elements an array has.
   constexpr std::size_t size() const {
     std::size_t n = 0;
@@ -241,7 +254,8 @@ class value {
     return n;
   }
 
-  // Member number `index` of an object, in document order.
+  // Member number `index` of an object, in document order. Each call reads from
+  // the first member, so a loop over all members uses members() instead.
   constexpr member member_at(std::size_t index) const {
     if (!is(kind::object)) return {};
     std::size_t i = first();
@@ -249,7 +263,8 @@ class value {
     return i == detail::npos ? member{} : read(i);
   }
 
-  // Element number `index` of an array.
+  // Element number `index` of an array. Each call reads from the first element,
+  // so a loop over all elements uses elements() instead.
   constexpr value at(std::size_t index) const {
     if (!is(kind::array)) return {};  // an object's "elements" would be its keys
     std::size_t i = first();
@@ -291,6 +306,67 @@ class value {
     const auto v = detail::skip_space(text_, detail::skip_space(text_, key_end) + 1);
     return {text_.substr(i + 1, key_end - i - 2), text_.substr(v, detail::skip_value(text_, v) - v)};
   }
+
+  // The member or element at `i`, as the walks of members() and elements() give it.
+  constexpr member item(std::size_t i, std::type_identity<member>) const { return read(i); }
+  constexpr value item(std::size_t i, std::type_identity<value>) const {
+    return value{text_.substr(i, detail::skip_value(text_, i) - i)};
+  }
+
+  template <class Item>
+  friend class items;
 };
+
+// The members of an object (Item is member) or the elements of an array (Item is
+// value), walked once from the first to the last. A view of the value's text,
+// like the value itself.
+template <class Item>
+class items {
+  value of_;
+  std::size_t first_;
+
+ public:
+  constexpr items(value of, std::size_t first) : of_(of), first_(first) {}
+
+  class iterator {
+    value of_;
+    std::size_t at_ = detail::npos;
+
+   public:
+    using value_type = Item;
+    using difference_type = std::ptrdiff_t;
+
+    constexpr iterator() = default;
+    constexpr iterator(value of, std::size_t at) : of_(of), at_(at) {}
+
+    constexpr Item operator*() const { return of_.item(at_, std::type_identity<Item>{}); }
+    constexpr iterator& operator++() {
+      at_ = of_.next(at_);
+      return *this;
+    }
+    constexpr iterator operator++(int) {
+      const iterator before = *this;
+      ++*this;
+      return before;
+    }
+    // Two iterators of the same walk; like any iterators, those of two walks do
+    // not compare.
+    friend constexpr bool operator==(const iterator& a, const iterator& b) { return a.at_ == b.at_; }
+    friend constexpr bool operator==(const iterator& i, std::default_sentinel_t) {
+      return i.at_ == detail::npos;
+    }
+  };
+
+  constexpr iterator begin() const { return {of_, first_}; }
+  constexpr std::default_sentinel_t end() const { return {}; }
+};
+
+constexpr items<member> value::members() const {
+  return {*this, is(kind::object) ? first() : detail::npos};
+}
+
+constexpr items<value> value::elements() const {
+  return {*this, is(kind::array) ? first() : detail::npos};
+}
 
 }  // namespace lv::json

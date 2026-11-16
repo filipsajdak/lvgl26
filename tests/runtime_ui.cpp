@@ -4,6 +4,7 @@
 
 #include "check.hpp"
 
+#include <chrono>
 #include <cstring>
 #include <limits>
 
@@ -379,6 +380,34 @@ void defect_unsigned_parameter_refuses_negative(lv::obj screen) {
   expect_bad_value(R"({"type": "scale", "props": {"angle_range": "-90deg"}})", R"("-90deg")", screen);
 }
 
+// A document is read in one pass. Each loop over members or children used to
+// count them and then find number i from the start: 10000 members of "props"
+// took 141 s in the Debug build. Now that takes well under a second, so the
+// bound below holds on a loaded machine and under the sanitizers, and the old
+// code misses it by minutes.
+void limit_document_is_read_in_linear_time(lv::obj screen) {
+  constexpr std::size_t members = 20000;
+  constexpr std::size_t children = 2000;
+  constexpr auto bound = std::chrono::seconds{10};
+  std::string props;
+  for (std::size_t i = 0; i < members; ++i) props += i == 0 ? R"("value": 1)" : R"(, "value": 1)";
+  std::string kids;
+  for (std::size_t i = 0; i < children; ++i) kids += i == 0 ? R"({"type": "obj"})" : R"(, {"type": "obj"})";
+  std::string patch;
+  for (std::size_t i = 0; i < members; ++i) patch += i == 0 ? R"("a": {"value": 2})" : R"(, "a": {"value": 2})";
+  const std::string doc = R"({"type": "arc", "id": "a", "props": {)" + props + R"(}, "children": [)" + kids + "]}";
+
+  const auto start = std::chrono::steady_clock::now();
+  auto loaded = ui::load(doc, screen);
+  check(loaded.has_value());
+  if (loaded) {
+    check(lv_obj_get_child_count(loaded->root().raw()) == children);
+    check(loaded->apply("{" + patch + "}").has_value());
+    check(lv::view<"arc">{loaded->find("a").raw()}.get<"value">() == 2);
+  }
+  check(std::chrono::steady_clock::now() - start < bound);
+}
+
 // A number too large for the integer it becomes, or not a number at all, is a bad
 // value. The cast of such a double is undefined: 1e99 for a width became
 // INT32_MAX on Arm, and only -fsanitize=float-cast-overflow
@@ -485,6 +514,7 @@ int main() {
   capability_other_counts_take_their_whole_type(screen);
   defect_unsigned_parameter_refuses_negative(screen);
   defect_number_outside_integer_is_refused(screen);
+  limit_document_is_read_in_linear_time(screen);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
