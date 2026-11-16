@@ -70,7 +70,7 @@ speed = 3 * m;                                         // error: not a speed
 What a state can hold:
 
 - **A measure:** an mp-units quantity with an integer number. lvgl26 has no unit system of its own and
-  does not include mp-units; it accepts any type of that shape, so the dependency is yours to add.
+  does not include mp-units; it accepts any type of that shape. `set(LVGL26_UNITS ON)` in CMake adds mp-units for you.
   It builds freestanding, and a quantity compiles to the same code as an `int`.
 - **A count:** `lv::counter`.
 - **Anything else that is a number:** a struct with one integer, bool or enum member, such as

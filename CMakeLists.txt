@@ -8,6 +8,7 @@ endif()
 
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
 option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset arm-m4)" OFF)
+option(LVGL26_UNITS "Fetch mp-units and link it to lvgl26, for values with a unit" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
 # lvgl26 has no C++ modules. CMake would still scan every C++ source for them and pass
@@ -31,6 +32,9 @@ target_compile_options(lvgl26 INTERFACE
   "$<LIST:TRANSFORM,$<TARGET_PROPERTY:lvgl::lvgl,INTERFACE_INCLUDE_DIRECTORIES>,PREPEND,--embed-dir=>")
 # stdc++exp holds GCC's default contract violation handler.
 target_link_libraries(lvgl26 INTERFACE lvgl::lvgl stdc++exp)
+if(LVGL26_UNITS)
+  target_link_libraries(lvgl26 INTERFACE mp-units::mp-units)
+endif()
 
 if(LVGL26_BUILD_TESTS)
   enable_testing()
