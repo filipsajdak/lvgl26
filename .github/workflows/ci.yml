@@ -118,6 +118,61 @@ jobs:
           TSAN_OPTIONS: halt_on_error=1
         run: ctest --preset host-v96-tsan -R '^(ui_scheduler|task)$' -j "$(nproc)"
 
+  # The image with Clang, for the job below.
+  image-editor:
+    uses: ./.github/workflows/image.yml
+    with:
+      name: ci-editor
+    permissions:
+      contents: read
+      packages: write
+
+  # The editor stubs (tools/editor): Clang reads the examples and the mistakes an editor
+  # must mark, and clangd reads a project that turns editor support on. Only lv_names is
+  # built, which lists the public names; the other tests need the project configured.
+  # A failed test prints what Clang reported.
+  editor:
+    runs-on: ubuntu-latest
+    needs: image-editor
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image-editor.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: host-v96-editor
+      - name: Versions
+        run: |
+          g++-16 --version | head -n 1
+          clang++ --version
+          clangd --version
+          # Where Clang finds its standard library: the stubs are read with it.
+          clang++ -v -x c++ -fsyntax-only /dev/null 2>&1 | grep -E 'Selected GCC|Target|^ /'
+      - name: Configure
+        run: |
+          cmake --preset host-v96
+          grep -E 'LVGL26_CLANG(XX|D):' build/host-v96/CMakeCache.txt
+      - name: Build the list of public names
+        run: cmake --build --preset host-v96 --target lv_names
+      - name: Test
+        run: ctest --preset host-v96 -R '^editor_' -j "$(nproc)" --output-on-failure
+      - name: The stubs, if a test failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-stubs
+          path: |
+            build/host-v96/tests/editor/stubs
+            build/host-v96/tests/editor/consumer/project/.clangd
+            build/host-v96/Testing/Temporary/LastTest.log
+          include-hidden-files: true
+
   # Complexity and CRAP: every function at complexity 8 or less, and every function
   # that runs at run time at CRAP 8 or less. See tools/crap.py.
   crap:

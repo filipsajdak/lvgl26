@@ -16,7 +16,7 @@ target_link_libraries(app PRIVATE lvgl26::lvgl26)
 lvgl26_editor_support()
 ```
 
-Then run CMake once, and restart clangd in your editor. You need Python 3 for CMake, and clangd for the editor. Version 23 is the one that is tested; the stubs need 19 or newer.
+Then run CMake once, and restart clangd in your editor. You need Python 3 for CMake, and clangd 21 or newer for the editor. Versions 21 and 23 are tested. With clangd 19, a file that includes mp-units shows errors from mp-units.
 
 The line does three things when CMake runs:
 

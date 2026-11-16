@@ -91,7 +91,10 @@ Measured on 2026-11-16 with the stubs of `tools/editor` (the whole public API), 
 | Clang warns (`-Wundefined-internal`) about a declared-only function of a template whose arguments have no linkage. A stub needs bodies. | `tools/editor/stubs/lv/stub.hpp` | `measured` |
 | Clang only warns about designated initializers out of order. `-Werror=reorder-init-list` makes it an error, as in GCC. | `tests/editor/unknown_member.cpp` | `measured` |
 | libc++ of LLVM 23 has no `<contracts>`. A fallback header behind `-idirafter` lets `examples/mcu/slice.cpp` parse. | `tools/editor/fallback/contracts` | `measured` |
-| Not tried: clangd on Linux with libstdc++, clang 19 to 22, and any editor other than clangd itself. | none | not confirmed |
+| Linux arm64 in a container (`gcc:16`, Debian 13): Clang takes libstdc++ 14 from `/usr/lib/gcc`, not GCC 16's from `/usr/local`. | `clang++ -v` in the image of `.github/ci-image/editor` | `measured` |
+| Debian's clang 19.1.7 there reads the stubs, but not mp-units 2.5.0: `kelvin` "does not satisfy `Unit`". The quick start fails; examples without mp-units pass. | the `editor_*` tests in that container | `measured` |
+| Clang and clangd 21.1.8 from apt.llvm.org there: all eleven `editor_*` tests pass. | the same | `measured` |
+| Not tried: Linux x86-64, clang 20 and 22, and any editor other than clangd itself. | none | not confirmed |
 
 What breaks in a stub, and what does not:
 

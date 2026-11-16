@@ -486,13 +486,14 @@ target_link_libraries(editor_clang_only PRIVATE lvgl26::lvgl26 lvgl26_test_data)
 set_target_properties(editor_api_uses editor_clang_only PROPERTIES EXPORT_COMPILE_COMMANDS ON)
 configure_file(data/tokens.json ${CMAKE_CURRENT_BINARY_DIR}/editor/unseen_tokens.json COPYONLY)
 
-# A Clang that can read the stubs: version 19 or newer, and not Apple's, whose numbers
-# mean something else.
+# A Clang that can read the stubs: version 21 or newer, and not Apple's, whose numbers
+# mean something else. Clang 19 reads the stubs, but not mp-units 2.5.0, which the
+# quick start includes. Clang 20 was not tried.
 function(lvgl26_find_clang result names)
   find_program(${result} NAMES ${names} HINTS /opt/homebrew/opt/llvm/bin /usr/local/opt/llvm/bin)
   if(${result})
     execute_process(COMMAND ${${result}} --version OUTPUT_VARIABLE said ERROR_QUIET)
-    if(said MATCHES "Apple" OR NOT said MATCHES "version ([0-9]+)" OR CMAKE_MATCH_1 LESS 19)
+    if(said MATCHES "Apple" OR NOT said MATCHES "version ([0-9]+)" OR CMAKE_MATCH_1 LESS 21)
       set(${result} ${result}-NOTFOUND CACHE FILEPATH "" FORCE)
     endif()
   endif()
@@ -511,10 +512,10 @@ if(Python3_FOUND)
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/names_test.cmake)
   set_tests_properties(editor_names PROPERTIES FIXTURES_SETUP editor_names)
 
-  lvgl26_find_clang(LVGL26_CLANGXX "clang++;clang++-23;clang++-22;clang++-21;clang++-20;clang++-19")
-  lvgl26_find_clang(LVGL26_CLANGD "clangd;clangd-23;clangd-22;clangd-21;clangd-20;clangd-19")
+  lvgl26_find_clang(LVGL26_CLANGXX "clang++;clang++-23;clang++-22;clang++-21")
+  lvgl26_find_clang(LVGL26_CLANGD "clangd;clangd-23;clangd-22;clangd-21")
   if(NOT LVGL26_CLANGXX)
-    message(STATUS "lvgl26: no clang++ of version 19 or newer: the editor_* tests that read the stubs are left out")
+    message(STATUS "lvgl26: no clang++ of version 21 or newer: the editor_* tests that read the stubs are left out")
   else()
     add_test(NAME editor_stubs
              COMMAND Python3::Interpreter ${LVGL26_EDITOR}/generate.py
