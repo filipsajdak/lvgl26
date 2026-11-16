@@ -11,6 +11,7 @@
 #include <lv/mcp.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
+#include <lv/signal_type.hpp>
 #include <lv/ui_scheduler.hpp>
 
 #include <mp-units/systems/si.h>
@@ -23,6 +24,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace api_uses {
@@ -110,6 +112,16 @@ static_assert(std::same_as<decltype(raw_gap), const lv::raw_value<lv::length>>);
 static_assert(gap == *tok.space.gap && raw_gap.value == 3 * px);
 static_assert(std::same_as<decltype(lv::signal::dark_tokens.color.muted), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::day_tokens.color.ground), lv::token<lv_color_t>>);  // C API
+
+// ---- Signal's typefaces -----------------------------------------------------------
+
+constexpr auto signal_title = lv::signal::type(lv::signal::type_tokens.text.title);
+constexpr auto signal_reading = lv::signal::numerals(lv::signal::type_tokens.text.numeral_l);
+constexpr lv::typeface own_barlow{{"Barlow", 500, lv::signal::barlow_medium_ttf},
+                                  {"Barlow Condensed", 600, lv::signal::barlow_condensed_semibold_ttf},
+                                  {"Barlow Condensed", 700, lv::signal::barlow_condensed_bold_ttf}};
+constexpr auto signal_fonts = std::pair{lv::signal::body_font, lv::signal::label_font};
+constexpr lv::length signal_spacing = lv::signal::label_spacing;
 
 // ---- styles and themes ------------------------------------------------------------
 
@@ -287,6 +299,8 @@ int use_application() {
   lv::display plain{app, frame};
   lv::display themed{app, frame, lv::signal::dark};
   lv::display day{app, frame, &changed, lv::signal::day};
+  lv::display typed{app, frame, lv::signal::dark_with_type};
+  lv::display typed_day{app, frame, &changed, lv::signal::day_with_type};
   lv::display object{app, frame, on_frame, look};
   lv::display banded{app, band, &send};
   lv::display banded_object{app, band, on_band, look};
