@@ -22,6 +22,7 @@
 #include <lv/config.hpp>
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/png_reader.hpp>
+#include <lv/values.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -50,14 +51,19 @@ struct stored_pixels {
   std::vector<std::uint8_t> data;
 };
 
-// Sixteen bits for each pixel, the low byte first; then, when `alpha`, a byte of alpha for each pixel.
-consteval stored_pixels as_rgb565(const png_reader::picture& p, bool alpha) {
-  const std::size_t n = static_cast<std::size_t>(p.w) * p.h, stride = p.w * p.step;
-  stored_pixels out{alpha ? LV_COLOR_FORMAT_RGB565A8 : LV_COLOR_FORMAT_RGB565, p.w * 2, std::vector<std::uint8_t>(n * (alpha ? 3 : 2))};
-  std::uint8_t* colour = out.data.data();
-  std::uint8_t* mask = colour + n * 2;
+// The bytes of a row of `row` bytes, when rows start at a multiple of `align`.
+consteval std::uint32_t aligned(std::uint32_t row, std::uint32_t align) { return (row + align - 1) / align * align; }
+
+// Sixteen bits for each pixel, the low byte first. With `alpha`, a byte of alpha for
+// each pixel follows the colours, and rows have no padding: LVGL asks none of that form.
+consteval stored_pixels as_rgb565(const png_reader::picture& p, bool alpha, std::uint32_t align) {
+  const std::size_t from = p.w * p.step, stride = alpha ? p.w * 2 : aligned(p.w * 2, align);
+  stored_pixels out{alpha ? LV_COLOR_FORMAT_RGB565A8 : LV_COLOR_FORMAT_RGB565, static_cast<std::uint32_t>(stride),
+                    std::vector<std::uint8_t>(stride * p.h + (alpha ? static_cast<std::size_t>(p.w) * p.h : 0))};
+  std::uint8_t* mask = out.data.data() + stride * p.h;
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* at = p.rows.data() + y * (stride + 1) + 1;
+    const unsigned char* at = p.rows.data() + y * (from + 1) + 1;
+    std::uint8_t* colour = out.data.data() + y * stride;
     for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
       const auto c = png_reader::pixel(p, at);
       const unsigned v = (c.r >> 3) << 11 | (c.g >> 2) << 5 | c.b >> 3;
@@ -69,13 +75,13 @@ consteval stored_pixels as_rgb565(const png_reader::picture& p, bool alpha) {
 }
 
 // Four bytes for each pixel: blue, green, red, then alpha.
-consteval stored_pixels as_argb8888(const png_reader::picture& p, bool alpha) {
-  const std::size_t stride = p.w * p.step;
-  stored_pixels out{alpha ? LV_COLOR_FORMAT_ARGB8888 : LV_COLOR_FORMAT_XRGB8888, p.w * 4,
-                    std::vector<std::uint8_t>(static_cast<std::size_t>(p.w) * p.h * 4)};
-  std::uint8_t* to = out.data.data();
+consteval stored_pixels as_argb8888(const png_reader::picture& p, bool alpha, std::uint32_t align) {
+  const std::size_t from = p.w * p.step, stride = aligned(p.w * 4, align);
+  stored_pixels out{alpha ? LV_COLOR_FORMAT_ARGB8888 : LV_COLOR_FORMAT_XRGB8888, static_cast<std::uint32_t>(stride),
+                    std::vector<std::uint8_t>(stride * p.h)};
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* at = p.rows.data() + y * (stride + 1) + 1;
+    const unsigned char* at = p.rows.data() + y * (from + 1) + 1;
+    std::uint8_t* to = out.data.data() + y * stride;
     for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
       const auto c = png_reader::pixel(p, at);
       *to++ = c.b, *to++ = c.g, *to++ = c.r, *to++ = c.a;
@@ -84,23 +90,30 @@ consteval stored_pixels as_argb8888(const png_reader::picture& p, bool alpha) {
   return out;
 }
 
-consteval void check_size(std::uint32_t w, std::uint32_t h, std::size_t most) {
+// LVGL keeps the width, the height and the bytes of a row in 16 bits each.
+consteval void check_size(std::uint32_t w, std::uint32_t h, std::uint32_t stride, std::size_t most) {
+  if (w > 0xffff || h > 0xffff || stride > 0xffff)
+    fail("lv: this picture is " + decimal(w) + " x " + decimal(h) + " pixels, with rows of " + decimal(stride) +
+         " bytes. LVGL holds a picture of at most 65535 pixels each way, and rows of at most 65535 bytes.");
   if (static_cast<std::size_t>(w) * h > most)
     fail("lv: this picture is " + decimal(w) + " x " + decimal(h) + " pixels, and the compiler decodes at most " + decimal(most) +
          " (a large picture makes the build slow). To allow it, raise lv::config::compile_time_image_pixels.");
 }
 
 // The picture of the PNG file `file` as a constant LVGL image. `depth` is the
-// display's colour depth, `most` the largest picture the project allows.
-consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, std::size_t most) {
-  check_size(png_reader::width_of(file), png_reader::height_of(file), most);
+// display's colour depth, `most` the largest picture the project allows, and `align`
+// what LVGL wants the bytes of a row to be a multiple of.
+consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, std::size_t most,
+                                           std::uint32_t align = LV_DRAW_BUF_STRIDE_ALIGN) {
+  const std::uint32_t w = png_reader::width_of(file), h = png_reader::height_of(file);
+  check_size(w, h, aligned(w * (depth == 16 ? 2 : 4), align), most);
   const auto p = png_reader::decode(file);
   const bool alpha = has_alpha(p);
-  const auto pixels = depth == 16 ? as_rgb565(p, alpha) : as_argb8888(p, alpha);
+  const auto pixels = depth == 16 ? as_rgb565(p, alpha, align) : as_argb8888(p, alpha, align);
   lv_image_dsc_t dsc{};
   dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
   dsc.header.cf = static_cast<std::uint32_t>(pixels.format) & 0xff;
-  dsc.header.w = p.w & 0xffff, dsc.header.h = p.h & 0xffff;
+  dsc.header.w = w & 0xffff, dsc.header.h = h & 0xffff;
   dsc.header.stride = pixels.stride & 0xffff;
   dsc.data_size = static_cast<std::uint32_t>(pixels.data.size());
   dsc.data = std::define_static_array(pixels.data).data();

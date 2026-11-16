@@ -70,6 +70,9 @@ inline constexpr lv::config lv::cfg<lv::override>{.compile_time_image_pixels = 3
 ## Rules and limits
 
 - The file is a PNG with 8 bits for each channel: grey, RGB or a palette, with or without alpha. Interlaced and 16-bit files are refused with a message.
+- A grey or RGB file that names one colour as see-through is stored with alpha.
+- Where LVGL is built to want rows of a multiple of some bytes, opaque rows are padded to it.
+- A picture is at most 65535 pixels each way, with rows of at most 65535 bytes: LVGL's own limits.
 - The picture keeps its size: see-through borders are not cut off.
 - Photos and whole-screen backgrounds are better kept as JPEG and decoded on the device. That form is not built yet.
 - A very large picture may not link on macOS, whose linker limits the length of a name. 128 x 128 links.

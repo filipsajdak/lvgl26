@@ -262,7 +262,9 @@ struct picture {
   std::size_t step = 0;                  // bytes for each pixel in `rows`
   std::vector<unsigned char> rows;       // for each row: its filter byte, then its pixels
   std::vector<unsigned char> palette;    // three bytes for each colour
-  std::vector<unsigned char> palette_alpha;
+  // The tRNS chunk. For a palette: the alpha of each colour. For grey and RGB: the one
+  // colour that is see-through, each sample in two bytes.
+  std::vector<unsigned char> transparency;
 };
 
 consteval void check_header(bytes d) {
@@ -292,7 +294,7 @@ consteval picture decode(bytes d) {
     const std::size_t n = be32(d, at), body = at + 8;
     const auto tag = be32(d, at + 4);
     if (tag == 0x504c5445) out.palette = chunk(d, body, n);        // PLTE
-    if (tag == 0x74524e53) out.palette_alpha = chunk(d, body, n);  // tRNS
+    if (tag == 0x74524e53) out.transparency = chunk(d, body, n);  // tRNS
     if (tag == 0x49444154) z.insert(z.end(), d.begin() + static_cast<std::ptrdiff_t>(body), d.begin() + static_cast<std::ptrdiff_t>(body + n));
     at = body + n + 4;
   }
@@ -312,15 +314,24 @@ struct rgba {
   unsigned char r, g, b, a;
 };
 
+// The alpha of a grey or RGB pixel: 0 when it has the file's one see-through colour.
+// That colour has two bytes for each of its `samples`; with 8 bits the second one counts.
+consteval unsigned char keyed_alpha(const picture& p, const unsigned char* at, std::size_t samples) {
+  if (p.transparency.size() != 2 * samples) return 255;
+  for (std::size_t i = 0; i < samples; ++i)
+    if (at[i] != p.transparency[2 * i + 1]) return 255;
+  return 0;
+}
+
 // The colour of the pixel that starts at `p`.
 consteval rgba pixel(const picture& p, const unsigned char* at) {
   if (p.colour == 6) return {at[0], at[1], at[2], at[3]};
-  if (p.colour == 2) return {at[0], at[1], at[2], 255};
+  if (p.colour == 2) return {at[0], at[1], at[2], keyed_alpha(p, at, 3)};
   if (p.colour == 4) return {at[0], at[0], at[0], at[1]};
-  if (p.colour == 0) return {at[0], at[0], at[0], 255};
+  if (p.colour == 0) return {at[0], at[0], at[0], keyed_alpha(p, at, 1)};
   const std::size_t i = at[0];
   return {p.palette[3 * i], p.palette[3 * i + 1], p.palette[3 * i + 2],
-          i < p.palette_alpha.size() ? p.palette_alpha[i] : static_cast<unsigned char>(255)};
+          i < p.transparency.size() ? p.transparency[i] : static_cast<unsigned char>(255)};
 }
 
 }  // namespace lv::detail::png_reader
