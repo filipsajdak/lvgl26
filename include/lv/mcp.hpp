@@ -39,6 +39,8 @@
 //
 // Limits: keys and tool names are compared as written, so a client that escapes
 // them ("tools\/call") is not understood.
+// serve() reads lines of at most one mebibyte (detail::line_limit). A longer line is
+// dropped up to its line feed and answered with an Invalid Request error.
 // serve() blocks: nothing else of the program runs while it waits for a line.
 // Keep LVGL's log off stdout (LV_LOG_PRINTF), which belongs to the protocol.
 
@@ -49,9 +51,12 @@
 #include <lv/runtime.hpp>
 
 #include <array>
+#include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -335,16 +340,74 @@ constexpr bool usable_file_name(std::string_view name) {
 
 // ---- the stream ----------------------------------------------------------------
 
-// Reads up to the next line feed. False at the end of the stream.
-inline bool read_line(std::FILE* in, std::string& line) {
-  line.clear();
-  int c = std::fgetc(in);
-  for (; c != EOF && c != '\n'; c = std::fgetc(in)) line.push_back(static_cast<char>(c));
-  return c != EOF || !line.empty();
+// The longest line serve() takes, in bytes without its line feed: one mebibyte.
+// Without a limit a client that never sends a line feed makes the server hold all it
+// sends. A document of a screen is a few kilobytes, so this leaves room for any.
+inline constexpr std::size_t line_limit = std::size_t{1} << 20;
+
+// Gives the bytes of a stream one at a time, as std::fgetc does: EOF at the end.
+template <class S>
+concept byte_source = std::invocable<S&> && std::convertible_to<std::invoke_result_t<S&>, int>;
+
+// Takes a message and returns the answer, as server::handle does.
+template <class H>
+concept message_handler = std::invocable<H&, std::string_view> &&
+                          std::convertible_to<std::invoke_result_t<H&, std::string_view>, std::string>;
+
+// What read_line found.
+enum class line_status { line, too_long, end };
+
+// Drops the rest of a line.
+template <byte_source S>
+void skip_line(S& next) {
+  for (int c = std::invoke(next); c != EOF && c != '\n'; c = std::invoke(next)) {
+  }
 }
 
-inline void write_line(std::FILE* out, const std::string& line) {
-  std::fputs(line.c_str(), out);
+// Reads up to the next line feed into `line`. A line of more than `limit` bytes is
+// read to its end, dropped, and reported as too long; it never takes more memory.
+template <byte_source S>
+line_status read_line(S& next, std::string& line, std::size_t limit) {
+  line.clear();
+  int c = std::invoke(next);
+  for (; c != EOF && c != '\n'; c = std::invoke(next)) {
+    if (line.size() == limit) {
+      skip_line(next);
+      return line_status::too_long;
+    }
+    line.push_back(static_cast<char>(c));
+  }
+  return c == EOF && line.empty() ? line_status::end : line_status::line;
+}
+
+// The answer to a line that was too long. The id could not be read.
+inline std::string too_long(std::size_t limit) {
+  return error_message({}, invalid_request,
+                       "Invalid Request: a message is longer than " + std::to_string(limit) + " bytes");
+}
+
+// The answer to a line that was read: none for an empty one.
+template <message_handler H>
+std::string answer_line(H& handle, std::string_view line) {
+  if (line.find_first_not_of(" \t\r") == std::string_view::npos) return {};
+  return std::invoke(handle, line);
+}
+
+// Answers every line of `next` through `write`, until `next` ends. serve() with
+// any source of bytes and any sink, so that a test or a fuzzer can drive it.
+template <message_handler H, byte_source S, json::sink W>
+void serve_lines(H& handle, S& next, W& write, std::size_t limit) {
+  std::string line;
+  for (auto status = read_line(next, line, limit); status != line_status::end;
+       status = read_line(next, line, limit)) {
+    const std::string reply =
+        status == line_status::too_long ? too_long(limit) : answer_line(handle, line);
+    if (!reply.empty()) std::invoke(write, std::string_view{reply});
+  }
+}
+
+inline void write_line(std::FILE* out, std::string_view line) {
+  std::fwrite(line.data(), 1, line.size(), out);
   std::fputc('\n', out);
   std::fflush(out);
 }
@@ -381,12 +444,10 @@ class server {
     pre(in != nullptr)
     pre(out != nullptr)
   {
-    std::string line;
-    while (detail::read_line(in, line)) {
-      if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
-      const std::string reply = handle(line);
-      if (!reply.empty()) detail::write_line(out, reply);
-    }
+    auto next = [in] { return std::fgetc(in); };
+    auto write = [out](std::string_view reply) { detail::write_line(out, reply); };
+    auto answer = [this](std::string_view message) { return handle(message); };
+    detail::serve_lines(answer, next, write, detail::line_limit);
   }
 
  private:

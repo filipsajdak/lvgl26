@@ -565,6 +565,83 @@ void lines() {
   if (silence != nullptr) std::fclose(silence);
 }
 
+// What serve() writes for `input`, read through a temporary file as from stdin.
+std::string served(server& agent, std::string_view input) {
+  std::FILE* in = std::tmpfile();
+  std::FILE* out = std::tmpfile();
+  check(in != nullptr && out != nullptr);
+  std::string written;
+  if (in != nullptr && out != nullptr) {
+    std::fwrite(input.data(), 1, input.size(), in);
+    std::rewind(in);
+    agent.serve(in, out);
+    std::rewind(out);
+    for (int c = std::fgetc(out); c != EOF; c = std::fgetc(out)) written.push_back(static_cast<char>(c));
+  }
+  if (in != nullptr) std::fclose(in);
+  if (out != nullptr) std::fclose(out);
+  return written;
+}
+
+constexpr std::string_view ping_one = R"({"jsonrpc":"2.0","id":1,"method":"ping"})";
+constexpr std::string_view pong_one = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n";
+
+// `message` padded with spaces to `size` bytes: still the same JSON.
+std::string padded(std::string_view message, std::size_t size) {
+  std::string line{message};
+  line.resize(size, ' ');
+  return line;
+}
+
+// A client that never ends a line cannot make the server hold all it sends: a line
+// over the limit is dropped up to its line feed and answered with one error, and the
+// session goes on.
+void a_line_over_the_limit_is_refused_and_the_session_goes_on() {
+  server agent{lv::screen_active()};
+  const auto limit = lv::mcp::detail::line_limit;
+  const std::string refused =
+      "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":"
+      "\"Invalid Request: a message is longer than " + std::to_string(limit) + " bytes\"}}\n";
+
+  // A line exactly at the limit is read, with a line feed or at the end of the stream.
+  check(served(agent, padded(ping_one, limit) + "\n") == pong_one);
+  check(served(agent, padded(ping_one, limit)) == pong_one);
+  // One byte more is refused, and the next request is answered.
+  check(served(agent, padded(ping_one, limit + 1) + "\n" + std::string{ping_one} + "\n") ==
+        refused + std::string{pong_one});
+  // A line that never ends gets its one error, then the stream ends.
+  check(served(agent, std::string(limit * 2, 'x')) == refused);
+  // A tool call after an oversize line still works.
+  const std::string after = served(agent, std::string(limit + 1, '{') + "\n" + call("2", "dump_tree", "{}") + "\n");
+  check(after.starts_with(refused) && has(after, R"("id":2,"result":{"content":[{"type":"text")"));
+}
+
+// The line reader takes bytes from anything that gives them, here a text in memory,
+// and keeps no more than the limit of a line, whatever comes.
+void the_line_reader_keeps_at_most_the_limit() {
+  using lv::mcp::detail::line_status;
+  constexpr std::size_t limit = 4;
+  std::string_view input = "abcd\nabcde\n\nab\r\nabcdefgh";
+  auto next = [&input] {
+    if (input.empty()) return EOF;
+    const auto c = static_cast<unsigned char>(input.front());
+    input.remove_prefix(1);
+    return static_cast<int>(c);
+  };
+  std::string line;
+  const auto read = [&](line_status expected, std::string_view text) {
+    check(lv::mcp::detail::read_line(next, line, limit) == expected && line.size() <= limit);
+    check(expected == line_status::too_long || line == text);
+  };
+  read(line_status::line, "abcd");
+  read(line_status::too_long, "");
+  read(line_status::line, "");
+  read(line_status::line, "ab\r");
+  read(line_status::too_long, "");
+  read(line_status::end, "");
+  read(line_status::end, "");
+}
+
 void base64() {
   const auto encode = [](std::string_view text) {
     std::string out;
@@ -601,6 +678,8 @@ int main(int argc, char** argv) {
   requests_with_their_own_metadata(screen);
   refuses(screen);
   lines();
+  a_line_over_the_limit_is_refused_and_the_session_goes_on();
+  the_line_reader_keeps_at_most_the_limit();
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
