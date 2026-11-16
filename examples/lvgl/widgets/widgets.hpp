@@ -130,4 +130,10 @@ void image_inner_align(lv::obj screen);     // lv_example_image_inner_align
 void image_src(lv::obj screen);             // lv_example_image_src
 void image_transformations(lv::obj screen);  // lv_example_image_transformations
 
+// scale
+void scale_modes(lv::obj screen);    // lv_example_scale_modes
+void scale_range(lv::obj screen);    // lv_example_scale_range
+void scale_styling(lv::obj screen);  // lv_example_scale_styling
+void scale_ticks(lv::obj screen);    // lv_example_scale_ticks
+
 }  // namespace widgets

@@ -209,6 +209,7 @@ lvgl26_widget_ports(dropdown bind_value direction event text)
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 lvgl26_widget_ports(textarea placeholder)
 lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
+lvgl26_widget_ports(scale modes range styling ticks)
 
 add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
