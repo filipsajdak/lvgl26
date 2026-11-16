@@ -118,6 +118,41 @@ constexpr auto tok = lv::tokens<tokens_json>;
 - A style takes tokens, not loose numbers. A color that is not in the file does not reach the screen.
 - Change a value in the file and build again: the picture changes with it.
 
+## The styles
+
+A style is a named constant made of tokens. A widget takes it whole:
+
+<!-- snippet: examples/quick_start/main.cpp styles -->
+```cpp
+// The looks of the screen, named once. Every value is a token.
+constexpr auto screen_look = lv::style({.bg_color = tok.color.ground,
+                                        .bg_opa = tok.opacity.opaque,
+                                        .border_width = tok.space.none,
+                                        .pad_all = tok.space.edge,
+                                        .pad_row = tok.space.gap,
+                                        .radius = tok.space.none,
+                                        .text_color = tok.color.muted});
+
+constexpr auto track = lv::style({.arc_color = tok.color.line,
+                                  .arc_rounded = false,
+                                  .arc_width = tok.stroke.track});
+constexpr auto progress = track | lv::style({.arc_color = tok.color.active});
+constexpr auto no_knob = lv::style({.bg_opa = tok.opacity.none, .pad_all = tok.space.none});
+
+constexpr auto reading_look = lv::style({.text_color = tok.color.reading});
+
+constexpr auto button_look = lv::style({.bg_color = tok.color.active,
+                                        .pad_hor = tok.space.button_x,
+                                        .pad_ver = tok.space.button_y,
+                                        .radius = tok.space.none,
+                                        .shadow_width = tok.space.none,
+                                        .text_color = tok.color.on_active});
+```
+
+- `button_look` is the look of every button that names it. Change it here and all of them change.
+- `|` puts one style on top of another: `progress` is the track in the active color.
+- A style is built at compile time and kept in read-only memory.
+
 ## The screen
 
 A screen is a tree, written as one constant:
@@ -126,30 +161,17 @@ A screen is a tree, written as one constant:
 ```cpp
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
                                 .size = {320 * px, 240 * px},
-                                .style = {.bg_color = tok.color.ground,
-                                          .bg_opa = tok.opacity.opaque,
-                                          .border_width = tok.space.none,
-                                          .pad_all = tok.space.edge,
-                                          .pad_row = tok.space.gap,
-                                          .radius = tok.space.none,
-                                          .text_color = tok.color.muted}})[
+                                .style = screen_look})[
     lv::label({.id = "title", .text = "SPEED"}),
     lv::arc({.id = "speedo",
              .range = {0, 240},
              .size = {108 * px, 108 * px},
-             .style = {.arc_color = tok.color.line, .arc_rounded = false, .arc_width = tok.stroke.track},
-             .style_indicator = {.arc_color = tok.color.active, .arc_rounded = false, .arc_width = tok.stroke.track},
-             .style_knob = {.bg_opa = tok.opacity.none, .pad_all = tok.space.none},
+             .style = track,
+             .style_indicator = progress,
+             .style_knob = no_knob,
              .value = lv::bind(speed)})[
-        lv::label({.align = "center", .id = "reading", .style = {.text_color = tok.color.reading}, .text = lv::bind(speed)})],
-    lv::button({.id = "reset",
-                .on_clicked = &reset,
-                .style = {.bg_color = tok.color.active,
-                          .pad_hor = tok.space.button_x,
-                          .pad_ver = tok.space.button_y,
-                          .radius = tok.space.none,
-                          .shadow_width = tok.space.none,
-                          .text_color = tok.color.on_active}})[
+        lv::label({.align = "center", .id = "reading", .style = reading_look, .text = lv::bind(speed)})],
+    lv::button({.id = "reset", .on_clicked = &reset, .style = button_look})[
         lv::label({.text = "RESET"})]];
 ```
 
@@ -160,7 +182,7 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
 - The properties of a widget come from LVGL itself. lvgl26 reads LVGL's headers at compile time and builds one typed member for each setter.
 - Name the properties in alphabetical order: `.id`, `.range`, `.size`, `.style`, `.value`. C++ asks for the order of declaration, and the members are sorted.
 - An `id` gives a widget a name that you can ask for later.
-- `.style` is the look of the widget. `.style_indicator` and `.style_knob` are the looks of two parts of the dial.
+- `.style = button_look` gives a widget a style. `.style_indicator` and `.style_knob` are for two parts of the dial.
 
 The compiler reads this tree. A wrong property, a wrong value or a missing unit stops the build.
 

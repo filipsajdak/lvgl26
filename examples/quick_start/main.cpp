@@ -31,33 +31,46 @@ constexpr char tokens_json[] = {
 constexpr auto tok = lv::tokens<tokens_json>;
 //! [tokens]
 
+//! [styles]
+// The looks of the screen, named once. Every value is a token.
+constexpr auto screen_look = lv::style({.bg_color = tok.color.ground,
+                                        .bg_opa = tok.opacity.opaque,
+                                        .border_width = tok.space.none,
+                                        .pad_all = tok.space.edge,
+                                        .pad_row = tok.space.gap,
+                                        .radius = tok.space.none,
+                                        .text_color = tok.color.muted});
+
+constexpr auto track = lv::style({.arc_color = tok.color.line,
+                                  .arc_rounded = false,
+                                  .arc_width = tok.stroke.track});
+constexpr auto progress = track | lv::style({.arc_color = tok.color.active});
+constexpr auto no_knob = lv::style({.bg_opa = tok.opacity.none, .pad_all = tok.space.none});
+
+constexpr auto reading_look = lv::style({.text_color = tok.color.reading});
+
+constexpr auto button_look = lv::style({.bg_color = tok.color.active,
+                                        .pad_hor = tok.space.button_x,
+                                        .pad_ver = tok.space.button_y,
+                                        .radius = tok.space.none,
+                                        .shadow_width = tok.space.none,
+                                        .text_color = tok.color.on_active});
+//! [styles]
+
 //! [tree]
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
                                 .size = {320 * px, 240 * px},
-                                .style = {.bg_color = tok.color.ground,
-                                          .bg_opa = tok.opacity.opaque,
-                                          .border_width = tok.space.none,
-                                          .pad_all = tok.space.edge,
-                                          .pad_row = tok.space.gap,
-                                          .radius = tok.space.none,
-                                          .text_color = tok.color.muted}})[
+                                .style = screen_look})[
     lv::label({.id = "title", .text = "SPEED"}),
     lv::arc({.id = "speedo",
              .range = {0, 240},
              .size = {108 * px, 108 * px},
-             .style = {.arc_color = tok.color.line, .arc_rounded = false, .arc_width = tok.stroke.track},
-             .style_indicator = {.arc_color = tok.color.active, .arc_rounded = false, .arc_width = tok.stroke.track},
-             .style_knob = {.bg_opa = tok.opacity.none, .pad_all = tok.space.none},
+             .style = track,
+             .style_indicator = progress,
+             .style_knob = no_knob,
              .value = lv::bind(speed)})[
-        lv::label({.align = "center", .id = "reading", .style = {.text_color = tok.color.reading}, .text = lv::bind(speed)})],
-    lv::button({.id = "reset",
-                .on_clicked = &reset,
-                .style = {.bg_color = tok.color.active,
-                          .pad_hor = tok.space.button_x,
-                          .pad_ver = tok.space.button_y,
-                          .radius = tok.space.none,
-                          .shadow_width = tok.space.none,
-                          .text_color = tok.color.on_active}})[
+        lv::label({.align = "center", .id = "reading", .style = reading_look, .text = lv::bind(speed)})],
+    lv::button({.id = "reset", .on_clicked = &reset, .style = button_look})[
         lv::label({.text = "RESET"})]];
 //! [tree]
 
