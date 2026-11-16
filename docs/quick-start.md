@@ -2,7 +2,7 @@
 
 Build a speedometer for a 320 x 240 screen in about ten minutes. You write the screen, tie it to a typed value, and save a picture of it.
 
-![The finished screen: a title, a dial at half its range, the text "120 km/h" and a Reset button](media/quick-start.png)
+![The finished screen in the dark Signal theme: a lime dial at half its range, the text "120 km/h" and a RESET button](media/quick-start.png)
 
 You need no display and no board. The program draws into memory and writes a PNG file.
 
@@ -26,7 +26,7 @@ apt-get update && apt-get install -y cmake ninja-build
 
 ## The project
 
-Make a folder with two files, `CMakeLists.txt` and `main.cpp`. This is the whole `CMakeLists.txt`:
+Make a folder with three files: `CMakeLists.txt`, `tokens.json` and `main.cpp`. This is the whole `CMakeLists.txt`:
 
 <!-- snippet: examples/quick_start/CMakeLists.txt -->
 ```cmake
@@ -59,29 +59,108 @@ FetchContent_MakeAvailable(mp-units)
 
 add_executable(quick_start main.cpp)
 target_link_libraries(quick_start PRIVATE lvgl26::lvgl26 mp-units::mp-units)
+# Where #embed finds tokens.json.
+target_compile_options(quick_start PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR})
 ```
 
 - **lvgl26** is headers only. It fetches LVGL, the C library that draws the widgets, and builds it for you.
 - **mp-units** is a units library. The speed in this program is a real quantity, `120 * km / h`, not a bare number.
 
+## The design tokens
+
+The colors and the spacing of the screen are design tokens: named values in a JSON file. The format is the one of the W3C design tokens group. These are a part of Signal, the design system of this project, in its dark theme. Save them as `tokens.json`:
+
+<!-- snippet: examples/quick_start/tokens.json -->
+```json
+{
+  "$description": "The quick start's design tokens: a part of Signal, the project's design system, in its dark theme.",
+  "color": {
+    "$type": "color",
+    "ground": { "$value": "#0A0A0C" },
+    "reading": { "$value": "#FFFFFF" },
+    "muted": { "$value": "#B4B7C0" },
+    "line": { "$value": "#34353D" },
+    "active": { "$value": "#D4FF3A" },
+    "on-active": { "$value": "#0A0A0C" }
+  },
+  "space": {
+    "$type": "dimension",
+    "edge": { "$value": "16px" },
+    "gap": { "$value": "12px" },
+    "button-x": { "$value": "24px" },
+    "button-y": { "$value": "17px" },
+    "none": { "$value": "0px" }
+  },
+  "stroke": {
+    "$type": "dimension",
+    "track": { "$value": "8px" }
+  },
+  "opacity": {
+    "$type": "number",
+    "opaque": { "$value": 1 },
+    "none": { "$value": 0 }
+  }
+}
+```
+
+The compiler reads the file. In `main.cpp`, `#embed` brings it in and `lv::tokens` turns it into typed values:
+
+<!-- snippet: examples/quick_start/main.cpp tokens -->
+```cpp
+constexpr char tokens_json[] = {
+#embed "tokens.json"
+    , 0};
+
+constexpr auto tok = lv::tokens<tokens_json>;
+```
+
+- `tok.color.active` is a color and `tok.space.edge` a length. A style takes only the right kind.
+- A style takes tokens, not loose numbers. A color that is not in the file does not reach the screen.
+- Change a value in the file and build again: the picture changes with it.
+
 ## The screen
 
-The rest goes into `main.cpp`. A screen is a tree, written as one constant:
+A screen is a tree, written as one constant:
 
 <!-- snippet: examples/quick_start/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .text = "Speed"}),
-    lv::arc({.id = "speedo", .range = {0, 240}, .size = {110 * px, 110 * px}, .value = lv::bind(speed)}),
-    lv::label({.id = "reading", .text = lv::bind(speed)}),
-    lv::button({.id = "reset", .on_clicked = &reset})[lv::label({.text = "Reset"})]];
+constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
+                                .size = {320 * px, 240 * px},
+                                .style = {.bg_color = tok.color.ground,
+                                          .bg_opa = tok.opacity.opaque,
+                                          .border_width = tok.space.none,
+                                          .pad_all = tok.space.edge,
+                                          .pad_row = tok.space.gap,
+                                          .radius = tok.space.none,
+                                          .text_color = tok.color.muted}})[
+    lv::label({.id = "title", .text = "SPEED"}),
+    lv::arc({.id = "speedo",
+             .range = {0, 240},
+             .size = {108 * px, 108 * px},
+             .style = {.arc_color = tok.color.line, .arc_rounded = false, .arc_width = tok.stroke.track},
+             .style_indicator = {.arc_color = tok.color.active, .arc_rounded = false, .arc_width = tok.stroke.track},
+             .style_knob = {.bg_opa = tok.opacity.none, .pad_all = tok.space.none},
+             .value = lv::bind(speed)})[
+        lv::label({.align = "center", .id = "reading", .style = {.text_color = tok.color.reading}, .text = lv::bind(speed)})],
+    lv::button({.id = "reset",
+                .on_clicked = &reset,
+                .style = {.bg_color = tok.color.active,
+                          .pad_hor = tok.space.button_x,
+                          .pad_ver = tok.space.button_y,
+                          .radius = tok.space.none,
+                          .shadow_width = tok.space.none,
+                          .text_color = tok.color.on_active}})[
+        lv::label({.text = "RESET"})]];
 ```
 
 - Properties go in `()`, children in `[]`.
+- `.flex_align` centres the children of the column. An LVGL value with a name is written as that name in quotes.
+- The reading is a child of the dial, and `.align = "center"` puts it in the middle.
 - `lv::column` puts its children below each other. `lv::label`, `lv::arc` and `lv::button` are LVGL widgets.
 - The properties of a widget come from LVGL itself. lvgl26 reads LVGL's headers at compile time and builds one typed member for each setter.
-- Name the properties in alphabetical order: `.id`, `.range`, `.size`, `.value`. C++ asks for the order of declaration, and the members are sorted.
+- Name the properties in alphabetical order: `.id`, `.range`, `.size`, `.style`, `.value`. C++ asks for the order of declaration, and the members are sorted.
 - An `id` gives a widget a name that you can ask for later.
+- `.style` is the look of the widget. `.style_indicator` and `.style_knob` are the looks of two parts of the dial.
 
 The compiler reads this tree. A wrong property, a wrong value or a missing unit stops the build.
 

@@ -27,3 +27,5 @@ FetchContent_MakeAvailable(mp-units)
 
 add_executable(quick_start main.cpp)
 target_link_libraries(quick_start PRIVATE lvgl26::lvgl26 mp-units::mp-units)
+# Where #embed finds tokens.json.
+target_compile_options(quick_start PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR})
