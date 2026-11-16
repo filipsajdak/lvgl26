@@ -68,6 +68,10 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
 - `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
   draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
+- `docs/reference/lvgl-<version>.json` is the reference as data: widgets, properties, what each takes,
+  enumerator names, style members. `tools/reference/reference.cpp` prints it by reflection, and the
+  test `reference_data` fails when a committed file is stale. Write it again with the program the
+  test names; never edit it by hand.
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.
@@ -160,7 +164,7 @@ A feature pull request also:
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images, editor support.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.

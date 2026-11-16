@@ -1,0 +1,13 @@
+# Runs PROGRAM and expects it to print exactly the file EXPECTED.
+execute_process(COMMAND ${PROGRAM} RESULT_VARIABLE result OUTPUT_VARIABLE output)
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "${PROGRAM} ended with ${result}")
+endif()
+if(NOT EXISTS ${EXPECTED})
+  message(FATAL_ERROR "${EXPECTED} does not exist. Write it: ${PROGRAM} > ${EXPECTED}")
+endif()
+file(READ ${EXPECTED} expected)
+if(NOT output STREQUAL expected)
+  message(FATAL_ERROR "${EXPECTED} is stale. Write it again: ${PROGRAM} > ${EXPECTED}")
+endif()
+message(STATUS "${EXPECTED} is what ${PROGRAM} prints")

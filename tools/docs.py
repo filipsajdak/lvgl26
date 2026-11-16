@@ -35,7 +35,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 SITE = ROOT / "site"
 OUT = SITE / "docs"
-NOT_PAGES = {"research"}  # notes for contributors, not documentation
+NOT_PAGES = {"research", "reference"}  # notes for contributors, and data: not pages
 
 SNIPPET = re.compile(r"<!-- snippet: (\S+)(?: (\S+))? -->\n```(\w*)\n(.*?)```\n", re.S)
 FENCE = re.compile(r"```(\w*)\n(.*?)```\n", re.S)
