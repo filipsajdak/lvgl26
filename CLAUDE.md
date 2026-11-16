@@ -66,6 +66,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - A font in a style comes from a typography token through `lv::typeface`; `lv::raw(font)` marks one
   that no token names. `include/lv/detail/coverage.hpp` is derived from font-rs and stays under the
   Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
+- A part of LVGL that costs the device code or heap is behind a CMake option of its own, off by
+  default (`LVGL26_TTF`). The tests build with it. Its C functions are found by reflection
+  (`detail::find`), and a `static_assert` names the option when they are missing.
 - `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
   draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
 - Code that runs in the compiler is written for its interpreter: look codes up in tables, give a

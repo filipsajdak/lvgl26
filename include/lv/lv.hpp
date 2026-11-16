@@ -9,6 +9,7 @@
 #include <lv/match.hpp>
 #include <lv/owned.hpp>
 #include <lv/runtime.hpp>
+#include <lv/scaled_font.hpp>
 #include <lv/state.hpp>
 #include <lv/style.hpp>
 #include <lv/task.hpp>

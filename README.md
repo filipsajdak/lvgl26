@@ -272,6 +272,9 @@ constexpr auto title = type(tok.text.title);          // family, weight and size
 lv::label({.style = {.text_font = title}, .text = "Wake up"})
 ```
 
+Where the size is only known on the device, `lv::scaled_font` lets the device draw the glyphs, and a
+style binds to it: `.text_font = lv::bind(title)`, then `title.resize(tok.text.large)`.
+
 [docs/fonts.md](docs/fonts.md) has the costs and the limits.
 
 A picture works the same way. The compiler decodes an embedded PNG file into the display's own

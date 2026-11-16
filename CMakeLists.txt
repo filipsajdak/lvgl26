@@ -8,6 +8,7 @@ endif()
 
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
 option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset arm-m4)" OFF)
+option(LVGL26_TTF "Build LVGL with TinyTTF, for fonts drawn on the device (lv::scaled_font)" OFF)
 option(LVGL26_UNITS "Fetch mp-units and link it to lvgl26, for values with a unit" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 

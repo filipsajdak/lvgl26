@@ -40,6 +40,12 @@ if(LVGL26_HEAP)
   target_compile_definitions(lvgl PUBLIC LV_MEM_SIZE=${LVGL26_HEAP})
 endif()
 
+# Fonts that the device draws from a TrueType file (lv::scaled_font). LVGL's TinyTTF
+# adds code and uses the heap, so a program asks for it.
+if(LVGL26_TTF OR LVGL26_BUILD_TESTS)
+  target_compile_definitions(lvgl PUBLIC LV_USE_TINY_TTF=1)
+endif()
+
 # Any other LVGL setting, as LVGL names it: -DLVGL26_LVGL_DEFINITIONS="LV_USE_LOG=1;LV_COLOR_DEPTH=32".
 set(LVGL26_LVGL_DEFINITIONS "" CACHE STRING "More compile definitions for LVGL, as LVGL names them")
 if(LVGL26_LVGL_DEFINITIONS)

@@ -58,6 +58,14 @@ lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(application)
 lvgl26_test(theme)
+lvgl26_test(scaled_font)
+target_link_libraries(scaled_font PRIVATE lvgl26_test_data)
+# A font size is more than nothing.
+foreach(case zero negative)
+  add_test(NAME scaled_font_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:scaled_font> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 lvgl26_test(signal)
 target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.
@@ -194,6 +202,13 @@ lvgl26_compile_fail(image_deep "this PNG file has 16 bits or fewer than 8 bits f
 lvgl26_compile_fail(image_interlaced "this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced")
 lvgl26_compile_fail(image_short "this PNG file is damaged: it does not hold as many pixels as it says")
 lvgl26_compile_fail(image_bad_filter "this PNG file is damaged: a row has a filter that the format does not know")
+lvgl26_compile_fail(scaled_font_needs_ttf "lv::scaled_font needs LVGL's TinyTTF, which is off. Turn it on in CMake, before lvgl26 is added: set\\(LVGL26_TTF ON\\)")
+target_compile_options(fail_scaled_font_needs_ttf PRIVATE -ULV_USE_TINY_TTF)  # as a build without the option
+lvgl26_compile_fail(scaled_font_raw_needs_ttf "lv::scaled_font needs LVGL's TinyTTF, which is off")
+target_compile_options(fail_scaled_font_raw_needs_ttf PRIVATE -ULV_USE_TINY_TTF)
+lvgl26_compile_fail(scaled_font_plain_size "the size of a font comes from a typography token")
+lvgl26_compile_fail(scaled_font_bound_to_number "lv::bind\\(font\\) is for a font property of a style")
+lvgl26_compile_fail(theme_bound_font "a theme holds constants, and a font bound with lv::bind is drawn on the device")
 lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
 lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
 lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
@@ -351,6 +366,13 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
                    ${PROJECT_SOURCE_DIR}/docs/media/images.png)
   set_tests_properties(example_images_picture PROPERTIES FIXTURES_REQUIRED example_images_picture)
 endif()
+
+# The second example of docs/fonts.md: a font drawn on the device.
+add_executable(example_scaled_font ${PROJECT_SOURCE_DIR}/examples/scaled_font/main.cpp)
+target_compile_options(example_scaled_font PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/fonts
+                                                   --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_scaled_font PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_scaled_font COMMAND example_scaled_font)
 
 # The example of docs/fonts.md. Its picture is the one on the page.
 add_executable(example_fonts ${PROJECT_SOURCE_DIR}/examples/fonts/main.cpp)

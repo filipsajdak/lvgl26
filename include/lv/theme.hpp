@@ -210,6 +210,9 @@ consteval std::vector<lv_style_const_prop_t> plain_props(const S& s) {
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     if constexpr (style_ids<D>[i] != std::meta::info{}) {
       if (s.[:style_members<D>[i]:].set) {
+        if (s.[:style_members<D>[i]:].bound != nullptr)
+          fail("lv: a theme holds constants, and a font bound with lv::bind is drawn on the device. Give the "
+               "theme a font made by the compiler (lv::typeface), or bind the font in the widget's own style.");
         lv_style_const_prop_t p{};
         p.prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
         p.value = style_value(s.[:style_members<D>[i]:].v.v0);
