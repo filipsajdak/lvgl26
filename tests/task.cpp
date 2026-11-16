@@ -444,6 +444,27 @@ void a_task_is_small(lv::obj screen) {
   check(free_bytes() == nothing);
 }
 
+// Resetting a state deletes its subject, and LVGL frees every observer on it, also the
+// one of a task that waits for a change. Ending the task later must not delete that
+// observer again: LVGL may have given its memory to a new observer by then.
+void a_reset_state_leaves_its_waiting_task_safe(lv::obj screen) {
+  auto panel = screen.add<"obj">();
+  lv::state<lv::counter> source;
+  int seen = -1;
+  bool ended = false;
+  check(lv::spawn(follows(source, &seen, &ended), panel));
+  source.reset();
+  int calls = 0;
+  check(source.observe([p = &calls](lv::counter) { ++*p; }) != nullptr);
+  lv_obj_delete(panel.raw());  // ends the task, which must leave the new observer alone
+  check(ended);
+  const int before = calls;
+  source = lv::counter{9};
+  check(calls == before + 1);
+  check(lv_mem_test() == LV_RESULT_OK);
+  source.reset();
+}
+
 void nothing_is_left_behind(lv::obj screen) {
   // Run the main paths once more and compare the heap before and after.
   const auto before = free_bytes();
@@ -489,6 +510,7 @@ int main() {
   a_lost_wait_for_deletion(screen);
   moving_a_task();
   a_task_is_small(screen);
+  a_reset_state_leaves_its_waiting_task_safe(screen);
   nothing_is_left_behind(screen);
 
   clicks.reset();

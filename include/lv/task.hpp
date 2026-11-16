@@ -43,6 +43,7 @@
 
 #include <array>
 #include <coroutine>
+#include <cstdint>
 #include <cstring>
 #include <exception>
 #include <string>
@@ -505,6 +506,7 @@ struct change_source {
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_observer_t* observer = nullptr;
+  std::uint32_t epoch = 0;  // of the state when the observer was added: see graph_access
   bool armed = false;
   alignas(T) unsigned char before[sizeof(T)]{};  // the value when the wait began
 
@@ -518,14 +520,18 @@ struct change_source {
     context = done_context;
     // LVGL calls a new observer once at once; only later calls are changes.
     observer = lv_subject_add_observer(source->raw(), &changed_cb, this);
+    epoch = graph_access::epoch(*source);
     armed = observer != nullptr;
     const T now = source->get();
     std::memcpy(before, &now, sizeof(T));
     return armed;
   }
 
+  // The observer is gone already if the state deleted its subject since arm(), or if
+  // LVGL was shut down. LVGL may have given its memory to another observer since.
   void disarm() noexcept {
-    if (observer != nullptr) lv_observer_delete(observer);
+    const bool exists = observer != nullptr && epoch == graph_access::epoch(*source);
+    if (exists && lv_is_initialized()) lv_observer_delete(observer);
     observer = nullptr;
     armed = false;
   }
@@ -735,6 +741,8 @@ auto event_ref<Code>::then(F handler) const {
 inline detail::sleep_source sleep(duration time) noexcept { return detail::sleep_source{time.ms}; }
 
 // T now = co_await lv::changed(speed): the value after the state's next change.
+// The state must outlive the wait. A reset of the state ends no wait: the task then
+// waits until it is ended, for example by deleting its owner.
 template <class T, class O>
 detail::change_source<T, O> changed(const state<T, O>& source) noexcept {
   return detail::change_source<T, O>{&source};
