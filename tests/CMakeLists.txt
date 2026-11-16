@@ -56,6 +56,7 @@ lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(application)
 lvgl26_test(theme)
+lvgl26_test(signal)
 target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
@@ -288,6 +289,23 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
   endif()
 endif()
 
+# The example of docs/themes.md. Its pictures are the ones on the page.
+add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)
+target_compile_options(example_theme PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/theme)
+target_link_libraries(example_theme PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_out)
+add_test(NAME example_theme COMMAND example_theme WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_out)
+set_tests_properties(example_theme PROPERTIES FIXTURES_SETUP example_theme_pictures)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  foreach(look signal paper)
+    add_test(NAME example_theme_picture_${look}
+             COMMAND ${CMAKE_COMMAND} -E compare_files
+                     ${CMAKE_CURRENT_BINARY_DIR}/example_theme_out/theme_${look}.png
+                     ${PROJECT_SOURCE_DIR}/docs/media/theme-${look}.png)
+    set_tests_properties(example_theme_picture_${look} PROPERTIES FIXTURES_REQUIRED example_theme_pictures)
+  endforeach()
+endif()
+
 # The pages in docs/ show only code that these tests have built, and no C names.
 # The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
@@ -295,6 +313,8 @@ if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
+  # The token files of the Signal theme are written from the design system.
+  add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it

@@ -1,0 +1,105 @@
+{
+  "$description": "Signal, dark theme. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
+  "color": {
+    "$type": "color",
+    "ground": {
+      "$value": "#0a0a0c"
+    },
+    "surface": {
+      "$value": "#1b1c22"
+    },
+    "surface-raised": {
+      "$value": "#26272f"
+    },
+    "line": {
+      "$value": "#34353d"
+    },
+    "line-strong": {
+      "$value": "#7b7e8a"
+    },
+    "reading": {
+      "$value": "#ffffff"
+    },
+    "muted": {
+      "$value": "#b4b7c0"
+    },
+    "active": {
+      "$value": "#d4ff3a"
+    },
+    "on-active": {
+      "$value": "#0a0a0c"
+    },
+    "alarm": {
+      "$value": "#ff4438"
+    },
+    "on-alarm": {
+      "$value": "#0a0a0c"
+    },
+    "caution": {
+      "$value": "#ffc531"
+    },
+    "on-caution": {
+      "$value": "#0a0a0c"
+    },
+    "advice": {
+      "$value": "#9db4ff"
+    },
+    "on-advice": {
+      "$value": "#0a0a0c"
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": {
+      "$value": "4px"
+    },
+    "2": {
+      "$value": "8px"
+    },
+    "3": {
+      "$value": "12px"
+    },
+    "4": {
+      "$value": "16px"
+    },
+    "6": {
+      "$value": "24px"
+    },
+    "8": {
+      "$value": "32px"
+    },
+    "12": {
+      "$value": "48px"
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "0": {
+      "$value": "0px"
+    }
+  },
+  "stroke": {
+    "$type": "dimension",
+    "bar": {
+      "$value": "4px"
+    },
+    "track": {
+      "$value": "8px"
+    },
+    "ring": {
+      "$value": "16px"
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "target": {
+      "$value": "48px"
+    },
+    "target-glove": {
+      "$value": "80px"
+    },
+    "chip": {
+      "$value": "32px"
+    }
+  }
+}
