@@ -45,6 +45,7 @@
 #include <cstdint>
 #include <expected>
 #include <limits>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -111,16 +112,34 @@ constexpr measured read_measured(json::value v) {
   return {json::value{s.substr(0, n)}.number(), s.substr(n), true};
 }
 
-constexpr std::int32_t rounded_i32(double v) {
-  return static_cast<std::int32_t>(v < 0 ? v - 0.5 : v + 0.5);
+// Whether casting `v` to I is defined: false for NaN, an infinity and anything
+// whose whole part is outside the range of I. The cast drops the fraction, so the
+// bounds are one below the lowest value of I and the power of two just above its
+// highest one. Where one below is not exact in a double, it errs toward refusing.
+// (Not std::ldexp: <cmath> would put ::log and the like into every user's file.)
+template <integer I>
+constexpr bool castable_to(double v) {
+  using limits = std::numeric_limits<I>;
+  constexpr double below_lowest = static_cast<double>(limits::min()) - 1;
+  constexpr double past_highest = static_cast<double>(limits::max() / limits::radix + 1) * limits::radix;
+  return v > below_lowest && v < past_highest;
+}
+
+// The nearest whole number, halves away from zero, or nothing if an int32_t
+// cannot hold it.
+constexpr std::optional<std::int32_t> rounded_i32(double v) {
+  const double away = v < 0 ? v - 0.5 : v + 0.5;
+  if (!castable_to<std::int32_t>(away)) return std::nullopt;
+  return static_cast<std::int32_t>(away);
 }
 
 constexpr bool read_length(json::value v, length& out) {
   if (v.is(json::kind::string) && v.string() == "content") return out = size_content, true;
   const auto m = read_measured(v);
-  if (!m.ok) return false;
-  if (m.unit == "px" || m.unit.empty()) return out = length::px(rounded_i32(m.number)), true;
-  if (m.unit == "%") return out = length{percent{rounded_i32(m.number)}}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || !n) return false;
+  if (m.unit == "px" || m.unit.empty()) return out = length::px(*n), true;
+  if (m.unit == "%") return out = length{percent{*n}}, true;
   return false;
 }
 
@@ -188,8 +207,9 @@ bool read(json::value v, json_value<along<Axis>>& out) {
 
 inline bool read(json::value v, json_value<angle>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
-  return out.value = angle{rounded_i32(m.number)}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || !(m.unit.empty() || m.unit == "deg") || !n) return false;
+  return out.value = angle{*n}, true;
 }
 
 // An angle with tenths of a degree: 22.5 or "22.5deg". A finer fraction, or more
@@ -208,14 +228,16 @@ constexpr double milliseconds(const measured& m) {
 
 inline bool read(json::value v, json_value<duration>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || m.number < 0 || milliseconds(m) < 0) return false;
-  return out.value = duration{static_cast<std::uint32_t>(rounded_i32(milliseconds(m)))}, true;
+  const auto ms = rounded_i32(milliseconds(m));
+  if (!m.ok || m.number < 0 || !ms || *ms < 0) return false;
+  return out.value = duration{static_cast<std::uint32_t>(*ms)}, true;
 }
 
 inline bool read(json::value v, json_value<opa>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || m.unit != "%") return false;
-  return out.value = opa{percent{rounded_i32(m.number)}}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || m.unit != "%" || !n) return false;
+  return out.value = opa{percent{*n}}, true;
 }
 
 inline bool read(json::value v, json_value<lv_color_t>& out) { return read_color(v, out.value); }
@@ -230,9 +252,8 @@ template <integer I>
 bool read(json::value v, json_value<strict<I>>& out) {
   if (!v.is(json::kind::number)) return false;
   const double n = v.number();
-  const auto whole = static_cast<std::int64_t>(n);
-  if (static_cast<double>(whole) != n || !std::in_range<I>(whole)) return false;
-  return out.value = strict<I>{static_cast<I>(whole)}, true;
+  if (!castable_to<I>(n) || static_cast<double>(static_cast<I>(n)) != n) return false;
+  return out.value = strict<I>{static_cast<I>(n)}, true;
 }
 
 // A style value. A document has no design tokens, so it is a raw one.

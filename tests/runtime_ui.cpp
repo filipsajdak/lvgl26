@@ -5,6 +5,7 @@
 #include "check.hpp"
 
 #include <cstring>
+#include <limits>
 
 namespace {
 
@@ -378,6 +379,46 @@ void defect_unsigned_parameter_refuses_negative(lv::obj screen) {
   expect_bad_value(R"({"type": "scale", "props": {"angle_range": "-90deg"}})", R"("-90deg")", screen);
 }
 
+// A number too large for the integer it becomes, or not a number at all, is a bad
+// value. The cast of such a double is undefined: 1e99 for a width became
+// INT32_MAX on Arm, and only -fsanitize=float-cast-overflow
+// reported it. 0e999 is zero times infinity: NaN.
+void defect_number_outside_integer_is_refused(lv::obj screen) {
+  const auto heap = free_bytes();
+  const auto refused = [&](std::string_view doc, std::string_view at) {
+    const auto r = ui::load(doc, screen);
+    check(!r.has_value() && r.error().error == lv::load_error::bad_value && r.error().at == at);
+  };
+  refused(R"({"type": "obj", "props": {"size": [1e99, "10px"]}})", R"([1e99, "10px"])");
+  refused(R"({"type": "obj", "props": {"width": "99999999999999999999px"}})", R"("99999999999999999999px")");
+  refused(R"({"type": "obj", "props": {"width": "-99999999999%"}})", R"("-99999999999%")");
+  refused(R"({"type": "obj", "props": {"width": 0e999}})", "0e999");
+  refused(R"({"type": "arc", "props": {"value": 1e99}})", "1e99");
+  refused(R"({"type": "arc", "props": {"value": -1e99}})", "-1e99");
+  refused(R"({"type": "arc", "props": {"value": 0e999}})", "0e999");
+  refused(R"({"type": "arc", "props": {"value": 1e999}})", "1e999");
+  refused(R"({"type": "arc", "props": {"value": 2147483648}})", "2147483648");
+  refused(R"({"type": "arc", "props": {"value": -2147483649}})", "-2147483649");
+  refused(R"({"type": "arc", "props": {"value": -1.5}})", "-1.5");  // a fraction below zero too
+  refused(R"({"type": "arc", "props": {"rotation": -1e99}})", "-1e99");
+  refused(R"({"type": "arc", "props": {"rotation": 0e999}})", "0e999");
+  refused(R"({"type": "obj", "props": {"style": {"anim_duration": 0e999}}})", "0e999");
+  refused(R"({"type": "obj", "props": {"style": {"anim_duration": "99999999999s"}}})", R"("99999999999s")");
+  refused(R"({"type": "obj", "props": {"style": {"bg_opa": "99999999999%"}}})", R"("99999999999%")");
+  // The extremes of the integer itself still fit.
+  auto extremes = ui::load(R"({"type": "column", "children": [
+      {"type": "arc", "id": "high", "props": {"range": [-2147483648, 2147483647], "value": 2147483647}},
+      {"type": "arc", "id": "low", "props": {"range": [-2147483648, 2147483647], "value": -2147483648}}]})",
+                           screen);
+  check(extremes.has_value());
+  if (extremes) {
+    check(lv::view<"arc">{extremes->find("high").raw()}.get<"value">() == 2147483647);
+    check(lv::view<"arc">{extremes->find("low").raw()}.get<"value">() == -2147483648);
+  }
+  extremes = {};
+  check(free_bytes() == heap);
+}
+
 }  // namespace
 
 int main() {
@@ -406,6 +447,21 @@ int main() {
   static_assert(lv::detail::rounded_i32(-1.5) == -2 && lv::detail::rounded_i32(-2.4) == -2);
   static_assert(lv::detail::rounded_i32(-0.4) == 0 && lv::detail::rounded_i32(0) == 0);
   static_assert(lv::detail::rounded_i32(0.6) == 1 && lv::detail::rounded_i32(0.4) == 0);
+  // A cast to an integer is defined when the whole part fits, and never for NaN.
+  static_assert(lv::detail::castable_to<std::int32_t>(2147483647.9));
+  static_assert(!lv::detail::castable_to<std::int32_t>(2147483648.0));
+  static_assert(lv::detail::castable_to<std::int32_t>(-2147483648.9));
+  static_assert(!lv::detail::castable_to<std::int32_t>(-2147483649.0));
+  static_assert(lv::detail::castable_to<std::uint32_t>(-0.9) && !lv::detail::castable_to<std::uint32_t>(-1.0));
+  static_assert(lv::detail::castable_to<std::uint32_t>(4294967295.0));
+  static_assert(!lv::detail::castable_to<std::uint32_t>(4294967296.0));
+  static_assert(!lv::detail::castable_to<std::int32_t>(std::numeric_limits<double>::quiet_NaN()));
+  static_assert(!lv::detail::castable_to<std::int32_t>(std::numeric_limits<double>::infinity()));
+  static_assert(!lv::detail::castable_to<std::int32_t>(-std::numeric_limits<double>::infinity()));
+  static_assert(lv::detail::rounded_i32(2147483646.5) == 2147483647);
+  static_assert(!lv::detail::rounded_i32(2147483647.5));
+  static_assert(lv::detail::rounded_i32(-2147483647.5) == -2147483648);
+  static_assert(!lv::detail::rounded_i32(-2147483648.5));
   // The tables of properties have no empty slot either.
   static_assert(std::ranges::none_of(lv::detail::property_table<"obj">,
                                      [](const auto& e) { return e.name.empty(); }));
@@ -428,6 +484,7 @@ int main() {
   limit_chart_points(screen);
   capability_other_counts_take_their_whole_type(screen);
   defect_unsigned_parameter_refuses_negative(screen);
+  defect_number_outside_integer_is_refused(screen);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
