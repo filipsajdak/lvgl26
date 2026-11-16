@@ -136,4 +136,9 @@ void scale_range(lv::obj screen);    // lv_example_scale_range
 void scale_styling(lv::obj screen);  // lv_example_scale_styling
 void scale_ticks(lv::obj screen);    // lv_example_scale_ticks
 
+// keyboard
+void keyboard_modes(lv::obj screen);     // lv_example_keyboard_modes
+void keyboard_popovers(lv::obj screen);  // lv_example_keyboard_popovers
+void keyboard_textarea(lv::obj screen);  // lv_example_keyboard_textarea
+
 }  // namespace widgets
