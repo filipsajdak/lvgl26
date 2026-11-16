@@ -107,17 +107,13 @@ class display {
   display(application& app, frame<W, H>& memory, void (*changed)(area), theme_styles look = {})
       : display(app, memory, look) {
     function_ = reinterpret_cast<void (*)()>(changed);
-    call_ = [](const display& self, area where, std::span<const std::byte>) {
-      reinterpret_cast<void (*)(area)>(self.function_)(where);
-    };
+    call_ = &frame_function;
   }
 
   template <std::int32_t W, std::int32_t H, frame_panel P>
   display(application& app, frame<W, H>& memory, P& panel, theme_styles look = {}) : display(app, memory, look) {
     object_ = &panel;
-    call_ = [](const display& self, area where, std::span<const std::byte>) {
-      (*static_cast<P*>(self.object_))(where);
-    };
+    call_ = &frame_object<P>;
   }
 
   template <std::int32_t W, std::int32_t H, class P>
@@ -132,9 +128,7 @@ class display {
       : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_PARTIAL) {
     use(look);
     function_ = reinterpret_cast<void (*)()>(send);
-    call_ = [](const display& self, area where, std::span<const std::byte> pixels) {
-      reinterpret_cast<void (*)(area, std::span<const std::byte>)>(self.function_)(where, pixels);
-    };
+    call_ = &band_function;
   }
 
   template <std::int32_t W, std::int32_t H, std::int32_t L, band_panel P>
@@ -142,9 +136,7 @@ class display {
       : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_PARTIAL) {
     use(look);
     object_ = &panel;
-    call_ = [](const display& self, area where, std::span<const std::byte> pixels) {
-      (*static_cast<P*>(self.object_))(where, pixels);
-    };
+    call_ = &band_object<P>;
   }
 
   template <std::int32_t W, std::int32_t H, std::int32_t L, class P>
@@ -177,6 +169,23 @@ class display {
     lv_display_set_driver_data(raw_, this);
     lv_display_set_buffers(raw_, memory.data(), nullptr, static_cast<std::uint32_t>(memory.size()), mode);
     lv_display_set_flush_cb(raw_, &drawn);
+  }
+
+  // How the display reaches each kind of panel. They are functions, not lambdas: GCC's
+  // analyzer reports a null `this` in the function a lambda converts to.
+  static void frame_function(const display& self, area where, std::span<const std::byte>) {
+    reinterpret_cast<void (*)(area)>(self.function_)(where);
+  }
+  template <class P>
+  static void frame_object(const display& self, area where, std::span<const std::byte>) {
+    (*static_cast<P*>(self.object_))(where);
+  }
+  static void band_function(const display& self, area where, std::span<const std::byte> pixels) {
+    reinterpret_cast<void (*)(area, std::span<const std::byte>)>(self.function_)(where, pixels);
+  }
+  template <class P>
+  static void band_object(const display& self, area where, std::span<const std::byte> pixels) {
+    (*static_cast<P*>(self.object_))(where, pixels);
   }
 
   // Puts `look` after the theme the display has, and styles the screen with it. The
