@@ -55,6 +55,8 @@ lvgl26_test(task)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(application)
+lvgl26_test(theme)
+target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:application> -DCASE=twice
@@ -168,6 +170,8 @@ lvgl26_compile_fail(match_not_an_enumerator "contract predicate is false in cons
 lvgl26_compile_fail(match_not_an_enumerator_folded "contract predicate is false in constant expression")
 lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example tok.space.md\\) or lv::raw\\(...\\), holding a length .*You gave lv::length")
 lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
+lvgl26_compile_fail(theme_needs_token "It takes a design token .*You gave lv::length")
+lvgl26_compile_fail(theme_not_a_value "a theme cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
 lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")

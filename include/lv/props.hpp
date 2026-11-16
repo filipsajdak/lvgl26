@@ -130,6 +130,26 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   return {prop, std::meta::substitute(^^arg, types), f};
 }
 
+// The style members of a widget, and of a theme's widget: `style`, then style_pressed,
+// style_checked, ... and style_indicator, style_knob, ...: the same style struct for
+// one state or one part. The target is lv_obj_add_style for `style`, and otherwise
+// the LV_STATE_* or LV_PART_* enumerator, which is the selector.
+struct named_style_slot {
+  std::string_view name;
+  std::meta::info target;
+};
+
+consteval std::vector<named_style_slot> named_style_slots() {
+  std::vector<named_style_slot> slots{{"style", ^^lv_obj_add_style}};
+  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_state_t)))
+    if (auto name = style_member(std::meta::identifier_of(e), "LV_STATE_"); !name.empty())
+      slots.push_back({std::define_static_string(name), e});
+  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_part_t)))
+    if (auto name = style_member(std::meta::identifier_of(e), "LV_PART_"); !name.empty())
+      slots.push_back({std::define_static_string(name), e});
+  return slots;
+}
+
 // What every widget has: `id`, `style`, the lv_obj_set_* properties and the events.
 // `prefix` is "lv_obj_set_". It is a parameter, and the scans are handed on as
 // arguments, because of GCC 16.2: a call whose arguments are all constants, written
@@ -139,16 +159,7 @@ template <class D>
 consteval std::vector<member_item> scan_base(std::string_view prefix) {
   std::vector<member_item> items;
   items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}});
-  items.push_back({"style", ^^style_t<D>, ^^lv_obj_add_style});
-  // style_pressed, style_checked, ... and style_indicator, style_knob, ...: the same
-  // style struct for one state or one part. The target is the LV_STATE_* or LV_PART_*
-  // enumerator, which is the selector.
-  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_state_t)))
-    if (auto name = style_member(std::meta::identifier_of(e), "LV_STATE_"); !name.empty())
-      items.push_back({std::define_static_string(name), ^^style_t<D>, e});
-  for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_part_t)))
-    if (auto name = style_member(std::meta::identifier_of(e), "LV_PART_"); !name.empty())
-      items.push_back({std::define_static_string(name), ^^style_t<D>, e});
+  for (const auto& slot : named_style_slots()) items.push_back({slot.name, ^^style_t<D>, slot.target});
   for (auto f : setters_with_prefix(prefix)) items.push_back(setter_item<D>(f, prefix.size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
