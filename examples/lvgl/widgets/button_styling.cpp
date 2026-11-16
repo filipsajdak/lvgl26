@@ -29,15 +29,15 @@ constexpr auto toggled = lv::style({.bg_color = tok.button.toggled.fill,
                                     .shadow_opa = opacity_step(160),
                                     .shadow_width = tok.button.toggled.shadow_blur});
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.xl})})[
     // The look at rest, and another while pressed.
     lv::button({.size = {180 * px, 48 * px}, .style = action, .style_pressed = pressed})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Press me"})],
+        lv::label({.align = "center", .text = "Press me"})],
     // A button that stays checked: it changes to the checked look.
     lv::button({.checkable = true, .size = {180 * px, 48 * px}, .style = action,
                 .style_checked = toggled, .style_pressed = pressed})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Toggle me"})],
+        lv::label({.align = "center", .text = "Toggle me"})],
     // A style written in place, for one widget only.
     lv::button({.size = {180 * px, 48 * px},
                 .style = lv::style({.bg_color = tok.button.warning.fill,
@@ -46,7 +46,7 @@ constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
                                     .radius = tok.button.warning.radius,
                                     .text_color = tok.button.warning.text}) |
                          tok.button.warning.border})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Local props"})]];
+        lv::label({.align = "center", .text = "Local props"})]];
 
 }  // namespace
 

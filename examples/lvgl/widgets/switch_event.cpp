@@ -11,8 +11,8 @@ using namespace widgets;
 constinit lv::state<bool> on{false};
 constinit lv::state<const char*> status{"State: OFF"};
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
-                               .style = {.flex_cross_place = LV_FLEX_ALIGN_CENTER,
+constexpr auto ui = lv::group({.flex_flow = "column",
+                               .style = {.flex_cross_place = "center",
                                          .pad_row = tok.gap.md}})[
     lv::toggle({.checked = lv::bind(on)}),  // follows, and writes back when toggled
     lv::label({.text = lv::bind(status)})];

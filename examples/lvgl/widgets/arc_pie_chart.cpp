@@ -7,7 +7,7 @@ using namespace lv::units;
 
 // A slice is the background part of an arc, drawn so wide that it reaches the
 // center. All slices lie on top of each other in the middle of the screen.
-constexpr auto slice = lv::style({.align = LV_ALIGN_CENTER,
+constexpr auto slice = lv::style({.align = "center",
                                   .arc_rounded = false,
                                   .arc_width = tok.arc.pie.width,
                                   .height = tok.arc.pie.size,

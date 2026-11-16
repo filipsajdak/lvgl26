@@ -12,11 +12,11 @@ using namespace lv::units;
 constinit lv::state<bool> details_wanted{false};
 constinit lv::state<bool> note_hidden{true};
 
-constexpr auto box = lv::checkbox({.align = LV_ALIGN_CENTER, .checked = lv::bind(details_wanted),
+constexpr auto box = lv::checkbox({.align = "center", .checked = lv::bind(details_wanted),
                                    .text = "Show extra details"});
 
 constexpr auto note =
-    lv::label({.align = LV_ALIGN_CENTER, .hidden = lv::bind(note_hidden),
+    lv::label({.align = "center", .hidden = lv::bind(note_hidden),
                .text = "Extra details only visible while the box is ticked.", .y = 30 * px});
 
 }  // namespace

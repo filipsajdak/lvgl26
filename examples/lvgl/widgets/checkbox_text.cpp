@@ -5,7 +5,7 @@ namespace {
 using namespace widgets;
 
 // A short text, a longer one, and one with two lines.
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::checkbox({.text = "Enable"}),
     lv::checkbox({.text = "Send anonymous usage data"}),

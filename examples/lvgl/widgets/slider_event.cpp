@@ -7,8 +7,8 @@ namespace {
 using namespace widgets;
 using namespace lv::units;
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
-                               .style = {.flex_cross_place = LV_FLEX_ALIGN_CENTER,
+constexpr auto ui = lv::group({.flex_flow = "column",
+                               .style = {.flex_cross_place = "center",
                                          .pad_row = tok.gap.md}})[
     lv::slider({.id = "slider", .width = 200 * px}),
     lv::label({.id = "status", .text = "Drag the slider"})];

@@ -25,7 +25,7 @@ constexpr auto callout = lv::style({.bg_color = tok.label.callout.fill,
                                     .text_color = tok.label.callout.text}) |
                          tok.label.callout.border | tok.label.callout.shadow;
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::label({.style = badge, .text = "NEW"}),
     lv::label({.style = callout, .text = "Heads up"})];

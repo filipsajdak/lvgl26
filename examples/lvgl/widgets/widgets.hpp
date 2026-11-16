@@ -25,13 +25,13 @@ constexpr char tokens_json[] = {
 inline constexpr auto tok = lv::tokens<tokens_json>;
 
 // Children in the middle of a flex container, on both axes.
-inline constexpr auto centered = lv::style({.flex_cross_place = LV_FLEX_ALIGN_CENTER,
-                                            .flex_main_place = LV_FLEX_ALIGN_CENTER,
-                                            .flex_track_place = LV_FLEX_ALIGN_CENTER});
+inline constexpr auto centered = lv::style({.flex_cross_place = "center",
+                                            .flex_main_place = "center",
+                                            .flex_track_place = "center"});
 
 // Children spread evenly along a row, each in the middle of the row's height.
-inline constexpr auto spread_out = lv::style({.flex_main_place = LV_FLEX_ALIGN_SPACE_EVENLY,
-                                              .flex_track_place = LV_FLEX_ALIGN_CENTER});
+inline constexpr auto spread_out = lv::style({.flex_main_place = "space_evenly",
+                                              .flex_track_place = "center"});
 
 // An opacity that the C example gives as a step of 255 (80, 120, 180). An opacity
 // token is a number from 0 to 1 that is rounded to a whole percent, and no whole

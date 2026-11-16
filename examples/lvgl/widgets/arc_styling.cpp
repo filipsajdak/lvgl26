@@ -29,7 +29,7 @@ constexpr auto knob = lv::style({.bg_color = tok.arc.gauge.knob.fill,
                                  .shadow_opa = opacity_step(160)}) |
                       tok.arc.gauge.knob.border | tok.arc.gauge.knob.shadow;
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.xl})})[
     lv::arc({.max_value = 100, .min_value = 0, .size = {180 * px, 180 * px}, .style = track,
              .style_indicator = indicator, .style_knob = knob, .value = 65})];

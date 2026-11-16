@@ -18,8 +18,8 @@ void show_value(lv::event e) {
   reading = arc_value{e.target<lv::view<"arc">>().get<"value">()};
 }
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
-                               .style = {.flex_cross_place = LV_FLEX_ALIGN_CENTER,
+constexpr auto ui = lv::group({.flex_flow = "column",
+                               .style = {.flex_cross_place = "center",
                                          .pad_row = tok.gap.md}})[
     lv::arc({.id = "dial", .on_value_changed = &show_value, .size = {150 * px, 150 * px}}),
     lv::label({.text = lv::bind(reading, "Value: {}")})];

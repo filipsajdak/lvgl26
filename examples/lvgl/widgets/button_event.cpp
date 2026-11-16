@@ -14,11 +14,11 @@ void count_click() {
   ++clicks;
 }
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
-                               .style = {.flex_cross_place = LV_FLEX_ALIGN_CENTER,
+constexpr auto ui = lv::group({.flex_flow = "column",
+                               .style = {.flex_cross_place = "center",
                                          .pad_row = tok.gap.md}})[
     lv::button({.on_clicked = &count_click})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Click me"})],
+        lv::label({.align = "center", .text = "Click me"})],
     lv::label({.text = lv::bind(clicks, "Clicks: {}")})];
 
 }  // namespace

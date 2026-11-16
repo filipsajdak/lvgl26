@@ -37,8 +37,8 @@ constexpr auto pending = lv::widget<"led">(
 // The screen itself is the row, as in the C example: the gap between the LEDs is
 // the one the theme gives a screen. A tree has one root, so each LED is its own.
 void widgets::led_styling(lv::obj screen) {
-  screen.set({.flex_flow = LV_FLEX_FLOW_ROW,
-              .style = spread_out | lv::style({.flex_cross_place = LV_FLEX_ALIGN_CENTER})});
+  screen.set({.flex_flow = "row",
+              .style = spread_out | lv::style({.flex_cross_place = "center"})});
   lv::place<ok>(screen);
   lv::place<fault>(screen);
   lv::place<pending>(screen);

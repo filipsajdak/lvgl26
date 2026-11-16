@@ -20,16 +20,16 @@ constexpr auto dark_look = lv::style({.bg_color = tok.panel.dark.fill,
                                       .border_color = tok.panel.dark.border,
                                       .text_color = tok.panel.dark.text});
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::box({.checked = lv::bind(dark), .size = {240 * px, 120 * px},
              .style = {.border_width = tok.panel.border_width,
                        .pad_all = tok.panel.pad,
                        .radius = tok.panel.radius},
              .style_checked = dark_look})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Panel content"})],
+        lv::label({.align = "center", .text = "Panel content"})],
     lv::button({.on_clicked = &flip_theme})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Toggle theme"})]];
+        lv::label({.align = "center", .text = "Toggle theme"})]];
 
 }  // namespace
 

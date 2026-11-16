@@ -14,13 +14,13 @@ constexpr auto track = lv::style({.bg_color = tok.bar.track.fill,
 // An indicator that goes from green to cyan, with a tight glow.
 constexpr auto indicator = lv::style({.bg_color = tok.bar.indicator.from,
                                       .bg_grad_color = tok.bar.indicator.to,
-                                      .bg_grad_dir = LV_GRAD_DIR_HOR,
+                                      .bg_grad_dir = "hor",
                                       .bg_opa = tok.opacity.opaque,
                                       .radius = tok.bar.indicator.radius,
                                       .shadow_opa = opacity_step(180)}) |
                            tok.bar.indicator.shadow;
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.xl})})[
     // A tall bar with a named style for each part.
     lv::bar({.max_value = 100, .min_value = 0, .size = {90 * pct, 22 * px}, .style = track,

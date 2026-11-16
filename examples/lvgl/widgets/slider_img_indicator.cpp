@@ -2,8 +2,8 @@
 
 // Two pictures from LVGL's examples/assets: the dark segmented strip and the lit one.
 extern "C" {
-extern const lv_image_dsc_t img_bar_bg;
-extern const lv_image_dsc_t img_bar_indicator;
+extern const lv_image_dsc_t img_bar_bg;  // C API
+extern const lv_image_dsc_t img_bar_indicator;  // C API
 }
 
 namespace {
@@ -29,7 +29,7 @@ constexpr auto plate = lv::style({.bg_color = tok.slider.image.knob.fill,
                                   .radius = tok.slider.image.knob.radius}) |
                        tok.slider.image.knob.border;
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::slider({.max_value = 20, .min_value = 0, .size = {280 * px, 30 * px},
                 .style = dark_strip, .style_indicator = lit_strip, .style_knob = plate,

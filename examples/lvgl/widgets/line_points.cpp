@@ -5,10 +5,10 @@ namespace {
 using namespace widgets;
 
 // The corners of the line. The widget keeps a pointer to them, not a copy.
-constexpr lv_point_precise_t corners[] = {{5, 5}, {70, 70}, {120, 10}, {180, 60}, {240, 10}};
+constexpr lv_point_precise_t corners[] = {{5, 5}, {70, 70}, {120, 10}, {180, 60}, {240, 10}};  // C API
 
 // A wide blue line with round ends, in the middle of the screen.
-constexpr auto ui = lv::widget<"line">({.align = LV_ALIGN_CENTER,
+constexpr auto ui = lv::widget<"line">({.align = "center",
                                         .points = {corners, 5},
                                         .style = {.line_color = tok.line.color,
                                                   .line_rounded = true,

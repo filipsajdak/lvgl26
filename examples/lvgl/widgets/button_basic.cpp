@@ -6,11 +6,11 @@ using namespace widgets;
 using namespace lv::units;
 
 // A button as large as its label needs, and one with a size of its own.
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::button[lv::label({.align = LV_ALIGN_CENTER, .text = "Click me"})],
+    lv::button[lv::label({.align = "center", .text = "Click me"})],
     lv::button({.size = {160 * px, 48 * px}})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = "Wide button"})]];
+        lv::label({.align = "center", .text = "Wide button"})]];
 
 }  // namespace
 

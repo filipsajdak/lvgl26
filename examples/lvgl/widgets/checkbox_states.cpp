@@ -5,7 +5,7 @@ namespace {
 using namespace widgets;
 
 // Unticked, ticked, and the same two again as boxes that cannot be used.
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::checkbox({.text = "Unchecked"}),
     lv::checkbox({.checked = true, .text = "Checked"}),

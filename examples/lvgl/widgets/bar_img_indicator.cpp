@@ -2,8 +2,8 @@
 
 // Two pictures from LVGL's examples/assets: the dark segmented strip and the lit one.
 extern "C" {
-extern const lv_image_dsc_t img_bar_bg;
-extern const lv_image_dsc_t img_bar_indicator;
+extern const lv_image_dsc_t img_bar_bg;  // C API
+extern const lv_image_dsc_t img_bar_indicator;  // C API
 }
 
 namespace {
@@ -34,20 +34,20 @@ constexpr auto lit_strip = lv::style({.bg_image_src = &img_bar_indicator,
 // The row of the two buttons: a box without its own look.
 constexpr auto stepper = lv::style({.bg_opa = tok.opacity.none,
                                     .border_width = tok.bar.stepper.border_width,
-                                    .flex_cross_place = LV_FLEX_ALIGN_CENTER,
-                                    .flex_main_place = LV_FLEX_ALIGN_SPACE_BETWEEN,
+                                    .flex_cross_place = "center",
+                                    .flex_main_place = "space_between",
                                     .pad_column = tok.bar.stepper.gap});
 
-constexpr auto ui = lv::group({.flex_flow = LV_FLEX_FLOW_COLUMN,
+constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::bar({.max_value = 20, .min_value = 0, .size = {280 * px, 35 * px}, .style = dark_strip,
              .style_indicator = lit_strip, .value = lv::bind(lit)}),
     lv::row({.size = {180 * px, lv::size_content}, .style = stepper})[
         lv::button({.on_clicked = &one_less, .on_long_pressed_repeat = &one_less})[
-            lv::label({.align = LV_ALIGN_CENTER, .text = "-"})],
+            lv::label({.align = "center", .text = "-"})],
         lv::label({.text = lv::bind(lit, "{}")}),
         lv::button({.on_clicked = &one_more, .on_long_pressed_repeat = &one_more})[
-            lv::label({.align = LV_ALIGN_CENTER, .text = "+"})]]];
+            lv::label({.align = "center", .text = "+"})]]];
 
 }  // namespace
 
