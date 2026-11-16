@@ -67,6 +67,19 @@ foreach(case zero negative)
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
 lvgl26_test(signal)
+# Signal's typefaces. LVGL v9.6 and the v10 pin render the same pixels, so one reference
+# serves both.
+add_executable(signal_type signal_type.cpp)
+target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
+                                              A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
+# the font files of the site. They must stay the same files.
+foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
+  add_test(NAME signal_type_file_${file}
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${PROJECT_SOURCE_DIR}/include/lv/signal/fonts/${file}
+                   ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
+endforeach()
 target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
@@ -231,6 +244,7 @@ lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVG
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
 lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
 lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
+lvgl26_compile_fail(signal_numerals_not_a_numeral "the typeface has no file for the family 'Barlow' at weight 500. Add it")
 lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
@@ -364,6 +378,21 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   endforeach()
 endif()
 
+# The second example of docs/themes.md: Signal with its typefaces.
+add_executable(example_signal_type ${PROJECT_SOURCE_DIR}/examples/signal_type/main.cpp)
+target_link_libraries(example_signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out)
+add_test(NAME example_signal_type COMMAND example_signal_type
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out)
+set_tests_properties(example_signal_type PROPERTIES FIXTURES_SETUP example_signal_type_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_signal_type_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files
+                   ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out/signal_type.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/theme-signal-type.png)
+  set_tests_properties(example_signal_type_picture PROPERTIES FIXTURES_REQUIRED example_signal_type_picture)
+endif()
+
 # The example of docs/images.md. Its picture is the one on the page.
 add_executable(example_images ${PROJECT_SOURCE_DIR}/examples/images/main.cpp)
 target_compile_options(example_images PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/images)
@@ -458,3 +487,112 @@ foreach(input ${LVGL26_MCP_CORPUS})
   get_filename_component(name ${input} NAME)
   add_test(NAME fuzz_corpus_mcp_${name} COMMAND fuzz_mcp_message ${input})
 endforeach()
+
+# ---- editor support (tools/editor, cmake/editor.cmake) -----------------------------
+#
+# The stubs that let clangd read lvgl26 code must say what the real headers say.
+# editor/api_uses.cpp uses every public name once. GCC compiles it here with the real
+# headers; Clang reads it below with the stubs.
+add_library(editor_api_uses OBJECT editor/api_uses.cpp)
+target_compile_options(editor_api_uses PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/editor)
+target_link_libraries(editor_api_uses PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+
+# The public names, listed by reflection.
+add_executable(lv_names ${PROJECT_SOURCE_DIR}/tools/editor/names.cpp)
+target_link_libraries(lv_names PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+# Neither file is for the analyzer: nothing in them runs. See lv_reference above.
+set_source_files_properties(editor/api_uses.cpp ${PROJECT_SOURCE_DIR}/tools/editor/names.cpp
+                            PROPERTIES COMPILE_OPTIONS -fno-analyzer)
+
+# Files that only Clang reads, with the stubs. They are never built: a target gives
+# each one a line in compile_commands.json, which tools/editor/check.py takes its flags from.
+add_library(editor_clang_only OBJECT EXCLUDE_FROM_ALL
+            editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp
+            editor/tokens_by_bytes.cpp ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp PROPERTIES GENERATED TRUE)
+target_compile_options(editor_clang_only PRIVATE --embed-dir=${CMAKE_CURRENT_BINARY_DIR}/editor)
+target_link_libraries(editor_clang_only PRIVATE lvgl26::lvgl26 lvgl26_test_data)
+set_target_properties(editor_api_uses editor_clang_only PROPERTIES EXPORT_COMPILE_COMMANDS ON)
+configure_file(data/tokens.json ${CMAKE_CURRENT_BINARY_DIR}/editor/unseen_tokens.json COPYONLY)
+
+# A Clang that can read the stubs: version 21 or newer, and not Apple's, whose numbers
+# mean something else. Clang 19 reads the stubs, but not mp-units 2.5.0, which the
+# quick start includes. Clang 20 was not tried.
+function(lvgl26_find_clang result names)
+  find_program(${result} NAMES ${names} HINTS /opt/homebrew/opt/llvm/bin /usr/local/opt/llvm/bin)
+  if(${result})
+    execute_process(COMMAND ${${result}} --version OUTPUT_VARIABLE said ERROR_QUIET)
+    if(said MATCHES "Apple" OR NOT said MATCHES "version ([0-9]+)" OR CMAKE_MATCH_1 LESS 21)
+      set(${result} ${result}-NOTFOUND CACHE FILEPATH "" FORCE)
+    endif()
+  endif()
+endfunction()
+
+if(Python3_FOUND)
+  set(LVGL26_EDITOR ${PROJECT_SOURCE_DIR}/tools/editor)
+  set(LVGL26_EDITOR_STUBS ${CMAKE_CURRENT_BINARY_DIR}/editor/stubs)
+  add_test(NAME editor_tools COMMAND Python3::Interpreter ${LVGL26_EDITOR}/test_editor.py)
+  # Every public name is declared in the stubs and used in editor/api_uses.cpp. It also
+  # writes the file that names them all, for editor_names_declared.
+  add_test(NAME editor_names
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_names> -DPYTHON=${Python3_EXECUTABLE}
+                   -DINVENTORY=${LVGL26_EDITOR}/inventory.py
+                   -DUSING=${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/names_test.cmake)
+  set_tests_properties(editor_names PROPERTIES FIXTURES_SETUP editor_names)
+
+  lvgl26_find_clang(LVGL26_CLANGXX "clang++;clang++-23;clang++-22;clang++-21")
+  lvgl26_find_clang(LVGL26_CLANGD "clangd;clangd-23;clangd-22;clangd-21")
+  if(NOT LVGL26_CLANGXX)
+    message(STATUS "lvgl26: no clang++ of version 21 or newer: the editor_* tests that read the stubs are left out")
+  else()
+    add_test(NAME editor_stubs
+             COMMAND Python3::Interpreter ${LVGL26_EDITOR}/generate.py
+                     --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
+                     --out ${LVGL26_EDITOR_STUBS} --real-include ${PROJECT_SOURCE_DIR}/include
+                     --scan ${PROJECT_SOURCE_DIR}/examples --scan ${CMAKE_CURRENT_SOURCE_DIR}/editor
+                     --tokens ${CMAKE_CURRENT_SOURCE_DIR}/data/tokens.json)
+    set_tests_properties(editor_stubs PROPERTIES FIXTURES_SETUP editor_stubs)
+    set(LVGL26_EDITOR_CHECK Python3::Interpreter ${LVGL26_EDITOR}/check.py --clang ${LVGL26_CLANGXX}
+                            --commands ${CMAKE_BINARY_DIR}/compile_commands.json --stubs ${LVGL26_EDITOR_STUBS})
+    # Every example, and every file a page of the documentation shows, reads without an
+    # error. The quick start and the slice are projects of their own: they borrow flags.
+    add_test(NAME editor_examples
+             COMMAND ${LVGL26_EDITOR_CHECK} --like ${PROJECT_SOURCE_DIR}/examples/lvgl/get_started/slider.cpp
+                     --examples ${PROJECT_SOURCE_DIR}/examples --docs ${PROJECT_SOURCE_DIR}/docs)
+    add_test(NAME editor_api_uses COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/api_uses.cpp)
+    add_test(NAME editor_names_declared
+             COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
+    add_test(NAME editor_tokens_by_bytes
+             COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/tokens_by_bytes.cpp)
+    # Mistakes are marked on the line they are written on.
+    foreach(case wrong_enumerator unknown_member wrong_widget)
+      add_test(NAME editor_${case}
+               COMMAND ${LVGL26_EDITOR_CHECK} --verify ${CMAKE_CURRENT_SOURCE_DIR}/editor/${case}.cpp)
+    endforeach()
+    set_tests_properties(editor_examples editor_api_uses editor_names_declared editor_tokens_by_bytes
+                         editor_wrong_enumerator editor_unknown_member editor_wrong_widget
+                         PROPERTIES FIXTURES_REQUIRED editor_stubs)
+    set_property(TEST editor_names_declared APPEND PROPERTY FIXTURES_REQUIRED editor_names)
+  endif()
+
+  # A project turns editor support on with one line, and clangd then reads it. The
+  # project is configured, not built. LVGL26_CLANGD may be empty: then clangd is not run.
+  if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
+    string(JOIN "\;" LVGL26_CONSUMER_OPTIONS
+           -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DLVGL26_LVGL_REF=${LVGL26_LVGL_REF}
+           -DFETCHCONTENT_SOURCE_DIR_LVGL26=${PROJECT_SOURCE_DIR}
+           -DFETCHCONTENT_SOURCE_DIR_LVGL=${lvgl_SOURCE_DIR}
+           -DFETCHCONTENT_SOURCE_DIR_MP-UNITS=${mp-units_SOURCE_DIR})
+    set(LVGL26_CONSUMER_CLANGD)
+    if(LVGL26_CLANGD)
+      set(LVGL26_CONSUMER_CLANGD -DCLANGD=${LVGL26_CLANGD})
+    endif()
+    add_test(NAME editor_support
+             COMMAND ${CMAKE_COMMAND} -DSOURCE=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/editor/consumer
+                     -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} ${LVGL26_CONSUMER_CLANGD}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/consumer_test.cmake)
+    set_tests_properties(editor_support PROPERTIES TIMEOUT 600)
+  endif()
+endif()

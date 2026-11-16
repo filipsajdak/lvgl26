@@ -21,7 +21,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 
 | Where | What runs |
 |---|---|
-| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, CRAP, one minute of fuzzing |
+| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
 | Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
 
 - A check belongs in the pull request run if it takes a few minutes and a change can
@@ -63,6 +63,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   so they need no template argument and no heap. `include/lv/signal/*.json` is written by
   `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
   run the tool.
+- `lv/signal.hpp` draws no font and reads no typography token. Signal's typefaces, their tokens (`include/lv/signal/type.json`) and the themes with fonts are in `lv/signal_type.hpp`. Both headers build their themes from the one description in `lv/signal.hpp`. Measure a change to `lv/signal.hpp` against main in instructions: it must not cost more.
+- A header embeds only a file that lies next to it. `include/lv/signal/fonts/` holds copies of the files in `site/media/fonts/`, and the tests `signal_type_file_*` fail when a copy differs.
+- An array that a header embeds is `constexpr`, not `inline constexpr`. Under a sanitizer GCC 16.2 does not know that the address of an inline variable is not null. Reading its text in constant evaluation then fails to compile.
 - A font in a style comes from a typography token through `lv::typeface`; `lv::raw(font)` marks one
   that no token names. `include/lv/detail/coverage.hpp` is derived from font-rs and stays under the
   Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
@@ -174,9 +177,22 @@ A feature pull request also:
 - One line per paragraph. A picture on a page is written by a test (see `quick_start_picture`).
 - `site/docs/`, `site/llms.txt` and `site/llms-full.txt` are generated: do not commit them.
 
+## Editor stubs
+
+clangd cannot parse the headers, so editors read stubs: the public API as plain C++. `tools/editor/generate.py` writes the generated part from `docs/reference/*.json` and from a project's token files. `tools/editor/stubs/lv/` is the hand-written part. `lvgl26_editor_support()` in `cmake/editor.cmake` runs it for a project. `docs/editor-support.md` is the page for users.
+
+- A change to the public API changes the stubs in the same pull request. Declare a new public name in `tools/editor/stubs`, and use it in `tests/editor/api_uses.cpp`.
+- The test `editor_names` lists the public names by reflection (`tools/editor/names.cpp`) and fails for a name that the stubs or `api_uses.cpp` lack. It needs no Clang, so it runs under every preset.
+- GCC compiles `tests/editor/api_uses.cpp` with the real headers, and Clang reads it with the stubs (`editor_api_uses`). Write a `static_assert` on a type there where both must agree, as for `root->get<"id">()`.
+- The `editor_*` tests that read the stubs need clang++ 21 or newer, and `editor_support` runs clangd when it finds one. In CI they run in the job `editor`, in an image of its own (`.github/ci-image/editor/Dockerfile`): the main image has no Clang.
+- A stub repeats a check only when the editor can show it at the user's line: a `requires` on the call, or a `consteval` constructor. `tests/editor/wrong_*.cpp` and `unknown_member.cpp` hold those cases, in the form of Clang's `-verify`.
+- Every function of a template in a stub has a body, `{ __builtin_unreachable(); }` when nothing else fits. Clang warns about a function without one when its arguments have no linkage. The stub tests run with `-Werror`.
+- The stubs are read by Clang only, and may use what our own code may not (`__builtin_unreachable`, an include guard in `tools/editor/fallback/contracts`).
+- A new member kind or value text in the reference data needs a rule in `tools/editor/reference_stubs.py`: `editor_tools` fails when a value becomes `stub::anything`.
+
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images, editor support, components.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics. Some are about the platform: LVGL upstream, C++26, a browser target, fonts, images, editor support and components. The others are the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, and documentation for agents.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.

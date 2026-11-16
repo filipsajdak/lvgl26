@@ -25,8 +25,9 @@
 // `lv::font<barlow_ttf>(72 * px, "0123456789:")`, `{"Barlow", 500, barlow_ttf, "0123456789:"}`.
 // Kerning comes from the file. There is no hinting, so very small sizes are a little soft.
 //
-// Making a font costs compile time (about a second for 95 characters at 14 px, five at
-// 48 px). Make each one once, in a constexpr variable, in one file.
+// Making a font costs compile time: about 3.5 seconds for 95 characters at 14 px and 7.5 at
+// 48 px, half a second for sixteen characters. Make each one once, in a constexpr
+// variable, in one file.
 
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/ttf.hpp>
@@ -157,14 +158,15 @@ consteval std::int8_t kern_value(int units, float scale) {
 // The pairs of the font's glyphs that the file moves, in the order LVGL searches them.
 consteval const lv_font_fmt_txt_kern_pair_t* stored_kerning(const ttf::face& f, const std::vector<std::uint32_t>& characters,
                                                             float scale) {
-  const auto subtables = ttf::pair_subtables(f);
   std::vector<std::uint32_t> glyphs;
   for (const auto c : characters) glyphs.push_back(ttf::glyph_of(f, c));
+  const auto tables = ttf::pair_tables(f, glyphs);
   std::vector<std::uint8_t> ids;
   std::vector<std::int8_t> values;
-  for (std::size_t l = 0; l < glyphs.size() && !subtables.empty(); ++l) {
+  for (std::size_t l = 0; l < glyphs.size() && !tables.empty(); ++l) {
+    const auto row = ttf::kerning_row(f, tables, glyphs[l], glyphs);
     for (std::size_t r = 0; r < glyphs.size(); ++r) {
-      const auto v = kern_value(ttf::kerning(f, subtables, glyphs[l], glyphs[r]), scale);
+      const auto v = kern_value(row[r], scale);
       if (v == 0) continue;
       ids.push_back(static_cast<std::uint8_t>(l + 1)), ids.push_back(static_cast<std::uint8_t>(r + 1));
       values.push_back(v);

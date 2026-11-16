@@ -260,6 +260,9 @@ lv::display display{app, frame, mine};                // or lv::signal::dark, fr
 ```
 
 [docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
+
+Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash.
+
 A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
 read-only memory, no heap and no converter. A typography token chooses it:
 
@@ -304,6 +307,10 @@ Rules to know:
   `image.get<"rotation">() == 90 * deg` holds whatever LVGL's number is.
 - In a design token file an angle is a `number` token in degrees (`22.5`). In a run-time document it is
   `22.5` or `"22.5deg"`. A fraction is accepted only where LVGL takes tenths of a degree.
+
+## In your editor
+
+clangd cannot parse reflection, so lvgl26 gives it stub headers of the public API to read instead. Add `lvgl26_editor_support()` to your `CMakeLists.txt` and run CMake. Your editor then completes the members of `lv::arc({.`, shows what each one takes, and marks a wrong name in quotes. [docs/editor-support.md](docs/editor-support.md) says what works and what does not yet.
 
 ## Requirements
 

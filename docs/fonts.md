@@ -102,12 +102,13 @@ Barlow Medium with its 95 characters, measured once on one machine:
 
 | Size | Compile time | In flash |
 |---|---|---|
-| 14 px | about 1 s | about 5 KB |
-| 24 px | about 2 s | about 10 KB |
-| 48 px | about 5 s | about 32 KB |
+| 14 px | about 3.5 s | about 5 KB |
+| 24 px | about 4.5 s | about 10 KB |
+| 48 px | about 7.5 s | about 32 KB |
 
 - The font file itself does not reach the program.
 - Kerning pairs add three bytes each. Barlow Medium at 32 px has 748 among these characters.
+- The characters cost more compile time than the size does. A font of sixteen characters at 16 px takes about half a second.
 - Make the fonts in one file, so that only that file pays the compile time.
 
 ## Rules and limits

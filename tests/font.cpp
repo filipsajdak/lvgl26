@@ -42,6 +42,9 @@ constexpr const lv_font_t* odd = lv::font<barlow_ttf>(32 * px);
 constexpr const lv_font_t* digits = lv::font<condensed_ttf>(64 * px, "0123456789:");
 constexpr const lv_font_t* two = lv::font<barlow_ttf>(16 * px, "\xC2\xB0""C9");  // the degree sign, C and 9: not in a row
 
+// A font whose first character kerns with its second.
+constexpr const lv_font_t* pair = lv::font<barlow_ttf>(32 * px, "AV");
+
 constexpr const lv_font_t* ubuntu = lv::font<ubuntu_ttf>(24 * px, "AVTo.");
 constexpr const lv_font_t* montserrat = lv::font<montserrat_ttf>(24 * px, "AVTo.");
 
@@ -103,6 +106,8 @@ void kerns() {
   check(lv_font_get_glyph_width(odd, 'A', 0) == 20 && lv_font_get_glyph_width(odd, 'A', 'V') == 19);
   check(lv_font_get_glyph_width(odd, 'T', 0) == 18 && lv_font_get_glyph_width(odd, 'T', 'o') == 16);
   check(lv_font_get_glyph_width(odd, 'H', 'H') == lv_font_get_glyph_width(odd, 'H', 0));
+  // The first glyph of a font has its row of pairs too.
+  check(lv_font_get_glyph_width(pair, 'A', 0) == 20 && lv_font_get_glyph_width(pair, 'A', 'V') == 19);
 }
 
 void reads_other_files() {

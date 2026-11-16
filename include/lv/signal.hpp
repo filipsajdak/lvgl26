@@ -13,7 +13,8 @@
 //   lv::label({.style = {.text_color = lv::signal::dark_tokens.color.muted}})
 //
 // The theme covers the screen, boxes, buttons, arcs and bars. The other widgets keep
-// LVGL's look, and text keeps LVGL's font: Signal's typefaces are not in the library.
+// LVGL's look, and text keeps LVGL's font. Signal's own typefaces cost compile time and
+// flash, so they are in a header of their own: lv/signal_type.hpp.
 
 #include <lv/theme.hpp>
 #include <lv/tokens.hpp>
@@ -33,9 +34,15 @@ constexpr char day_json[] = {
 inline constexpr auto shown = lv::raw(lv::opa::cover);
 inline constexpr auto hidden = lv::raw(lv::opa::transparent);
 
-// Signal with the tokens of one of its themes.
+// The font of a kind of text. An empty one sets nothing, and the text keeps LVGL's font.
+using font = lv::arg<lv::styled<const lv_font_t*>>;
+using spacing = lv::arg<lv::styled<lv::length>>;
+
+// Signal with the tokens of one of its themes. This is the one description of the look:
+// lv/signal_type.hpp calls it with Signal's fonts. `body` is the font of all text, and
+// `label` the font of the text of a control.
 template <const auto& Tok>
-consteval lv::theme_styles themed() {
+consteval lv::theme_styles themed(font body = {}, font label = {}, spacing label_spacing = {}) {
   return lv::theme({
       // A ring shows progress or a reading: square ends, no knob.
       .arc = {.style = {.arc_color = Tok.color.line, .arc_rounded = false, .arc_width = Tok.stroke.track},
@@ -52,7 +59,9 @@ consteval lv::theme_styles themed() {
                            .pad_ver = Tok.space._3,
                            .radius = Tok.radius._0,
                            .shadow_width = Tok.radius._0,
-                           .text_color = Tok.color.on_active},
+                           .text_color = Tok.color.on_active,
+                           .text_font = label,
+                           .text_letter_space = label_spacing},
                  .style_pressed = {.bg_color = Tok.color.surface_raised,
                                    .color_filter_opa = hidden,
                                    .text_color = Tok.color.reading,
@@ -66,7 +75,11 @@ consteval lv::theme_styles themed() {
                         .radius = Tok.radius._0,
                         .shadow_width = Tok.radius._0,
                         .text_color = Tok.color.reading}},
-      .screen = {.style = {.bg_color = Tok.color.ground, .bg_opa = shown, .text_color = Tok.color.reading}},
+      // Text is inherited: what a box or a label does not say comes from the screen.
+      .screen = {.style = {.bg_color = Tok.color.ground,
+                           .bg_opa = shown,
+                           .text_color = Tok.color.reading,
+                           .text_font = body}},
   });
 }
 
