@@ -8,6 +8,7 @@ lvgl26 is a C++26 framework over LVGL for embedded user interfaces. The compiler
 | [Themes](themes.md) | One look for every widget: the built-in Signal theme with its typefaces, and a theme of your own from a token file |
 | [Images](images.md) | A PNG file becomes pixels in read-only memory, decoded by the compiler into the display's own format |
 | [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
+| [Editor support](editor-support.md) | Completion, documentation and marks on mistakes in editors that use clangd, from one CMake line |
 
 More pages are being written: the reference, guides, and pages for readers who know Qt, Slint or TouchGFX. Until then the [README](../README.md) tours the features.
 

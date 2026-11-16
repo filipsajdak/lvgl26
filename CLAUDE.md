@@ -21,7 +21,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 
 | Where | What runs |
 |---|---|
-| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, CRAP, one minute of fuzzing |
+| Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
 | Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
 
 - A check belongs in the pull request run if it takes a few minutes and a change can
@@ -176,6 +176,19 @@ A feature pull request also:
 - A new page goes into `docs/docs.json`, or it has no place in the sidebar and in `llms.txt`.
 - One line per paragraph. A picture on a page is written by a test (see `quick_start_picture`).
 - `site/docs/`, `site/llms.txt` and `site/llms-full.txt` are generated: do not commit them.
+
+## Editor stubs
+
+clangd cannot parse the headers, so editors read stubs: the public API as plain C++. `tools/editor/generate.py` writes the generated part from `docs/reference/*.json` and from a project's token files. `tools/editor/stubs/lv/` is the hand-written part. `lvgl26_editor_support()` in `cmake/editor.cmake` runs it for a project. `docs/editor-support.md` is the page for users.
+
+- A change to the public API changes the stubs in the same pull request. Declare a new public name in `tools/editor/stubs`, and use it in `tests/editor/api_uses.cpp`.
+- The test `editor_names` lists the public names by reflection (`tools/editor/names.cpp`) and fails for a name that the stubs or `api_uses.cpp` lack. It needs no Clang, so it runs under every preset.
+- GCC compiles `tests/editor/api_uses.cpp` with the real headers, and Clang reads it with the stubs (`editor_api_uses`). Write a `static_assert` on a type there where both must agree, as for `root->get<"id">()`.
+- The `editor_*` tests that read the stubs need clang++ 21 or newer, and `editor_support` runs clangd when it finds one. In CI they run in the job `editor`, in an image of its own (`.github/ci-image/editor/Dockerfile`): the main image has no Clang.
+- A stub repeats a check only when the editor can show it at the user's line: a `requires` on the call, or a `consteval` constructor. `tests/editor/wrong_*.cpp` and `unknown_member.cpp` hold those cases, in the form of Clang's `-verify`.
+- Every function of a template in a stub has a body, `{ __builtin_unreachable(); }` when nothing else fits. Clang warns about a function without one when its arguments have no linkage. The stub tests run with `-Werror`.
+- The stubs are read by Clang only, and may use what our own code may not (`__builtin_unreachable`, an include guard in `tools/editor/fallback/contracts`).
+- A new member kind or value text in the reference data needs a rule in `tools/editor/reference_stubs.py`: `editor_tools` fails when a value becomes `stub::anything`.
 
 ## Research
 

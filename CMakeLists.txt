@@ -22,6 +22,7 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 include(cmake/quality.cmake)
 include(cmake/lvgl.cmake)
+include(cmake/editor.cmake)
 
 add_library(lvgl26 INTERFACE)
 add_library(lvgl26::lvgl26 ALIAS lvgl26)
