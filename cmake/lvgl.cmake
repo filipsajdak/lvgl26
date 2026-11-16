@@ -46,6 +46,17 @@ if(LVGL26_TTF OR LVGL26_BUILD_TESTS)
   target_compile_definitions(lvgl PUBLIC LV_USE_TINY_TTF=1)
 endif()
 
+# Pictures kept as files and decoded on the device (lv::encoded_image). Each decoder
+# adds code and uses the heap, so a program asks for it. LVGL's JPEG decoder reads a
+# file in memory through its memory file system, which gets the drive letter M. The
+# tests compare screenshots with the PNG decoder.
+if(LVGL26_PNG OR LVGL26_BUILD_TESTS)
+  target_compile_definitions(lvgl PUBLIC LV_USE_LODEPNG=1)
+endif()
+if(LVGL26_JPEG OR LVGL26_BUILD_TESTS)
+  target_compile_definitions(lvgl PUBLIC LV_USE_TJPGD=1 LV_USE_FS_MEMFS=1 LV_FS_MEMFS_LETTER=77)
+endif()
+
 # Any other LVGL setting, as LVGL names it: -DLVGL26_LVGL_DEFINITIONS="LV_USE_LOG=1;LV_COLOR_DEPTH=32".
 set(LVGL26_LVGL_DEFINITIONS "" CACHE STRING "More compile definitions for LVGL, as LVGL names them")
 if(LVGL26_LVGL_DEFINITIONS)
@@ -55,7 +66,7 @@ endif()
 # The tests render headless and compare screenshots.
 if(LVGL26_BUILD_TESTS)
   target_compile_definitions(lvgl PUBLIC
-    LV_USE_TEST=1 LV_USE_TEST_SCREENSHOT_COMPARE=1 LV_USE_LODEPNG=1
+    LV_USE_TEST=1 LV_USE_TEST_SCREENSHOT_COMPARE=1
     LV_USE_LOG=1 LV_LOG_PRINTF=1 LV_LOG_LEVEL=LV_LOG_LEVEL_WARN
     LV_USE_FS_STDIO=1 LV_FS_STDIO_LETTER=65
     LV_TEST_SCREENSHOT_CREATE_REFERENCE_IMAGE=$<BOOL:${LVGL26_UPDATE_REFERENCES}>)

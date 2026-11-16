@@ -4,6 +4,7 @@
 #include <lv/application.hpp>
 #include <lv/computed.hpp>
 #include <lv/display.hpp>
+#include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
 #include <lv/image.hpp>
 #include <lv/match.hpp>
