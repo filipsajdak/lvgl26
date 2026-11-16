@@ -11,5 +11,6 @@ updates:
       - /.github/ci-image
       - /.github/ci-image/arm
       - /.github/ci-image/editor
+      - /.github/ci-image/toolchain
     schedule:
       interval: weekly
