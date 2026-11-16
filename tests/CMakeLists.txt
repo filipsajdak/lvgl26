@@ -389,6 +389,25 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_fonts_picture PROPERTIES FIXTURES_REQUIRED example_fonts_picture)
 endif()
 
+# The reference data: what reflection finds in the LVGL of this build, as JSON. The
+# committed file must be what the program prints.
+add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
+target_link_libraries(lv_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# Not for the analyzer: this file is one long constant evaluation over every widget, and
+# the analyzer on top of it needs more memory than a CI machine has. What runs is a loop
+# that prints. A source file's options come last, after -fanalyzer.
+set_source_files_properties(${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp PROPERTIES COMPILE_OPTIONS -fno-analyzer)
+# The v10 pin is a commit, which is no name for a file.
+if(LVGL26_LVGL_REF MATCHES "^v[0-9.]+$")
+  set(LVGL26_REFERENCE_FILE lvgl-${LVGL26_LVGL_REF}.json)
+else()
+  set(LVGL26_REFERENCE_FILE lvgl-v10-pin.json)
+endif()
+add_test(NAME reference_data
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_reference>
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+
 # The pages in docs/ show only code that these tests have built, and no C names.
 # The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
