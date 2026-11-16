@@ -5,7 +5,7 @@ lvgl26 is a C++26 framework over LVGL for embedded user interfaces. The compiler
 | Page | What it gives you |
 |---|---|
 | [Quick start](quick-start.md) | A speedometer screen in ten minutes: a tree, a typed value, a picture |
-| [Themes](themes.md) | One look for every widget: the built-in Signal theme, and a theme of your own from a token file |
+| [Themes](themes.md) | One look for every widget: the built-in Signal theme with its typefaces, and a theme of your own from a token file |
 | [Images](images.md) | A PNG file becomes pixels in read-only memory, decoded by the compiler into the display's own format |
 | [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
 

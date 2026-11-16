@@ -31,7 +31,7 @@ How it works:
 - **An angle is in the unit LVGL means.** Most of LVGL takes whole degrees (an arc, a scale): that is an
   `lv::angle`. An image's rotation and a style's `transform_rotation` and `transform_skew_x/y` take tenths
   of a degree: that is `lv::decidegrees`. Write `90 * deg` for both; `22.5 * deg` only compiles where
-  tenths are taken. LVGL says which is which only in its doc comments, so lvgl26 reads them from the
+  tenths are taken. LVGL says which is which only in its doc comments. So lvgl26 reads them from the
   embedded headers at compile time (`include/lv/detail/angle_docs.hpp`), and a test checks the result
   against the pixels LVGL draws.
 - **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
@@ -218,10 +218,10 @@ constexpr auto tok = lv::tokens<tokens_json>;
 lv::box({.style = {.bg_color = tok.color.surface, .radius = tok.radius.card}})
 ```
 
-Each token group becomes a struct and each token a typed `lv::token<T>`: colors, dimensions
-(spacing, radius, sizes), durations, numbers (opacity), font family and weight, easing curves, and the
-composite types shadow, border, typography, transition and gradient. Aliases are resolved. A misspelled
-token, a broken alias or an unreadable value is a compile error.
+Each token group becomes a struct and each token a typed `lv::token<T>`. The simple types are colors,
+dimensions (spacing, radius, sizes), durations, numbers (opacity), font family and weight, and easing
+curves. The composite types are shadow, border, typography, transition and gradient. Aliases are resolved. A
+misspelled token, a broken alias or an unreadable value is a compile error.
 
 **Styles use tokens.** A design value in a style (color, length, opacity, time, number) must be a token:
 
@@ -259,6 +259,9 @@ lv::display display{app, frame, mine};                // or lv::signal::dark, fr
 ```
 
 [docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
+
+Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash.
+
 A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
 read-only memory, no heap and no converter. A typography token chooses it:
 

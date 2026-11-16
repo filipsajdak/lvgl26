@@ -63,6 +63,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   so they need no template argument and no heap. `include/lv/signal/*.json` is written by
   `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
   run the tool.
+- `lv/signal.hpp` draws no font and reads no typography token. Signal's typefaces, their tokens (`include/lv/signal/type.json`) and the themes with fonts are in `lv/signal_type.hpp`. Both headers build their themes from the one description in `lv/signal.hpp`. Measure a change to `lv/signal.hpp` against main in instructions: it must not cost more.
+- A header embeds only a file that lies next to it. `include/lv/signal/fonts/` holds copies of the files in `site/media/fonts/`, and the tests `signal_type_file_*` fail when a copy differs.
+- An array that a header embeds is `constexpr`, not `inline constexpr`. Under a sanitizer GCC 16.2 does not know that the address of an inline variable is not null. Reading its text in constant evaluation then fails to compile.
 - A font in a style comes from a typography token through `lv::typeface`; `lv::raw(font)` marks one
   that no token names. `include/lv/detail/coverage.hpp` is derived from font-rs and stays under the
   Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
@@ -173,7 +176,7 @@ A feature pull request also:
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images, editor support.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics. Some are about the platform: LVGL upstream, C++26, a browser target, fonts, images and editor support. The others are the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, and documentation for agents.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
