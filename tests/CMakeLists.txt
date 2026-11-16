@@ -67,6 +67,19 @@ foreach(case zero negative)
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
 lvgl26_test(signal)
+# Signal's typefaces. LVGL v9.6 and the v10 pin render the same pixels, so one reference
+# serves both.
+add_executable(signal_type signal_type.cpp)
+target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
+                                              A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
+# the font files of the site. They must stay the same files.
+foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
+  add_test(NAME signal_type_file_${file}
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${PROJECT_SOURCE_DIR}/include/lv/signal/fonts/${file}
+                   ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
+endforeach()
 target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
@@ -231,6 +244,7 @@ lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVG
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
 lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
 lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
+lvgl26_compile_fail(signal_numerals_not_a_numeral "the typeface has no file for the family 'Barlow' at weight 500. Add it")
 lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
@@ -362,6 +376,21 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
                      ${PROJECT_SOURCE_DIR}/docs/media/theme-${look}.png)
     set_tests_properties(example_theme_picture_${look} PROPERTIES FIXTURES_REQUIRED example_theme_pictures)
   endforeach()
+endif()
+
+# The second example of docs/themes.md: Signal with its typefaces.
+add_executable(example_signal_type ${PROJECT_SOURCE_DIR}/examples/signal_type/main.cpp)
+target_link_libraries(example_signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out)
+add_test(NAME example_signal_type COMMAND example_signal_type
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out)
+set_tests_properties(example_signal_type PROPERTIES FIXTURES_SETUP example_signal_type_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_signal_type_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files
+                   ${CMAKE_CURRENT_BINARY_DIR}/example_signal_type_out/signal_type.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/theme-signal-type.png)
+  set_tests_properties(example_signal_type_picture PROPERTIES FIXTURES_REQUIRED example_signal_type_picture)
 endif()
 
 # The example of docs/images.md. Its picture is the one on the page.

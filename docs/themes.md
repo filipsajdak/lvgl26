@@ -31,6 +31,70 @@ lv::display display{app, frame, lv::signal::dark};
 - The theme covers the screen, boxes, buttons, arcs and bars. The other widgets keep LVGL's look.
 - Signal's tokens are there for your own styles: `lv::signal::dark_tokens.color.muted`.
 
+## Use Signal's typefaces
+
+Signal sets numbers and titles in Barlow Condensed and everything else in Barlow. A second header makes these fonts, and two themes that use them.
+
+![Signal with its typefaces. The title LIVING ROOM, the reading 21.5 degrees in large condensed digits, a line of text and a lime button that says HOLD](media/theme-signal-type.png)
+
+```cpp
+#include <lv/signal_type.hpp>
+
+lv::display display{app, frame, lv::signal::dark_with_type};
+```
+
+- `lv::signal::dark_with_type` and `lv::signal::day_with_type` are `dark` and `day` with Signal's fonts.
+- All text is `body`: Barlow at 16 px. The text of a button is `label`: Barlow Condensed at 16 px.
+- Text is inherited. A label in a box takes the font of the screen, and a label in a button takes the font of the button.
+- The two fonts are `lv::signal::body_font` and `lv::signal::label_font`, for a style of your own.
+
+The larger styles are yours to make, once each, in the file that shows them. `lv::signal::type` is Signal's typeface, and `lv::signal::type_tokens` is its typography.
+
+<!-- snippet: examples/signal_type/main.cpp fonts -->
+```cpp
+// A copy: a reference to the tokens would keep the token file in the program.
+constexpr auto text = lv::signal::type_tokens.text;
+
+constexpr auto title = lv::signal::type(text.title);            // 24 px, the space to the tilde
+constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
+```
+
+<!-- snippet: examples/signal_type/main.cpp tree -->
+```cpp
+constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
+                                .size = {320 * px, 240 * px},
+                                .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
+    lv::label({.style = lv::style({.text_font = title}) | text.title, .text = "LIVING ROOM"}),  // and its spacing
+    lv::label({.style = {.text_font = reading}, .text = "21.5°"}),
+    lv::label({.text = "Heating to 22 degrees."}),
+    lv::button[lv::label({.text = "HOLD"})]];
+```
+
+- `type` makes a font with the characters from the space to the tilde.
+- `numerals` makes a font with sixteen characters: the digits, the point, the colon, the minus, the percent sign, the degree sign and the space. Signal keeps its large numbers in such a font.
+- `numerals` holds Barlow Condensed at weight 700 only. A token of another style stops the build.
+
+### What the typefaces cost
+
+Measured once on one machine, with `-Os` for the flash. The compile time comes on top of `lv/signal.hpp`.
+
+| Font | Characters | Compile time | In flash |
+|---|---|---|---|
+| `body` and `label`, 16 px: what the header makes | 95 each | about 7 s | 13 KB |
+| `type` at `title`, 24 px | 95 | about 4 s | 11 KB |
+| `numerals` at `numeral-m`, 40 px | 16 | under 1 s | 4 KB |
+| `numerals` at `numeral-l`, 72 px | 16 | about 2 s | 11 KB |
+| `numerals` at `numeral-xl`, 104 px | 16 | about 3 s | 20 KB |
+| `numerals` at `numeral-2xl`, 208 px | 16 | about 12 s | 75 KB |
+| `type` at `numeral-l`, 72 px | 95 | about 11 s | 62 KB |
+| `type` at `numeral-xl`, 104 px | 95 | about 21 s | 123 KB |
+
+- This cost is why the fonts are not in `lv/signal.hpp`. Include `lv/signal_type.hpp` in one file, and make each larger font once.
+- `title` and `label` are capitals with wide spacing. The themes space the text of a button; for a style of your own, merge the token: `lv::style({.text_font = title}) | text.title`.
+- A numeral style with all 95 characters takes six times the flash of `numerals`. Use `type` for it only when the reading has letters.
+- `numeral-2xl` is 208 px, and `numerals` makes it. `type` does not: 95 characters of that size need more compile-time work than lvgl26 allows. The build stops at GCC's `-fconstexpr-ops-limit`.
+- The fonts have no glyph for LVGL's symbols. A widget that draws one, such as the arrow of a drop-down list, shows an empty box in its place.
+
 ## Make your own
 
 A theme is one constant. It has a member for each kind of widget, and each member holds the styles a node of a tree can have: `style`, `style_pressed`, `style_indicator` and the rest.

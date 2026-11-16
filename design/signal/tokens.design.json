@@ -180,13 +180,15 @@
             "name": "title",
             "fontSize": "24px",
             "lineHeight": "28px",
-            "fontWeight": 600
+            "fontWeight": 600,
+            "letterSpacing": "2px"
           },
           {
             "name": "label",
             "fontSize": "16px",
             "lineHeight": "20px",
-            "fontWeight": 700
+            "fontWeight": 700,
+            "letterSpacing": "1px"
           }
         ]
       },
