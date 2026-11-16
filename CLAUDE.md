@@ -70,8 +70,23 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   reading against the pixels.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).
+- Inside a template, name what is generated for one widget through a template parameter
+  (`members_of_props<"obj", D>`, `getter_table<"obj", D>`), never plainly. A name that depends on
+  nothing is generated where the template is read: in every file that includes the header.
+- GCC 16.2 runs a call whose arguments are all constants twice when it is written inside a
+  function template: once when the template is instantiated, once when the function runs. Hand
+  the result of a scan in as an argument (see `scan_base` in `include/lv/props.hpp`).
+- A node of a tree keeps `detail::kept<W>`, not `props<W>`. A props struct has thousands of
+  members, and the compiler walks every one each time it copies a node.
+- `lv::arg` and what it holds have no default member initializer, so that an unset property is
+  all zeros. A constructor to run there is paid for every unset member of every node.
+- `tests/large_tree.cpp` is compiled under a fixed `-fconstexpr-ops-limit`. It stops compiling
+  when a node becomes expensive for the compiler again. Raise the limit only with a measurement.
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
   pixels with `lv_test_screenshot_compare`.
+- Compare compile times in instructions, not in seconds: on a busy machine the same compile takes
+  several times longer. `/usr/bin/time -l` prints "instructions retired", but for the process it
+  starts, so start `cc1plus` itself: `g++ -###` prints its command.
 
 ## Test adequacy
 
