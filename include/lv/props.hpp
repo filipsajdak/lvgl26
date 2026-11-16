@@ -85,9 +85,14 @@ constexpr lv_style_selector_t selector_of() {
     return static_cast<lv_style_selector_t>([:Target:]);
 }
 
+// Where va_list is an array (x86-64 Linux), a parameter of it is a pointer to its
+// element: the type an array has as a parameter.
 consteval bool takes_va_list(std::meta::info f) {
-  for (auto p : std::meta::parameters_of(f))
-    if (std::meta::dealias(std::meta::type_of(p)) == std::meta::dealias(^^va_list)) return true;
+  const auto list = std::meta::dealias(^^va_list), as_parameter = std::meta::decay(list);
+  for (auto p : std::meta::parameters_of(f)) {
+    const auto type = std::meta::dealias(std::meta::type_of(p));
+    if (type == list || type == as_parameter) return true;
+  }
   return false;
 }
 

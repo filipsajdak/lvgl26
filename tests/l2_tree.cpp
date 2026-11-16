@@ -20,6 +20,16 @@ constexpr auto ui = lv::column(
     lv::arc({.id = "speedo", .range = {0, 240}, .size = {110 * px, 110 * px}, .value = 120}),
     lv::button({.id = "reset", .on_clicked = &reset})[lv::label({.text = "Reset"})]];
 
+// A setter that takes a va_list, or any number of values, is no property, whatever
+// type va_list is on the machine.
+template <class P>
+concept has_text = requires(P p) { p.text; };
+template <class P>
+concept has_text_vfmt = requires(P p) { p.text_vfmt; };
+template <class P>
+concept has_text_fmt = requires(P p) { p.text_fmt; };
+static_assert(has_text<lv::props<"label">> && !has_text_vfmt<lv::props<"label">> && !has_text_fmt<lv::props<"label">>);
+
 static_assert(lv::detail::id_count<ui> == 3);
 
 // The typed values a props struct accepts.
