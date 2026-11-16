@@ -49,29 +49,38 @@ def read(path):
     return page
 
 
+def reference_problems(name, page, pages):
+    """What is wrong with the links and the loaded files of one page."""
+    problems = []
+    for tag, attribute, value in page.refs:
+        if value.startswith(("data:", "mailto:")):
+            continue
+        if external(value):
+            # A link to another site is fine. Loading from one is not.
+            if (tag, attribute) in LOADS or attribute == "data-src":
+                problems.append(f"{name}: <{tag} {attribute}> loads from another site: {value}")
+            continue
+        target, _, anchor = value.partition("#")
+        file = (SITE / name).parent / target if target else SITE / name
+        if not file.is_file():
+            problems.append(f"{name}: <{tag} {attribute}> points at a missing file: {value}")
+            continue
+        key = file.resolve().relative_to(SITE).as_posix()
+        if anchor and file.suffix == ".html" and anchor not in pages[key].ids:
+            problems.append(f"{name}: no id '{anchor}' in {key} (from {value})")
+    return problems
+
+
 def main():
-    pages = {p.name: read(p) for p in sorted(SITE.glob("*.html"))}
+    # Every page, also the generated ones in subfolders, by its path inside the site.
+    pages = {p.relative_to(SITE).as_posix(): read(p) for p in sorted(SITE.rglob("*.html"))}
     problems = []
     if not pages:
         problems.append("no pages found")
 
     for name, page in pages.items():
         problems += [f"{name}: {p}" for p in page.problems]
-        for tag, attribute, value in page.refs:
-            if value.startswith(("data:", "mailto:")):
-                continue
-            if external(value):
-                # A link to another site is fine. Loading from one is not.
-                if (tag, attribute) in LOADS or attribute == "data-src":
-                    problems.append(f"{name}: <{tag} {attribute}> loads from another site: {value}")
-                continue
-            target, _, anchor = value.partition("#")
-            file = SITE / target if target else SITE / name
-            if not file.is_file():
-                problems.append(f"{name}: <{tag} {attribute}> points at a missing file: {value}")
-                continue
-            if anchor and file.suffix == ".html" and anchor not in pages[file.name].ids:
-                problems.append(f"{name}: no id '{anchor}' in {file.name} (from {value})")
+        problems += reference_problems(name, page, pages)
 
     css = (SITE / "style.css").read_text(encoding="utf-8")
     if "@import" in css or "url(" in css:
