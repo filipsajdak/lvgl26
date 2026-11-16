@@ -67,6 +67,30 @@ template <>
 inline constexpr lv::config lv::cfg<lv::override>{.compile_time_image_pixels = 320 * 240};
 ```
 
+## A picture kept as its file
+
+A photo, or a picture too large for the compiler, can stay a file. `lv::encoded_image` keeps the bytes of a PNG or JPEG as they are, and LVGL's decoder draws them on the device:
+
+```cpp
+constexpr unsigned char photo_jpg[] = {
+#embed "photo.jpg"
+};
+
+lv::image({.src = lv::encoded_image<photo_jpg>})
+```
+
+| | `lv::image_file` | `lv::encoded_image` |
+|---|---|---|
+| In flash | The pixels | The file, which is much smaller |
+| On the device | Nothing | The decoder's code, and heap while the picture is drawn |
+| Files | PNG | PNG, baseline JPEG |
+| Build | Compile time for each picture | None |
+
+- The decoders are off by default. Turn them on before lvgl26 is added: `set(LVGL26_PNG ON)`, `set(LVGL26_JPEG ON)`.
+- LVGL decodes a PNG into four bytes for each pixel on its heap, and a JPEG in small blocks.
+- Without LVGL's image cache, a picture is decoded again each time it is drawn.
+- A progressive JPEG is refused with a message: LVGL's decoder reads baseline files only.
+
 ## Rules and limits
 
 - The file is a PNG with 8 bits for each channel: grey, RGB or a palette, with or without alpha. Interlaced and 16-bit files are refused with a message.
@@ -74,5 +98,5 @@ inline constexpr lv::config lv::cfg<lv::override>{.compile_time_image_pixels = 3
 - Where LVGL is built to want rows of a multiple of some bytes, opaque rows are padded to it.
 - A picture is at most 65535 pixels each way, with rows of at most 65535 bytes: LVGL's own limits.
 - The picture keeps its size: see-through borders are not cut off.
-- Photos and whole-screen backgrounds are better kept as JPEG and decoded on the device. That form is not built yet.
+- Photos and whole-screen backgrounds are better kept as JPEG: see `lv::encoded_image` above.
 - A very large picture may not link on macOS, whose linker limits the length of a name. 128 x 128 links.

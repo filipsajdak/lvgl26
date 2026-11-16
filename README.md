@@ -291,6 +291,8 @@ constexpr unsigned char logo_png[] = {
 lv::image({.src = lv::image_file<logo_png>})
 ```
 
+A photo or a large picture can stay a file that the device decodes: `lv::encoded_image<photo_jpg>`.
+
 [docs/images.md](docs/images.md) says how a picture is stored and what it costs.
 
 Rules to know:
