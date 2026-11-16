@@ -60,6 +60,12 @@ lvgl26_test(application)
 lvgl26_test(theme)
 lvgl26_test(scaled_font)
 target_link_libraries(scaled_font PRIVATE lvgl26_test_data)
+# A font size is more than nothing.
+foreach(case zero negative)
+  add_test(NAME scaled_font_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:scaled_font> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 lvgl26_test(signal)
 target_link_libraries(theme PRIVATE lvgl26_test_data)
 # LVGL's state is global: a second application ends the program.

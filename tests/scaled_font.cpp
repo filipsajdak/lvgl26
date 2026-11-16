@@ -1,10 +1,15 @@
 // lv::scaled_font: a font that the device draws from a TrueType file, at a size that can change.
+//
+//   scaled_font             runs the checks
+//   scaled_font zero        resizes to 0 px: must end with a contract violation
+//   scaled_font negative    resizes to -5 px: the same
 
 #include <lv/lv.hpp>
 
 #include "check.hpp"
 
 #include <cstdio>
+#include <cstring>
 
 namespace {
 
@@ -80,9 +85,17 @@ void is_made_on_first_use_and_given_back() {
   check(used_bytes() == before);
 }
 
+// A size the compiler cannot see, so that the contract is checked when the program runs.
+volatile int no_size = 0, less_than_none = -5;
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc == 2) {
+    odd.resize(lv::raw((std::strcmp(argv[1], "zero") == 0 ? no_size : less_than_none) * px));
+    std::printf("no contract violation\n");
+    return 0;
+  }
   lv_init();
   lv_test_display_create(320, 240);
   is_made_on_first_use_and_given_back();
