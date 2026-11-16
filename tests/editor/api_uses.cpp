@@ -373,6 +373,7 @@ lv::task<> ask(lv::view<"button"> ok, lv::view<"arc"> arc, lv::ui_scheduler& ui_
   static_cast<void>(yes);
   co_await ui_thread.schedule();
   static_cast<void>(lv::spawn(count_clicks(ok, arc)));
+  static_cast<void>(lv::spawn(count_clicks(ok, arc), arc));
 }
 
 void use_scheduler() {

@@ -135,6 +135,11 @@ class [[nodiscard]] task {
 /// Returns false if the task is empty (no memory for its frame).
 bool spawn(task<void> work) noexcept;
 
+/// Starts a task that belongs to a widget: when `owner` is deleted, the task ends,
+/// whatever it is doing. For work that may never wait for an event of that widget.
+/// Returns false if the task is empty, or if LVGL has no memory to tie it to the widget.
+bool spawn(task<void> work, obj owner);
+
 /// co_await button.next().clicked
 template <lv_event_code_t Code>
 detail::awaiter<void> operator co_await(event_ref<Code>) noexcept { __builtin_unreachable(); }
