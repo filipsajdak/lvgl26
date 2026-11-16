@@ -63,6 +63,11 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   so they need no template argument and no heap. `include/lv/signal/*.json` is written by
   `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
   run the tool.
+- A font in a style comes from a typography token through `lv::typeface`; `lv::raw(font)` marks one
+  that no token names. `include/lv/detail/coverage.hpp` is derived from font-rs and stays under the
+  Apache License 2.0: keep its notice, and list any other borrowed part in `NOTICE.md`.
+- `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
+  draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.

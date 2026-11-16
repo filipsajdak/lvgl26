@@ -4,7 +4,7 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT
 
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -259,6 +259,20 @@ lv::display display{app, frame, mine};                // or lv::signal::dark, fr
 ```
 
 [docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
+A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
+read-only memory, no heap and no converter. A typography token chooses it:
+
+```cpp
+constexpr unsigned char barlow_ttf[] = {
+#embed "Barlow-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
+constexpr auto title = type(tok.text.title);          // family, weight and size from the token
+
+lv::label({.style = {.text_font = title}, .text = "Wake up"})
+```
+
+[docs/fonts.md](docs/fonts.md) has the costs and the limits.
 
 Rules to know:
 

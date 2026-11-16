@@ -116,6 +116,9 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
 consteval std::string how_to_write(std::meta::info t) {
   if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (t == ^^styled<const lv_font_t*>)
+    return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
+           "lv/font.hpp), or lv::raw(font) for a font that no token names";
   if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
