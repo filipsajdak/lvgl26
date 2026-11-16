@@ -4,7 +4,7 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT
 
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -244,6 +244,21 @@ Keep tokens in three tiers: primitive values (`primitive.color.blue-500`), seman
 them (`color.primary`), and component tokens that alias those (`card.radius`). UI code uses the last two.
 
 Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
+
+A theme gives every widget of a kind its styles, so a screen needs none of its own. It is one
+constant, kept in read-only memory, and the last argument of a display:
+
+```cpp
+constexpr auto mine = lv::theme({
+    .button = {.style = {.bg_color = tok.color.primary, .radius = tok.radius.none},
+               .style_pressed = {.bg_color = tok.color.pressed}},
+    .screen = {.style = {.bg_color = tok.color.ground}},
+});
+
+lv::display display{app, frame, mine};                // or lv::signal::dark, from <lv/signal.hpp>
+```
+
+[docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
 
 Rules to know:
 

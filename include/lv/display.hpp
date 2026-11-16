@@ -24,6 +24,7 @@
 // deleted when the object ends, so declare it after the application.
 
 #include <lv/application.hpp>
+#include <lv/detail/theme_styles.hpp>
 #include <lv/view.hpp>
 
 #include <lvgl/lvgl.h>
@@ -97,22 +98,22 @@ concept band_panel = std::is_class_v<P> && std::invocable<P&, area, std::span<co
 class display {
  public:
   template <std::int32_t W, std::int32_t H>
-  display(application&, frame<W, H>& memory) : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_DIRECT) {}
+  display(application&, frame<W, H>& memory, theme_styles look = {})
+      : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_DIRECT) {
+    use(look);
+  }
 
   template <std::int32_t W, std::int32_t H>
-  display(application& app, frame<W, H>& memory, void (*changed)(area)) : display(app, memory) {
+  display(application& app, frame<W, H>& memory, void (*changed)(area), theme_styles look = {})
+      : display(app, memory, look) {
     function_ = reinterpret_cast<void (*)()>(changed);
-    call_ = [](const display& self, area where, std::span<const std::byte>) {
-      reinterpret_cast<void (*)(area)>(self.function_)(where);
-    };
+    call_ = &frame_function;
   }
 
   template <std::int32_t W, std::int32_t H, frame_panel P>
-  display(application& app, frame<W, H>& memory, P& panel) : display(app, memory) {
+  display(application& app, frame<W, H>& memory, P& panel, theme_styles look = {}) : display(app, memory, look) {
     object_ = &panel;
-    call_ = [](const display& self, area where, std::span<const std::byte>) {
-      (*static_cast<P*>(self.object_))(where);
-    };
+    call_ = &frame_object<P>;
   }
 
   template <std::int32_t W, std::int32_t H, class P>
@@ -122,21 +123,20 @@ class display {
       "pointer to the object, so it cannot be a temporary");
 
   template <std::int32_t W, std::int32_t H, std::int32_t L>
-  display(application&, band<W, H, L>& memory, void (*send)(area, std::span<const std::byte>))
+  display(application&, band<W, H, L>& memory, void (*send)(area, std::span<const std::byte>),
+          theme_styles look = {})
       : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_PARTIAL) {
+    use(look);
     function_ = reinterpret_cast<void (*)()>(send);
-    call_ = [](const display& self, area where, std::span<const std::byte> pixels) {
-      reinterpret_cast<void (*)(area, std::span<const std::byte>)>(self.function_)(where, pixels);
-    };
+    call_ = &band_function;
   }
 
   template <std::int32_t W, std::int32_t H, std::int32_t L, band_panel P>
-  display(application&, band<W, H, L>& memory, P& panel)
+  display(application&, band<W, H, L>& memory, P& panel, theme_styles look = {})
       : display(W, H, memory.memory, LV_DISPLAY_RENDER_MODE_PARTIAL) {
+    use(look);
     object_ = &panel;
-    call_ = [](const display& self, area where, std::span<const std::byte> pixels) {
-      (*static_cast<P*>(self.object_))(where, pixels);
-    };
+    call_ = &band_object<P>;
   }
 
   template <std::int32_t W, std::int32_t H, std::int32_t L, class P>
@@ -148,7 +148,10 @@ class display {
   display(const display&) = delete;
   display& operator=(const display&) = delete;
 
-  ~display() { lv_display_delete(raw_); }
+  ~display() {
+    lv_display_delete(raw_);
+    if (theme_ != nullptr) lv_theme_delete(theme_);
+  }
 
   // The screen that is shown.
   obj screen() const { return obj{lv_display_get_screen_active(raw_)}; }
@@ -166,6 +169,37 @@ class display {
     lv_display_set_driver_data(raw_, this);
     lv_display_set_buffers(raw_, memory.data(), nullptr, static_cast<std::uint32_t>(memory.size()), mode);
     lv_display_set_flush_cb(raw_, &drawn);
+  }
+
+  // How the display reaches each kind of panel. They are functions, not lambdas: GCC's
+  // analyzer reports a null `this` in the function a lambda converts to.
+  static void frame_function(const display& self, area where, std::span<const std::byte>) {
+    reinterpret_cast<void (*)(area)>(self.function_)(where);
+  }
+  template <class P>
+  static void frame_object(const display& self, area where, std::span<const std::byte>) {
+    (*static_cast<P*>(self.object_))(where);
+  }
+  static void band_function(const display& self, area where, std::span<const std::byte> pixels) {
+    reinterpret_cast<void (*)(area, std::span<const std::byte>)>(self.function_)(where, pixels);
+  }
+  template <class P>
+  static void band_object(const display& self, area where, std::span<const std::byte> pixels) {
+    (*static_cast<P*>(self.object_))(where, pixels);
+  }
+
+  // Puts `look` after the theme the display has, and styles the screen with it. The
+  // screen is still empty: a display is given its theme when it is made.
+  void use(theme_styles look) {
+    if (look.empty()) return;
+    theme_ = lv_theme_create();
+    contract_assert(theme_ != nullptr);  // LVGL's heap is too small for a theme
+    lv_theme_set_parent(theme_, lv_display_get_theme(raw_));
+    lv_theme_set_apply_cb(theme_, &detail::apply_theme);
+    lv_theme_set_user_data(theme_, const_cast<detail::theme_entry*>(detail::theme_access::first(look)));
+    lv_display_set_theme(raw_, theme_);
+    // LVGL styles the bottom layer there, not the screen that is shown.
+    lv_theme_apply(lv_display_get_screen_active(raw_));
   }
 
   // LVGL has drawn `where`. In a frame `pixels` is the frame; in a band it is the piece.
@@ -188,6 +222,7 @@ class display {
   }
 
   lv_display_t* raw_;
+  lv_theme_t* theme_ = nullptr;
   void* object_ = nullptr;
   void (*function_)() = nullptr;
   void (*call_)(const display&, area, std::span<const std::byte>) = nullptr;

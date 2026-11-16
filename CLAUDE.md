@@ -58,6 +58,11 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
 - Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
+- A look shared by all widgets of a kind is a theme (`lv::theme`, `include/lv/theme.hpp`), given to
+  the display. A theme's styles are built in constant evaluation with `std::define_static_array`,
+  so they need no template argument and no heap. `include/lv/signal/*.json` is written by
+  `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
+  run the tool.
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.

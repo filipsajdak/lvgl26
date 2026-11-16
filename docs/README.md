@@ -5,6 +5,7 @@ lvgl26 is a C++26 framework over LVGL for embedded user interfaces. The compiler
 | Page | What it gives you |
 |---|---|
 | [Quick start](quick-start.md) | A speedometer screen in ten minutes: a tree, a typed value, a picture |
+| [Themes](themes.md) | One look for every widget: the built-in Signal theme, and a theme of your own from a token file |
 
 More pages are being written: the reference, guides, and pages for readers who know Qt, Slint or TouchGFX. Until then the [README](../README.md) tours the features.
 

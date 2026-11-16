@@ -2,6 +2,7 @@
 
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
+#include <lv/signal.hpp>
 
 #include <mp-units/systems/si.h>
 
@@ -26,8 +27,8 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .s
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;              // LVGL starts; it stops when app goes out of scope
-  lv::display display{app, frame};  // no panel: the picture stays in the frame
+  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them
   if (!root) return 1;
