@@ -129,9 +129,9 @@
         <tbody>
           <tr><th scope="row">LVGL versions</th><td class="num">2</td><td>v9.6.0 and a pinned commit of the v10 development line. One reference picture serves both, because they render the same pixels.</td></tr>
           <tr><th scope="row">Build presets</th><td class="num">7</td><td><span class="path">host-v96, host-v10, host-v96-asan, host-v10-asan, host-v96-tsan, host-v96-analyze, host-v96-coverage</span>. All with warnings as errors.</td></tr>
-          <tr><th scope="row">Compile-fail tests</th><td class="num">147</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
-          <tr><th scope="row">Test programs</th><td class="num">40</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
-          <tr><th scope="row">Reference pictures</th><td class="num">8</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png, font.png, image.png, signal_type_dark.png, signal_type_day.png</span></td></tr>
+          <tr><th scope="row">Compile-fail tests</th><td class="num">153</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
+          <tr><th scope="row">Test programs</th><td class="num">41</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
+          <tr><th scope="row">Reference pictures</th><td class="num">9</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png, font.png, image.png, encoded_image.png, signal_type_dark.png, signal_type_day.png</span></td></tr>
           <tr><th scope="row">Fuzz targets</th><td class="num">3</td><td>The JSON reader (libFuzzer, one minute on every push), runtime documents and MCP messages (AFL++).</td></tr>
           <tr><th scope="row">Corpus inputs replayed</th><td class="num">13</td><td>7 for JSON, 2 for documents, 4 for MCP messages. They run as tests under every preset, sanitizers included.</td></tr>
           <tr><th scope="row">Complexity and CRAP limit</th><td class="num">8</td><td>For every function. <code>tools/crap.py</code> runs in CI after the coverage build.</td></tr>
