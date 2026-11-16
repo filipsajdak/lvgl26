@@ -69,10 +69,17 @@ namespace detail {
 struct task_promise_base;
 inline void cancel(task_promise_base* waiting) noexcept;
 
-// A widget that a spawned task depends on. Deleting the widget cancels the task.
+template <lv_event_code_t Code>
+struct event_source;
+using deletion_source = event_source<LV_EVENT_DELETE>;
+inline void deletion_seen(deletion_source* wait);
+
+// A widget that a spawned task depends on. Deleting the widget cancels the task, or
+// ends the task's wait for that deletion.
 struct widget_watch {
-  lv_obj_t* widget;
-  lv_event_dsc_t* on_delete;  // null while the task itself waits for the deletion
+  lv_obj_t* widget;            // null once the widget was deleted
+  lv_event_dsc_t* on_delete;   // the handler of the deletion, as long as the widget exists
+  deletion_source* gone_wait;  // the task's wait for the deletion, if it waits for it
   task_promise_base* task;
   widget_watch* next;
 };
@@ -179,7 +186,10 @@ inline void widget_deleted(lv_event_t* e) {
   auto* w = static_cast<widget_watch*>(lv_event_get_user_data(e));
   w->widget = nullptr;  // LVGL frees the widget's event list itself
   w->on_delete = nullptr;
-  cancel(w->task);
+  if (w->gone_wait != nullptr)
+    deletion_seen(std::exchange(w->gone_wait, nullptr));
+  else
+    cancel(w->task);
 }
 
 inline widget_watch* find_watch(task_promise_base* root, lv_obj_t* widget) noexcept {
@@ -190,17 +200,20 @@ inline widget_watch* find_watch(task_promise_base* root, lv_obj_t* widget) noexc
 
 // Ties the spawned task to `widget`: from now on, deleting the widget cancels the
 // task, whatever it is waiting for at that moment. Returns the record, or null if
-// LVGL has no memory (the task is then not protected for this widget).
-inline widget_watch* watch(task_promise_base* waiting, lv_obj_t* widget, bool cancel_on_delete) {
+// LVGL has no memory for the record or for its handler. The task is then not tied
+// to the widget, and must not wait on it.
+inline widget_watch* watch(task_promise_base* waiting, lv_obj_t* widget) {
   task_promise_base* root = root_of(waiting);
-  widget_watch* w = find_watch(root, widget);
-  if (w == nullptr) {
-    w = static_cast<widget_watch*>(lv_malloc(sizeof(widget_watch)));
-    if (w == nullptr) return nullptr;
-    *w = {widget, nullptr, root, root->watches};
-    root->watches = w;
-    if (cancel_on_delete) w->on_delete = lv_obj_add_event_cb(widget, &widget_deleted, LV_EVENT_DELETE, w);
+  if (widget_watch* known = find_watch(root, widget)) return known;
+  auto* w = static_cast<widget_watch*>(lv_malloc(sizeof(widget_watch)));
+  if (w == nullptr) return nullptr;
+  *w = {widget, nullptr, nullptr, root, root->watches};
+  w->on_delete = lv_obj_add_event_cb(widget, &widget_deleted, LV_EVENT_DELETE, w);
+  if (w->on_delete == nullptr) {
+    lv_free(w);
+    return nullptr;
   }
+  root->watches = w;
   return w;
 }
 
@@ -334,7 +347,7 @@ inline bool spawn(task<void> work, obj owner) {
   if (!work) return false;
   const auto frame = std::exchange(work.frame_, {});
   frame.promise().detached = true;
-  if (detail::watch(&frame.promise(), owner.raw(), true) == nullptr) {
+  if (detail::watch(&frame.promise(), owner.raw()) == nullptr) {
     frame.destroy();
     return false;
   }
@@ -393,7 +406,7 @@ struct event_source {
     // Without the record that ties the task to the widget, a later deletion would
     // leave the task waiting on freed memory. So if LVGL has no memory for it, the
     // task ends here instead of waiting unprotected.
-    if (watch(owner, widget, true) == nullptr) {
+    if (watch(owner, widget) == nullptr) {
       cancel(owner);
       return true;  // stay suspended, with nothing armed, until the task is ended
     }
@@ -414,18 +427,19 @@ struct event_source {
 };
 
 // The deletion of a widget: view.next().gone. While a task waits for it, deleting
-// the widget does not cancel the task; the wait is done instead.
+// the widget does not cancel the task; the wait is done instead. The task's record of
+// the widget (see watch()) reports the deletion, so arming and disarming this wait
+// needs no memory beyond that record.
 template <>
 struct event_source<LV_EVENT_DELETE> {
   lv_obj_t* widget = nullptr;
   void (*done)(void*) = nullptr;
   void* context = nullptr;
-  lv_event_dsc_t* on_code = nullptr;
-  widget_watch* record = nullptr;
+  widget_watch* record = nullptr;  // while armed
 
   event_source() = default;
   explicit event_source(lv_obj_t* w) : widget(w) {}
-  event_source(event_source&&) = default;
+  event_source(event_source&&) = default;  // only moved before it is armed
   ~event_source() { disarm(); }
 
   bool arm(void (*done_fn)(void*), void* done_context, task_promise_base* owner)
@@ -434,32 +448,31 @@ struct event_source<LV_EVENT_DELETE> {
   {
     done = done_fn;
     context = done_context;
-    // Take over from the task's own watch of this widget, if there is one.
-    record = watch(owner, widget, false);
-    if (record != nullptr && record->on_delete != nullptr) {
-      lv_obj_remove_event_dsc(widget, record->on_delete);
-      record->on_delete = nullptr;
+    // As for any other event: without the record, the task ends here instead of
+    // waiting unprotected.
+    record = watch(owner, widget);
+    if (record == nullptr) {
+      cancel(owner);
+      return true;  // stay suspended, with nothing armed, until the task is ended
     }
-    on_code = lv_obj_add_event_cb(widget, &fired_cb, LV_EVENT_DELETE, this);
+    record->gone_wait = this;
     return true;
   }
 
-  // Stops waiting. If the widget still exists, the task is tied to it again.
+  // Stops waiting. The task stays tied to the widget through its record.
   void disarm() noexcept {
-    if (on_code == nullptr) return;
-    lv_obj_remove_event_dsc(widget, on_code);
-    on_code = nullptr;
-    if (record != nullptr)
-      record->on_delete = lv_obj_add_event_cb(widget, &widget_deleted, LV_EVENT_DELETE, record);
+    if (record != nullptr && record->gone_wait == this) record->gone_wait = nullptr;
+    record = nullptr;
   }
 
-  static void fired_cb(lv_event_t* e) {
-    auto* self = static_cast<event_source*>(lv_event_get_user_data(e));
-    self->on_code = nullptr;  // LVGL frees the widget's event list itself
-    if (self->record != nullptr) self->record->widget = nullptr;
-    self->done(self->context);
+  // The widget was deleted.
+  void seen() {
+    record = nullptr;
+    done(context);  // may destroy this source: nothing after this line
   }
 };
+
+inline void deletion_seen(deletion_source* wait) { wait->seen(); }
 
 // A time span, with a one-shot LVGL timer.
 struct sleep_source {
