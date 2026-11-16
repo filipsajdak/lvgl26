@@ -6,10 +6,13 @@
 
 #include "check.hpp"
 
+#include <csignal>
 #include <cstring>
 #include <filesystem>
 #include <string>
 #include <string_view>
+
+#include <sys/resource.h>
 
 namespace {
 
@@ -607,6 +610,72 @@ void replies_are_well_formed_utf8(lv::obj screen) {
   check(!has(cut, "\xe2") && !has(cut, replacement));
 }
 
+// A client cannot fill the directory the host allows: a server writes a limited
+// number of screenshot files, and then refuses with a reason the agent can read.
+void screenshot_files_stop_at_the_limit(lv::obj screen, const std::string& dir) {
+  const std::string shots = dir + "/screenshot_limit";
+  std::filesystem::remove_all(shots);
+  std::filesystem::create_directory(shots);
+  const auto limit = lv::mcp::detail::screenshot_file_limit;
+  {
+    server agent{screen, {.screenshot_directory = shots}};
+    // A refused name does not count.
+    check(has(agent.handle(call("1", "screenshot", R"({"name": "x.txt"})")), "must be a file name"));
+    for (std::size_t i = 0; i < limit; ++i)
+      check(has(agent.handle(call("1", "screenshot", R"({"name": "shot)" + std::to_string(i) + R"(.png"})")),
+                R"("isError":false)"));
+    const auto refused = agent.handle(call("2", "screenshot", R"({"name": "one_more.png"})"));
+    check(one_json_line(refused) && has(refused, R"("isError":true)"));
+    check(has(refused, "has written its " + std::to_string(limit) + " screenshot files"));
+    // A picture without a file is still returned.
+    check(has(agent.handle(call("3", "screenshot", "{}")), R"("type":"image")"));
+  }
+  const auto files = std::distance(std::filesystem::directory_iterator{shots}, std::filesystem::directory_iterator{});
+  check(files == static_cast<std::ptrdiff_t>(limit) && !std::filesystem::exists(shots + "/one_more.png"));
+  std::filesystem::remove_all(shots);
+}
+
+// While it lives, no file of this process can grow past `bytes`: a write past that
+// fails (EFBIG) instead of ending the process (SIGXFSZ).
+struct file_size_limit {
+  rlimit before{};
+  void (*handler)(int) = std::signal(SIGXFSZ, SIG_IGN);
+  explicit file_size_limit(rlim_t bytes) {
+    getrlimit(RLIMIT_FSIZE, &before);
+    const rlimit lower{.rlim_cur = bytes, .rlim_max = before.rlim_max};
+    setrlimit(RLIMIT_FSIZE, &lower);
+  }
+  file_size_limit(const file_size_limit&) = delete;
+  file_size_limit& operator=(const file_size_limit&) = delete;
+  ~file_size_limit() {
+    setrlimit(RLIMIT_FSIZE, &before);
+    std::signal(SIGXFSZ, handler);
+  }
+};
+
+// A screenshot whose file was made but could not be written still counts: the file
+// stays in the directory, so the limit on files must hold for it too.
+void screenshot_files_that_fail_to_write_count_to_the_limit(lv::obj screen, const std::string& dir) {
+  const std::string shots = dir + "/screenshot_limit_failed";
+  std::filesystem::remove_all(shots);
+  std::filesystem::create_directory(shots);
+  const auto limit = lv::mcp::detail::screenshot_file_limit;
+  {
+    server agent{screen, {.screenshot_directory = shots}};
+    {
+      const file_size_limit full{0};
+      for (std::size_t i = 0; i < limit; ++i)
+        check(has(agent.handle(call("1", "screenshot", R"({"name": "shot)" + std::to_string(i) + R"(.png"})")),
+                  "cannot_write"));
+    }
+    const auto refused = agent.handle(call("2", "screenshot", R"({"name": "one_more.png"})"));
+    check(has(refused, R"("isError":true)") && has(refused, "screenshot files"));
+  }
+  const auto files = std::distance(std::filesystem::directory_iterator{shots}, std::filesystem::directory_iterator{});
+  check(files == static_cast<std::ptrdiff_t>(limit) && !std::filesystem::exists(shots + "/one_more.png"));
+  std::filesystem::remove_all(shots);
+}
+
 // The loop over a stream: one answer per request, none for the rest.
 void lines() {
   std::FILE* in = std::tmpfile();
@@ -758,6 +827,8 @@ int main(int argc, char** argv) {
   requests_with_their_own_metadata(screen);
   refuses(screen);
   replies_are_well_formed_utf8(screen);
+  screenshot_files_stop_at_the_limit(screen, dir);
+  screenshot_files_that_fail_to_write_count_to_the_limit(screen, dir);
   lines();
   a_line_over_the_limit_is_refused_and_the_session_goes_on();
   the_line_reader_keeps_at_most_the_limit();

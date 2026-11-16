@@ -12,7 +12,7 @@
 // run, next to a second directory it must never reach. The first holds a file
 // (taken.png) and a symbolic link into the second (link.png). After the session
 // the file is as it was, the link is still a link, the second directory is empty,
-// and everything new in the first has the name of a PNG file.
+// and everything new in the first has the name of a PNG file and stays in the limit.
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
@@ -78,6 +78,10 @@ struct places {
                           std::filesystem::directory_iterator{}) == 2);
     for (const auto& entry : std::filesystem::directory_iterator{shots})
       require(lv::mcp::detail::usable_file_name(entry.path().filename().string()));
+    constexpr std::size_t made_here = 2;  // taken.png and link.png
+    require(static_cast<std::size_t>(std::distance(std::filesystem::directory_iterator{shots},
+                                                   std::filesystem::directory_iterator{})) <=
+            made_here + lv::mcp::detail::screenshot_file_limit);
   }
 };
 

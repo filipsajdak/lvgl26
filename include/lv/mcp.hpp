@@ -36,6 +36,8 @@
 // screenshot then takes the name of a file, not a path: letters, digits, '.', '_'
 // and '-', ending in ".png", not starting with a dot. The file is made new in
 // that directory; a file or a symbolic link of that name is never written to.
+// A server makes a limited number of files (detail::screenshot_file_limit), then
+// refuses. A file is no larger than a PNG of the screen, so the count bounds the space.
 //
 // Limits: keys and tool names are compared as written, so a client that escapes
 // them ("tools\/call") is not understood.
@@ -317,6 +319,16 @@ inline std::string image_result(std::span<const std::uint8_t> png) {
 // little enough to keep a long document out of the agent's context.
 inline constexpr std::size_t failure_excerpt = 200;
 
+// How many screenshot files one server makes. An agent checks a screen a few dozen
+// times in a session; a client that asks for more must not fill the directory.
+inline constexpr std::size_t screenshot_file_limit = 100;
+
+// Whether a screenshot may have left a file: it did, or the file was made and then
+// could not be written, which leaves it behind. Such a file counts to the limit.
+inline bool may_have_made_a_file(const std::expected<void, png_error>& written) {
+  return written || written.error() == png_error::cannot_write;
+}
+
 // A refused document or patch, as a result the agent can act on.
 inline std::string failure(const load_failure& f) {
   std::string text{name_of(f.error)};
@@ -428,6 +440,7 @@ class server {
   obj parent_;
   options options_;
   typename ui::loaded screen_;
+  std::size_t screenshot_files_ = 0;  // made, or perhaps left half written, by this server
 
  public:
   // The server shows documents under `parent`, and dumps and draws `parent`.
@@ -532,17 +545,22 @@ class server {
     return detail::text_result(text);
   }
 
-  std::string screenshot(json::value name) const {
+  std::string screenshot(json::value name) {
     if (name) return screenshot_file(name);
     const auto png = encode_png(parent_);
     if (!png) return detail::failure(png.error());
     return detail::image_result(*png);
   }
 
-  std::string screenshot_file(json::value name) const {
+  std::string screenshot_file(json::value name) {
     if (options_.screenshot_directory.empty())
       return detail::text_result(
           "this server does not write files: call screenshot without a name", true);
+    if (screenshot_files_ >= detail::screenshot_file_limit)
+      return detail::text_result("this server has written its " +
+                                     std::to_string(detail::screenshot_file_limit) +
+                                     " screenshot files: call screenshot without a name",
+                                 true);
     if (!detail::usable_file_name(name.string()))
       return detail::text_result(
           R"("name" must be a file name of letters, digits, '.', '_' and '-' that ends in .png)",
@@ -551,6 +569,7 @@ class server {
     file += "/";
     file += name.string();
     const auto written = write_new_png(parent_, file.c_str());
+    if (detail::may_have_made_a_file(written)) ++screenshot_files_;
     if (!written) return detail::failure(written.error());
     return detail::text_result("wrote " + file);
   }
