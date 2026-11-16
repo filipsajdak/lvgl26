@@ -156,7 +156,7 @@ consteval std::vector<const char*> functions_in_tenths(std::span<const doc_heade
   std::vector<std::string_view> names;
   for (const doc_header& h : headers) collect_tenths(h.text, names);
   if (names.empty())
-    throw unknown_name("lv: no doc comment in LVGL's headers says '" + str(tenths_mark) +
+    fail("lv: no doc comment in LVGL's headers says '" + str(tenths_mark) +
                        "' any more, so lvgl26 cannot tell which angles are in tenths of a "
                        "degree. See lv/detail/angle_docs.hpp: the mark it searches for must "
                        "follow LVGL's wording.");
@@ -191,7 +191,7 @@ template <class D = void>
 consteval std::meta::info angle_type_of(std::meta::info f) {
   const std::string_view name = std::meta::identifier_of(f);
   if (!is_declared_in(f, angle_headers))
-    throw unknown_name(
+    fail(
         "lv: '" + str(name) + "' takes or returns an angle, and only LVGL's doc comment says "
         "whether it is in degrees or in tenths of a degree. lvgl26 has not read its header, " +
         str(std::meta::source_location_of(f).file_name()) +

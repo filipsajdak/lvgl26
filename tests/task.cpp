@@ -138,6 +138,95 @@ void a_task_may_delete_its_own_widget(lv::obj screen) {
   check(free_bytes() == before);
 }
 
+// A task that never waits for a widget: it only sleeps, or waits for a state.
+lv::task<> ticks(int* count, bool* ended) {
+  at_exit cleanup{ended};
+  for (;;) {
+    co_await lv::sleep(10 * ms);
+    ++*count;
+  }
+}
+
+lv::task<> follows(const lv::state<lv::counter>& source, int* seen, bool* ended) {
+  at_exit cleanup{ended};
+  for (;;) *seen = (co_await lv::changed(source)).value;
+}
+
+// A task that deletes the widget it belongs to, then goes on to its next wait.
+lv::task<> deletes_its_owner(lv::obj owner, int* steps, bool* ended) {
+  at_exit cleanup{ended};
+  co_await lv::sleep(10 * ms);
+  lv_obj_delete(owner.raw());
+  *steps = 1;  // still runs: the task ends when it next waits
+  co_await lv::sleep(10 * ms);
+  *steps = 2;
+}
+
+lv::task<> returns_at_once(int* steps) {
+  *steps = 1;
+  co_return;
+}
+
+void a_task_ends_with_its_owner(lv::obj screen) {
+  lv_obj_delete(screen.add<"obj">().raw());  // the screen keeps what it needs to have children
+  const auto before = free_bytes();
+  {
+    auto panel = screen.add<"obj">();
+    int count = 0;
+    bool ended = false;
+    check(lv::spawn(ticks(&count, &ended), panel));
+    lv_test_wait(35);
+    check(count == 3 && !ended);
+    lv_obj_delete(panel.raw());
+    check(ended);
+    lv_test_wait(50);
+    check(count == 3);  // nothing of it ran after its owner had gone
+  }
+  {
+    // Without an owner the same task runs on: this is what an owner is for.
+    int count = 0;
+    bool ended = false;
+    auto panel = screen.add<"obj">();
+    lv::state<lv::counter> source;
+    int seen = -1;
+    bool follower_ended = false;
+    check(lv::spawn(follows(source, &seen, &follower_ended), panel));
+    source = lv::counter{4};
+    check(seen == 4 && !follower_ended);
+    source = lv::counter{7};  // it waits again inside the notification, and sees the next change
+    check(seen == 7);
+    source = lv::counter{4};
+    check(seen == 4);
+    lv_obj_delete(panel.raw());
+    check(follower_ended);
+    source = lv::counter{5};
+    check(seen == 4);
+    (void)count, (void)ended;
+  }
+  {
+    auto panel = screen.add<"obj">();
+    int steps = 0;
+    bool ended = false;
+    check(lv::spawn(deletes_its_owner(panel, &steps, &ended), panel));
+    lv_test_wait(15);
+    check(steps == 1 && ended);
+    lv_test_wait(50);
+    check(steps == 1);
+  }
+  {
+    // A task that finishes at once is gone before its owner; the owner is deleted without it.
+    auto panel = screen.add<"obj">();
+    int steps = 0;
+    auto work = returns_at_once(&steps);
+    const bool started = lv::spawn(std::move(work), panel);
+    check(started && steps == 1);
+    lv::task<> none;  // an empty task: what a coroutine gives when LVGL has no memory for it
+    check(!lv::spawn(std::move(none), panel));
+    lv_obj_delete(panel.raw());
+  }
+  check(free_bytes() == before);
+}
+
 void events_and_timers(lv::obj screen) {
   auto button = screen.add<"button">();
   bool ended = false;
@@ -390,6 +479,7 @@ int main() {
   static_assert(std::is_same_v<decltype(screen.next().clicked), lv::event_ref<LV_EVENT_CLICKED>>);
   static_assert(std::is_same_v<decltype(screen.next().gone), lv::event_ref<LV_EVENT_DELETE>>);
 
+  a_task_ends_with_its_owner(screen);
   events_and_timers(screen);
   tasks_await_tasks(screen);
   state_changes();

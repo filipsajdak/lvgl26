@@ -49,6 +49,13 @@
       }
     },
     {
+      "name": "host-v96-no-theme",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_NO_DEFAULT_THEME": "ON"
+      }
+    },
+    {
       "name": "host-v96-analyze",
       "inherits": "host-v96",
       "cacheVariables": {
@@ -60,6 +67,18 @@
       "inherits": "host-v96",
       "cacheVariables": {
         "LVGL26_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "arm-m4",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/cmake/arm/toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "LVGL26_LVGL_REF": "v9.6.0",
+        "LVGL26_BUILD_TESTS": "OFF",
+        "LVGL26_BUILD_MCU_EXAMPLE": "ON"
       }
     }
   ],
@@ -91,6 +110,14 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage"
+    },
+    {
+      "name": "arm-m4",
+      "configurePreset": "arm-m4"
+    },
+    {
+      "name": "host-v96-no-theme",
+      "configurePreset": "host-v96-no-theme"
     }
   ],
   "testPresets": [
@@ -139,6 +166,13 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-no-theme",
+      "configurePreset": "host-v96-no-theme",
       "output": {
         "outputOnFailure": true
       }

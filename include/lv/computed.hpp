@@ -274,7 +274,7 @@ class computed {
   // binding it would write there.
   constexpr ~computed() {
     if consteval {
-      throw detail::unknown_name(
+      detail::fail(
           "lv: an lv::computed cannot be a constexpr variable: binding it writes to it. "
           "Write `constinit lv::computed`, as for a state.");
     } else {

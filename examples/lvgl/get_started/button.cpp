@@ -15,7 +15,7 @@ void count_click() {
 
 constexpr auto ui = lv::group[
     lv::button({.on_clicked = &count_click, .pos = {10 * px, 10 * px}, .size = {120 * px, 50 * px}})[
-        lv::label({.align = LV_ALIGN_CENTER, .text = lv::bind(clicks, "Button: {}")})]];
+        lv::label({.align = "center", .text = lv::bind(clicks, "Button: {}")})]];
 
 }  // namespace
 

@@ -54,8 +54,8 @@ consteval std::meta::info style_unit(std::string_view prop) {
 
 // The C++ type of a style value. All style setters call their parameter `value`,
 // so the unit comes from the property name alone. Design values (colors, lengths,
-// opacities, times and numbers) are wrapped in styled<>, which asks for a design
-// token. Enums, flags and pointers are structure, not design, and stay plain.
+// opacities, times, numbers and fonts) are wrapped in styled<>, which asks for a design
+// token. Enums, flags and other pointers are structure, not design, and stay plain.
 // An angle is decidegrees when the setter's doc comment says tenths of a degree
 // (see lv/detail/angle_docs.hpp); D only delays reading the comments.
 template <class D = void>
@@ -67,6 +67,7 @@ consteval std::meta::info style_value_type(std::meta::info setter, std::string_v
 
   if (t == std::meta::dealias(^^lv_color_t)) return design(^^lv_color_t);
   if (t == ^^bool) return ^^strict<bool>;
+  if (t == std::meta::dealias(^^const lv_font_t*)) return design(^^const lv_font_t*);  // see lv/font.hpp
   if (!std::meta::is_arithmetic_type(t)) return raw;
   if (is_angle_name(prop, {})) return design(angle_type_of<D>(setter));
   if (const auto unit = style_unit(prop); unit != std::meta::info{}) return design(unit);
@@ -93,45 +94,62 @@ struct style_item {
   std::meta::info id;      // LV_STYLE_<NAME>, or null when LVGL has no such id
 };
 
-// The LV_STYLE_* enumerator of the style property `prop`, or a null reflection.
-consteval std::meta::info style_id_of(std::string_view prop) {
+// An LV_STYLE_* enumerator with its name.
+struct style_id {
+  std::string_view name;
+  std::meta::info id;
+};
+
+// Every LV_STYLE_* enumerator. The names are read once for a scan: the compiler
+// counts the characters of a name each time it is asked for one, and asking for
+// all 150 of them for each of the 139 style properties was most of the scan.
+consteval std::vector<style_id> lvgl_style_ids() {
+  std::vector<style_id> ids;
   for (auto e : std::meta::enumerators_of(^^_lv_style_id_t))
-    if (is_style_id(std::meta::identifier_of(e), prop)) return e;
+    ids.push_back({std::meta::identifier_of(e), e});
+  return ids;
+}
+
+// The LV_STYLE_* enumerator of the style property `prop`, or a null reflection.
+consteval std::meta::info style_id_of(std::string_view prop, const std::vector<style_id>& ids) {
+  for (const auto& id : ids)
+    if (is_style_id(id.name, prop)) return id.id;
   return {};
 }
 
 // The member of lv::style for the setter `f`, called lv_obj_set_style_<prop>.
 template <class D>
-consteval style_item style_item_of(std::meta::info f, std::string_view prop) {
+consteval style_item style_item_of(std::meta::info f, std::string_view prop,
+                                   const std::vector<style_id>& ids) {
   const auto params = std::meta::parameters_of(f);  // obj, value(s), selector
   std::vector<std::meta::info> types;
   for (std::size_t i = 1; i + 1 < params.size(); ++i)
     types.push_back(style_value_type<D>(f, prop, params[i]));
   // Only a setter with one value can have a style id.
-  const auto id = params.size() == 3 ? style_id_of(prop) : std::meta::info{};
+  const auto id = params.size() == 3 ? style_id_of(prop, ids) : std::meta::info{};
   return {prop, std::meta::substitute(^^arg, types), f, id};
 }
 
 // The functions below are templates on D only so that nothing runs until a style
 // is really used: the scan costs about a second of compile time.
 template <class D>
-consteval std::vector<style_item> scan_style() {
+consteval std::vector<style_item> scan_style(const std::vector<style_id>& ids) {
   std::vector<style_item> items;
   for (auto f : api) {
     const auto name = std::meta::identifier_of(f);
     if (!name.starts_with(style_prefix) || std::meta::is_vararg_function(f)) continue;
     if (std::meta::parameters_of(f).size() < 3) continue;
-    items.push_back(style_item_of<D>(f, name.substr(style_prefix.size())));
+    items.push_back(style_item_of<D>(f, name.substr(style_prefix.size()), ids));
   }
   sort_by_name(items);
   return items;
 }
 
-// The scan runs once. Its result is stored as triples: type, setter, id.
-template <class D>
-consteval std::vector<std::meta::info> pack_style() {
+// The scan runs once. Its result is stored as triples: type, setter, id. It comes in
+// as an argument: see scan_base in props.hpp for why.
+consteval std::vector<std::meta::info> pack_style(const std::vector<style_item>& items) {
   std::vector<std::meta::info> out;
-  for (const auto& it : scan_style<D>()) {
+  for (const auto& it : items) {
     out.push_back(it.type);
     out.push_back(it.setter);
     out.push_back(it.id);
@@ -141,7 +159,7 @@ consteval std::vector<std::meta::info> pack_style() {
 
 template <class D = void>
 inline constexpr std::span<const std::meta::info> style_table =
-    std::define_static_array(pack_style<D>());
+    std::define_static_array(pack_style(scan_style<D>(lvgl_style_ids())));
 
 template <class D>
 consteval std::vector<std::meta::info> style_specs() {
@@ -150,6 +168,7 @@ consteval std::vector<std::meta::info> style_specs() {
     out.push_back(std::meta::data_member_spec(
         style_table<D>[i],
         {.name = str(std::meta::identifier_of(style_table<D>[i + 1]).substr(style_prefix.size()))}));
+  out.push_back(braces_member());
   return out;
 }
 
@@ -175,8 +194,7 @@ template <class S, class D = void>
 concept a_style = std::same_as<S, style_t<D>>;
 
 template <class D = void>
-inline constexpr auto style_members = std::define_static_array(
-    std::meta::nonstatic_data_members_of(^^style_t<D>, std::meta::access_context::unchecked()));
+inline constexpr auto style_members = std::define_static_array(members_before_braces(^^style_t<D>));
 
 // For each member of lv::style, in member order: its setter and its LV_STYLE_* id.
 template <class D = void>
@@ -185,6 +203,20 @@ inline constexpr std::span<const std::meta::info> style_setters =
 template <class D = void>
 inline constexpr std::span<const std::meta::info> style_ids =
     std::define_static_array(style_column<D>(2));
+
+// The font of a font property that follows an lv::scaled_font. Defined in
+// lv/scaled_font.hpp, which a program that binds a font has included.
+const lv_font_t* bound_font(const void* source);
+
+// Calls a style setter with the value of one member: what it holds, or the font it follows.
+template <class A, class Setter>
+void set_style_value(lv_obj_t* o, const A& a, Setter setter, lv_style_selector_t selector) {
+  if constexpr (std::same_as<A, arg<styled<const lv_font_t*>>>) {
+    if (a.bound != nullptr) return setter(o, bound_font(a.bound), selector);
+  }
+  const auto& [... x] = a.v;
+  setter(o, lower(x)..., selector);
+}
 
 // True when at least one property of the style is set.
 template <class S, class D = void>
@@ -201,10 +233,7 @@ template <class S, class D = void>
 void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector) {
   template for (constexpr auto i : indices<style_members<D>.size()>) {
     constexpr auto m = style_members<D>[i];
-    if (s.[:m:].set) {
-      const auto& [... x] = s.[:m:].v;
-      [:style_setters<D>[i]:](o, lower(x)..., selector);
-    }
+    if (s.[:m:].set) set_style_value(o, s.[:m:], [:style_setters<D>[i]:], selector);
   }
 }
 
@@ -214,13 +243,36 @@ void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector) {
 // tree of the same name would share code. A type built from the root variable and an
 // index path is unique.
 
+// The numbers of the members of lv::style that `s` sets.
+template <class S, class D = void>
+  requires a_style<S, D>
+consteval std::vector<std::size_t> set_style_members(const S& s) {
+  std::vector<std::size_t> out;
+  template for (constexpr auto i : indices<style_members<D>.size()>) {
+    if (s.[:style_members<D>[i]:].set) out.push_back(i);
+  }
+  return out;
+}
+
+// The same for the constant style `Where::get()`. They are found in one constant
+// evaluation and the loops below visit only these: a question to the compiler for
+// each of the 139 members of each style of each node is what made a large tree slow.
+template <class Where, class D = void>
+inline constexpr std::span<const std::size_t> set_in =
+    std::define_static_array(set_style_members<std::remove_cvref_t<decltype(Where::get())>, D>(Where::get()));
+
+// Whether member i of the constant style can live in a const lv_style_t: LVGL has an
+// id for it, and it holds a value. A font that is drawn on the device is not a constant.
+template <class Where, std::size_t I, class D = void>
+inline constexpr bool is_const_member =
+    style_ids<D>[I] != std::meta::info{} && Where::get().[:style_members<D>[I]:].bound == nullptr;
+
 // How many set properties of a constant style can live in a const lv_style_t.
 template <class Where, class D = void>
 inline constexpr std::size_t const_count = [] {
   std::size_t n = 0;
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    constexpr auto m = style_members<D>[i];
-    if (Where::get().[:m:].set && style_ids<D>[i] != std::meta::info{}) ++n;
+  template for (constexpr auto i : set_in<Where, D>) {
+    if constexpr (is_const_member<Where, i, D>) ++n;
   }
   return n;
 }();
@@ -250,11 +302,10 @@ template <class Where, class D = void>
 consteval std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_props() {
   std::array<lv_style_const_prop_t, const_count<Where, D> + 1> out{};
   std::size_t k = 0;
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    constexpr auto m = style_members<D>[i];
-    if constexpr (Where::get().[:m:].set && style_ids<D>[i] != std::meta::info{}) {
+  template for (constexpr auto i : set_in<Where, D>) {
+    if constexpr (is_const_member<Where, i, D>) {
       out[k].prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
-      out[k].value = style_value(lower(std::get<0>(Where::get().[:m:].v)));
+      out[k].value = style_value(Where::get().[:style_members<D>[i]:].v.v0);
       ++k;
     }
   }
@@ -275,22 +326,27 @@ constexpr lv_style_t const_style(const lv_style_const_prop_t* props) {
   return s;
 }
 
+// The constant style of a node: one object for every node whose style has these values.
+template <class Where, class D = void>
+consteval const lv_style_t* shared_const_style() {
+  // Equal values give one object, so two nodes with the same style share their style.
+  const auto* props = std::define_static_array(const_props<Where, D>()).data();
+  return std::define_static_object(const_style(props));
+}
+
 // Adds a constant style to a widget. What LVGL can keep in a const style goes to
-// read-only memory; the few shorthands without a style id (pad_all, size, ...) are
-// set as local styles.
+// read-only memory; the few shorthands without a style id (pad_all, size, ...) and a
+// font that follows an lv::scaled_font are set as local styles.
 template <class Where, class D = void>
 void add_const_style(lv_obj_t* o, lv_style_selector_t selector) {
   if constexpr (const_count<Where, D> > 0) {
-    static constexpr auto props = const_props<Where, D>();
-    static constexpr lv_style_t st = const_style(props.data());
-    lv_obj_add_style(o, &st, selector);
+    constexpr const lv_style_t* st = shared_const_style<Where, D>();
+    lv_obj_add_style(o, st, selector);
   }
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    constexpr auto m = style_members<D>[i];
-    if constexpr (Where::get().[:m:].set && style_ids<D>[i] == std::meta::info{}) {
-      constexpr auto a = Where::get().[:m:];
-      const auto& [... x] = a.v;
-      [:style_setters<D>[i]:](o, lower(x)..., selector);
+  template for (constexpr auto i : set_in<Where, D>) {
+    if constexpr (!is_const_member<Where, i, D>) {
+      constexpr auto a = Where::get().[:style_members<D>[i]:];
+      set_style_value(o, a, [:style_setters<D>[i]:], selector);
     }
   }
 }

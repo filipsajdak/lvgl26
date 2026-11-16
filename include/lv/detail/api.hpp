@@ -8,7 +8,6 @@
 
 #include <lvgl/lvgl.h>
 
-#include <exception>
 #include <meta>
 #include <span>
 #include <string>
@@ -46,12 +45,18 @@ consteval std::vector<std::meta::info> scan_api() {
 // costs more than the linear searches it would save.
 inline constexpr std::span<const std::meta::info> api = std::define_static_array(scan_api());
 
-// The compile error a user sees for a wrong widget or property name.
-struct unknown_name : std::exception {
-  const char* msg;
-  consteval explicit unknown_name(std::string_view m) : msg(std::define_static_string(m)) {}
-  constexpr const char* what() const noexcept override { return msg; }
-};
+// Stops a constant evaluation with a message: the compile error a user sees for a
+// wrong name, id, token or format. It is not an exception, so that the library builds
+// with -fno-exceptions, as microcontroller projects do: GCC refuses the word `throw`
+// there, even in code that only runs at compile time.
+[[noreturn]] consteval void fail(std::string_view message) {
+  __builtin_constexpr_diag(2, "", message);  // 2: an error
+  // Reading through a null pointer is not a constant, which ends the evaluation here:
+  // what follows a failure must not run.
+  const int* nothing = nullptr;
+  const int stop = *nothing;
+  for (;;) static_cast<void>(stop);
+}
 
 // The function called `name`, or a null reflection.
 consteval std::meta::info find(std::string_view name) {
@@ -84,7 +89,7 @@ consteval std::meta::info resolve(std::string_view widget, std::string_view verb
                     str(prop) + "' to " + str(verb) + ". Its own: " +
                     names_after(own) + ".";
   if (widget != "obj") msg += " Every '" + base + "*' property of obj works too.";
-  throw unknown_name(msg);
+  fail(msg);
 }
 
 // lv_<widget>_create.
@@ -99,7 +104,7 @@ consteval std::meta::info resolve_create(std::string_view widget) {
     if (!valid.empty()) valid += ", ";
     valid += id.substr(3, id.size() - 3 - 7);
   }
-  throw unknown_name("lv: there is no widget '" + str(widget) + "'. Valid: " + valid + ".");
+  fail("lv: there is no widget '" + str(widget) + "'. Valid: " + valid + ".");
 }
 
 }  // namespace lv::detail

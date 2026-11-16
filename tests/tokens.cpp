@@ -41,8 +41,7 @@ static_assert(*dark.primitive.angle.tilt == 22.5 && *dark.primitive.angle.quarte
 static_assert(lv::styled<lv::decidegrees>{dark.primitive.angle.tilt}.raw() == 225);
 static_assert(lv::styled<lv::decidegrees>{dark.primitive.angle.quarter}.raw() == 900);
 static_assert(lv::styled<lv::angle>{dark.primitive.angle.quarter}.raw() == 90);
-static_assert(std::get<0>(lv::style({.transform_rotation = dark.primitive.angle.tilt})
-                              .transform_rotation.v).raw() == 225);
+static_assert(lv::style({.transform_rotation = dark.primitive.angle.tilt}).transform_rotation.v.v0 == 225);
 
 // Semantic tokens are aliases of primitives, also across groups.
 static_assert(dark.color.primary->green == dark.primitive.color.blue_500->green);

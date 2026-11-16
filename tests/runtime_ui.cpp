@@ -118,7 +118,7 @@ void styles_and_units(lv::obj screen) {
 }
 
 // What a document must not be able to do.
-void rejects(lv::obj screen) {
+void rejects(lv::obj screen, bool holds_heap) {
   const auto before = lv_obj_get_child_count(screen.raw());
   const auto heap = free_bytes();
   const auto expect = [&](std::string_view doc, lv::load_error error, std::string_view at) {
@@ -263,7 +263,7 @@ void rejects(lv::obj screen) {
     check(lv::view<"arc">{ok->find("speedo").raw()}.get<"value">() == 33);
   }
   ok = {};
-  check(free_bytes() == heap);
+  if (holds_heap) check(free_bytes() == heap);
 }
 
 }  // namespace
@@ -311,7 +311,9 @@ int main() {
 
   same_pixels_as_the_tree(screen);
   styles_and_units(screen);
-  rejects(screen);
+  // The first run allocates a few bytes once, so only the second is held to the heap it began with.
+  rejects(screen, false);
+  rejects(screen, true);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");

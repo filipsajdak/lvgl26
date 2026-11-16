@@ -9,7 +9,7 @@ using namespace get_started;
 constexpr auto ui = lv::group({.style = {.bg_color = tok.screen.background,
                                          .bg_opa = tok.opacity.opaque,
                                          .text_color = tok.screen.text}})[
-    lv::label({.align = LV_ALIGN_CENTER, .text = "Hello world"})];
+    lv::label({.align = "center", .text = "Hello world"})];
 
 }  // namespace
 

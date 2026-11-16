@@ -68,9 +68,14 @@ static_assert(sorts());
 constexpr bool copies() {
   lv::arg<lv::strict<int>> a{7};
   lv::arg<lv::strict<int>> b{a};
-  return b.set && std::get<0>(b.v).raw() == 7;
+  return b.set && b.v.v0 == 7;
 }
 static_assert(copies());
+
+// The members of a generated struct are numbered in decimal: k0 ... k9, k10, k11.
+static_assert(lv::detail::decimal(0) == "0" && lv::detail::decimal(9) == "9");
+static_assert(lv::detail::decimal(10) == "10" && lv::detail::decimal(19) == "19");
+static_assert(lv::detail::decimal(120) == "120");
 
 // A number token for an opacity is a share from 0 to 1, rounded to whole percent.
 constexpr lv::token<double> number(double v) { return {v, lv::detail::from_design_tokens{}}; }
