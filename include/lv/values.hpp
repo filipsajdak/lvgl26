@@ -6,6 +6,7 @@
 #include <lv/config.hpp>
 #include <lv/detail/angle_docs.hpp>
 #include <lv/detail/api.hpp>
+#include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
 #include <lv/units.hpp>
@@ -286,6 +287,12 @@ struct arg {
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...)))
   constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
+
+  // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
+  // The name is the enumerator without what all of them share, in lower case.
+  template <std::size_t... N>
+    requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
+  consteval arg(const char (&... name)[N]) : set(true), v(detail::enumerator_named<Ts>(name)...) {}
 
   template <class T>
   constexpr arg(binding<T> b)

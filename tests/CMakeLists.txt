@@ -53,6 +53,7 @@ lvgl26_test(state_plain)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(animate)
+lvgl26_test(enum_names)
 lvgl26_test(application)
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
@@ -232,6 +233,7 @@ lvgl26_compile_fail(match_not_comparable "no matching function for call to .matc
 lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.value.>")
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
+lvgl26_compile_fail(enumerator_unknown_name "align has no value 'centre'. Its values: default, top_left")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
 lvgl26_compile_fail(frame_without_size "lv::frame<Width, Height>: both must be greater than 0")
 lvgl26_compile_fail(band_without_screen "lv::band<Width, Height, Lines>: the screen must be larger than 0")
@@ -268,9 +270,12 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
 endif()
 
 # The pages in docs/ show only code that these tests have built, and no C names.
+# The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+  # An example names nothing of LVGL's C API.
+  add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
