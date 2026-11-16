@@ -57,6 +57,14 @@ if(LVGL26_JPEG OR LVGL26_BUILD_TESTS)
   target_compile_definitions(lvgl PUBLIC LV_USE_TJPGD=1 LV_USE_FS_MEMFS=1 LV_FS_MEMFS_LETTER=77)
 endif()
 
+# LVGL's default theme costs 2532 bytes of heap on the first display, and lv::display
+# puts a theme of ours on top of it. A program with a complete theme of its own asks for
+# it to go. LVGL then falls back to its simple and its mono theme, so those go too. The
+# widgets have no look except that theme's.
+if(LVGL26_NO_DEFAULT_THEME)
+  target_compile_definitions(lvgl PUBLIC LV_USE_THEME_DEFAULT=0 LV_USE_THEME_SIMPLE=0 LV_USE_THEME_MONO=0)
+endif()
+
 # Any other LVGL setting, as LVGL names it: -DLVGL26_LVGL_DEFINITIONS="LV_USE_LOG=1;LV_COLOR_DEPTH=32".
 set(LVGL26_LVGL_DEFINITIONS "" CACHE STRING "More compile definitions for LVGL, as LVGL names them")
 if(LVGL26_LVGL_DEFINITIONS)
