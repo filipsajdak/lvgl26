@@ -68,7 +68,10 @@ void follows_its_font() {
 // At run time, with a view: the same binding.
 void binds_through_a_view() {
   auto label = lv::screen_active().add<"label">().set({.text = "31"});
-  label.set({.style = {.text_font = lv::bind(odd)}});
+  // Which font is only known when the program runs, so the binding is made then.
+  volatile bool use_title = false;
+  lv::scaled_font& chosen = use_title ? title : odd;
+  label.set({.style = {.text_font = lv::bind(chosen)}});
   check(lv_obj_get_style_text_font(label.raw(), LV_PART_MAIN) == odd.raw());
   lv_obj_delete(label.raw());
 }

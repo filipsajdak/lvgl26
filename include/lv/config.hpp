@@ -13,6 +13,8 @@
 // later, the compiler reports a redefinition of lv::cfg<lv::override>.
 // (The same technique as boost-ext/ut's `cfg<override>`.)
 
+#include <cstddef>
+
 namespace lv {
 
 struct config {
@@ -22,6 +24,10 @@ struct config {
   // Accept lv::state<int> and other plain integers, instead of a named type
   // such as `struct kmh { int value; };`.
   bool raw_integer_state = false;
+
+  // The largest picture, in pixels, that the compiler decodes (see lv/image.hpp).
+  // Decoding costs compile time: about a second for 48 x 48, many for a whole screen.
+  std::size_t compile_time_image_pixels = 128 * 128;
 };
 
 struct override {};

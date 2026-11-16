@@ -28,6 +28,7 @@
 // Making a font costs compile time (about a second for 95 characters at 14 px, five at
 // 48 px). Make each one once, in a constexpr variable, in one file.
 
+#include <lv/detail/embedded.hpp>
 #include <lv/detail/ttf.hpp>
 #include <lv/token_types.hpp>
 #include <lv/units.hpp>
@@ -45,11 +46,6 @@
 namespace lv {
 
 namespace detail {
-
-// A file embedded as an array of unsigned char.
-template <class T>
-concept embedded_bytes = std::is_bounded_array_v<std::remove_cvref_t<T>> &&
-                         std::same_as<std::remove_cv_t<std::remove_extent_t<std::remove_cvref_t<T>>>, unsigned char>;
 
 inline constexpr std::string_view ascii = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 

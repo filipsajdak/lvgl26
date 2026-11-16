@@ -5,6 +5,7 @@
 #include <lv/computed.hpp>
 #include <lv/display.hpp>
 #include <lv/font.hpp>
+#include <lv/image.hpp>
 #include <lv/match.hpp>
 #include <lv/owned.hpp>
 #include <lv/runtime.hpp>

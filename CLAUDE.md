@@ -71,6 +71,12 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   (`detail::find`), and a `static_assert` names the option when they are missing.
 - `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
   draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
+- Code that runs in the compiler is written for its interpreter: look codes up in tables, give a
+  buffer its size once and write through pointers, avoid a call for each byte
+  (`include/lv/detail/png_reader.hpp` needs an eighth of the work of its first form).
+- A large result of constant evaluation is stored with `std::define_static_array`: returning a
+  `std::array` of 200 KB costs several times the decoding. Its data becomes part of a symbol name,
+  and Apple's linker refuses a very long one, so sizes are limited (`compile_time_image_pixels`).
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.
