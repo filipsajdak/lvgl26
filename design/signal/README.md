@@ -1,4 +1,4 @@
-Signal is the look of one family of eight devices: a smart thermostat, a smartwatch, a kitchen appliance, an e-bike display, a machine panel, an EV charger, a medical device and a vehicle instrument cluster. It is made to be drawn by a microcontroller and read at a glance.
+Signal is the look of one family of eight devices. They are a smart thermostat, a smartwatch, a kitchen appliance, an e-bike display, a machine panel, an EV charger, a medical device and a vehicle instrument cluster. It is made to be drawn by a microcontroller and read at a glance.
 
 ## Principles
 
@@ -40,7 +40,7 @@ A state is never colour alone. Each priority has a colour, a number of triangles
 - Numbers and titles are Barlow Condensed (`display`); everything else is Barlow (`text`). Both are under the SIL Open Font Licence, so they may be embedded in a device.
 - `numeral-2xl` (208 px): only the speed of a wide instrument cluster and the one reading of a large outdoor panel.
 - `numeral-xl` (104 px): the one reading of a watch face, a thermostat or a small display. `numeral-l` (72 px): the reading of a tile. `numeral-m` (40 px): a second value.
-- `title` and `label` are set in capitals with wide spacing: `TANK 2 LEVEL`, `ECO`. `body` and `caption` are sentence case.
+- `title` and `label` are set in capitals with wide spacing: `TANK 2 LEVEL`, `ECO`. The spacing is 8 percent of the size, in whole pixels: 2 px for `title`, 1 px for `label`. `body` and `caption` are sentence case.
 - A number always has its unit, in `muted`, one step smaller: `87 KM/H`, `4.8 bar`, `21.5°`.
 - Decimals: write a leading zero (`0.5`), never a trailing one (`5`, not `5.0`), on the medical device above all.
 

@@ -36,12 +36,13 @@ inline constexpr auto hidden = lv::raw(lv::opa::transparent);
 
 // The font of a kind of text. An empty one sets nothing, and the text keeps LVGL's font.
 using font = lv::arg<lv::styled<const lv_font_t*>>;
+using spacing = lv::arg<lv::styled<lv::length>>;
 
 // Signal with the tokens of one of its themes. This is the one description of the look:
 // lv/signal_type.hpp calls it with Signal's fonts. `body` is the font of all text, and
 // `label` the font of the text of a control.
 template <const auto& Tok>
-consteval lv::theme_styles themed(font body = {}, font label = {}) {
+consteval lv::theme_styles themed(font body = {}, font label = {}, spacing label_spacing = {}) {
   return lv::theme({
       // A ring shows progress or a reading: square ends, no knob.
       .arc = {.style = {.arc_color = Tok.color.line, .arc_rounded = false, .arc_width = Tok.stroke.track},
@@ -59,7 +60,8 @@ consteval lv::theme_styles themed(font body = {}, font label = {}) {
                            .radius = Tok.radius._0,
                            .shadow_width = Tok.radius._0,
                            .text_color = Tok.color.on_active,
-                           .text_font = label},
+                           .text_font = label,
+                           .text_letter_space = label_spacing},
                  .style_pressed = {.bg_color = Tok.color.surface_raised,
                                    .color_filter_opa = hidden,
                                    .text_color = Tok.color.reading,

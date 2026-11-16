@@ -80,7 +80,11 @@ inline constexpr lv::typeface numerals{
 inline constexpr auto body_font = type(type_tokens.text.body);
 inline constexpr auto label_font = type(type_tokens.text.label);
 
-inline constexpr lv::theme_styles dark_with_type = detail::themed<dark_tokens>(body_font, label_font);
-inline constexpr lv::theme_styles day_with_type = detail::themed<day_tokens>(body_font, label_font);
+
+// `label` is set with wide spacing: the space between its letters comes from the token too.
+inline constexpr auto label_spacing = lv::detail::part(type_tokens.text.label->letter_spacing);
+
+inline constexpr lv::theme_styles dark_with_type = detail::themed<dark_tokens>(body_font, label_font, label_spacing);
+inline constexpr lv::theme_styles day_with_type = detail::themed<day_tokens>(body_font, label_font, label_spacing);
 
 }  // namespace lv::signal

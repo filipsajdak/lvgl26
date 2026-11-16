@@ -64,7 +64,7 @@ constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the si
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
                                 .size = {320 * px, 240 * px},
                                 .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
-    lv::label({.style = {.text_font = title}, .text = "LIVING ROOM"}),
+    lv::label({.style = lv::style({.text_font = title}) | text.title, .text = "LIVING ROOM"}),  // and its spacing
     lv::label({.style = {.text_font = reading}, .text = "21.5°"}),
     lv::label({.text = "Heating to 22 degrees."}),
     lv::button[lv::label({.text = "HOLD"})]];
@@ -90,6 +90,7 @@ Measured once on one machine, with `-Os` for the flash. The compile time comes o
 | `type` at `numeral-xl`, 104 px | 95 | about 21 s | 123 KB |
 
 - This cost is why the fonts are not in `lv/signal.hpp`. Include `lv/signal_type.hpp` in one file, and make each larger font once.
+- `title` and `label` are capitals with wide spacing. The themes space the text of a button; for a style of your own, merge the token: `lv::style({.text_font = title}) | text.title`.
 - A numeral style with all 95 characters takes six times the flash of `numerals`. Use `type` for it only when the reading has letters.
 - `numeral-2xl` is 208 px, and `numerals` makes it. `type` does not: 95 characters of that size need more compile-time work than lvgl26 allows. The build stops at GCC's `-fconstexpr-ops-limit`.
 - The fonts have no glyph for LVGL's symbols. A widget that draws one, such as the arrow of a drop-down list, shows an empty box in its place.

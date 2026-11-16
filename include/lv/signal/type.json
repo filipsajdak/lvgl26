@@ -52,7 +52,7 @@
         "fontFamily": "{font.display}",
         "fontSize": "24px",
         "fontWeight": 600,
-        "letterSpacing": "0px",
+        "letterSpacing": "2px",
         "lineHeight": 1.1667
       }
     },
@@ -61,7 +61,7 @@
         "fontFamily": "{font.display}",
         "fontSize": "16px",
         "fontWeight": 700,
-        "letterSpacing": "0px",
+        "letterSpacing": "1px",
         "lineHeight": 1.25
       }
     },

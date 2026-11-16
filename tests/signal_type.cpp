@@ -19,14 +19,16 @@ constexpr auto text = lv::signal::type_tokens.text;
 
 // The tokens are Signal's: design/signal/tokens.design.json, "type". `line` is the line
 // height in pixels, which the token holds as a multiple of the size.
-consteval bool is(const lv::token<lv::typography_token>& t, std::string_view family, int size, int weight, int line) {
+consteval bool is(const lv::token<lv::typography_token>& t, std::string_view family, int size, int weight, int line,
+                  int spacing = 0) {
   return t->font_family == family && t->font_size == size * px && t->font_weight == weight &&
-         static_cast<int>(size * t->line_height + 0.5) == line && t->letter_spacing == 0 * px;
+         static_cast<int>(size * t->line_height + 0.5) == line && t->letter_spacing == spacing * px;
 }
 static_assert(*lv::signal::type_tokens.font.display == "Barlow Condensed" && *lv::signal::type_tokens.font.text == "Barlow");
 static_assert(is(text.numeral_2xl, "Barlow Condensed", 208, 700, 176) && is(text.numeral_xl, "Barlow Condensed", 104, 700, 94));
 static_assert(is(text.numeral_l, "Barlow Condensed", 72, 700, 66) && is(text.numeral_m, "Barlow Condensed", 40, 700, 40));
-static_assert(is(text.title, "Barlow Condensed", 24, 600, 28) && is(text.label, "Barlow Condensed", 16, 700, 20));
+// Capitals with wide spacing: 8 percent of the size, in whole pixels.
+static_assert(is(text.title, "Barlow Condensed", 24, 600, 28, 2) && is(text.label, "Barlow Condensed", 16, 700, 20, 1));
 static_assert(is(text.body, "Barlow", 16, 500, 22) && is(text.caption, "Barlow", 13, 500, 18));
 
 static_assert(!lv::signal::dark_with_type.empty() && !lv::signal::day_with_type.empty());
@@ -97,6 +99,10 @@ void sets_text(lv::theme_styles theme, const char* reference) {
   lv_obj_t* button = lv_button_create(box);
   check(font_of(button) == label && font_of(lv_label_create(button)) == label);
   check(font_of(lv_label_create(lv_obj_create(button))) == label);
+  // The text of a button is spaced as `label` says; other text is not.
+  check(lv_obj_get_style_text_letter_space(button, LV_PART_MAIN) == 1);
+  check(lv_obj_get_style_text_letter_space(lv_label_create(button), LV_PART_MAIN) == 1);
+  check(lv_obj_get_style_text_letter_space(lv_label_create(screen), LV_PART_MAIN) == 0);
   // A widget that the theme leaves to LVGL has the font of the screen too.
   check(font_of(lv_checkbox_create(screen)) == body);
   lv_obj_clean(screen);
