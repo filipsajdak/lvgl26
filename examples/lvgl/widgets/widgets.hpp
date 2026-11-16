@@ -125,4 +125,9 @@ void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
 // textarea
 void textarea_placeholder(lv::obj screen);  // lv_example_textarea_placeholder
 
+// image
+void image_inner_align(lv::obj screen);     // lv_example_image_inner_align
+void image_src(lv::obj screen);             // lv_example_image_src
+void image_transformations(lv::obj screen);  // lv_example_image_transformations
+
 }  // namespace widgets
