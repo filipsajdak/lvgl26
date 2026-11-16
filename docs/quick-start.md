@@ -65,7 +65,11 @@ The whole file is [examples/quick_start/main.cpp](../examples/quick_start/main.c
 
 ## Build and run
 
-You need GCC 16, CMake 3.30 and Ninja. On macOS: `brew install gcc cmake ninja`. Anywhere else, the container `gcc:16` with `apt-get install -y cmake ninja-build`.
+You need GCC 16, CMake 3.30 and Ninja. There are three ways to get them.
+
+- **The template.** [lvgl26-template](https://github.com/filipsajdak/lvgl26-template) on GitHub holds this program, set up for a dev container and for CI. Use it as a template and open it in a dev container.
+- **The image.** `ghcr.io/filipsajdak/lvgl26-toolchain:16` has GCC 16.2, CMake, Ninja, ccache and git, for amd64 and arm64: `docker run --rm -it -v "$PWD":/w -w /w ghcr.io/filipsajdak/lvgl26-toolchain:16 bash`.
+- **macOS.** `brew install gcc cmake ninja`.
 
 Put this `CMakeLists.txt` next to `main.cpp`:
 
