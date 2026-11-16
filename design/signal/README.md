@@ -1,4 +1,4 @@
-Signal is the look of one family of eight devices. They are a smart thermostat, a smartwatch, a kitchen appliance, an e-bike display, a machine panel, an EV charger, a medical device and a vehicle instrument cluster. It is made to be drawn by a microcontroller and read at a glance.
+Signal is the look of one family of eight devices. They are a thermostat, a smartwatch, a kitchen appliance, an e-bike display, a machine panel, an EV charger, a medical device and an instrument cluster. It is made to be drawn by a microcontroller and read at a glance.
 
 ## Principles
 

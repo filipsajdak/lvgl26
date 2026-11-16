@@ -11,6 +11,7 @@
 //   }
 //
 //   lv::spawn(count_clicks(button));
+//   lv::spawn(blink(lamp), panel);     // ends with the panel, though it never waits for it
 //
 // What can be awaited:
 //   view.next().clicked      one event of a widget (any LVGL event, by name)
@@ -20,9 +21,10 @@
 //   lv::animate(...)         an animation of a widget's property: see lv/animate.hpp
 //   lv::first(...)           whichever of several comes first; see below
 //
-// A deleted widget cancels the task. Once a task has waited for an event of a
-// widget, it is tied to that widget: when the widget is deleted, the task ends,
-// whatever it is doing at that moment. Its frame is destroyed and the destructors
+// A deleted widget cancels the task. A task started with lv::spawn(work, owner)
+// belongs to `owner` from the start. Any task is also tied to a widget once it has
+// waited for an event of it: when the widget is deleted, the task ends, whatever it
+// is doing at that moment. Its frame is destroyed and the destructors
 // of its local objects run. So the loop above needs no exit condition, and a task
 // never wakes up to a widget that is gone.
 // To react to the deletion instead, wait for it: view.next().gone.
@@ -41,6 +43,7 @@
 
 #include <array>
 #include <coroutine>
+#include <cstring>
 #include <exception>
 #include <string>
 #include <string_view>
@@ -282,6 +285,7 @@ class [[nodiscard]] task {
   }
 
   friend bool spawn(task<void> work) noexcept;
+  friend bool spawn(task<void> work, obj owner);
 };
 
 namespace detail {
@@ -313,6 +317,26 @@ inline bool spawn(task<void> work) noexcept {
   if (!work) return false;
   const auto frame = std::exchange(work.frame_, {});
   frame.promise().detached = true;
+  detail::resume_task(&frame.promise(), frame);
+  return true;
+}
+
+// Starts a task that belongs to a widget: when `owner` is deleted, the task ends,
+// whatever it is doing, and the destructors of its local objects run. Use it for work
+// that goes on while a part of the screen exists and that may never wait for one of
+// that part's events: a task that only sleeps, or only waits for a state.
+// Returns false if the task is empty, or if LVGL has no memory to tie it to the widget;
+// the task has not run then.
+inline bool spawn(task<void> work, obj owner) {
+  // A check in the body: GCC 16.2 reports a mismatch for pre() on a friend of a class template.
+  contract_assert(owner.raw() != nullptr);
+  if (!work) return false;
+  const auto frame = std::exchange(work.frame_, {});
+  frame.promise().detached = true;
+  if (detail::watch(&frame.promise(), owner.raw(), true) == nullptr) {
+    frame.destroy();
+    return false;
+  }
   detail::resume_task(&frame.promise(), frame);
   return true;
 }
@@ -482,6 +506,7 @@ struct change_source {
   void* context = nullptr;
   lv_observer_t* observer = nullptr;
   bool armed = false;
+  alignas(T) unsigned char before[sizeof(T)]{};  // the value when the wait began
 
   explicit change_source(const state<T, O>* s) : source(s) {}
   change_source(change_source&&) = default;
@@ -494,6 +519,8 @@ struct change_source {
     // LVGL calls a new observer once at once; only later calls are changes.
     observer = lv_subject_add_observer(source->raw(), &changed_cb, this);
     armed = observer != nullptr;
+    const T now = source->get();
+    std::memcpy(before, &now, sizeof(T));
     return armed;
   }
 
@@ -517,6 +544,11 @@ struct change_source {
   static void changed_cb(lv_observer_t* o, lv_subject_t*) {
     auto* self = static_cast<change_source*>(lv_observer_get_user_data(o));
     if (!self->armed) return;
+    // A task that waits again inside a notification adds its observer while LVGL
+    // still goes through the list, and LVGL calls it in the same round. That call
+    // brings no new value: without this check a loop of waits would never end.
+    const T now = self->source->get();
+    if (std::memcmp(self->before, &now, sizeof(T)) == 0) return;
     self->disarm();
     self->done(self->context);
   }
