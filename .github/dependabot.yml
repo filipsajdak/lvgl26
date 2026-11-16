@@ -1,0 +1,15 @@
+# A pinned dependency does not move by itself. This asks for a pull request when a new
+# version of an action or of the base image of the CI containers is out.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directories:
+      - /.github/ci-image
+      - /.github/ci-image/arm
+      - /.github/ci-image/editor
+    schedule:
+      interval: weekly

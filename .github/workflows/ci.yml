@@ -46,7 +46,7 @@ jobs:
           - host-v96-asan      # AddressSanitizer + UndefinedBehaviorSanitizer
           - host-v96-analyze   # GCC static analyzer: what it reports is a build error
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
           cache-key: ${{ matrix.preset }}
@@ -82,7 +82,7 @@ jobs:
         preset: [host-v96, host-v10]
         part: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
       - name: Test
@@ -103,7 +103,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --cap-add SYS_PTRACE --security-opt seccomp=unconfined
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-tsan
@@ -143,7 +143,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-editor
@@ -164,7 +164,7 @@ jobs:
         run: ctest --preset host-v96 -R '^editor_' -j "$(nproc)" --output-on-failure
       - name: The stubs, if a test failed
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: editor-stubs
           path: |
@@ -187,7 +187,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
           cache-key: host-v96-coverage
@@ -205,8 +205,10 @@ jobs:
   # feedback. One minute here, half an hour every night; ctest replays the corpus above.
   fuzz-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build the fuzz target
         run: |
           clang++ -std=c++23 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \

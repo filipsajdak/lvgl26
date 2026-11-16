@@ -36,7 +36,7 @@ jobs:
           - host-v10-asan      # AddressSanitizer + UndefinedBehaviorSanitizer on the v10 pin
           - host-v96-tsan      # ThreadSanitizer, every test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
           cache-key: ${{ matrix.preset }}
@@ -57,8 +57,10 @@ jobs:
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build the fuzz target
         run: |
           clang++ -std=c++23 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
@@ -67,7 +69,7 @@ jobs:
         run: |
           mkdir -p new_corpus
           ./json_reader new_corpus fuzz/corpus/json -max_total_time=1800 -max_len=4096
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: fuzz-json-crash
@@ -99,7 +101,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build the slice for Cortex-M4 and run it in QEMU
         shell: bash
         run: |
