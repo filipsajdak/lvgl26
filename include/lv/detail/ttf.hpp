@@ -300,19 +300,12 @@ consteval pair_answer pair_format1(bytes d, std::size_t t, int first, std::uint3
   return {false, 0};
 }
 
-// Pairs given by the class of each glyph: every pair has an entry.
-consteval pair_answer pair_format2(bytes d, std::size_t t, std::uint32_t left, std::uint32_t right) {
+// Pairs given by the class of each glyph: every pair has an entry. `first_class` and
+// `second_class` are the classes of the two glyphs in this subtable.
+consteval pair_answer pair_format2(bytes d, std::size_t t, std::uint32_t first_class, std::uint32_t second_class) {
   const auto format1 = u16(d, t + 4), format2 = u16(d, t + 6);
-  const auto c1 = class_of(d, t + u16(d, t + 8), left), c2 = class_of(d, t + u16(d, t + 10), right);
   const std::size_t size = 2 * (bits(format1) + bits(format2));
-  return {true, x_advance(d, t + 16 + size * (c1 * u16(d, t + 14) + c2), format1)};
-}
-
-consteval pair_answer pair_in(bytes d, std::size_t t, std::uint32_t left, std::uint32_t right) {
-  const int first = covered(d, t + u16(d, t + 2), left);
-  if (first < 0) return {false, 0};
-  if (u16(d, t) == 1) return pair_format1(d, t, first, right);
-  return u16(d, t) == 2 ? pair_format2(d, t, left, right) : pair_answer{false, 0};
+  return {true, x_advance(d, t + 16 + size * (first_class * u16(d, t + 14) + second_class), format1)};
 }
 
 // The pair adjustment subtables of one lookup. A lookup of type 9 wraps another one.
@@ -342,12 +335,64 @@ consteval std::vector<std::size_t> pair_subtables(const face& f) {
   return out;
 }
 
-// How much closer or further apart two glyphs stand than their advances say, in
-// font units. The first subtable that has a say decides.
-consteval int kerning(const face& f, const std::vector<std::size_t>& subtables, std::uint32_t left, std::uint32_t right) {
-  for (const std::size_t t : subtables)
-    if (const auto answer = pair_in(f.d, t, left, right); answer.applies) return answer.units;
-  return 0;
+// A pair adjustment subtable, and what it says about each glyph of a font as the second
+// glyph of a pair. A font of 95 characters has 9025 pairs. Whatever is true of one
+// glyph is therefore read once for the font, and not once for every pair.
+struct pair_table {
+  std::size_t at;
+  std::vector<std::uint32_t> second_class;  // format 2: the class of each glyph of the font
+};
+
+// The class of each of `glyphs` as the second glyph of a pair. Only format 2 has classes.
+consteval std::vector<std::uint32_t> second_classes(bytes d, std::size_t t, const std::vector<std::uint32_t>& glyphs) {
+  std::vector<std::uint32_t> out;
+  if (u16(d, t) != 2) return out;
+  for (const auto g : glyphs) out.push_back(class_of(d, t + u16(d, t + 10), g));
+  return out;
+}
+
+// The kerning subtables of the font, read for the glyphs of one font made from it.
+consteval std::vector<pair_table> pair_tables(const face& f, const std::vector<std::uint32_t>& glyphs) {
+  std::vector<pair_table> out;
+  for (const std::size_t t : pair_subtables(f)) out.push_back({t, second_classes(f.d, t, glyphs)});
+  return out;
+}
+
+// A subtable that lists its pairs: what it says about `first`, a place in its coverage,
+// with each of `glyphs`. An answer that is there already stays.
+consteval void add_listed(bytes d, std::size_t t, int first, const std::vector<std::uint32_t>& glyphs,
+                          std::vector<pair_answer>& row) {
+  for (std::size_t r = 0; r < row.size(); ++r)
+    if (!row[r].applies) row[r] = pair_format1(d, t, first, glyphs[r]);
+}
+
+// A subtable with classes: what it says about a first glyph of `first_class` with each
+// glyph of the font. An answer that is there already stays.
+consteval void add_classed(bytes d, const pair_table& table, std::uint32_t first_class, std::vector<pair_answer>& row) {
+  for (std::size_t r = 0; r < row.size(); ++r)
+    if (!row[r].applies) row[r] = pair_format2(d, table.at, first_class, table.second_class[r]);
+}
+
+// Adds what one subtable says about the first glyph `left` with each of `glyphs`. The
+// first subtable that has a say decides, so the subtables are asked in their order.
+consteval void add_answers(bytes d, const pair_table& table, std::uint32_t left, const std::vector<std::uint32_t>& glyphs,
+                           std::vector<pair_answer>& row) {
+  const std::size_t t = table.at;
+  const int first = covered(d, t + u16(d, t + 2), left);
+  if (first < 0) return;
+  if (u16(d, t) == 1) add_listed(d, t, first, glyphs, row);
+  if (u16(d, t) == 2) add_classed(d, table, class_of(d, t + u16(d, t + 8), left), row);
+}
+
+// How much closer or further apart `left` and each of `glyphs` stand than the advance
+// of `left` says, in font units.
+consteval std::vector<int> kerning_row(const face& f, const std::vector<pair_table>& tables, std::uint32_t left,
+                                       const std::vector<std::uint32_t>& glyphs) {
+  std::vector<pair_answer> row(glyphs.size(), pair_answer{false, 0});
+  for (const auto& table : tables) add_answers(f.d, table, left, glyphs, row);
+  std::vector<int> units;
+  for (const auto& answer : row) units.push_back(answer.units);
+  return units;
 }
 
 }  // namespace lv::detail::ttf
