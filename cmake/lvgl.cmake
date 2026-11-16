@@ -12,8 +12,18 @@ set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
 set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CONFIG_LV_USE_THORVG OFF CACHE BOOL "" FORCE)
 
+# The pinned release is checked against the hash of its archive. Another tag or a sha is
+# the user's choice and has no hash here.
+set(LVGL26_LVGL_V960_SHA256 "b20ee3acc1bba13c62d854f9ebd62e4c51e0b443b1e0225892e86442defa84df")
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")
+  set(LVGL26_LVGL_HASH URL_HASH SHA256=${LVGL26_LVGL_V960_SHA256})
+else()
+  set(LVGL26_LVGL_HASH "")
+endif()
+
 FetchContent_Declare(lvgl
   URL "https://github.com/lvgl/lvgl/archive/${LVGL26_LVGL_REF}.tar.gz"
+  ${LVGL26_LVGL_HASH}
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   EXCLUDE_FROM_ALL)
 FetchContent_MakeAvailable(lvgl)
@@ -82,6 +92,7 @@ if(LVGL26_UNITS OR LVGL26_BUILD_TESTS)
   set(MP_UNITS_BUILD_INSTALL OFF CACHE BOOL "" FORCE)
   FetchContent_Declare(mp-units
     URL "https://github.com/mpusz/mp-units/archive/refs/tags/v2.5.0.tar.gz"
+    URL_HASH SHA256=a6bd48bee699f11f0ed5b04b8c5006d15f76e6d898e058db3880554d2e47a400
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SOURCE_SUBDIR src
     EXCLUDE_FROM_ALL
