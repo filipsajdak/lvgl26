@@ -10,6 +10,7 @@
 #include <lv/mcp.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
+#include <lv/signal_type.hpp>
 #include <lv/ui_scheduler.hpp>
 
 #include <cstdio>
