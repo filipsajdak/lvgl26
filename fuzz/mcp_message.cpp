@@ -4,8 +4,8 @@
 // it reads one input file, which is how AFL++ drives it (fuzz/afl.sh mcp_message).
 //
 // The input is a session: one message per line. Whatever the lines are, every
-// answer must be one line of well-formed JSON with "jsonrpc" in it, and nothing may
-// crash or trip a sanitizer.
+// answer must be one line of well-formed JSON in well-formed UTF-8 with "jsonrpc" in
+// it, and nothing may crash or trip a sanitizer.
 //
 // Files: every line goes to two servers. One is as a host gets it by default and
 // may write no files. The other may make screenshots in a directory made for this
@@ -85,6 +85,7 @@ void answer(server& agent, std::string_view message) {
   const std::string reply = agent.handle(message);
   if (reply.empty()) return;  // a notification
   require(reply.find('\n') == std::string::npos);
+  require(lv::json::detail::well_formed(reply));
   const auto parsed = lv::json::value::parse(reply);
   require(parsed.has_value());
   require((*parsed)["jsonrpc"].string() == "2.0");

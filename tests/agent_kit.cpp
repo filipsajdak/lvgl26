@@ -77,6 +77,57 @@ void json_text() {
   check(text == "-9223372036854775807");
 }
 
+// The writer passes each well-formed UTF-8 character as it is and writes U+FFFD for
+// each byte that is no part of one: the bounds of every range of table 3-7, from both sides.
+void the_writer_writes_only_well_formed_utf8() {
+  const auto written = [](std::string_view bytes) {
+    std::string text;
+    auto sink = [&](std::string_view piece) { text += piece; };
+    lv::json::write_string(sink, std::string{bytes});
+    return text.substr(1, text.size() - 2);
+  };
+  const auto replaced = [](std::size_t bytes) {
+    std::string text;
+    for (std::size_t i = 0; i < bytes; ++i) text += "\xef\xbf\xbd";
+    return text;
+  };
+  for (const char* character :
+       {"\x7f", "\xc2\x80", "\xdf\xbf", "\xe0\xa0\x80", "\xe0\xbf\xbf", "\xe1\x80\x80", "\xec\xbf\xbf",
+        "\xed\x80\x80", "\xed\x9f\xbf", "\xee\x80\x80", "\xef\xbf\xbf", "\xf0\x90\x80\x80", "\xf0\xbf\xbf\xbf",
+        "\xf1\x80\x80\x80", "\xf3\xbf\xbf\xbf", "\xf4\x80\x80\x80", "\xf4\x8f\xbf\xbf", "\xf0\x9f\x98\x80"}) {
+    check(written(character) == character);
+    check(lv::json::detail::well_formed(std::string{character}));
+  }
+  for (const char* broken :
+       {"\x80", "\xbf", "\xc0\x80", "\xc1\xbf", "\xe0\x9f\xbf", "\xe0\xc0\x80", "\xed\xa0\x80", "\xed\xbf\xbf",
+        "\xf0\x8f\xbf\xbf", "\xf0\xc0\x80\x80", "\xf4\x90\x80\x80", "\xf5\x80\x80\x80", "\xff",
+        "\xc2\xc0", "\xe1\x80\xc0", "\xf1\x80\x80\xc0", "\xf1\x80\xc0\x80"}) {
+    check(written(broken) == replaced(std::strlen(broken)));
+    check(!lv::json::detail::well_formed(std::string{broken}));
+  }
+  // A character cut short at the end, and one cut by an ASCII byte.
+  check(written(std::string{"a\xc3"}) == "a" + replaced(1));
+  check(written(std::string{"\xe2\x82"}) == replaced(2));
+  check(written(std::string{"\xf0\x9f\x98"}) == replaced(3));
+  check(written(std::string{"\xc2\x7f"}) == replaced(1) + "\x7f");
+  check(written(std::string{"\xe1\x7f\x80"}) == replaced(1) + "\x7f" + replaced(1));
+  check(written(std::string{"\xf4\x7f\x80\x80"}) == replaced(1) + "\x7f" + replaced(2));
+  check(written(std::string{"\xf1\x80\x80\"z"}) == replaced(3) + "\\\"z");
+  check(!lv::json::detail::well_formed(std::string{"ok\xe2\x82"}));
+  check(lv::json::detail::well_formed(std::string{}) && lv::json::detail::well_formed(std::string{"ok\xe2\x82\xac"}));
+
+  // A cut steps back to the start of the character it would split.
+  using lv::json::detail::utf8_prefix;
+  const std::string euro = "ab\xe2\x82\xac";
+  check(utf8_prefix(euro, 2) == "ab" && utf8_prefix(euro, 3) == "ab" && utf8_prefix(euro, 4) == "ab");
+  check(utf8_prefix(euro, 5) == euro && utf8_prefix(euro, 9) == euro && utf8_prefix(euro, 0).empty());
+  const std::string emoji = "a\xf0\x9f\x98\x80z";
+  check(utf8_prefix(emoji, 4) == "a" && utf8_prefix(emoji, 5) == "a\xf0\x9f\x98\x80");
+  // No further than one character reaches, whatever the bytes are.
+  const std::string continuations(8, '\x80');
+  check(utf8_prefix(continuations, 4).size() == 1 && utf8_prefix(continuations, 3).empty());
+}
+
 void tree_dump(lv::obj screen) {
   auto loaded = ui::load(R"({"type": "column", "id": "root", "props": {"size": [200, 100]}, "children": [
       {"type": "label", "id": "title", "props": {"text": "say \"hi\""}},
@@ -528,6 +579,34 @@ void refuses(lv::obj screen) {
   check(!has(long_error, std::string(199, 'x')));
 }
 
+constexpr std::string_view replacement = "\xef\xbf\xbd";  // U+FFFD in UTF-8
+
+// A strict JSON client rejects a reply that is not UTF-8, so text from the client
+// goes back well-formed: a character intact, a byte that is no character replaced.
+void replies_are_well_formed_utf8(lv::obj screen) {
+  server agent{screen};
+  const auto message_of = [&](std::string_view reply) {
+    return std::string{lv::json::value{reply}["error"]["message"].string()};
+  };
+  // A valid emoji in a tool name echoes intact; an invalid byte becomes the replacement.
+  const auto emoji = agent.handle(call("4", "\xf0\x9f\x98\x80", "{}"));
+  check(one_json_line(emoji) && message_of(emoji) == "Unknown tool: \xf0\x9f\x98\x80");
+  const auto broken = agent.handle(call("4", "x\xff\xc3", "{}"));
+  check(one_json_line(broken) &&
+        message_of(broken) == "Unknown tool: x" + std::string{replacement} + std::string{replacement});
+  // An id goes back as written, so one that is not UTF-8 is refused.
+  const auto bad_id = agent.handle("{\"jsonrpc\":\"2.0\",\"id\":\"a\xff\",\"method\":\"ping\"}");
+  check(one_json_line(bad_id) && lv::json::value{bad_id}["error"]["code"].number() == -32600);
+  check(lv::json::value{bad_id}["id"].text() == "null" && !has(bad_id, "\xff"));
+  // An excerpt is cut before a character, not inside it: here 197 x and a euro sign
+  // that would straddle the cut.
+  const auto cut = agent.handle(call("5", "load_document",
+      R"({"document": {"type": "label", "props": {"text": [")" + std::string(197, 'x') +
+          "\xe2\x82\xac" + std::string(300, 'y') + "\"]}}}"));
+  check(one_json_line(cut) && has(cut, R"(bad_value: [\")" + std::string(197, 'x') + "\"}"));
+  check(!has(cut, "\xe2") && !has(cut, replacement));
+}
+
 // The loop over a stream: one answer per request, none for the rest.
 void lines() {
   std::FILE* in = std::tmpfile();
@@ -669,6 +748,7 @@ int main(int argc, char** argv) {
   auto screen = lv::screen_active();
 
   json_text();
+  the_writer_writes_only_well_formed_utf8();
   values();
   base64();
   tree_dump(screen);
@@ -677,6 +757,7 @@ int main(int argc, char** argv) {
   agent_changes_the_screen(screen, dir);
   requests_with_their_own_metadata(screen);
   refuses(screen);
+  replies_are_well_formed_utf8(screen);
   lines();
   a_line_over_the_limit_is_refused_and_the_session_goes_on();
   the_line_reader_keeps_at_most_the_limit();

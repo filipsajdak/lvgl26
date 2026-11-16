@@ -173,10 +173,12 @@ struct request {
   json::value params;
 };
 
-// An id is a number, or a string that can be sent back on one line.
+// An id is a number, or a string that can be sent back as written: on one line, and
+// well-formed UTF-8.
 inline bool usable_id(json::value id) {
   if (id.is(json::kind::number)) return true;
-  return id.is(json::kind::string) && !has_control_character(id.text());
+  return id.is(json::kind::string) && !has_control_character(id.text()) &&
+         json::detail::well_formed(id.text());
 }
 
 // Reads a message. The error is the response to send.
@@ -311,11 +313,15 @@ inline std::string image_result(std::span<const std::uint8_t> png) {
   return out;
 }
 
+// How many bytes of a refused document a failure shows: enough to find the place,
+// little enough to keep a long document out of the agent's context.
+inline constexpr std::size_t failure_excerpt = 200;
+
 // A refused document or patch, as a result the agent can act on.
 inline std::string failure(const load_failure& f) {
   std::string text{name_of(f.error)};
   text += ": ";
-  text += f.at.substr(0, 200);
+  text += json::detail::utf8_prefix(f.at, failure_excerpt);
   return text_result(text, true);
 }
 
