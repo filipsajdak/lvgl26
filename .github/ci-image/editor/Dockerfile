@@ -8,7 +8,7 @@
 #
 # The main image stays without Clang: it is several hundred megabytes that only this
 # job uses.
-FROM gcc:16
+FROM gcc:16@sha256:5c2f83335c97e233c80d2bc754bd5c46b2d9c32f236a765a4ac40a59f216c064
 
 ARG CLANG=21
 RUN apt-get update \
