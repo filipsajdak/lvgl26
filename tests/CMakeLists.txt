@@ -371,6 +371,10 @@ endif()
 # committed file must be what the program prints.
 add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
 target_link_libraries(lv_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# Not for the analyzer: this file is one long constant evaluation over every widget, and
+# the analyzer on top of it needs more memory than a CI machine has. What runs is a loop
+# that prints. A source file's options come last, after -fanalyzer.
+set_source_files_properties(${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp PROPERTIES COMPILE_OPTIONS -fno-analyzer)
 # The v10 pin is a commit, which is no name for a file.
 if(LVGL26_LVGL_REF MATCHES "^v[0-9.]+$")
   set(LVGL26_REFERENCE_FILE lvgl-${LVGL26_LVGL_REF}.json)
