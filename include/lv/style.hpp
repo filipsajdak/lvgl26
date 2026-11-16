@@ -54,8 +54,8 @@ consteval std::meta::info style_unit(std::string_view prop) {
 
 // The C++ type of a style value. All style setters call their parameter `value`,
 // so the unit comes from the property name alone. Design values (colors, lengths,
-// opacities, times and numbers) are wrapped in styled<>, which asks for a design
-// token. Enums, flags and pointers are structure, not design, and stay plain.
+// opacities, times, numbers and fonts) are wrapped in styled<>, which asks for a design
+// token. Enums, flags and other pointers are structure, not design, and stay plain.
 // An angle is decidegrees when the setter's doc comment says tenths of a degree
 // (see lv/detail/angle_docs.hpp); D only delays reading the comments.
 template <class D = void>
@@ -67,6 +67,7 @@ consteval std::meta::info style_value_type(std::meta::info setter, std::string_v
 
   if (t == std::meta::dealias(^^lv_color_t)) return design(^^lv_color_t);
   if (t == ^^bool) return ^^strict<bool>;
+  if (t == std::meta::dealias(^^const lv_font_t*)) return design(^^const lv_font_t*);  // see lv/font.hpp
   if (!std::meta::is_arithmetic_type(t)) return raw;
   if (is_angle_name(prop, {})) return design(angle_type_of<D>(setter));
   if (const auto unit = style_unit(prop); unit != std::meta::info{}) return design(unit);

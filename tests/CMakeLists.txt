@@ -1,6 +1,8 @@
 # Where #embed finds the test data.
 add_library(lvgl26_test_data INTERFACE)
 target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/data)
+# The Barlow files of the site are the test fonts: `#embed "fonts/Barlow-Medium.ttf"`.
+target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
 # The compile-fail tests that use quantities need mp-units too.
 target_link_libraries(lvgl26_test_data INTERFACE mp-units::mp-units)
 
@@ -133,6 +135,11 @@ target_link_libraries(examples_get_started PRIVATE
   lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_get_started)
 add_test(NAME examples_get_started COMMAND examples_get_started)
 
+add_executable(font font.cpp)
+target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
+target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
+
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
@@ -173,6 +180,17 @@ lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example to
 lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
 lvgl26_compile_fail(theme_needs_token "It takes a design token .*You gave lv::length")
 lvgl26_compile_fail(theme_not_a_value "a theme cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
+lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
+lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
+lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
+lvgl26_compile_fail(font_lacks_table "this font file lacks a table that lvgl26 reads")
+lvgl26_compile_fail(font_size_out_of_range "a font size is from 4 px to 255 px")
+lvgl26_compile_fail(font_no_glyph "the font file has no glyph for the character U\\+0416")
+lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LVGL's font format holds")
+lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
+lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
+lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
+lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
 lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
@@ -304,6 +322,21 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
                      ${PROJECT_SOURCE_DIR}/docs/media/theme-${look}.png)
     set_tests_properties(example_theme_picture_${look} PROPERTIES FIXTURES_REQUIRED example_theme_pictures)
   endforeach()
+endif()
+
+# The example of docs/fonts.md. Its picture is the one on the page.
+add_executable(example_fonts ${PROJECT_SOURCE_DIR}/examples/fonts/main.cpp)
+target_compile_options(example_fonts PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/fonts
+                                             --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_fonts PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_out)
+add_test(NAME example_fonts COMMAND example_fonts WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_out)
+set_tests_properties(example_fonts PROPERTIES FIXTURES_SETUP example_fonts_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_fonts_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_out/fonts.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/fonts.png)
+  set_tests_properties(example_fonts_picture PROPERTIES FIXTURES_REQUIRED example_fonts_picture)
 endif()
 
 # The pages in docs/ show only code that these tests have built, and no C names.

@@ -26,6 +26,9 @@ target_include_directories(lvgl26 INTERFACE include)
 target_compile_features(lvgl26 INTERFACE cxx_std_26)
 # Designated initializers leave most members of a props struct out on purpose.
 target_compile_options(lvgl26 INTERFACE -freflection -Wno-missing-field-initializers)
+# The compiler draws fonts (include/lv/font.hpp). GCC stops a constant evaluation after 33
+# million operations by default; a 48 px font of 95 characters needs about 100 million.
+target_compile_options(lvgl26 INTERFACE -fconstexpr-ops-limit=1000000000)
 # lvgl26 reads LVGL's headers as text with #embed (see include/lv/detail/angle_docs.hpp).
 # GCC looks for an embedded file in its embed directories, not in the include path.
 target_compile_options(lvgl26 INTERFACE

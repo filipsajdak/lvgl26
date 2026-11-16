@@ -1,0 +1,144 @@
+// lv::font and lv::typeface: the compiler makes a constant font from a TrueType file.
+//
+//   font <reference.png>
+
+#include <lv/lv.hpp>
+
+#include "check.hpp"
+
+#include <cstdint>
+#include <cstdio>
+
+namespace {
+
+using namespace lv::units;
+
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr unsigned char condensed_ttf[] = {
+#embed "fonts/BarlowCondensed-SemiBold.ttf"
+};
+// Two fonts from LVGL's own sources, for the forms of a file that Barlow does not have:
+// Ubuntu finds its glyphs through four-byte offsets, and Montserrat wraps its kerning
+// tables in lookups of type 9.
+constexpr unsigned char ubuntu_ttf[] = {
+#embed "examples/libs/tiny_ttf/Ubuntu-Medium.ttf"
+};
+constexpr unsigned char montserrat_ttf[] = {
+#embed "scripts/generators/built_in_font/Montserrat-Medium.ttf"
+};
+constexpr char tokens_json[] = {
+#embed "tokens.json"
+    , 0};
+constexpr auto tok = lv::tokens<tokens_json>;
+
+// The test tokens call their family Montserrat; here Barlow stands in for it.
+constexpr auto type = lv::typeface({{"Montserrat", 400, barlow_ttf}, {"Montserrat", 700, condensed_ttf}});
+
+constexpr auto body = type(tok.text.body);    // 14 px, weight 400
+constexpr auto title = type(tok.text.title);  // 20 px, weight 700
+constexpr const lv_font_t* odd = lv::font<barlow_ttf>(32 * px);
+constexpr const lv_font_t* digits = lv::font<condensed_ttf>(64 * px, "0123456789:");
+constexpr const lv_font_t* two = lv::font<barlow_ttf>(16 * px, "\xC2\xB0""C9");  // the degree sign, C and 9: not in a row
+
+constexpr const lv_font_t* ubuntu = lv::font<ubuntu_ttf>(24 * px, "AVTo.");
+constexpr const lv_font_t* montserrat = lv::font<montserrat_ttf>(24 * px, "AVTo.");
+
+// The same file, size and characters are one font in memory. Checked at run time: under
+// a sanitizer GCC 16.2 does not compare two static addresses in a constant expression.
+constexpr const lv_font_t* title_again = lv::font<condensed_ttf>(20 * px);
+
+// Barlow: 1000 units to the em, ascender 1000, descender -200.
+static_assert(odd->line_height == 39 && odd->base_line == 7);
+static_assert((*body)->line_height == 17 && (*body)->base_line == 3);
+
+static_assert(lv::detail::characters_of("ba\xC2\xB0""a") == std::vector<std::uint32_t>{'a', 'b', 0xb0});
+static_assert(lv::detail::characters_of("\xE2\x82\xAC") == std::vector<std::uint32_t>{0x20ac});
+static_assert(lv::detail::characters_of("\xF0\x9F\x98\x80") == std::vector<std::uint32_t>{0x1f600});
+static_assert(lv::detail::hex(0xb0) == "00B0" && lv::detail::hex(0x1f600) == "1F600");
+
+constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
+    lv::label({.id = "body", .style = {.text_font = body}, .text = "The quick brown fox, AVATAR To."}),
+    lv::label({.id = "title", .style = {.text_font = title}, .text = "Speed 120 km/h"}),
+    lv::label({.id = "odd", .style = {.text_font = lv::raw(odd)}, .text = "Reset {}[]@#"}),
+    lv::label({.id = "digits", .style = {.text_font = lv::raw(digits)}, .text = "12:45"})];
+
+struct glyph {
+  bool found;
+  lv_font_glyph_dsc_t dsc;
+};
+
+glyph glyph_of(const lv_font_t* font, std::uint32_t character, std::uint32_t next = 0) {
+  glyph g{};
+  g.found = lv_font_get_glyph_dsc(font, &g.dsc, character, next);
+  return g;
+}
+
+void holds_its_characters() {
+  check(*title == title_again && *body != *title);
+  check(glyph_of(odd, 'A').found && glyph_of(odd, '~').found && glyph_of(odd, ' ').found);
+  check(glyph_of(odd, ' ').dsc.box_w == 0 && glyph_of(odd, ' ').dsc.adv_w > 0);
+  check(glyph_of(digits, '0').found && glyph_of(digits, ':').found);
+  check(glyph_of(digits, 'A').dsc.is_placeholder);  // not in this font
+  check(glyph_of(two, 0xb0).found && glyph_of(two, 'C').found && glyph_of(two, '9').found);
+  check(glyph_of(two, 'A').dsc.is_placeholder && glyph_of(two, ':').dsc.is_placeholder);
+  check(!glyph_of(two, 'C').dsc.is_placeholder);
+}
+
+void measures_as_the_file_says() {
+  // Barlow Medium at 32 px: A advances 20 px and stands 23 px high on the baseline.
+  const auto a = glyph_of(odd, 'A').dsc;
+  check(a.adv_w == 20 && a.box_w == 20);
+  check(a.box_h == 23 && a.ofs_y == 0);
+  // A descender goes below the baseline.
+  check(glyph_of(odd, 'g').dsc.ofs_y < 0);
+  // A composite glyph: the colon is two dots.
+  check(glyph_of(odd, ':').dsc.box_h > glyph_of(odd, '.').dsc.box_h);
+}
+
+void kerns() {
+  const auto* dsc = static_cast<const lv_font_fmt_txt_dsc_t*>(odd->dsc);
+  check(static_cast<const lv_font_fmt_txt_kern_pair_t*>(dsc->kern_dsc)->pair_cnt == 748);  // of 95 x 95
+  check(lv_font_get_glyph_width(odd, 'A', 0) == 20 && lv_font_get_glyph_width(odd, 'A', 'V') == 19);
+  check(lv_font_get_glyph_width(odd, 'T', 0) == 18 && lv_font_get_glyph_width(odd, 'T', 'o') == 16);
+  check(lv_font_get_glyph_width(odd, 'H', 'H') == lv_font_get_glyph_width(odd, 'H', 0));
+}
+
+void reads_other_files() {
+  // Ubuntu Medium at 24 px.
+  check(glyph_of(ubuntu, 'A').dsc.adv_w == 16 && glyph_of(ubuntu, 'A').dsc.box_h == 17);
+  check(glyph_of(ubuntu, '.').dsc.box_w == 5 && glyph_of(ubuntu, '.').dsc.box_h == 5);
+  check(lv_font_get_glyph_width(ubuntu, 'A', 'V') == 15 && lv_font_get_glyph_width(ubuntu, 'T', 'o') == 13);
+  // Montserrat Medium at 24 px.
+  check(glyph_of(montserrat, 'A').dsc.adv_w == 18 && glyph_of(montserrat, 'A').dsc.box_h == 17);
+  check(lv_font_get_glyph_width(montserrat, 'A', 'V') == 17);
+  check(lv_font_get_glyph_width(montserrat, 'T', 0) == 14 && lv_font_get_glyph_width(montserrat, 'T', 'o') == 13);
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::printf("usage: font <reference.png>\n");
+    return 2;
+  }
+  lv_init();
+  lv_test_display_create(320, 240);
+  holds_its_characters();
+  measures_as_the_file_says();
+  kerns();
+  reads_other_files();
+  {
+    auto root = lv::mount<ui>(lv::screen_active());
+    check(root.has_value());
+    if (root) {
+      check(lv_obj_get_style_text_font(root->get<"title">().raw(), LV_PART_MAIN) == *title);
+      check(lv_obj_get_style_text_font(root->get<"odd">().raw(), LV_PART_MAIN) == odd);
+      check(lv_test_screenshot_compare(argv[1]) == LV_TEST_SCREENSHOT_RESULT_PASSED);
+    }
+  }
+  lv_deinit();
+  if (failures == 0) std::printf("ok\n");
+  return failures == 0 ? 0 : 1;
+}
