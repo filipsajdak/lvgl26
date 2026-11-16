@@ -121,6 +121,7 @@ lv::task<bool> confirm(lv::view<"button"> ok, lv::view<"button"> cancel) {
 }
 
 lv::spawn(count_clicks(button));
+lv::spawn(blink(lamp), panel);   // belongs to the panel: it ends when the panel is deleted
 ```
 
 - `view.next()` names every LVGL event of a widget (`clicked`, `value_changed`, ...); the names are

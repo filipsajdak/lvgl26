@@ -81,6 +81,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   enumerator names, style members. `tools/reference/reference.cpp` prints it by reflection, and the
   test `reference_data` fails when a committed file is stale. Write it again with the program the
   test names; never edit it by hand.
+- Work that goes on while a part of the screen exists is started with `lv::spawn(task, owner)`: it
+  ends when `owner` is deleted. A task without an owner lives until it returns, or until a widget it
+  has waited on is deleted.
 - No macros and no `#if` in our code. Settings go in `lv::config` (see `include/lv/config.hpp`);
   optional LVGL features are detected with `requires` or reflection. `#embed`, `#include` and
   `#pragma once` are the only preprocessor lines we write.
@@ -186,7 +189,7 @@ clangd cannot parse the headers, so editors read stubs: the public API as plain 
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images, editor support.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics: LVGL upstream, C++26, the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, a browser target, documentation for agents, fonts, images, editor support, components.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.
