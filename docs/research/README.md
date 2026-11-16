@@ -14,6 +14,8 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [3d-and-effects.md](3d-and-effects.md) | 3D in LVGL, the plan for microcontrollers, generating 3D models, shadows and blur. |
 | [web-target.md](web-target.md) | Whether an lvgl26 application can run in a browser, and by which route. |
 | [agent-docs.md](agent-docs.md) | How a library gives its documentation to AI coding agents: measurements, formats, what other projects ship. |
+| [fonts.md](fonts.md) | LVGL's font format, what its converter does, the TrueType a rasteriser needs, SDF and MSDF, and our spike that rasterises a TTF in the compiler. |
+| [images.md](images.md) | What LVGL draws from read-only memory, its compression and decoders, what other frameworks choose at build time, and a rule for the compile-time path. |
 
 ## How each claim is marked
 
