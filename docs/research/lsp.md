@@ -76,6 +76,23 @@ The machine was under heavy load (load average over 100), so times are CPU user 
 | `Remove: [-freflection, -fconstexpr-ops-limit=*]` is needed; clangd warns about the second flag. | spike: `redir/` | `measured` |
 | `CompilationDatabase:` can point clangd at a second, generated `compile_commands.json` for the editor. | [clangd config](https://clangd.llvm.org/config) | `source` |
 
+Measured on 2026-11-16 with the stubs of `tools/editor` (the whole public API), clangd and clang++ 23.1.5, on a loaded machine:
+
+| Finding | Link | Mark |
+|---|---|---|
+| A VFS overlay with a `directory-remap` of `include/lv` redirects every `<lv/...>` header. No `Remove: [-I...]` is needed. | `tools/editor/generate.py`, test `editor_support` | `measured` |
+| `#embed "tokens.json"` goes through the overlay too: Clang embeds the file the overlay names. | spike, test `editor_support` | `measured` |
+| `clangd --check` on the quick start: preamble built in 1.8 s, 0 errors. On the theme example: 0 errors. | test `editor_support` | `measured` |
+| Over LSP: 2.4 s from opening the file to its diagnostics, about 100 ms for a completion list of 100 items, 1 ms for a hover. | scratch script that drives clangd | `measured` |
+| One run answered the first hover after 41 s. It did not happen again; the machine was building at the time. | the same script | `measured` |
+| `clang++ -fsyntax-only` with the stubs: quick start 1.5 s user (mp-units is most of it), theme example 0.3 s. | `/usr/bin/time -p` | `measured` |
+| The generated header is 1.1 MB and 21,600 lines for LVGL v9.6.0; all stubs together are 1.2 MB. | `wc` | `measured` |
+| A wrong quoted name gives two errors in a `constexpr` variable: one at the literal, one at the variable. | `tests/editor/wrong_enumerator.cpp` | `measured` |
+| Clang warns (`-Wundefined-internal`) about a declared-only function of a template whose arguments have no linkage. A stub needs bodies. | `tools/editor/stubs/lv/stub.hpp` | `measured` |
+| Clang only warns about designated initializers out of order. `-Werror=reorder-init-list` makes it an error, as in GCC. | `tests/editor/unknown_member.cpp` | `measured` |
+| libc++ of LLVM 23 has no `<contracts>`. A fallback header behind `-idirafter` lets `examples/mcu/slice.cpp` parse. | `tools/editor/fallback/contracts` | `measured` |
+| Not tried: clangd on Linux with libstdc++, clang 19 to 22, and any editor other than clangd itself. | none | not confirmed |
+
 What breaks in a stub, and what does not:
 
 | Construct | In a stub for Clang 23 | Mark |

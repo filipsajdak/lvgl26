@@ -304,6 +304,10 @@ Rules to know:
 - In a design token file an angle is a `number` token in degrees (`22.5`). In a run-time document it is
   `22.5` or `"22.5deg"`. A fraction is accepted only where LVGL takes tenths of a degree.
 
+## In your editor
+
+clangd cannot parse reflection, so lvgl26 gives it stub headers of the public API to read instead. Add `lvgl26_editor_support()` to your `CMakeLists.txt` and run CMake. Your editor then completes the members of `lv::arc({.`, shows what each one takes, and marks a wrong name in quotes. [docs/editor-support.md](docs/editor-support.md) says what works and what does not yet.
+
 ## Requirements
 
 - GCC 16 or newer (`-std=c++26 -freflection`)
