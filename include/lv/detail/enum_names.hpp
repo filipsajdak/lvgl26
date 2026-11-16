@@ -47,11 +47,11 @@ consteval std::size_t shared_prefix(std::span<const enum_name> names) {
   return same;
 }
 
-// `text` in lower case.
+// `text` in lower case. The text is copied one character at a time: under a sanitizer
+// GCC 16.2 does not take std::string's own copy from a pointer as a constant expression.
 consteval std::string lowercase(std::string_view text) {
-  std::string out{text};
-  for (char& c : out)
-    if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+  std::string out;
+  for (char c : text) out.push_back(c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c);
   return out;
 }
 
@@ -68,7 +68,9 @@ consteval std::string no_such_enumerator(std::string_view text) {
   const std::string_view full = enum_names<E>[0].name;
   const std::size_t start = full.starts_with("LV_") ? 3 : 0;
   std::string out = "lv: " + lowercase(full.substr(start, prefix > start ? prefix - start - 1 : 0)) +
-                    " has no value '" + std::string{text} + "'. Its values: ";
+                    " has no value '";
+  for (char c : text) out.push_back(c);
+  out += "'. Its values: ";
   for (std::size_t i = 0; i < enum_names<E>.size(); ++i)
     out += (i ? ", " : "") + short_enum_name<E>(enum_names<E>[i]);
   return out + ".";
