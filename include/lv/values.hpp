@@ -363,7 +363,9 @@ struct arg {
   // The name is the enumerator without what all of them share, in lower case.
   template <std::size_t... N>
     requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
-  consteval arg(const char (&... name)[N]) : set(true), v(detail::enumerator_named<Ts>(name)...) {}
+  consteval arg(const char (&... name)[N])
+      : set(true), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
+        bound_subject(nullptr), bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
