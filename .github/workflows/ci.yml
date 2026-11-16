@@ -205,6 +205,8 @@ jobs:
   # feedback. One minute here, half an hour every night; ctest replays the corpus above.
   fuzz-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build the fuzz target
