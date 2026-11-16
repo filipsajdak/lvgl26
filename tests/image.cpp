@@ -31,11 +31,24 @@ constexpr unsigned char palette_png[] = {
 #embed "images/palette.png"
 };  // three colours; the first two have an alpha of 255 and 128
 
+constexpr unsigned char noise_png[] = {
+#embed "images/noise.png"
+};  // uneven noise: its compressed data has codes longer than ten bits
+constexpr unsigned char corner_png[] = {
+#embed "images/corner.png"
+};  // opaque but for its last pixel
+constexpr unsigned char solid_png[] = {
+#embed "images/solid.png"
+};  // RGBA with every alpha at 255
+
 constexpr auto ring = lv::image_file<ring_png>;
 constexpr auto flag = lv::image_file<flag_png>;
 constexpr auto grey = lv::image_file<grey_png>;
 constexpr auto grey_alpha = lv::image_file<grey_alpha_png>;
 constexpr auto palette = lv::image_file<palette_png>;
+constexpr auto noise = lv::image_file<noise_png>;
+constexpr auto corner = lv::image_file<corner_png>;
+constexpr auto solid = lv::image_file<solid_png>;
 
 // The same files for a display with 32 bits for each pixel.
 constexpr std::size_t most = 128 * 128;
@@ -78,6 +91,13 @@ void stores_for_16_bits() {
   check(is(palette, LV_COLOR_FORMAT_RGB565A8, 8, 8, 16, 192) && sum(palette) == 24467);
   check(rgb565(palette, 0, 0) == 0xf800 && rgb565(palette, 1, 0) == 0x07e0 && rgb565(palette, 2, 0) == 0x001f);
   check(palette->data[128] == 255 && palette->data[129] == 128 && palette->data[130] == 255);
+}
+
+void decodes_long_codes_and_finds_alpha_anywhere() {
+  check(is(noise, LV_COLOR_FORMAT_RGB565, 64, 64, 128, 64 * 64 * 2) && sum(noise) == 798627);
+  // A file with an alpha channel that is opaque everywhere needs no alpha plane.
+  check(is(solid, LV_COLOR_FORMAT_RGB565, 8, 8, 16, 128));
+  check(is(corner, LV_COLOR_FORMAT_RGB565A8, 8, 8, 16, 192) && corner->data[128 + 63] == 0 && corner->data[128 + 62] == 255);
 }
 
 void stores_for_32_bits() {
@@ -125,6 +145,7 @@ int main(int argc, char** argv) {
   lv_test_display_create(320, 240);
   stores_for_16_bits();
   stores_for_32_bits();
+  decodes_long_codes_and_finds_alpha_anywhere();
   draws(argv[1]);
   draws_without_heap();
   lv_deinit();
