@@ -298,7 +298,7 @@ void apply_node(lv_obj_t* w) {
       static_assert(a.bound == nullptr || bindable<W, i>(),
                     "lv: this property cannot follow a state. LVGL has no bind function "
                     "for it and it takes more than one value.");
-      apply_member<W, i>(w, a);
+      apply_member<W, i, std::remove_cvref_t<decltype(a)>, true>(w, a);
     }
   }
 }
