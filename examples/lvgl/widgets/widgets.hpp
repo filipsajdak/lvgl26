@@ -122,4 +122,7 @@ void spinbox_rollover(lv::obj screen);    // lv_example_spinbox_rollover
 void spinbox_styling(lv::obj screen);     // lv_example_spinbox_styling
 void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
 
+// textarea
+void textarea_placeholder(lv::obj screen);  // lv_example_textarea_placeholder
+
 }  // namespace widgets
