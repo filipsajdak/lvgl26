@@ -1,7 +1,8 @@
 #pragma once
 
-// Unit types. LVGL takes a plain integer for pixels, percent, angles, times and
-// opacity; these types keep them apart at compile time and cost nothing at run time.
+// Unit types. LVGL takes a plain integer for pixels, percent, angles (in degrees or
+// in tenths of a degree), times and opacity; these types keep them apart at compile
+// time and cost nothing at run time.
 
 #include <lvgl/lvgl.h>
 
@@ -36,12 +37,72 @@ class length {
 // As large as the content needs.
 inline constexpr length size_content = length::content();
 
-// An angle in degrees: 90 * deg.
+namespace detail {
+
+// Whether whole degrees can be written as tenths of a degree in an int32_t.
+constexpr bool fits_tenths(std::int32_t degrees) {
+  return degrees >= -214'748'364 && degrees <= 214'748'364;
+}
+
+// Degrees as tenths of a degree, rounded to the nearest one.
+constexpr double nearest_tenth(double degrees) {
+  return static_cast<double>(static_cast<std::int64_t>(degrees * 10 + (degrees < 0 ? -0.5 : 0.5)));
+}
+
+// Whether degrees with a fraction are a whole number of tenths that fits an int32_t.
+// A double cannot hold most tenths exactly (22.3 is 22.300000000000000711), so a
+// value within a thousandth of a tenth counts as that tenth.
+constexpr bool whole_tenths(double degrees) {
+  if (!(degrees >= -214'748'364.8 && degrees <= 214'748'364.7)) return false;  // also not a number
+  const double off = degrees * 10 - nearest_tenth(degrees);
+  return off > -0.001 && off < 0.001;
+}
+
+}  // namespace detail
+
+struct decidegrees;
+
+// An angle in whole degrees: 90 * deg. It is what most of LVGL takes (an arc, a scale).
+// It converts to decidegrees, so 90 * deg can be written for every angle.
 struct angle {
   std::int32_t degrees = 0;
   constexpr std::int32_t raw() const { return degrees; }
+  constexpr operator decidegrees() const
+    pre(detail::fits_tenths(degrees));
   friend constexpr bool operator==(angle, angle) = default;
 };
+
+// An angle in tenths of a degree: 22.5 * deg, or any whole angle such as 90 * deg.
+// A few LVGL values have this resolution: the rotation of an image, and the
+// transform rotation and skew of a style. Which ones is read from LVGL's doc
+// comments: see lv/detail/angle_docs.hpp.
+struct decidegrees {
+  std::int32_t tenths = 0;
+  constexpr std::int32_t raw() const { return tenths; }
+
+  // Degrees as a number, as a design token or a document gives them: 22.5.
+  static constexpr decidegrees from_number(double degrees)
+    pre(detail::whole_tenths(degrees))
+  {
+    detail::keep_checked(detail::whole_tenths(degrees));
+    return {static_cast<std::int32_t>(detail::nearest_tenth(degrees))};
+  }
+
+  operator angle() const = delete(
+      "lv: this takes an angle in whole degrees, and the value may have a fraction of a degree "
+      "(it is lv::decidegrees, as 22.5 * lv::deg is). Write whole degrees: 90 * lv::deg.");
+
+  friend constexpr bool operator==(decidegrees, decidegrees) = default;
+  // Without these, comparing the two kinds would be ambiguous.
+  friend constexpr bool operator==(decidegrees a, angle b) {
+    return a.tenths == std::int64_t{b.degrees} * 10;
+  }
+};
+
+constexpr angle::operator decidegrees() const {
+  detail::keep_checked(detail::fits_tenths(degrees));
+  return {degrees * 10};
+}
 
 // A time span in milliseconds: 300 * ms.
 struct duration {
@@ -116,7 +177,7 @@ constexpr std::int32_t count(T n)
 }  // namespace detail
 
 // Units, written as in mp-units: a number times a unit.
-//   320 * px    50 * pct    90 * deg    300 * ms    2 * sec
+//   320 * px    50 * pct    90 * deg    22.5 * deg    300 * ms    2 * sec
 inline namespace units {
 
 inline constexpr struct px_unit {
@@ -141,6 +202,14 @@ constexpr percent operator*(T n, pct_unit) {
 template <detail::unit_count T>
 constexpr angle operator*(T n, deg_unit) {
   return {detail::count(n)};
+}
+// Degrees with a fraction: 22.5 * deg. The number must be a whole number of tenths.
+template <std::same_as<double> T>
+constexpr decidegrees operator*(T n, deg_unit)
+  pre(detail::whole_tenths(n))
+{
+  detail::keep_checked(detail::whole_tenths(n));
+  return decidegrees::from_number(n);
 }
 template <detail::unit_count T>
 constexpr duration operator*(T n, ms_unit)

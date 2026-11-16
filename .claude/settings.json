@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "WebSearch|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"lvgl26: docs/research/README.md lists what has already been looked up. Read the topic file before searching. After the search, add each new finding to its topic file with its link, its mark and the date.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}

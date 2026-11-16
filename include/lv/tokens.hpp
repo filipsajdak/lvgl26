@@ -90,7 +90,7 @@ consteval std::meta::info token_cpp_type(token_type t) {
 }
 
 [[noreturn]] consteval void token_fail(std::string_view what) {
-  throw unknown_name("lv: design tokens: " + str(what));
+  fail("lv: design tokens: " + str(what));
 }
 
 // The document without the trailing NUL that the #embed idiom adds.
@@ -155,10 +155,6 @@ consteval bool token_member_used(json::value root, json::member m, token_type in
     token_fail("'" + str(m.key) + "' is neither a group nor a token");
   if (!child["$value"]) return true;
   return token_cpp_type(resolve_token(root, child, inherited).type) != std::meta::info{};
-}
-
-consteval bool is_name_char(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
 // The value that starts at `offset` in `doc`. The offset comes from a value of the

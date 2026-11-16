@@ -1,0 +1,11 @@
+{
+  "name": "lvgl26",
+  "owner": { "name": "lvgl26 contributors" },
+  "plugins": [
+    {
+      "name": "lvgl26",
+      "source": "./",
+      "description": "Skills for building embedded UIs with lvgl26."
+    }
+  ]
+}

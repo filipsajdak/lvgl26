@@ -2,7 +2,9 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
+
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -15,7 +17,7 @@ constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
     lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 
-auto root = lv::mount<ui>(lv::screen_active());   // std::expected; owns the widgets
+auto root = lv::mount<ui>(display.screen());      // std::expected; owns the widgets
 root->get<"speedo">().set({.value = 0});          // a typed view of the arc
 ```
 
@@ -26,6 +28,16 @@ How it works:
   Nothing is written by hand and nothing is generated offline.
 - **Properties are typed.** Sizes take `120 * px`, `50 * pct` or `lv::size_content`; angles `90 * deg`; times
   `300 * ms`; opacity `50 * pct`. Integers reject `bool`, floating point and values that do not fit.
+- **An angle is in the unit LVGL means.** Most of LVGL takes whole degrees (an arc, a scale): that is an
+  `lv::angle`. An image's rotation and a style's `transform_rotation` and `transform_skew_x/y` take tenths
+  of a degree: that is `lv::decidegrees`. Write `90 * deg` for both; `22.5 * deg` only compiles where
+  tenths are taken. LVGL says which is which only in its doc comments.
+  lvgl26 reads them from the embedded headers at compile time (`include/lv/detail/angle_docs.hpp`).
+  A test checks the result against the pixels LVGL draws.
+- **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
+  `.flex_align = {"center", "center", "start"}`.
+  The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.
+  A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
 - **The tree costs nothing at run time.** `lv::mount<ui>` reads it at compile time; an optimized build
@@ -58,7 +70,7 @@ speed = 3 * m;                                         // error: not a speed
 What a state can hold:
 
 - **A measure:** an mp-units quantity with an integer number. lvgl26 has no unit system of its own and
-  does not include mp-units; it accepts any type of that shape, so the dependency is yours to add.
+  does not include mp-units; it accepts any type of that shape. `set(LVGL26_UNITS ON)` in CMake adds mp-units for you.
   It builds freestanding, and a quantity compiles to the same code as an `int`.
 - **A count:** `lv::counter`.
 - **Anything else that is a number:** a struct with one integer, bool or enum member, such as
@@ -68,9 +80,8 @@ What a state can hold:
 `lv::state<int>` is rejected, because a plain integer does not say what it is; the error shows these
 choices. `lv::config::raw_integer_state` allows it.
 
-A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it. Where LVGL has a
-bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a
-generic observer.
+A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
+Where LVGL has a bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a generic observer.
 
 A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
 The dependencies are part of the type, so both can be constant-initialized globals:
@@ -85,10 +96,10 @@ lv::label({.hidden = lv::bind(over_limit), .text = "Within the limit"})   // bou
 log.start();                                           // runs now, and after every change
 ```
 
-`over_limit.get()` calls the function with the current values; nothing is stored. Binding a computed
-creates its `lv_subject_t` and one observer on each dependency. The result follows the rules of a
-state, so a function that returns a plain `int` is rejected. See `include/lv/computed.hpp` for how
-changes travel and who owns what.
+`over_limit.get()` calls the function with the current values; nothing is stored.
+Binding a computed creates its `lv_subject_t` and one observer on each dependency.
+The result follows the rules of a state, so a function that returns a plain `int` is rejected.
+See `include/lv/computed.hpp` for how changes travel and who owns what.
 
 Sequences of UI steps are coroutines on LVGL's loop:
 
@@ -109,6 +120,7 @@ lv::task<bool> confirm(lv::view<"button"> ok, lv::view<"button"> cancel) {
 }
 
 lv::spawn(count_clicks(button));
+lv::spawn(blink(lamp), panel);   // belongs to the panel: it ends when the panel is deleted
 ```
 
 - `view.next()` names every LVGL event of a widget (`clicked`, `value_changed`, ...); the names are
@@ -132,9 +144,36 @@ lv::task<> open(lv::view<"arc"> arc) {
 - `lv::animatable<"arc">` lists the properties that take one number (a whole number, a length, an
   angle, an opacity), generated from the same setters as `lv::props<"arc">`. Both ends have the
   property's type: `.width = {0, 100}` is a compile error, and so is `{10 * px, 50 * pct}`.
+- A fourth argument says how the value moves: a name from `lv::ease` (LVGL's own paths and named
+  curves, such as `lv::ease::in_quad`, `out_back`, `bounce`), a `cubicBezier` design token
+  (`tok.motion.fall`), or an `lv::bezier` as in CSS. Without it the value moves at one speed.
 - The result is `false` when something stopped the animation: a newer animation of the same
   property took over, or `lv_anim_delete()` removed it.
 - Cancelling the task, or losing in `lv::first`, deletes the animation.
+
+A program starts LVGL with two objects and calls no C function:
+
+```cpp
+constinit lv::frame<320, 240> frame;   // the display's memory
+
+int main() {
+  lv::application app;                 // LVGL starts; it stops when app goes out of scope
+  lv::display display{app, frame};     // no panel: the picture stays in the frame
+
+  auto root = lv::mount<ui>(display.screen());
+  return app.run();                    // timers, animations and input, until app.quit()
+}
+```
+
+- **Time.** `lv::application app{lv::host}` takes the operating system's clock (`#include <lv/host.hpp>`).
+  A device passes its own, `{.clock = &since_start}`, or tells the time from a timer interrupt
+  with `app.advance(5 * ms)`.
+- **A panel.** `lv::display display{app, frame, &changed}` calls `void changed(lv::area)` with the
+  part of the frame that is new. An `lv::band<320, 240, 24>` holds 24 lines instead of the whole
+  screen; its panel function gets each piece: `void send(lv::area, std::span<const std::byte>)`.
+- **The memory is right by its type.** A frame or a band has the size and the alignment LVGL
+  asks for. LVGL ignores a buffer that is not aligned, and the screen stays empty.
+- `app.heap()` says how much of LVGL's heap is in use.
 
 Another thread never calls LVGL. It posts work to the UI thread through `lv::ui_scheduler`
 (`#include <lv/ui_scheduler.hpp>`, hosted only):
@@ -179,9 +218,10 @@ constexpr auto tok = lv::tokens<tokens_json>;
 lv::box({.style = {.bg_color = tok.color.surface, .radius = tok.radius.card}})
 ```
 
-Each token group becomes a struct and each token a typed `lv::token<T>`: colors, dimensions
-(spacing, radius, sizes), durations, numbers (opacity), font family and weight, easing curves, and the
-composite types shadow, border, typography, transition and gradient. Aliases are resolved. A misspelled
+Each token group becomes a struct and each token a typed `lv::token<T>`.
+The types are colors, dimensions (spacing, radius, sizes), durations, numbers (opacity), font family and weight, and easing curves.
+The composite types are shadow, border, typography, transition and gradient.
+Aliases are resolved. A misspelled
 token, a broken alias or an unreadable value is a compile error.
 
 **Styles use tokens.** A design value in a style (color, length, opacity, time, number) must be a token:
@@ -206,6 +246,56 @@ them (`color.primary`), and component tokens that alias those (`card.radius`). U
 
 Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
 
+A theme gives every widget of a kind its styles, so a screen needs none of its own. It is one
+constant, kept in read-only memory, and the last argument of a display:
+
+```cpp
+constexpr auto mine = lv::theme({
+    .button = {.style = {.bg_color = tok.color.primary, .radius = tok.radius.none},
+               .style_pressed = {.bg_color = tok.color.pressed}},
+    .screen = {.style = {.bg_color = tok.color.ground}},
+});
+
+lv::display display{app, frame, mine};                // or lv::signal::dark, from <lv/signal.hpp>
+```
+
+[docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
+
+Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash.
+
+A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
+read-only memory, no heap and no converter. A typography token chooses it:
+
+```cpp
+constexpr unsigned char barlow_ttf[] = {
+#embed "Barlow-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
+constexpr auto title = type(tok.text.title);          // family, weight and size from the token
+
+lv::label({.style = {.text_font = title}, .text = "Wake up"})
+```
+
+Where the size is only known on the device, `lv::scaled_font` lets the device draw the glyphs, and a
+style binds to it: `.text_font = lv::bind(title)`, then `title.resize(tok.text.large)`.
+
+[docs/fonts.md](docs/fonts.md) has the costs and the limits.
+
+A picture works the same way. The compiler decodes an embedded PNG file into the display's own
+pixels, so the device needs no decoder:
+
+```cpp
+constexpr unsigned char logo_png[] = {
+#embed "logo.png"
+};
+
+lv::image({.src = lv::image_file<logo_png>})
+```
+
+A photo or a large picture can stay a file that the device decodes: `lv::encoded_image<photo_jpg>`.
+
+[docs/images.md](docs/images.md) says how a picture is stored and what it costs.
+
 Rules to know:
 
 - Designated initializers must be in alphabetical order (`.id`, `.range`, `.value`). This is a C++ rule.
@@ -213,6 +303,14 @@ Rules to know:
   GCC does not name the member in that case.
 - `lv::widget<"spinbox">({...})` reaches any widget that has no short name.
 - `view.set<"name">(...)` and `view.get<"name">()` are the untyped escape hatch to any `lv_*_set_*` / `get_*`.
+  One thing is typed there: a getter of an angle returns an `lv::angle` or `lv::decidegrees`, so
+  `image.get<"rotation">() == 90 * deg` holds whatever LVGL's number is.
+- In a design token file an angle is a `number` token in degrees (`22.5`). In a run-time document it is
+  `22.5` or `"22.5deg"`. A fraction is accepted only where LVGL takes tenths of a degree.
+
+## In your editor
+
+clangd cannot parse reflection, so lvgl26 gives it stub headers of the public API to read instead. Add `lvgl26_editor_support()` to your `CMakeLists.txt` and run CMake. Your editor then completes the members of `lv::arc({.`, shows what each one takes, and marks a wrong name in quotes. [docs/editor-support.md](docs/editor-support.md) says what works and what does not yet.
 
 ## Requirements
 
@@ -232,6 +330,33 @@ cmake --preset host-v10 && cmake --build --preset host-v10 && ctest --preset hos
 | `host-v10` | master commit `53819fe4`, the v10 development line |
 
 To build against a local LVGL checkout, add `-DFETCHCONTENT_SOURCE_DIR_LVGL=<path>`.
+
+## On a microcontroller
+
+The library builds with `-fno-exceptions -fno-rtti`, and `examples/mcu/slice.cpp` runs on an Arm
+Cortex-M4 in QEMU: a compile-time tree, a label bound to a state, and a task.
+
+```sh
+brew install arm-none-eabi-binutils arm-none-eabi-gcc qemu   # GCC 16.2, without its libraries
+tools/arm-toolchain.sh build/_tools/arm                      # builds newlib and libstdc++, once
+tools/arm-run.sh                                             # builds the slice, runs it in QEMU
+```
+
+Measured: 269 KB of code with LVGL's default configuration, where every widget and feature is on.
+The screen takes 1052 bytes of LVGL's heap and the task 128.
+The application and the display objects are 1.6 KB of the code.
+A program for a device should define `handle_contract_violation` itself, as the example does: the standard library's handler brings the exception run-time with it (12 KB).
+
+## With Claude Code
+
+The repository is also a Claude Code plugin. It gives an agent what is already known about LVGL, C++26, device UI standards and 3D, with sources. The agent then does not search for it again.
+
+```
+/plugin marketplace add filipsajdak/lvgl26
+/plugin install lvgl26@lvgl26
+```
+
+`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: building a screen, designing with the Signal system, and porting from another framework.
 
 ## Website
 

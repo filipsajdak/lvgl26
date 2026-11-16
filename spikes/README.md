@@ -20,3 +20,9 @@ Throwaway experiments. They are not built by CMake. GCC 16.2.0, macOS arm64, 202
 2. In a file that mixes both, standard `#include`s come before `import lv;`. The other order fails
    in GCC 16 with redefinition errors.
 3. The header build and the module build share the same eager code, so both stay equivalent.
+
+## Later spikes
+
+| Spike | Files | Result |
+|---|---|---|
+| A TrueType file rasterised by the compiler into a constant `lv_font_t` (2026-11-16) | `font_from_ttf.hpp`, `font_from_ttf.cpp` | Pass. Numbers are in `docs/research/fonts.md` |

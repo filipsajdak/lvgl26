@@ -36,7 +36,7 @@ jobs:
           - host-v10-asan      # AddressSanitizer + UndefinedBehaviorSanitizer on the v10 pin
           - host-v96-tsan      # ThreadSanitizer, every test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           cache-key: ${{ matrix.preset }}
@@ -44,6 +44,8 @@ jobs:
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
+      - name: Compiler cache statistics
+        run: ccache --show-stats --verbose
       - name: Test
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
@@ -55,8 +57,10 @@ jobs:
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build the fuzz target
         run: |
           clang++ -std=c++23 -g -O1 -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
@@ -65,7 +69,7 @@ jobs:
         run: |
           mkdir -p new_corpus
           ./json_reader new_corpus fuzz/corpus/json -max_total_time=1800 -max_len=4096
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: fuzz-json-crash
@@ -75,9 +79,47 @@ jobs:
             timeout-*
             oom-*
 
+  # The microcontroller check: the slice built for an Arm Cortex-M4 without exceptions
+  # and run in QEMU. Its sizes go to the run's summary.
+  image-arm:
+    uses: ./.github/workflows/image.yml
+    with:
+      name: ci-arm
+    permissions:
+      contents: read
+      packages: write
+
+  arm:
+    runs-on: ubuntu-latest
+    needs: image-arm
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image-arm.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the slice for Cortex-M4 and run it in QEMU
+        shell: bash
+        run: |
+          set -o pipefail
+          tools/arm-run.sh 2>&1 | tee arm-run.txt
+      - name: Report what it printed and its sizes
+        if: always()
+        run: |
+          {
+            echo '### The slice on Cortex-M4 (QEMU mps2-an386)'
+            echo '```'
+            cat arm-run.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
-    needs: [host, fuzz-json]
+    needs: [host, fuzz-json, arm]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

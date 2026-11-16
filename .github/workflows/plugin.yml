@@ -1,0 +1,21 @@
+name: plugin
+
+# Checks the Claude Code plugin: its manifests parse and every file a skill
+# points to exists. A skill points to the repository's files, so moving a
+# research note or a header without updating the skill fails here.
+on:
+  pull_request:
+    paths: ['.claude-plugin/**', 'skills/**', 'docs/research/**', 'tools/check_plugin.py', '.github/workflows/plugin.yml']
+  push:
+    branches: [main]
+    paths: ['.claude-plugin/**', 'skills/**', 'docs/research/**', 'tools/check_plugin.py', '.github/workflows/plugin.yml']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check the manifests and the skills
+        run: python3 tools/check_plugin.py

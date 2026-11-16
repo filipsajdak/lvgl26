@@ -13,9 +13,15 @@
 // `to` at once, and there is nothing to wait for.
 //
 // The properties are those of lv::props that take one number: a whole number, a
-// length, an angle or an opacity. lv::animatable<"arc"> is the struct that lists
+// length, an angle (in degrees or in tenths) or an opacity. lv::animatable<"arc"> is the struct that lists
 // them; reflection generates it from the same setters as lv::props<"arc">. Both
 // ends have the property's type, so `.width = {0, 100}` does not compile.
+//
+// The value moves at one speed unless a fourth argument says otherwise: a name from
+// lv::ease, a "cubicBezier" design token, or an lv::bezier. See lv/easing.hpp.
+//
+//   co_await lv::animate(ball, {.y = {top, floor}}, 400 * lv::ms, lv::ease::in_quad);
+//   co_await lv::animate(ball, {.y = {top, floor}}, 400 * lv::ms, tok.motion.fall);
 //
 // co_await gives true when the animation ran to its end, and false when something
 // stopped it before that: a newer animation of the same property of the same
@@ -28,6 +34,7 @@
 // loses in lv::first, the animation is deleted and the property stays where it was.
 
 #include <lv/detail/checked.hpp>
+#include <lv/easing.hpp>
 #include <lv/props.hpp>
 #include <lv/task.hpp>
 #include <lv/units.hpp>
@@ -71,6 +78,7 @@ constexpr bool can_run_between(strict<I> from, strict<I> to) {
   return std::in_range<std::int32_t>(from.raw()) && std::in_range<std::int32_t>(to.raw());
 }
 constexpr bool can_run_between(angle, angle) { return true; }
+constexpr bool can_run_between(decidegrees, decidegrees) { return true; }
 constexpr bool can_run_between(opa, opa) { return true; }
 
 template <class T>
@@ -134,7 +142,7 @@ namespace detail {
 // Whether a property of this type can be animated: a number that LVGL can count
 // through. Not bool, not a time, not an enum, not text.
 consteval bool is_animatable_type(std::meta::info t) {
-  for (auto unit : {(^^opa), (^^angle), (^^length), std::meta::dealias(^^horizontal),
+  for (auto unit : {(^^opa), (^^angle), (^^decidegrees), (^^length), std::meta::dealias(^^horizontal),
                     std::meta::dealias(^^vertical)})
     if (t == unit) return true;
   return is_made_from(t, ^^strict) && std::meta::template_arguments_of(t)[0] != ^^bool;
@@ -232,6 +240,7 @@ struct animation_source {
   std::int32_t from = 0;
   std::int32_t to = 0;
   std::uint32_t ms = 0;
+  easing how{};  // how the value moves between its ends; the default is one speed
   void (*done)(void*) = nullptr;
   void* context = nullptr;
   lv_anim_t* running = nullptr;  // the animation, while it runs
@@ -323,6 +332,7 @@ struct animation_source {
     lv_anim_set_exec_cb(&a, step);
     lv_anim_set_values(&a, from, to);
     lv_anim_set_duration(&a, ms);
+    how.apply(&a);
     lv_anim_set_completed_cb(&a, &completed_cb);
     lv_anim_set_deleted_cb(&a, &deleted_cb);
     lv_anim_set_user_data(&a, this);
@@ -342,8 +352,10 @@ constexpr std::size_t count_set(const animatable<W>& what) {
 
 // The animation of the property that is set in `what`.
 template <fixed W>
-animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, duration time) {
+animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, duration time,
+                              const easing& how) {
   animation_source source{widget, time.ms};
+  source.how = how;
   template for (constexpr auto i : indices<members_of_animatable<W>.size()>) {
     const auto& ends = what.[:members_of_animatable<W>[i]:];
     if (ends.is_set()) {
@@ -358,15 +370,17 @@ animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, durat
 }  // namespace detail
 
 // bool finished = co_await lv::animate(arc, {.value = {0, 100}}, 300 * lv::ms);
-// Runs one property of a widget from one value to another. See the top of this file.
+// Runs one property of a widget from one value to another, at one speed or along an
+// easing curve. See the top of this file.
 template <detail::fixed W, class D = void>
 detail::animation_source animate(view<W> widget, const detail::lazy_animatable<W, D>& what,
-                                 duration time)
+                                 duration time, const easing& how = {})
   pre(widget.raw() != nullptr)
   pre(detail::count_set<W>(what) == 1)             // one property for each animation
   pre(std::in_range<std::int32_t>(time.ms))        // LVGL counts an animation's time in 31 bits
+  pre(detail::usable(how.curve()))                 // a curve LVGL can follow: see lv/easing.hpp
 {
-  return detail::animation_of<W>(widget.raw(), what, time);
+  return detail::animation_of<W>(widget.raw(), what, time, how);
 }
 
 }  // namespace lv

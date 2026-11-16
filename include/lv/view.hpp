@@ -40,6 +40,29 @@ template <class F>
 concept pointer_sized = std::is_trivially_copyable_v<F> &&
                         std::is_trivially_destructible_v<F> && sizeof(F) <= sizeof(void*);
 
+// The unit type of what `getter` returns, or a null reflection when it returns
+// LVGL's plain value. Only an angle has one: a plain number would not say whether
+// it is degrees or tenths of a degree. D only delays reading LVGL's doc comments.
+template <class D = void>
+consteval std::meta::info getter_unit(std::meta::info getter) {
+  const auto t = std::meta::remove_cv(std::meta::dealias(std::meta::return_type_of(getter)));
+  // The property is what follows "_get_": the widget's own name says nothing.
+  auto prop = std::meta::identifier_of(getter);
+  while (!prop.empty() && !prop.starts_with("_get_")) prop.remove_prefix(1);
+  if (!std::meta::is_integral_type(t) || t == ^^bool || !is_angle_name(prop, {})) return {};
+  return angle_type_of<D>(getter);
+}
+
+// What a getter returned, in its unit type if it has one.
+template <std::meta::info Getter, class R>
+constexpr auto with_unit(R value) {
+  constexpr auto unit = getter_unit<>(Getter);
+  if constexpr (unit != std::meta::info{})
+    return typename[:unit:]{static_cast<std::int32_t>(value)};
+  else
+    return value;
+}
+
 template <class F>
 void call(F& f, lv_event_t* e) {
   if constexpr (std::invocable<F&, event>)
@@ -82,7 +105,7 @@ class view {
 
   // The events of this widget, by name: co_await button.next().clicked.
   template <class D = void>
-  constexpr auto next() const {
+  auto next() const {
     return detail::make_events<D>(p_);
   }
 
@@ -114,7 +137,9 @@ class view {
     return self;
   }
 
-  // get<"text">() calls lv_label_get_text, or lv_obj_get_* as a fallback.
+  // get<"text">() calls lv_label_get_text, or lv_obj_get_* as a fallback. It returns
+  // what LVGL returns, except for an angle: get<"rotation">() is an lv::angle for an
+  // arc and lv::decidegrees for an image, so that it compares with 90 * lv::deg.
   template <detail::fixed P, class... A>
     requires requires(lv_obj_t* o, A&&... a) {
       [:detail::resolve(W.sv(), "get", P.sv()):](o, std::forward<A>(a)...);
@@ -122,7 +147,8 @@ class view {
   auto get(A&&... a) const {
     // A deduced return type with pre() crashes GCC 16.2, so the check is in the body.
     contract_assert(p_ != nullptr);
-    return [:detail::resolve(W.sv(), "get", P.sv()):](p_, std::forward<A>(a)...);
+    constexpr auto getter = detail::resolve(W.sv(), "get", P.sv());
+    return detail::with_unit<getter>([:getter:](p_, std::forward<A>(a)...));
   }
 
   // on<LV_EVENT_CLICKED>(handler). The handler takes lv::event or nothing.

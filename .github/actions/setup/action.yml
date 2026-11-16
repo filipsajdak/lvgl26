@@ -10,14 +10,26 @@ runs:
     - name: Use the compiler cache
       shell: bash
       run: |
-        # LVGL's C files are most of a build and never change between runs: ccache
-        # gives them back from the cache.
+        # Most files do not change between two runs: ccache gives their objects back
+        # from the cache. That holds for LVGL's C files and for our C++ files.
         echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
         echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
         echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache" >> "$GITHUB_ENV"
         echo "CCACHE_MAXSIZE=400M" >> "$GITHUB_ENV"
-    - uses: actions/cache@v4
+        # ccache before 4.14 does not see #embed in direct mode: after a change to an
+        # embedded file it would give the old object back. Without direct mode it hashes
+        # the preprocessed text, which holds the embedded bytes.
+        ccache --version | head -n 1
+        if ! printf '4.14\n%s\n' "$(ccache --version | sed -n '1s/.* //p')" | sort -V -C; then
+          echo "CCACHE_NODIRECT=1" >> "$GITHUB_ENV"
+          echo "Direct mode is off."
+        fi
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: .ccache
         key: ccache-${{ inputs.cache-key }}-${{ github.sha }}
         restore-keys: ccache-${{ inputs.cache-key }}-
+    # The statistics a job prints after its build then count that build alone.
+    - name: Zero the cache statistics
+      shell: bash
+      run: ccache --zero-stats

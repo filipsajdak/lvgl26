@@ -4,13 +4,16 @@
 // and the rule that gives each LVGL setter parameter its C++ type.
 
 #include <lv/config.hpp>
+#include <lv/detail/angle_docs.hpp>
 #include <lv/detail/api.hpp>
+#include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
 #include <lv/units.hpp>
 
 #include <array>
 #include <concepts>
+#include <initializer_list>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -64,19 +67,20 @@ class strict {
 
 // An event handler stored in a props struct: a function or a lambda without captures.
 // For a handler with state, use view.on<LV_EVENT_...>() instead.
+// No default member initializers: see lv::arg. An empty handler is `handler{}`.
 struct handler {
-  void (*plain)() = nullptr;
-  void (*with_event)(event) = nullptr;
+  void (*plain)();
+  void (*with_event)(event);
 
   constexpr handler() = default;
 
   template <class F>
     requires std::convertible_to<F, void (*)()>
-  constexpr handler(F f) : plain(f) {}
+  constexpr handler(F f) : plain(f), with_event(nullptr) {}
 
   template <class F>
     requires(!std::convertible_to<F, void (*)()>) && std::convertible_to<F, void (*)(event)>
-  constexpr handler(F f) : with_event(f) {}
+  constexpr handler(F f) : plain(nullptr), with_event(f) {}
 };
 
 namespace detail {
@@ -100,7 +104,8 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
         entry{std::meta::dealias(^^vertical),
               "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal "
               "length)"},
-        entry{^^angle, "an angle (90 * lv::deg)"},
+        entry{^^angle, "an angle in whole degrees (90 * lv::deg)"},
+        entry{^^decidegrees, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
         entry{^^duration, "a time (300 * lv::ms)"},
         entry{^^opa, "an opacity (50 * lv::pct)"},
         entry{^^strict<bool>, "true or false"}})
@@ -111,6 +116,9 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
 consteval std::string how_to_write(std::meta::info t) {
   if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (t == ^^styled<const lv_font_t*>)
+    return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
+           "lv/font.hpp), or lv::raw(font) for a font that no token names";
   if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
@@ -239,10 +247,16 @@ struct text_format {
       }
     }
     if (places != 1)
-      throw detail::unknown_name("lv: a text binding format needs exactly one {} for the value, "
+      detail::fail("lv: a text binding format needs exactly one {} for the value, "
                                  "for example \"{} km/h\".");
     printf = std::define_static_string(out);
   }
+};
+
+// A font property bound to a font that is drawn on the device: lv::bind(title).
+// See lv/scaled_font.hpp.
+struct font_binding {
+  const void* source;  // the lv::scaled_font
 };
 
 // A text property bound to a state through a format: lv::bind(speed, "{} km/h").
@@ -261,19 +275,88 @@ template <class T>
 inline constexpr bool is_binding<binding<T>> = true;
 template <class T>
 inline constexpr bool is_binding<formatted_binding<T>> = true;
+template <>
+inline constexpr bool is_binding<font_binding> = true;
+
+}  // namespace detail
+
+namespace detail {
+
+// Unit types and strict<> hand LVGL their plain value; everything else passes as is.
+template <class T>
+constexpr decltype(auto) lower(const T& x) {
+  if constexpr (requires { x.raw(); })
+    return x.raw();
+  else
+    return (x);
+}
+
+// A text that is not ended by a zero, as plain members: what a std::string_view is
+// lowered to. std::string_view itself has a constructor to run, even when it is empty.
+struct text_span {
+  const char* data;
+  std::size_t size;
+  constexpr operator std::string_view() const { return {data, size}; }
+};
+
+constexpr text_span lower(std::string_view text) { return {text.data(), text.size()}; }
+
+// What LVGL receives for a value of type T: the plain value of a unit type, of
+// strict<> or of a style value; T itself for anything else.
+template <class T>
+using lowered = std::remove_cvref_t<decltype(lower(std::declval<const T&>()))>;
+
+// A number in decimal digits.
+consteval std::string decimal(std::size_t n) {
+  std::string digits;
+  do digits.insert(digits.begin(), static_cast<char>('0' + n % 10));
+  while ((n /= 10) > 0);
+  return digits;
+}
+
+// Members of the given types, called <prefix>0, <prefix>1, ...: what
+// std::meta::define_aggregate needs to make a struct of them.
+consteval std::vector<std::meta::info> numbered_members(
+    char prefix, std::initializer_list<std::meta::info> types) {
+  std::vector<std::meta::info> specs;
+  for (auto type : types)
+    specs.push_back(std::meta::data_member_spec(type, {.name = prefix + decimal(specs.size())}));
+  return specs;
+}
+
+template <class... Ts>
+struct values_of {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, numbered_members('v', {^^Ts...})); }
+};
+
+// The values of one property, as LVGL takes them: a struct with the members v0, v1, ...
+// Reflection makes it, so it has no constructor and no default member initializer.
+// That matters to the compiler: see lv::arg.
+template <class... Ts>
+using values = typename values_of<lowered<Ts>...>::type;
 
 }  // namespace detail
 
 // One member of a props struct: unset, the arguments of one setter, or a binding.
+//
+// It has no default member initializers and holds plain values, on purpose. An
+// `arg{}` is then all zeros and the compiler writes it down without a call. A props
+// struct has thousands of unset members; with a constructor to run for each one, a
+// tree of a hundred widgets took minutes to compile. So an unset arg must be made
+// with braces: `arg a{};`, never `arg a;`.
 template <class... Ts>
 struct arg {
-  bool set = false;
-  std::tuple<Ts...> v{};
+  bool set;
+  detail::values<Ts...> v;  // v.v0, v.v1, ...: what LVGL takes
 
   // Set when the property follows a state instead of holding a value.
-  const void* bound = nullptr;
-  lv_subject_t* (*bound_subject)(const void*) = nullptr;
-  const char* bound_format = nullptr;
+  const void* bound;
+  lv_subject_t* (*bound_subject)(const void*);
+  const char* bound_format;
+
+  // The types of the property, as they are written: arg<angle>::types is std::tuple<angle>.
+  using types = std::tuple<Ts...>;
 
   constexpr arg() = default;
 
@@ -283,23 +366,44 @@ struct arg {
     requires(sizeof...(U) > 0) &&
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...)))
-  constexpr arg(U&&... u) : set(true), v(convert(std::forward<U>(u)...)) {}
+  constexpr arg(U&&... u)
+      : set(true), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
+        bound_format(nullptr) {}
+
+  // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
+  // The name is the enumerator without what all of them share, in lower case.
+  template <std::size_t... N>
+    requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
+  consteval arg(const char (&... name)[N])
+      : set(true), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
+        bound_subject(nullptr), bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), bound(b.source), bound_subject(b.subject),
+      : set(true), v{}, bound(b.source), bound_subject(b.subject),
         bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
-    using first = std::tuple_element_t<0, std::tuple<Ts...>>;
+    using first = std::tuple_element_t<0, types>;
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
                       std::convertible_to<typename detail::state_payload<T>::type, first>,
                   "lv: this property cannot be bound to a state of that type. The state's "
                   "type, or the number inside its quantity or named type, must be what the "
                   "property takes.");
+    // A subject carries a plain number, and the property would read whole degrees
+    // as tenths.
+    static_assert(!(std::same_as<T, angle> && std::same_as<first, decidegrees>),
+                  "lv: this property is in tenths of a degree, and a state of lv::angle holds "
+                  "whole degrees. Give the state the type of the property: "
+                  "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
+  }
+
+  constexpr arg(font_binding b) : set(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+    static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
+                  "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), bound(b.source), bound_subject(b.subject), bound_format(b.format) {
+      : set(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }
@@ -316,16 +420,38 @@ struct arg {
   };
 
   template <class... U>
-  static constexpr std::tuple<Ts...> convert(U&&... u) {
+  static constexpr detail::values<Ts...> convert(U&&... u) {
     static_assert(fits<U...>, detail::wrong_value<Ts...>::template message<U...>());
     if constexpr (fits<U...>)
-      return std::tuple<Ts...>{static_cast<Ts>(std::forward<U>(u))...};
+      return {detail::lower(static_cast<Ts>(std::forward<U>(u)))...};
     else
       return {};  // unreachable: keeps the message above the only error
   }
 };
 
 namespace detail {
+
+// The last member of every props struct and of every style. It has no default
+// constructor, so that `lv::props<"arc"> p;` does not compile: without braces the
+// members of p would hold whatever was in memory, and each one says whether it is
+// set. `lv::props<"arc"> p{};` makes this member from the empty braces.
+struct made_with_braces {
+  constexpr made_with_braces(std::initializer_list<int>) {}
+};
+
+// The member that carries it, for std::meta::define_aggregate.
+consteval std::meta::info braces_member() {
+  return std::meta::data_member_spec(^^made_with_braces,
+                                     {.name = "made_with_braces", .no_unique_address = true});
+}
+
+// The members of a struct that ends with made_with_braces, without that one.
+consteval std::vector<std::meta::info> members_before_braces(std::meta::info type) {
+  auto members =
+      std::meta::nonstatic_data_members_of(type, std::meta::access_context::unchecked());
+  members.pop_back();
+  return members;
+}
 
 consteval bool has(std::string_view s, std::string_view part) {
   return s.find(part) != std::string_view::npos;
@@ -364,39 +490,42 @@ consteval bool named_after(std::string_view prop, std::string_view parameter,
   return false;
 }
 
+// Whether the property or its parameter is named as LVGL names an angle.
+consteval bool is_angle_name(std::string_view prop, std::string_view parameter) {
+  return named_after(prop, parameter, {"angle", "rotation", "skew"});
+}
+
 // The unit type of a numeric setter parameter, judged by the names LVGL uses, or
-// a null reflection if they say nothing.
+// a null reflection if they say nothing. An angle may still be decidegrees: see
+// value_type.
 consteval std::meta::info unit_of(std::string_view prop, std::string_view parameter) {
   if (named_after(prop, parameter, {"opa"})) return ^^opa;
-  if (named_after(prop, parameter, {"angle", "rotation"})) return ^^angle;
+  if (is_angle_name(prop, parameter)) return ^^angle;
   if (named_after(prop, parameter, {"duration", "time", "delay", "period"})) return ^^duration;
   if (is_one_of(parameter, {"x", "w", "width"})) return ^^horizontal;
   if (is_one_of(parameter, {"y", "h", "height"})) return ^^vertical;
   return {};
 }
 
-// The C++ type a setter parameter gets in the props struct.
-// The unit is inferred from the names LVGL uses, because C only says int32_t.
+// The C++ type that the parameter `param` of `setter` gets in the props struct.
+// The unit is inferred from the names LVGL uses, because C only says int32_t. Whether
+// an angle is in degrees or in tenths of a degree is not in the names either: that is
+// read from the setter's doc comment (see lv/detail/angle_docs.hpp).
 // Style values follow other rules: see style_value_type in style.hpp.
-consteval std::meta::info value_type(std::string_view prop, std::meta::info param) {
+// D only delays reading the doc comments until a setter with an angle is met.
+template <class D = void>
+consteval std::meta::info value_type(std::meta::info setter, std::string_view prop,
+                                     std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
   const std::string_view name =
       std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
 
   if (std::meta::is_arithmetic_type(t) && t != ^^bool)
-    if (const auto unit = unit_of(prop, name); unit != std::meta::info{}) return unit;
+    if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
+      return unit == ^^angle ? angle_type_of<D>(setter) : unit;
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
-}
-
-// Unit types and strict<> hand LVGL their plain value; everything else passes as is.
-template <class T>
-constexpr decltype(auto) lower(const T& x) {
-  if constexpr (requires { x.raw(); })
-    return x.raw();
-  else
-    return (x);
 }
 
 
@@ -474,6 +603,12 @@ constexpr R whole_number(double v)
   return static_cast<R>(v);
 }
 
+// A value that a number token can be: the type says how with T::from_number(double).
+template <class T>
+concept made_from_number = requires(double number) {
+  { T::from_number(number) } -> std::same_as<T>;
+};
+
 }  // namespace detail
 
 template <class T>
@@ -495,8 +630,15 @@ class styled {
   // A number token that is a whole number.
   template <std::same_as<double> N>
     requires requires { typename std::type_identity_t<decltype(T{}.raw())>; } &&
-             detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>)
+             detail::integer<decltype(T{}.raw())> && (!std::convertible_to<const N&, T>) &&
+             (!detail::made_from_number<T>)
   constexpr styled(const token<N>& t) : v_(detail::whole_number<decltype(T{}.raw())>(*t)) {}
+
+  // A number token for a value that says how it is made from a number: an angle
+  // with tenths of a degree is a number of degrees, such as 22.5.
+  constexpr styled(const token<double>& t)
+    requires detail::made_from_number<T>
+      : v_(T::from_number(*t)) {}
 
   template <class U>
     requires std::convertible_to<const U&, T>

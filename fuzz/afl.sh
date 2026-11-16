@@ -43,6 +43,7 @@ g++-16 -std=gnu++26 -freflection -O1 -g -fsanitize=address,undefined -fno-saniti
   -DLV_USE_SNAPSHOT=1 -DLV_USE_LODEPNG=1 -DLV_USE_FS_STDIO=1 -DLV_FS_STDIO_LETTER=65 \
   -DLV_USE_TEST_SCREENSHOT_COMPARE=1 \
   -Iinclude -isystem "$source" -isystem "$source/include" -isystem "$lvgl" \
+  --embed-dir="$source/include" \
   "fuzz/$target.cpp" $extra "$lvgl/liblvgl.a" "$runtime" -lstdc++exp \
   -o "$out/${target}_afl"
 

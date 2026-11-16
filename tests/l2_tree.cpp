@@ -20,6 +20,16 @@ constexpr auto ui = lv::column(
     lv::arc({.id = "speedo", .range = {0, 240}, .size = {110 * px, 110 * px}, .value = 120}),
     lv::button({.id = "reset", .on_clicked = &reset})[lv::label({.text = "Reset"})]];
 
+// A setter that takes a va_list, or any number of values, is no property, whatever
+// type va_list is on the machine.
+template <class P>
+concept has_text = requires(P p) { p.text; };
+template <class P>
+concept has_text_vfmt = requires(P p) { p.text_vfmt; };
+template <class P>
+concept has_text_fmt = requires(P p) { p.text_fmt; };
+static_assert(has_text<lv::props<"label">> && !has_text_vfmt<lv::props<"label">> && !has_text_fmt<lv::props<"label">>);
+
 static_assert(lv::detail::id_count<ui> == 3);
 
 // The typed values a props struct accepts.
@@ -36,7 +46,7 @@ static_assert(lv::length{50 * pct}.raw() == LV_PCT(50));
 static_assert((2 * sec) == (2000 * ms) && (90 * deg).degrees == 90);
 constexpr lv::horizontal wide{100 * px};
 constexpr auto kinds = lv::box({.width = wide, .x = wide, .y = 5 * px});
-static_assert(std::get<0>(kinds.p.width.v).raw() == 100);
+static_assert(kinds.p.width.v.v0 == 100);
 static_assert(lv::opa{50 * pct}.raw() == 127);
 static_assert((lv::rgb(0x3366ff)).red == 0x33 && (lv::rgb(0x3366ff)).blue == 0xff);
 

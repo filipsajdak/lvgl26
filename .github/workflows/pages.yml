@@ -1,10 +1,12 @@
 name: pages
 
-# Publishes site/ to GitHub Pages. The site is plain files: there is no build step.
+# Publishes site/ to GitHub Pages. The pages in site/docs are rendered from docs/ first
+# (tools/docs.py, with pandoc); the rest of the site is plain files.
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'tools/check_site.py', '.github/workflows/pages.yml']
+    paths: ['site/**', 'docs/**', 'examples/quick_start/**', 'tools/check_site.py', 'tools/docs.py',
+            'tools/docs_page.html', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 # One deployment at a time. A newer one waits for the one that is running.
@@ -22,10 +24,16 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Render the documentation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pandoc
+          python3 tools/docs.py check
+          python3 tools/docs.py build
       - name: Check links and assets
         run: python3 tools/check_site.py
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
 
@@ -40,4 +48,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

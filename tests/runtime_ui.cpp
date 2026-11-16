@@ -98,19 +98,27 @@ void styles_and_units(lv::obj screen) {
       {"type": "arc", "id": "a", "props": {"rotation": "90deg", "bg_angles": [10, "200deg"]}},
       {"type": "obj", "id": "o", "props": {"style": {"anim_duration": "0.5s"}}},
       {"type": "obj", "id": "p", "props": {"style": {"anim_duration": 250}}},
-      {"type": "obj", "id": "q", "props": {"style": {"anim_duration": "300ms"}}}]})",
+      {"type": "obj", "id": "q", "props": {"style": {"anim_duration": "300ms"}}},
+      {"type": "obj", "id": "r", "props": {"style": {"transform_rotation": 22.5}}},
+      {"type": "obj", "id": "s", "props": {"style": {"transform_rotation": "-45deg"}}},
+      {"type": "obj", "id": "t", "props": {"style": {"transform_skew_x": "0.1deg"}}}]})",
                        screen);
   check(more.has_value());
   if (more) {
-    check(lv::view<"arc">{more->find("a").raw()}.get<"rotation">() == 90);
+    check(lv::view<"arc">{more->find("a").raw()}.get<"rotation">() == 90 * deg);
     check(more->find("o").get<"style_anim_duration">(LV_PART_MAIN) == 500);
     check(more->find("p").get<"style_anim_duration">(LV_PART_MAIN) == 250);
     check(more->find("q").get<"style_anim_duration">(LV_PART_MAIN) == 300);
+    // Where LVGL takes tenths of a degree, a document may give one decimal.
+    check(lv_obj_get_style_transform_rotation(more->find("r").raw(), LV_PART_MAIN) == 225);
+    check(more->find("r").get<"style_transform_rotation">(LV_PART_MAIN) == 22.5 * deg);
+    check(more->find("s").get<"style_transform_rotation">(LV_PART_MAIN) == -45 * deg);
+    check(lv_obj_get_style_transform_skew_x(more->find("t").raw(), LV_PART_MAIN) == 1);
   }
 }
 
 // What a document must not be able to do.
-void rejects(lv::obj screen) {
+void rejects(lv::obj screen, bool holds_heap) {
   const auto before = lv_obj_get_child_count(screen.raw());
   const auto heap = free_bytes();
   const auto expect = [&](std::string_view doc, lv::load_error error, std::string_view at) {
@@ -215,6 +223,13 @@ void rejects(lv::obj screen) {
   expect(R"({"type": "obj", "props": {"style": {"bg_color": "red"}}})", lv::load_error::bad_value, R"("red")");
   expect(R"({"type": "obj", "props": {"style": {"colour": "#000000"}}})", lv::load_error::unknown_property, "colour");
   expect(R"({"type": "arc", "props": {"rotation": "90rad"}})", lv::load_error::bad_value, R"("90rad")");
+  // An angle in tenths of a degree: not finer than a tenth, not another unit, not
+  // more than fits, and not a word.
+  expect(R"({"type": "obj", "props": {"style": {"transform_rotation": 22.55}}})", lv::load_error::bad_value, "22.55");
+  expect(R"({"type": "obj", "props": {"style": {"transform_rotation": "22.5rad"}}})", lv::load_error::bad_value, R"("22.5rad")");
+  expect(R"({"type": "obj", "props": {"style": {"transform_rotation": 1e12}}})", lv::load_error::bad_value, "1e12");
+  expect(R"({"type": "obj", "props": {"style": {"transform_rotation": "deg"}}})", lv::load_error::bad_value, R"("deg")");
+  expect(R"({"type": "obj", "props": {"style": {"transform_rotation": true}}})", lv::load_error::bad_value, "true");
   expect(R"({"type": "obj", "props": {"style": {"anim_duration": "5min"}}})", lv::load_error::bad_value, R"("5min")");
   expect(R"({"type": "obj", "props": {"style": {"anim_duration": -5}}})", lv::load_error::bad_value, "-5");
   expect(R"({"type": "obj", "props": {"style": {"bg_opa": 0.5}}})", lv::load_error::bad_value, "0.5");
@@ -248,7 +263,7 @@ void rejects(lv::obj screen) {
     check(lv::view<"arc">{ok->find("speedo").raw()}.get<"value">() == 33);
   }
   ok = {};
-  check(free_bytes() == heap);
+  if (holds_heap) check(free_bytes() == heap);
 }
 
 }  // namespace
@@ -296,7 +311,9 @@ int main() {
 
   same_pixels_as_the_tree(screen);
   styles_and_units(screen);
-  rejects(screen);
+  // The first run allocates a few bytes once, so only the second is held to the heap it began with.
+  rejects(screen, false);
+  rejects(screen, true);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");

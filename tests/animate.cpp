@@ -4,6 +4,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <meta>
 
 namespace {
 
@@ -94,6 +95,160 @@ lv::task<> resize(lv::obj box, int from, int to, bool* done) {
 lv::task<> turn(lv::view<"arc"> arc, int from, int to, bool* done) {
   co_await lv::animate(arc, {.rotation = {from * deg, to * deg}}, 100 * ms);
   *done = true;
+}
+
+// An easing curve as LVGL counts it, and which curves it can follow.
+static_assert(lv::detail::bezier_part(0) == 0 && lv::detail::bezier_part(1) == 1024);
+static_assert(lv::detail::bezier_part(0.5) == 512 && lv::detail::bezier_part(-0.25) == -256);
+static_assert(lv::detail::bezier_part(0.33) == 338 && lv::detail::bezier_part(-0.33) == -338);
+static_assert(lv::detail::bezier_part(0.7) == 717 && lv::detail::bezier_part(-0.7) == -717);  // rounded, not cut
+// A y is whatever LVGL's 16 bits hold: -32 to just under 32.
+static_assert(lv::detail::fits_bezier(0) && lv::detail::fits_bezier(-32) && lv::detail::fits_bezier(31.999));
+static_assert(!lv::detail::fits_bezier(-32.001) && !lv::detail::fits_bezier(32));
+static_assert(!lv::detail::fits_bezier(31.9999));  // rounds to 32768, one more than 16 bits hold
+static_assert(lv::detail::usable(lv::bezier{}) && lv::detail::usable(lv::bezier{0, 0, 1, 1}));
+static_assert(lv::detail::usable(lv::bezier{0.3, -32, 0.7, 31.999}));
+static_assert(lv::detail::usable(lv::bezier{0, 0, 0, 1}) && lv::detail::usable(lv::bezier{1, 0, 1, 1}));  // x at its ends
+static_assert(lv::detail::usable(lv::bezier{0.3, 31.999, 0.7, -32}));  // either y may overshoot either way
+static_assert(!lv::detail::usable(lv::bezier{-0.1, 0, 1, 1}) && !lv::detail::usable(lv::bezier{1.1, 0, 1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, 0, -0.1, 1}) && !lv::detail::usable(lv::bezier{0, 0, 1.1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, -33, 1, 1}) && !lv::detail::usable(lv::bezier{0, 33, 1, 1}));
+static_assert(!lv::detail::usable(lv::bezier{0, 0, 1, -33}) && !lv::detail::usable(lv::bezier{0, 0, 1, 33}));
+
+// What an easing is: one speed, a curve, or one of LVGL's paths.
+static_assert(!lv::easing{}.is_curve() && !lv::ease::linear.is_curve());
+static_assert(!lv::easing{lv::bezier{}}.is_curve());  // a straight line is one speed
+constexpr lv::easing fall{lv::bezier{0.33, 0, 0.67, 0.33}};
+static_assert(fall.is_curve() && fall.curve() == lv::bezier{0.33, 0, 0.67, 0.33});
+static_assert(!lv::ease::in.is_curve() && !lv::ease::in_out.is_curve() && !lv::ease::bounce.is_curve());
+
+// The path LVGL is given. Checked at run time: with -fsanitize=undefined GCC does not
+// compare the addresses of two functions in a constant expression.
+void easings_name_lvgl_paths() {
+  check(lv::easing{}.path() == &lv_anim_path_linear && lv::ease::linear.path() == &lv_anim_path_linear);
+  check(lv::easing{lv::bezier{}}.path() == &lv_anim_path_linear);
+  check(fall.path() == &lv_anim_path_custom_bezier3);
+  check(lv::ease::in_quad.path() == &lv_anim_path_custom_bezier3);
+  check(lv::ease::in.path() == &lv_anim_path_ease_in && lv::ease::out.path() == &lv_anim_path_ease_out);
+  check(lv::ease::in_out.path() == &lv_anim_path_ease_in_out);
+  check(lv::ease::overshoot.path() == &lv_anim_path_overshoot);
+  check(lv::ease::bounce.path() == &lv_anim_path_bounce && lv::ease::step.path() == &lv_anim_path_step);
+}
+
+// Every animation path LVGL has is named in lv::ease. A new one in LVGL fails here.
+consteval std::size_t lvgl_paths() {
+  std::size_t n = 0;
+  for (auto f : lv::detail::api)
+    if (std::meta::identifier_of(f).starts_with("lv_anim_path_")) ++n;
+  return n;
+}
+// linear, in, out, in_out, overshoot, bounce and step, and the one behind every curve.
+static_assert(lvgl_paths() == 8);
+
+// A named curve has the numbers LVGL gives it.
+constexpr bool has_parts(const lv::easing& e, int x1, int y1, int x2, int y2) {
+  const auto& c = e.curve();
+  return e.is_curve() && lv::detail::bezier_part(c.x1) == x1 && lv::detail::bezier_part(c.y1) == y1 &&
+         lv::detail::bezier_part(c.x2) == x2 && lv::detail::bezier_part(c.y2) == y2;
+}
+static_assert(has_parts(lv::ease::in_sine, LV_BEZIER_VAL_FLOAT(0.12), 0, LV_BEZIER_VAL_FLOAT(0.39), 0));
+static_assert(has_parts(lv::ease::out_quad, LV_BEZIER_VAL_FLOAT(0.5), 1024, LV_BEZIER_VAL_FLOAT(0.89), 1024));
+static_assert(has_parts(lv::ease::in_out_cubic, LV_BEZIER_VAL_FLOAT(0.65), 0, LV_BEZIER_VAL_FLOAT(0.35), 1024));
+static_assert(has_parts(lv::ease::in_circ, LV_BEZIER_VAL_FLOAT(0.55), 0, 1024, LV_BEZIER_VAL_FLOAT(0.45)));
+static_assert(has_parts(lv::ease::in_back, LV_BEZIER_VAL_FLOAT(0.36), 0, LV_BEZIER_VAL_FLOAT(0.66),
+                        LV_BEZIER_VAL_FLOAT(-0.56)));
+static_assert(has_parts(lv::ease::out_back, LV_BEZIER_VAL_FLOAT(0.34), LV_BEZIER_VAL_FLOAT(1.56),
+                        LV_BEZIER_VAL_FLOAT(0.64), 1024));
+// Each of the 24 named curves is a curve that LVGL can follow.
+constexpr const lv::easing* named[] = {
+    &lv::ease::in_sine,  &lv::ease::out_sine,  &lv::ease::in_out_sine,  &lv::ease::in_quad,
+    &lv::ease::out_quad, &lv::ease::in_out_quad, &lv::ease::in_cubic,   &lv::ease::out_cubic,
+    &lv::ease::in_out_cubic, &lv::ease::in_quart, &lv::ease::out_quart, &lv::ease::in_out_quart,
+    &lv::ease::in_quint, &lv::ease::out_quint, &lv::ease::in_out_quint, &lv::ease::in_expo,
+    &lv::ease::out_expo, &lv::ease::in_out_expo, &lv::ease::in_circ,    &lv::ease::out_circ,
+    &lv::ease::in_out_circ, &lv::ease::in_back, &lv::ease::out_back,    &lv::ease::in_out_back};
+constexpr bool all_usable() {
+  for (const lv::easing* e : named)
+    if (!e->is_curve() || !lv::detail::usable(e->curve())) return false;
+  return true;
+}
+static_assert(all_usable());
+
+lv::task<> eased(lv::view<"arc"> arc, lv::easing how, outcome* out) {
+  out->finished = co_await lv::animate(arc, {.value = {0, 1000}}, 400 * ms, how);
+  out->steps = 1;
+}
+
+// The value half way through an animation from 0 to 1000 with this easing. The
+// easing changes how the value moves, never where it ends.
+std::int32_t half_way(lv::view<"arc"> arc, lv::easing how) {
+  outcome out;
+  check(lv::spawn(eased(arc, how, &out)));
+  lv_test_wait(200);
+  const std::int32_t middle = value_of(arc);
+  check(out.steps == 0);
+  lv_test_wait(250);
+  check(value_of(arc) == 1000 && out.steps == 1 && out.finished);
+  return middle;
+}
+
+void an_easing_shapes_the_motion(lv::obj screen) {
+  auto arc = screen.add<"arc">();
+  arc.set({.range = {0, 1000}});
+  const auto before = free_bytes();
+
+  const auto straight = half_way(arc, {});
+  check(straight > 440 && straight < 560);
+  check(half_way(arc, lv::ease::linear) == straight);
+
+  // A curve. Like a fall under gravity: slow first. This one is the parabola t * t.
+  const auto falling = half_way(arc, lv::bezier{0.33, 0, 0.67, 0.33});
+  check(falling > 180 && falling < 330);
+  // Like a rise: fast first.
+  const auto rising = half_way(arc, lv::bezier{0.33, 0.67, 0.67, 1});
+  check(rising > 670 && rising < 820);
+  // A design token of an easing curve is given as it is.
+  const lv::token<lv::bezier> from_tokens{lv::bezier{0.33, 0, 0.67, 0.33}, lv::detail::from_design_tokens{}};
+  check(half_way(arc, from_tokens) == falling);
+
+  // LVGL's paths and named curves.
+  check(half_way(arc, lv::ease::in) < 400);
+  check(half_way(arc, lv::ease::out) > 600);
+  const auto both = half_way(arc, lv::ease::in_out);
+  check(both > 400 && both < 600);
+  check(half_way(arc, lv::ease::in_quad) < 400);
+  check(half_way(arc, lv::ease::out_quad) > 600);
+  check(half_way(arc, lv::ease::in_expo) < 150);
+  check(half_way(arc, lv::ease::overshoot) > 500);
+  check(half_way(arc, lv::ease::step) == 0);  // nothing until the end
+  const auto bouncing = half_way(arc, lv::ease::bounce);
+  check(bouncing > 500 && bouncing <= 1000);
+
+  check(lv_anim_count_running() == 0 && free_bytes() == before);
+  lv_obj_delete(arc.raw());
+}
+
+// An angle in tenths of a degree is animated in tenths: an image's rotation.
+static_assert(requires { lv::animatable<"image">{}.rotation; });
+lv::task<> turn(lv::view<"image"> image, outcome* out) {
+  out->finished = co_await lv::animate(image, {.rotation = {0 * deg, 22.5 * deg}}, 200 * ms);
+  out->steps = 1;
+}
+void an_image_turns_in_tenths_of_a_degree(lv::obj screen) {
+  auto image = screen.add<"image">();
+  // LVGL gives a widget its extra attributes at the first rotation, and keeps them.
+  image.set({.rotation = 1 * deg});
+  const auto before = free_bytes();
+  outcome out;
+  check(lv::spawn(turn(image, &out)));
+  lv_test_wait(100);
+  const auto half = lv_image_get_rotation(image.raw());
+  check(half > 60 && half < 165);  // on its way, in tenths
+  lv_test_wait(150);
+  check(lv_image_get_rotation(image.raw()) == 225 && out.steps == 1 && out.finished);
+  check(image.get<"rotation">() == 22.5 * deg);
+  check(free_bytes() == before);
+  lv_obj_delete(image.raw());
 }
 
 void every_kind_of_number_is_animated(lv::obj screen) {
@@ -458,6 +613,9 @@ int main(int argc, char**) {
   static_assert(!has_style<lv::animatable<"obj">>);
 
   an_animation_runs_to_its_end(screen);
+  easings_name_lvgl_paths();
+  an_easing_shapes_the_motion(screen);
+  an_image_turns_in_tenths_of_a_degree(screen);
   every_kind_of_number_is_animated(screen);
   ends_are_checked(argc + 4, argc + 9);
   first_of_several(screen);

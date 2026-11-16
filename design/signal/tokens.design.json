@@ -1,0 +1,306 @@
+{
+  "name": "Signal",
+  "version": 2,
+  "color": {
+    "themes": [
+      {
+        "id": "dark",
+        "name": "Dark"
+      },
+      {
+        "id": "day",
+        "name": "Day"
+      }
+    ],
+    "tokens": [
+      {
+        "name": "ground",
+        "value": {
+          "dark": "#0A0A0C",
+          "day": "#FFFFFF"
+        },
+        "usage": "Screen background on every device. Black pixels are off on an OLED watch. In Day it is white, for sunlight."
+      },
+      {
+        "name": "surface",
+        "value": {
+          "dark": "#1B1C22",
+          "day": "#ECEDF0"
+        },
+        "usage": "Tiles, panels and list rows on ground."
+      },
+      {
+        "name": "surface-raised",
+        "value": {
+          "dark": "#26272F",
+          "day": "#DCDEE3"
+        },
+        "usage": "A pressed control or the selected row, on surface."
+      },
+      {
+        "name": "line",
+        "value": {
+          "dark": "#34353D",
+          "day": "#C4C7CF"
+        },
+        "usage": "Tracks of bars and rings, separators, the normal band of a gauge. Decoration only: never the only sign of a control."
+      },
+      {
+        "name": "line-strong",
+        "value": {
+          "dark": "#7B7E8A",
+          "day": "#5F626C"
+        },
+        "usage": "The border of a control that has no fill, on ground and surface (at least 3:1 on both)."
+      },
+      {
+        "name": "reading",
+        "value": {
+          "dark": "#FFFFFF",
+          "day": "#0A0A0C"
+        },
+        "usage": "Numbers and primary text on ground, surface and surface-raised."
+      },
+      {
+        "name": "muted",
+        "value": {
+          "dark": "#B4B7C0",
+          "day": "#4A4D57"
+        },
+        "usage": "Units, labels and secondary text on ground and surface."
+      },
+      {
+        "name": "active",
+        "value": {
+          "dark": "#D4FF3A",
+          "day": "#0A0A0C"
+        },
+        "usage": "The one loud colour: the primary action, the selected mode, progress. Never a state of the machine or the patient. In Day the pair turns round: a black block with lime text, which stays loud on white."
+      },
+      {
+        "name": "on-active",
+        "value": {
+          "dark": "#0A0A0C",
+          "day": "#D4FF3A"
+        },
+        "usage": "Text and icons on active."
+      },
+      {
+        "name": "alarm",
+        "value": {
+          "dark": "#FF4438",
+          "day": "#C4161C"
+        },
+        "usage": "High priority: act now. A filled block with on-alarm text, three triangles, and a word."
+      },
+      {
+        "name": "on-alarm",
+        "value": {
+          "dark": "#0A0A0C",
+          "day": "#FFFFFF"
+        },
+        "usage": "Text and icons on alarm."
+      },
+      {
+        "name": "caution",
+        "value": {
+          "dark": "#FFC531",
+          "day": "#FFC531"
+        },
+        "usage": "Medium priority: act soon. A filled block with on-caution text, two triangles, and a word. In Day the block also gets a stroke-bar border in reading, because yellow fades on white."
+      },
+      {
+        "name": "on-caution",
+        "value": {
+          "dark": "#0A0A0C",
+          "day": "#0A0A0C"
+        },
+        "usage": "Text and icons on caution."
+      },
+      {
+        "name": "advice",
+        "value": {
+          "dark": "#9DB4FF",
+          "day": "#1F3FBF"
+        },
+        "usage": "Low priority and information: be aware. Text or an outline on ground and surface, one triangle, and a word."
+      },
+      {
+        "name": "on-advice",
+        "value": {
+          "dark": "#0A0A0C",
+          "day": "#FFFFFF"
+        },
+        "usage": "Text and icons on a filled advice block."
+      }
+    ]
+  },
+  "type": {
+    "fonts": [],
+    "families": {
+      "display": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+      "text": "\"Barlow\", system-ui, sans-serif"
+    },
+    "groups": [
+      {
+        "name": "Numerals",
+        "family": "display",
+        "styles": [
+          {
+            "name": "numeral-2xl",
+            "fontSize": "208px",
+            "lineHeight": "176px",
+            "fontWeight": 700
+          },
+          {
+            "name": "numeral-xl",
+            "fontSize": "104px",
+            "lineHeight": "94px",
+            "fontWeight": 700
+          },
+          {
+            "name": "numeral-l",
+            "fontSize": "72px",
+            "lineHeight": "66px",
+            "fontWeight": 700
+          },
+          {
+            "name": "numeral-m",
+            "fontSize": "40px",
+            "lineHeight": "40px",
+            "fontWeight": 700
+          }
+        ]
+      },
+      {
+        "name": "Titles",
+        "family": "display",
+        "styles": [
+          {
+            "name": "title",
+            "fontSize": "24px",
+            "lineHeight": "28px",
+            "fontWeight": 600,
+            "letterSpacing": "2px"
+          },
+          {
+            "name": "label",
+            "fontSize": "16px",
+            "lineHeight": "20px",
+            "fontWeight": 700,
+            "letterSpacing": "1px"
+          }
+        ]
+      },
+      {
+        "name": "Text",
+        "family": "text",
+        "styles": [
+          {
+            "name": "body",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "fontWeight": 500
+          },
+          {
+            "name": "caption",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": 500
+          }
+        ]
+      }
+    ]
+  },
+  "spacing": {
+    "tokens": [
+      {
+        "name": "space-1",
+        "value": "4px",
+        "usage": "The module: every size and gap is a multiple of it."
+      },
+      {
+        "name": "space-2",
+        "value": "8px",
+        "usage": "Between an icon and its word; inside a chip."
+      },
+      {
+        "name": "space-3",
+        "value": "12px",
+        "usage": "Between a number and its bar."
+      },
+      {
+        "name": "space-4",
+        "value": "16px",
+        "usage": "Padding of a tile; between rows of a list."
+      },
+      {
+        "name": "space-6",
+        "value": "24px",
+        "usage": "Between tiles; the margin of a small screen."
+      },
+      {
+        "name": "space-8",
+        "value": "32px",
+        "usage": "Between groups on a panel."
+      },
+      {
+        "name": "space-12",
+        "value": "48px",
+        "usage": "The margin of a large panel; the pitch of the stripe pattern."
+      }
+    ]
+  },
+  "radius": {
+    "tokens": [
+      {
+        "name": "radius-0",
+        "value": "0px",
+        "usage": "Everything: tiles, buttons, chips, bars. Signal has square corners."
+      },
+      {
+        "name": "radius-face",
+        "value": "50%",
+        "usage": "Only the face of a round display, and rings drawn on it."
+      }
+    ]
+  },
+  "stroke": {
+    "tokens": [
+      {
+        "name": "stroke-bar",
+        "value": "4px",
+        "usage": "The marker of a gauge and the border of an outlined button."
+      },
+      {
+        "name": "stroke-track",
+        "value": "8px",
+        "usage": "A linear bar: range left, level, progress."
+      },
+      {
+        "name": "stroke-ring",
+        "value": "16px",
+        "usage": "The ring of a round face: setpoint, activity."
+      }
+    ]
+  },
+  "size": {
+    "tokens": [
+      {
+        "name": "target",
+        "value": "48px",
+        "usage": "The smallest touch target for a bare finger on thermostat, watch and appliance."
+      },
+      {
+        "name": "target-glove",
+        "value": "80px",
+        "usage": "The smallest target where gloves are worn: machine panel, EV charger, e-bike (about 20 mm on those screens)."
+      },
+      {
+        "name": "chip",
+        "value": "32px",
+        "usage": "The height of a mode chip such as ECO or AUTO. It is not a touch target."
+      }
+    ]
+  }
+}

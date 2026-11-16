@@ -21,6 +21,7 @@
 
 #include <array>
 #include <expected>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -40,30 +41,26 @@ inline constexpr bool is_node<node<W, Kids...>> = true;
 template <class T>
 concept tree_node = is_node<std::remove_cvref_t<T>>;
 
-// The children of a node. A plain recursive struct: every child has its own
-// member path, which a reference template argument needs to be told apart.
 template <class... Kids>
-struct kids_list {};
-
-template <class First, class... Rest>
-struct kids_list<First, Rest...> {
-  First head;
-  kids_list<Rest...> tail;
+struct kids_of {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, numbered_members('k', {^^Kids...})); }
 };
 
-constexpr kids_list<> make_kids() { return {}; }
+// The children of a node: a struct with the members k0, k1, ..., one for each child.
+// Reflection makes it, so that all children are written into it in one step. A list
+// built child by child copied the children after each one again, and the compiler
+// walks every member of a node it copies.
+template <class... Kids>
+using kids = typename kids_of<Kids...>::type;
 
-template <class First, class... Rest>
-constexpr kids_list<First, Rest...> make_kids(First first, Rest... rest) {
-  return {std::move(first), make_kids(std::move(rest)...)};
-}
+template <class List>
+inline constexpr auto kid_members = std::define_static_array(
+    std::meta::nonstatic_data_members_of(^^List, std::meta::access_context::unchecked()));
 
-template <std::size_t I, class First, class... Rest>
-constexpr const auto& kid(const kids_list<First, Rest...>& l) {
-  if constexpr (I == 0)
-    return l.head;
-  else
-    return kid<I - 1>(l.tail);
+template <std::size_t I, class List>
+constexpr const auto& kid(const List& l) {
+  return l.[:kid_members<List>[I]:];
 }
 
 }  // namespace detail
@@ -72,19 +69,19 @@ constexpr const auto& kid(const kids_list<First, Rest...>& l) {
 template <detail::fixed W, class... Kids>
 struct node {
   static constexpr auto kind = W;
-  props<W> p{};
-  detail::kids_list<Kids...> kids{};
+  detail::kept<W> p{};  // what props<W> gave it: see detail::kept_of
+  detail::kids<Kids...> kids{};
   bool bare = false;  // start without the theme's styles: see lv::group
 
   // The children: lv::column()[lv::label(...), lv::arc(...)].
   template <detail::tree_node... K>
     requires(sizeof...(Kids) == 0)
-  constexpr node<W, K...> operator[](K... k) const {
-    return {p, detail::make_kids(std::move(k)...), bare};
+  constexpr node<W, K...> operator[](const K&... k) const {
+    return {p, {k...}, bare};
   }
 
   constexpr std::string_view id() const {
-    return p.id.set ? std::get<0>(p.id.v) : std::string_view{};
+    return p.id.set ? std::string_view{p.id.v.v0} : std::string_view{};
   }
 };
 
@@ -93,14 +90,15 @@ namespace detail {
 // The functions below must not name node<"arc"> directly: that would generate
 // the property struct of every listed widget in every file that includes this.
 template <fixed W, class D>
-constexpr node<W> make_node(lazy_props<W, D> p) {
-  return {std::move(p)};
+constexpr node<W> make_node(const lazy_props<W, D>& p) {
+  return {keep<W, D>(p)};
 }
 
 template <class D>
-constexpr auto make_flex(lazy_props<"obj", D> p, lv_flex_flow_t flow) {
-  if (!p.flex_flow.set) p.flex_flow = flow;
-  return make_node<"obj", D>(std::move(p));
+constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
+  auto n = make_node<"obj", D>(p);
+  if (!n.p.flex_flow.set) n.p.flex_flow = flow;
+  return n;
 }
 
 }  // namespace detail
@@ -112,13 +110,13 @@ namespace detail {
 template <fixed W>
 struct factory {
   template <class D = void>
-  constexpr auto operator()(lazy_props<W, D> p = {}) const {
-    return make_node<W, D>(std::move(p));
+  constexpr auto operator()(const lazy_props<W, D>& p = {}) const {
+    return make_node<W, D>(p);
   }
 
   template <tree_node... Kids>
-  constexpr auto operator[](Kids... kids) const {
-    return (*this)()[std::move(kids)...];
+  constexpr auto operator[](const Kids&... kids) const {
+    return (*this)()[kids...];
   }
 };
 
@@ -127,16 +125,19 @@ struct factory {
 // widgets without drawing anything itself.
 struct group_factory {
   template <class D = void>
-  constexpr auto operator()(lazy_props<"obj", D> p = {}) const {
-    if (!p.size.set) p.size = {percent{100}, percent{100}};
-    auto n = make_node<"obj", D>(std::move(p));
+  constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
+    auto n = make_node<"obj", D>(p);
+    if (!n.p.size.set) n.p.size = {percent{100}, percent{100}};
     n.bare = true;
     return n;
   }
 
+  // The call names a type that depends on Kids. A plain (*this)() does not depend on
+  // anything, so the compiler would work it out, and generate props<"obj">, while it
+  // reads this header.
   template <tree_node... Kids>
-  constexpr auto operator[](Kids... kids) const {
-    return (*this)()[std::move(kids)...];
+  constexpr auto operator[](const Kids&... kids) const {
+    return this->operator()<std::void_t<Kids...>>()[kids...];
   }
 };
 
@@ -146,13 +147,13 @@ struct flex_factory {
   lv_flex_flow_t flow;
 
   template <class D = void>
-  constexpr auto operator()(lazy_props<"obj", D> p = {}) const {
-    return make_flex<D>(std::move(p), flow);
+  constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
+    return make_flex<D>(p, flow);
   }
 
   template <tree_node... Kids>
-  constexpr auto operator[](Kids... kids) const {
-    return (*this)()[std::move(kids)...];
+  constexpr auto operator[](const Kids&... kids) const {
+    return this->operator()<std::void_t<Kids...>>()[kids...];  // see group_factory
   }
 };
 
@@ -190,21 +191,10 @@ struct id_entry {
   std::meta::info view;  // the view<...> type of the node
 };
 
-consteval void collect_kids(std::vector<id_entry>&, const kids_list<>&) {}
-
-template <class First, class... Rest>
-consteval void collect_kids(std::vector<id_entry>& out, const kids_list<First, Rest...>& l);
-
 template <fixed W, class... Kids>
 consteval void collect(std::vector<id_entry>& out, const node<W, Kids...>& n) {
   if (!n.id().empty()) out.push_back({n.id(), ^^view<W>});
-  collect_kids(out, n.kids);
-}
-
-template <class First, class... Rest>
-consteval void collect_kids(std::vector<id_entry>& out, const kids_list<First, Rest...>& l) {
-  collect(out, l.head);
-  collect_kids(out, l.tail);
+  template for (constexpr auto k : kid_members<kids<Kids...>>) collect(out, n.kids.[:k:]);
 }
 
 // The ids of a tree, in the order mount meets them.
@@ -215,7 +205,7 @@ consteval std::vector<id_entry> ids_of() {
   for (std::size_t i = 0; i < out.size(); ++i)
     for (std::size_t j = i + 1; j < out.size(); ++j)
       if (out[i].name == out[j].name)
-        throw unknown_name("lv: the id '" + str(out[i].name) +
+        fail("lv: the id '" + str(out[i].name) +
                            "' is used twice in one tree. Ids must be unique.");
   return out;
 }
@@ -232,7 +222,7 @@ consteval std::size_t id_index(std::string_view name) {
     if (!valid.empty()) valid += ", ";
     valid += ids[i].name;
   }
-  throw unknown_name("lv: the tree has no id '" + str(name) + "'. Its ids: " +
+  fail("lv: the tree has no id '" + str(name) + "'. Its ids: " +
                      (valid.empty() ? str("none") : valid) + ".");
 }
 
@@ -270,9 +260,26 @@ struct style_at {
   static constexpr const auto& get() {
     const auto& n = descend<Path...>(Tree);
     using node_type = std::remove_cvref_t<decltype(n)>;
-    return n.p.[:members_of_props<node_type::kind>[Member]:];
+    return n.p.[:members_of_kept<node_type::kind>[Member]:].value;
   }
 };
+
+// The numbers of the members of props<W> that the node `n` sets.
+template <fixed W, class... Kids>
+consteval std::vector<std::size_t> set_members_of(const node<W, Kids...>& n) {
+  std::vector<std::size_t> out;
+  template for (constexpr auto i : indices<members_of_kept<W>.size()>) {
+    if (is_set(n.p.[:members_of_kept<W>[i]:])) out.push_back(i);
+  }
+  return out;
+}
+
+// The same for the node of `Tree` at `Path`. They are found in one constant
+// evaluation, and apply_node visits only these: a question to the compiler for each
+// of the 160 members of each node is what made a large tree slow to mount.
+template <const auto& Tree, std::size_t... Path>
+inline constexpr std::span<const std::size_t> set_members =
+    std::define_static_array(set_members_of(descend<Path...>(Tree)));
 
 // Applies the properties of one node of `Tree` to its widget `w`.
 // A node is named by the root and an index path, never by a reference to the node
@@ -280,20 +287,18 @@ struct style_at {
 template <const auto& Tree, std::size_t... Path>
 void apply_node(lv_obj_t* w) {
   constexpr const auto& N = descend<Path...>(Tree);
-  constexpr auto W = std::remove_cvref_t<decltype(N)>::kind;
+  [[maybe_unused]] constexpr auto W = std::remove_cvref_t<decltype(N)>::kind;
 
-  template for (constexpr auto i : indices<members_of_props<W>.size()>) {
-    constexpr auto m = members_of_props<W>[i];
-    if constexpr (a_style<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
-      if constexpr (is_set(N.p.[:m:]))
-        add_const_style<style_at<Tree, i, Path...>>(w, selector_of<targets<W>[i]>());
-    } else if constexpr (is_set(N.p.[:m:])) {
+  template for (constexpr auto i : set_members<Tree, Path...>) {
+    constexpr auto m = members_of_kept<W>[i];
+    if constexpr (is_maybe<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
+      add_const_style<style_at<Tree, i, Path...>>(w, selector_of<targets<W>[i]>());
+    } else {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
-      if constexpr (requires { a.bound; })
-        static_assert(a.bound == nullptr || bindable<W, i>(),
-                      "lv: this property cannot follow a state. LVGL has no bind function "
-                      "for it and it takes more than one value.");
-      apply_member<W, i>(w, a);
+      static_assert(a.bound == nullptr || bindable<W, i>(),
+                    "lv: this property cannot follow a state. LVGL has no bind function "
+                    "for it and it takes more than one value.");
+      apply_member<W, i, std::remove_cvref_t<decltype(a)>, true>(w, a);
     }
   }
 }
