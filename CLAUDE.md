@@ -81,6 +81,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - A large result of constant evaluation is stored with `std::define_static_array`: returning a
   `std::array` of 200 KB costs several times the decoding. Its data becomes part of a symbol name,
   and Apple's linker refuses a very long one, so sizes are limited (`compile_time_image_pixels`).
+  It costs about 130 operations a byte, in one loop that must stay under 262144 rounds. A font's
+  bitmap is therefore a `std::array` in a variable template of its own, filled through a pointer at
+  about 20 operations a byte, and named by its glyphs rather than its data (`bitmap` in `font.hpp`).
 - `docs/reference/lvgl-<version>.json` is the reference as data: widgets, properties, what each takes,
   enumerator names, style members. `tools/reference/reference.cpp` prints it by reflection, and the
   test `reference_data` fails when a committed file is stale. Write it again with the program the

@@ -63,18 +63,18 @@ class coverage {
     line(p, p2);
   }
 
-  // The coverage of each pixel, row by row, from 0 to `most`.
-  consteval std::vector<unsigned char> pixels(int most) const {
-    std::vector<unsigned char> out;
-    for (int y = 0; y < h_; ++y) {
+  // The coverage of each pixel, row by row, from 0 to `most`: width times height values,
+  // written to `out`.
+  consteval void pixels(int most, unsigned char* out) const {
+    const float* row = cells_.data();
+    for (int y = 0; y < h_; ++y, row += w_ + 2) {
       float sum = 0;
       for (int x = 0; x < w_; ++x) {
-        sum += cells_[static_cast<std::size_t>(y * (w_ + 2) + x)];
+        sum += row[x];
         const float v = sum < 0 ? -sum : sum;
-        out.push_back(static_cast<unsigned char>((v > 1 ? 1 : v) * static_cast<float>(most) + 0.5f));
+        *out++ = static_cast<unsigned char>((v > 1 ? 1 : v) * static_cast<float>(most) + 0.5f);
       }
     }
-    return out;
   }
 
  private:
