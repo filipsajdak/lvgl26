@@ -53,8 +53,8 @@ static_assert(std::is_same_v<decltype(level)::value_type, bars>);
 constinit const lv::computed tint{
     [](bool over) { return over ? lv_color_hex(0xff0000) : lv_color_hex(0x00ff00); }, over_limit};
 
-static_assert(lv::detail::dependency<lv::state<bool>> && lv::detail::dependency<decltype(gap)>);
-static_assert(!lv::detail::dependency<bool> && !lv::detail::dependency<lv::state<bool>*>);
+static_assert(lv::dependency<lv::state<bool>> && lv::dependency<decltype(gap)>);
+static_assert(!lv::dependency<bool> && !lv::dependency<lv::state<bool>*>);
 
 constexpr auto ui = lv::column({.flex_flow = lv::bind(flow), .size = {320 * px, 240 * px}})[
     lv::label({.id = "advice", .text = lv::bind(advice)}),

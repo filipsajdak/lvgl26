@@ -501,7 +501,7 @@ void apply_member(lv_obj_t* o, const A& a) {
   constexpr auto target = targets<W>[I];
   if constexpr (target == std::meta::info{}) {
     // `id` names the node for lv::mount; there is nothing to apply.
-  } else if constexpr (a_style<A>) {
+  } else if constexpr (style_value<A>) {
     apply_style_local(o, a, selector_of<target>());
   } else if constexpr (std::meta::is_enumerator(target)) {
     const auto& [... x] = a.v;

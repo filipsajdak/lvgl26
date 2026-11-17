@@ -38,8 +38,14 @@ inline constexpr bool is_node = false;
 template <fixed W, class... Kids>
 inline constexpr bool is_node<node<W, Kids...>> = true;
 
+}  // namespace detail
+
+// A node of a tree: what lv::button({...})[...] and a part that returns one make. Where a
+// part takes a piece of a tree to put inside its own.
 template <class T>
-concept tree_node = is_node<std::remove_cvref_t<T>>;
+concept tree_node = detail::is_node<std::remove_cvref_t<T>>;
+
+namespace detail {
 
 // A node that builds no widget of its own but decides which widgets its parent gets, such
 // as lv::each (lv/list.hpp). Such a type has a static `build<Tree, Path...>(parent, state)`.
@@ -388,13 +394,13 @@ enum class mount_error {
 
 // The widgets built from a tree. Owns them: they are deleted with this object.
 template <const auto& Tree>
-  requires detail::tree_node<decltype(Tree)>
+  requires tree_node<decltype(Tree)>
 class mounted {
   owned<obj> root_;
   std::array<lv_obj_t*, detail::id_count<Tree>> ids_{};
 
   template <const auto& T>
-    requires detail::tree_node<decltype(T)>
+    requires tree_node<decltype(T)>
   friend std::expected<mounted<T>, mount_error> mount(obj);
 
  public:
@@ -421,7 +427,7 @@ class mounted {
 
 // Builds the widgets of the constexpr tree `Tree` under `parent`.
 template <const auto& Tree>
-  requires detail::tree_node<decltype(Tree)>
+  requires tree_node<decltype(Tree)>
 std::expected<mounted<Tree>, mount_error> mount(obj parent)
   pre(parent.raw() != nullptr)
 {
@@ -437,7 +443,7 @@ std::expected<mounted<Tree>, mount_error> mount(obj parent)
 // made with LVGL's C API are: they live until the parent is deleted.
 // Returns the root, or an empty view if LVGL had no memory.
 template <const auto& Tree>
-  requires detail::tree_node<decltype(Tree)>
+  requires tree_node<decltype(Tree)>
 obj place(obj parent)
   pre(parent.raw() != nullptr)
 {

@@ -95,6 +95,23 @@ class nonnegative {
   constexpr auto raw() const { return static_cast<std::make_unsigned_t<decltype(v_.raw())>>(v_.raw()); }
 };
 
+namespace detail {
+
+// The failed expression is what the compiler prints for a part that takes a tree_handler,
+// so its name says what to do.
+template <class F>
+inline constexpr bool without_captures__name_the_state_as_a_template_argument =
+    std::convertible_to<F, void (*)()> || std::convertible_to<F, void (*)(event)>;
+
+}  // namespace detail
+
+// A handler that a constexpr tree can hold: a function, or a lambda that captures nothing.
+// What a part that builds a constexpr tree takes for `.on_clicked`. A lambda with a capture
+// is refused at the part's call: name the state as a template argument instead. For a handler
+// that may capture one pointer, use lv::event_handler with view.on<>().
+template <class F>
+concept tree_handler = detail::without_captures__name_the_state_as_a_template_argument<F>;
+
 // An event handler stored in a props struct: a function or a lambda without captures.
 // For a handler with state, use view.on<LV_EVENT_...>() instead.
 // No default member initializers: see lv::arg. An empty handler is `handler{}`.
@@ -789,5 +806,36 @@ class styled {
 
   constexpr decltype(auto) raw() const { return detail::lower(v_); }
 };
+
+namespace detail {
+
+template <class T>
+inline constexpr bool is_design_token = false;
+template <class T>
+inline constexpr bool is_design_token<token<T>> = true;
+
+template <class X, class T>
+inline constexpr bool is_token_holding = false;
+template <class T>
+inline constexpr bool is_token_holding<token<T>, T> = true;
+
+}  // namespace detail
+
+// A design token of any kind: tok.color.surface, tok.space.md. Where a part takes a value
+// that it hands to a style, and wants the design system's value rather than a number.
+template <class X>
+concept token_value = detail::is_design_token<std::remove_cvref_t<X>>;
+
+// A design token that holds a T: lv::token_of<decltype(tok.color.surface), lv_color_t>.
+// A group of tokens (a colour pair, say) is a struct of tokens, and is not a token itself.
+template <class X, class T>
+concept token_of = detail::is_token_holding<std::remove_cvref_t<X>, T>;
+
+// A font that a style takes for `.text_font`: a typography token made into a font by
+// lv::typeface, lv::raw(font) for a font that no token names, or lv::bind(scaled) for a
+// font that is drawn on the device. See lv/font.hpp and lv/scaled_font.hpp.
+template <class F>
+concept font_value = std::convertible_to<F, styled<const lv_font_t*>> ||
+                 std::same_as<std::remove_cvref_t<F>, font_binding>;
 
 }  // namespace lv

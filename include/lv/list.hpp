@@ -760,7 +760,7 @@ lv_obj_t* child_on_path(lv_obj_t* w) {
 // `card` is the constexpr row template given to lv::each. A row needs no memory for its ids:
 // get<>() follows the template from the row's root.
 template <const auto& Template>
-  requires detail::tree_node<decltype(Template)>
+  requires tree_node<decltype(Template)>
 class row_view {
   lv_obj_t* root_;
 

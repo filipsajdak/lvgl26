@@ -17,6 +17,10 @@ namespace detail {
 using style_t = stub::style_t;
 }  // namespace detail
 
+/// The type of a widget's `.style`: lv::style. Where a part takes a style to apply.
+template <class S, class D = void>
+concept style_value = std::same_as<std::remove_cvref_t<S>, detail::style_t>;
+
 /// A style value: lv::style({.bg_color = tok.color.card, .radius = tok.radius.card}).
 /// Keep it in a constexpr variable to give it a name and reuse it.
 constexpr stub::style_t style(stub::style_t s) {
