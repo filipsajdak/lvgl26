@@ -73,8 +73,14 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   default (`LVGL26_TTF`, `LVGL26_PNG`, `LVGL26_JPEG`). So is leaving something out: `LVGL26_NO_DEFAULT_THEME`
   drops LVGL's own theme (`host-v96-no-theme` tests it). The tests build with them. Its C functions are found by reflection
   (`detail::find`), and a `static_assert` names the option when they are missing.
-- `-fconstexpr-ops-limit` is raised for every user of lvgl26 (`CMakeLists.txt`), because the compiler
-  draws fonts. A single loop in constant evaluation must still stay under 262144 rounds.
+- lvgl26 sets no `-fconstexpr-ops-limit`: GCC's default of 33,554,432 operations covers what a user
+  writes. The limit counts one constant evaluation, so work that needs more is split into evaluations
+  of its own: a font draws each glyph, each row of kerning pairs and its bitmap in variable templates
+  (`glyph`, `kerning_row`, `bitmap` in `include/lv/font.hpp`), reached with `std::meta::substitute`.
+  The tests `font`, `font_bytes` and `signal_type` compile with no option, and are the guard. A program
+  of the repository that needs more gets a fixed budget of its own, at about twice its need
+  (`large_tree`, `lv_reference` in `tests/CMakeLists.txt`). A single loop in constant evaluation must
+  still stay under 262144 rounds.
 - Code that runs in the compiler is written for its interpreter: look codes up in tables, give a
   buffer its size once and write through pointers, avoid a call for each byte
   (`include/lv/detail/png_reader.hpp` needs an eighth of the work of its first form).

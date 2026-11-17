@@ -444,6 +444,11 @@ endif()
 # committed file must be what the program prints.
 add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
 target_link_libraries(lv_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# The document is one constant evaluation over every widget: 232 to 256 million steps with
+# LVGL v9.6, 208 to 232 million with v10, where GCC's default is 33554432. This program
+# alone gets a budget, at about twice its need, so that a change which makes it far more
+# expensive still stops the build.
+target_compile_options(lv_reference PRIVATE -fconstexpr-ops-limit=500000000)
 # Not for the analyzer: this file is one long constant evaluation over every widget, and
 # the analyzer on top of it needs more memory than a CI machine has. What runs is a loop
 # that prints. A source file's options come last, after -fanalyzer.
