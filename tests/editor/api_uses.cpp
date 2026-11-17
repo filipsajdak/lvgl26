@@ -506,4 +506,36 @@ std::size_t use_json(std::string_view text) {
   return out.size() + list.size() + list.text().size() + first.text.size() + list.at(2).string().size();
 }
 
+// ---- repetition ---------------------------------------------------------------------
+
+enum class subpage { none, print, scan };
+struct subpage_icons {
+  static constexpr char print[] = "P";
+  static constexpr char scan[] = "S";
+};
+struct level {
+  int percent;
+};
+constexpr level levels[] = {{90}, {50}};
+
+constexpr auto tile = []<subpage Page> {
+  return lv::button[lv::label({.text = lv::like<Page, subpage_icons>}), lv::label({.text = lv::name_of<Page>})];
+};
+constexpr auto home = lv::row[lv::label({.text = "header"}),
+                              lv::for_each<subpage, lv::but<subpage::none>>(tile)];
+constexpr auto gauges = lv::row[lv::for_each<levels>([]<level L> {
+  return lv::bar({.range = {0, 100}, .value = {L.percent, false}});
+})];
+
+// Clang reads no annotation, so the members of a row type are repeated in a template that
+// is never instantiated: GCC checks the name, and tests/for_each.cpp runs it.
+template <class Row>
+constexpr auto details_of() {
+  return lv::column[lv::for_each_field<Row>([]<lv::field F> {
+    return lv::row[lv::label({.text = F.caption}), lv::label({.text = F.text()})];
+  })];
+}
+constexpr lv::caption<6> owner_caption{"owner"};
+static_assert(owner_caption.sv() == "owner");
+
 }  // namespace api_uses
