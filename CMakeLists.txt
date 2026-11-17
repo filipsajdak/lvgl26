@@ -49,6 +49,11 @@ if(LVGL26_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
+# The Qt Design Studio port counts speeds with mp-units.
+if(TARGET mp-units::mp-units)
+  add_subdirectory(examples/ports/qt/treadmill)
+endif()
+
 if(LVGL26_BUILD_MCU_EXAMPLE)
   add_subdirectory(examples/mcu)
 endif()
