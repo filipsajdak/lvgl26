@@ -5,46 +5,46 @@
 
 namespace printer::icons {
 
-inline constexpr unsigned char home[] = {
+constexpr unsigned char home[] = {
 #embed "images/home.png"
 };
-inline constexpr unsigned char settings[] = {
+constexpr unsigned char settings[] = {
 #embed "images/settings.png"
 };
-inline constexpr unsigned char ink[] = {
+constexpr unsigned char ink[] = {
 #embed "images/ink.png"
 };
-inline constexpr unsigned char print[] = {
+constexpr unsigned char print[] = {
 #embed "images/print.png"
 };
-inline constexpr unsigned char scan[] = {
+constexpr unsigned char scan[] = {
 #embed "images/scan.png"
 };
-inline constexpr unsigned char copy[] = {
+constexpr unsigned char copy[] = {
 #embed "images/copy.png"
 };
-inline constexpr unsigned char usb[] = {
+constexpr unsigned char usb[] = {
 #embed "images/usb.png"
 };
-inline constexpr unsigned char down[] = {
+constexpr unsigned char down[] = {
 #embed "images/down.png"
 };
-inline constexpr unsigned char back[] = {
+constexpr unsigned char back[] = {
 #embed "images/back.png"
 };
-inline constexpr unsigned char minus[] = {
+constexpr unsigned char minus[] = {
 #embed "images/minus.png"
 };
-inline constexpr unsigned char plus[] = {
+constexpr unsigned char plus[] = {
 #embed "images/plus.png"
 };
-inline constexpr unsigned char pause[] = {
+constexpr unsigned char pause[] = {
 #embed "images/pause.png"
 };
-inline constexpr unsigned char bin[] = {
+constexpr unsigned char bin[] = {
 #embed "images/bin.png"
 };
-inline constexpr unsigned char check[] = {
+constexpr unsigned char check[] = {
 #embed "images/check.png"
 };
 

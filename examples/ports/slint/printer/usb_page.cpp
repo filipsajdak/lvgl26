@@ -11,16 +11,16 @@
 namespace printer {
 namespace {
 
-inline constexpr unsigned char cat_jpg[] = {
+constexpr unsigned char cat_jpg[] = {
 #embed "photos/cat.jpg"
 };
-inline constexpr unsigned char dog_jpg[] = {
+constexpr unsigned char dog_jpg[] = {
 #embed "photos/dog.jpg"
 };
-inline constexpr unsigned char elephant_jpg[] = {
+constexpr unsigned char elephant_jpg[] = {
 #embed "photos/elephant.jpg"
 };
-inline constexpr unsigned char snake_jpg[] = {
+constexpr unsigned char snake_jpg[] = {
 #embed "photos/snake.jpg"
 };
 

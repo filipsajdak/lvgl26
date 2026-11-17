@@ -1,4 +1,5 @@
 // printer: the printer panel in a window. It needs SDL2 (cmake -DLVGL26_BUILD_WINDOW_EXAMPLES=ON).
+// editor-check: skip, it calls LVGL's SDL driver, which exists only when the window option is on
 
 #include "shell.hpp"
 

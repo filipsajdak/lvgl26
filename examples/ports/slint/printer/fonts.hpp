@@ -9,14 +9,14 @@
 
 namespace printer {
 
-inline constexpr unsigned char inter_regular[] = {
+constexpr unsigned char inter_regular[] = {
 #embed "fonts/Inter-24pt-Regular.ttf"
 };
-inline constexpr unsigned char inter_medium[] = {
+constexpr unsigned char inter_medium[] = {
 #embed "fonts/Inter-24pt-Medium.ttf"
 };
 
-inline constexpr auto type = lv::typeface({
+constexpr auto type = lv::typeface({
     {"Inter 24pt", 400, inter_regular},
     {"Inter 24pt", 500, inter_medium},
 });

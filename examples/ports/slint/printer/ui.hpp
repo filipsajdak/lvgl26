@@ -13,9 +13,9 @@ namespace printer {
 
 using namespace lv::units;
 
-inline constexpr char tokens_json[] = {
+constexpr char tokens_json[] = {
 #embed "tokens.json"
     , 0};
-inline constexpr auto tok = lv::tokens<tokens_json>;
+constexpr auto tok = lv::tokens<tokens_json>;
 
 }  // namespace printer
