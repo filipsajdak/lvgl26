@@ -63,37 +63,25 @@ pager main_pager;
 slide_pager sub_pager;
 lv::weak<lv::obj> sub_host;
 
-constexpr make_page page_maker(page p) {
-  switch (p) {
-    case page::home: return &mount_home;
-    case page::settings: return &mount_settings;
-    case page::ink: return &mount_ink;
-  }
-  return &mount_home;
-}
-
-constexpr make_page subpage_maker(subpage s) {
-  switch (s) {
-    case subpage::print: return &mount_print;
-    case subpage::scan: return &mount_scan;
-    case subpage::copy: return &mount_copy;
-    case subpage::usb: return &mount_usb;
-    case subpage::none: break;
-  }
-  return nullptr;
-}
-
 //! [follow]
-void show_page(page p) { main_pager.show(page_maker(p)); }
+void show_page(page p) {
+  main_pager.show(lv::match(p)(lv::is<page::home>.then([] { return &mount_home; }),
+                               lv::is<page::settings>.then([] { return &mount_settings; }),
+                               lv::is<page::ink>.then([] { return &mount_ink; })));
+}
 
-void show_subpage(subpage s) {
-  const make_page make = subpage_maker(s);
-  if (make == nullptr) {
-    sub_pager.leave();
-    return;
-  }
+// The host of the sub-pages catches taps again, and the page slides in.
+void open_subpage(make_page make) {
   if (sub_host) sub_host.get().set({.hidden = false});
   sub_pager.show(make);
+}
+
+void show_subpage(subpage s) {
+  lv::match(s)(lv::is<subpage::none>.then([] { sub_pager.leave(); }),
+               lv::is<subpage::print>.then([] { open_subpage(&mount_print); }),
+               lv::is<subpage::scan>.then([] { open_subpage(&mount_scan); }),
+               lv::is<subpage::copy>.then([] { open_subpage(&mount_copy); }),
+               lv::is<subpage::usb>.then([] { open_subpage(&mount_usb); }));
 }
 
 constinit lv::effect follow_page{&show_page, active_page};

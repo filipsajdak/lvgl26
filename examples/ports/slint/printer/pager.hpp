@@ -14,15 +14,19 @@ class pager {
   void host(lv::obj where) { host_ = where; }
 
   // Replaces the page that is shown with the one `make` builds.
-  void show(make_page make) {
-    current_.reset();
-    current_ = make(host_);
-  }
+  void show(make_page make) { delete_then_build(make); }
 
   // Deletes the page.
   void clear() { current_.reset(); }
 
  protected:
+  // The old page goes before the new one is built: `current_ = make(host_)` would build the new page
+  // while the old one still exists, and the heap would hold both at its peak.
+  void delete_then_build(make_page make) {
+    current_.reset();
+    current_ = make(host_);
+  }
+
   lv::obj host_;
   lv::owned<lv::obj> current_;
 };
@@ -42,7 +46,7 @@ class slide_pager : public pager {
  public:
   void show(make_page make) {
     leave();
-    current_ = make(host_);
+    delete_then_build(make);
     if (current_) lv::spawn(slide_in(current_.get()), current_.get());
   }
 

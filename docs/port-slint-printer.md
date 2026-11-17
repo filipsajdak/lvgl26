@@ -132,15 +132,19 @@ class pager {
   void host(lv::obj where) { host_ = where; }
 
   // Replaces the page that is shown with the one `make` builds.
-  void show(make_page make) {
-    current_.reset();
-    current_ = make(host_);
-  }
+  void show(make_page make) { delete_then_build(make); }
 
   // Deletes the page.
   void clear() { current_.reset(); }
 
  protected:
+  // The old page goes before the new one is built: `current_ = make(host_)` would build the new page
+  // while the old one still exists, and the heap would hold both at its peak.
+  void delete_then_build(make_page make) {
+    current_.reset();
+    current_ = make(host_);
+  }
+
   lv::obj host_;
   lv::owned<lv::obj> current_;
 };
@@ -165,16 +169,24 @@ In the port an `lv::effect` runs a function when a state changes, and the functi
 
 <!-- snippet: examples/ports/slint/printer/shell.cpp follow -->
 ```cpp
-void show_page(page p) { main_pager.show(page_maker(p)); }
+void show_page(page p) {
+  main_pager.show(lv::match(p)(lv::is<page::home>.then([] { return &mount_home; }),
+                               lv::is<page::settings>.then([] { return &mount_settings; }),
+                               lv::is<page::ink>.then([] { return &mount_ink; })));
+}
 
-void show_subpage(subpage s) {
-  const make_page make = subpage_maker(s);
-  if (make == nullptr) {
-    sub_pager.leave();
-    return;
-  }
+// The host of the sub-pages catches taps again, and the page slides in.
+void open_subpage(make_page make) {
   if (sub_host) sub_host.get().set({.hidden = false});
   sub_pager.show(make);
+}
+
+void show_subpage(subpage s) {
+  lv::match(s)(lv::is<subpage::none>.then([] { sub_pager.leave(); }),
+               lv::is<subpage::print>.then([] { open_subpage(&mount_print); }),
+               lv::is<subpage::scan>.then([] { open_subpage(&mount_scan); }),
+               lv::is<subpage::copy>.then([] { open_subpage(&mount_copy); }),
+               lv::is<subpage::usb>.then([] { open_subpage(&mount_usb); }));
 }
 
 constinit lv::effect follow_page{&show_page, active_page};
