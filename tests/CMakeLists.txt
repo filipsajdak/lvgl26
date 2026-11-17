@@ -648,6 +648,8 @@ if(Python3_FOUND)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
+  # The nightly mutation run: which headers it mutates, its time budget and its summary.
+  add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
