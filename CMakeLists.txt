@@ -50,6 +50,10 @@ if(LVGL26_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
+if(LVGL26_BUILD_TESTS OR LVGL26_BUILD_WINDOW_EXAMPLES)
+  add_subdirectory(examples/ports/slint/printer)
+endif()
+
 if(LVGL26_BUILD_WINDOW_EXAMPLES)
   add_subdirectory(examples/window)
 endif()

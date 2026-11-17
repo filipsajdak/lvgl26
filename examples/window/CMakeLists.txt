@@ -13,10 +13,3 @@ target_link_libraries(bounce PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 target_compile_options(bounce PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/bounce)
 # The scene's styles need more compile-time steps than GCC allows by default.
 target_compile_options(bounce PRIVATE -fconstexpr-ops-limit=20000000000)
-
-# The printer panel. Its pictures are PNG files, so LVGL needs its PNG decoder.
-target_compile_definitions(lvgl PUBLIC LV_USE_LODEPNG=1 LV_FONT_MONTSERRAT_18=1 LV_FONT_MONTSERRAT_24=1)
-add_executable(printer printer/main.cpp)
-target_link_libraries(printer PRIVATE lvgl26::lvgl26 lvgl26_warnings)
-target_compile_options(printer PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/printer
-                       -fconstexpr-ops-limit=20000000000)
