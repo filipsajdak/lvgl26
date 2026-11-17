@@ -492,3 +492,25 @@ Slice 1 needs nothing from node storage, and changes no existing program: withou
     Options: `lv::application` ends them before `lv_deinit`; the layout is a member of the application; nobody.
     Recommendation: the application, through the layout it was given.
     Cost: one pointer in `lv::application`, and an `end()` on the layout.
+
+## What the owner decided
+
+Decided 2026-11-18, in an interview over the list above.
+
+| # | Decision |
+|---|---|
+| 1 | A typed layout, `lv::memory<parts...>`, whose total size is a constant of the compiler. |
+| 2 | LVGL keeps its allocator and takes its pool from the layout, through CMake definitions. |
+| 3 | The size of LVGL's heap comes from one CMake setting, and a test checks that the layout agrees. |
+| 4 | After start the program uses no system heap, and LVGL's heap is a fixed part with a tested limit. A study of LVGL's allocations in each frame follows. |
+| 5 | The heap part is sized by measurement and held by a budget test. A bound that the compiler computes is studied as well. |
+| 6 | Not decided. Shrinking task frames and sizing them is studied first. |
+| 7 | An awaited task that gets no frame ends the whole spawned task, and the program is told. |
+| 8 | A checked build stops when a picture does not fit, and the budget test draws every picture. The layout also gets a part for decoding, sized from the largest picture. |
+| 9 | The names are `lv::memory`, `lv::lvgl_heap`, `lv::band`, `lv::one_of` and `lv::tasks`. |
+| 10 | `lv::application` ends the parts in reverse order, before LVGL shuts down. |
+
+Three studies follow from these answers.
+The first is where LVGL allocates while it draws, and whether layers and draw tasks can get fixed buffers.
+The second is a bound on the widget memory of a tree that the compiler can compute.
+The third is why some task frames are large, and how a frame gets a size that is known before it runs.
