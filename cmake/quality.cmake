@@ -19,8 +19,20 @@ endif()
 
 option(LVGL26_ANALYZE "Run GCC's static analyzer (-fanalyzer) on the tests" OFF)
 if(LVGL26_ANALYZE)
-  target_compile_options(lvgl26_warnings INTERFACE -fanalyzer)
+  # A target with the property LVGL26_NO_ANALYZER is left out: see lvgl26_skip_analyzer below.
+  target_compile_options(lvgl26_warnings INTERFACE
+                         $<$<NOT:$<BOOL:$<TARGET_PROPERTY:LVGL26_NO_ANALYZER>>>:-fanalyzer>)
 endif()
+
+# The analyzer triples the compile time of a port (16 files of two ports: 657 s without it, 2224 s
+# with it, measured 2026-11-17), and a port is the same headers again. The tests of the library
+# keep it. Call this after the targets of a directory exist.
+function(lvgl26_skip_analyzer directory)
+  get_property(targets DIRECTORY ${directory} PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS targets)
+    set_property(TARGET ${target} PROPERTY LVGL26_NO_ANALYZER ON)
+  endforeach()
+endfunction()
 
 option(LVGL26_COVERAGE "Build the tests with coverage instrumentation" OFF)
 if(LVGL26_COVERAGE)
