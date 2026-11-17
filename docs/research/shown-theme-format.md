@@ -836,3 +836,38 @@ What it removes from the ports.
     Options: yes, and the handler's constructor names the bad parameter; keep it as two signatures.
     Recommendation: yes; the id check stays a `static_assert` where the tree is known.
     Cost: two places say what is wrong, the concept and the tree.
+
+## What the owner decided
+
+Decided 2026-11-18, in an interview over the list above.
+The number is the decision it answers.
+
+| # | Decision |
+|---|---|
+| 1 | The names are `lv::shown` and `lv::when`. |
+| 2 | Arms reuse `lv::is` and `lv::otherwise`. The enum bug of `lv::match` is fixed in the same change. |
+| 3 | An arm is a tree or a page function from another file, from the first slice. |
+| 4 | No heap block. The node's storage must not allocate, and must be extendable and open for new node kinds. See [node-storage.md](node-storage.md). |
+| 5 | `lv::shown` is the only child of its widget. Anything else is a compile error. |
+| 6 | The switch must not allocate. Its timing is decided with the storage research. |
+| 7 | A page that is asked for again while it leaves plays its leave backwards. Any other change cuts it. |
+| 8 | Two values of one arm keep the tree. |
+| 9 | Ids in an arm are reached through a view handed to `.on_shown`. |
+| 10 | Focus goes to the first widget of the new page, if the old page had it. |
+| 11 | The theme changes in place, chosen by a state on `lv::display`. |
+| 12 | Tokens resolve through the active mode from the start. The tree is written once. |
+| 13 | Modes are described by a DTCG resolver document. |
+| 14 | A style value may follow a state in this round. An allocation-free form is researched first. |
+| 15 | The buffer of a formatted text lives in the node storage of decision 4. |
+| 16 | The format language is our own subset, checked at compile time. |
+| 17 | A text value in a format needs `{:.N}`. |
+| 18 | A custom text is a capture-free formatter function that writes into a fixed span. |
+| 19 | A handler may take the event, its own widget, widgets by id, the value and the row. States are not injected. |
+| 20 | The id is written in the type of the parameter: `lv::view<"label", "title">`, the kind and then the id. Parameter names are not read. |
+| 21 | A generic lambda stays refused: it has no parameter list to read. With the id in the type, an unnamed parameter is fine. |
+| 22 | Lambdas come first. A plain function takes the event and its own widget, until ids in the type are proven for functions. |
+| 23 | `lv::tree_handler` means that the library can build every parameter. The check of an id stays where the tree is known. |
+
+The order of building is the page node, formatted text, injection, and then looks.
+The cost of a wider handler to `tests/large_tree.cpp` is measured before injection is built.
+If a tree without injection gets dearer, the owner decides again.
