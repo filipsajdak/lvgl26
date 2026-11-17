@@ -7,9 +7,3 @@ target_compile_definitions(lvgl PUBLIC LV_USE_SDL=1 LV_USE_SNAPSHOT=1 LV_MEM_SIZ
                                        LV_DEF_REFR_PERIOD=8 LV_COLOR_FORMAT_DEFAULT=LV_COLOR_FORMAT_XRGB8888)
 # LV_COLOR_FORMAT_DEFAULT: LVGL draws in 16-bit color by default, which shows as bands in a gradient.
 target_link_libraries(lvgl PUBLIC SDL2::SDL2)
-
-add_executable(bounce bounce/main.cpp)
-target_link_libraries(bounce PRIVATE lvgl26::lvgl26 lvgl26_warnings)
-target_compile_options(bounce PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR}/bounce)
-# The scene's styles need more compile-time steps than GCC allows by default.
-target_compile_options(bounce PRIVATE -fconstexpr-ops-limit=20000000000)
