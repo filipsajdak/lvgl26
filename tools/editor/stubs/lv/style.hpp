@@ -23,6 +23,18 @@ constexpr stub::style_t style(stub::style_t s) {
   return s;
 }
 
+/// A style for one part in one state, merged into a style with |:
+///   .style = base | lv::on("knob", "pressed", {.bg_color = tok.color.active})
+/// The names are LVGL's parts (main, indicator, knob, items, cursor, ...) and states
+/// (pressed, checked, focused, disabled, ...).
+constexpr stub::style_t on(const char*, const char*, stub::style_t s) {
+  return s;
+}
+/// One name: a part in the default state, or a state of the main part.
+constexpr stub::style_t on(const char*, stub::style_t s) {
+  return s;
+}
+
 namespace stub {
 
 /// Two styles merge with |: what the right one sets wins.

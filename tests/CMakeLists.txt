@@ -86,6 +86,13 @@ foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold
                    ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
 endforeach()
 target_link_libraries(theme PRIVATE lvgl26_test_data)
+lvgl26_test(style_selectors)
+# A layer of lv::on in a style for another part, and two layered styles merged at run time.
+foreach(case part_slot merge)
+  add_test(NAME style_selectors_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:style_selectors> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:application> -DCASE=twice
@@ -270,7 +277,7 @@ lvgl26_compile_fail(match_not_an_enumerator_folded "contract predicate is false 
 lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example tok.space.md\\) or lv::raw\\(...\\), holding a length .*You gave lv::length")
 lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
 lvgl26_compile_fail(theme_needs_token "It takes a design token .*You gave lv::length")
-lvgl26_compile_fail(theme_not_a_value "a theme cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
+lvgl26_compile_fail(theme_not_a_value "a theme or an lv::on cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
 lvgl26_compile_fail(encoded_image_not_a_picture "lv::encoded_image takes a PNG or a JPEG file, and this is neither")
 lvgl26_compile_fail(encoded_image_progressive "this JPEG file is progressive, or of another form than baseline")
 lvgl26_compile_fail(encoded_image_empty "this picture is 0 x 0 pixels. LVGL holds a picture of 1 to 65535 pixels each way")
@@ -293,7 +300,18 @@ lvgl26_compile_fail(scaled_font_raw_needs_ttf "lv::scaled_font needs LVGL's Tiny
 target_compile_options(fail_scaled_font_raw_needs_ttf PRIVATE -ULV_USE_TINY_TTF)
 lvgl26_compile_fail(scaled_font_plain_size "the size of a font comes from a typography token")
 lvgl26_compile_fail(scaled_font_bound_to_number "lv::bind\\(font\\) is for a font property of a style")
-lvgl26_compile_fail(theme_bound_font "a theme holds constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(theme_bound_font "a theme and an lv::on hold constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(on_unknown_part "widgets have no part 'knop'. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first\\.")
+lvgl26_compile_fail(on_state_as_part "'pressed' is a state. lv::on takes the part first, then the state")
+lvgl26_compile_fail(on_unknown_state "widgets have no state 'presed'. The states: default, alt, checked, focused, .*pressed")
+lvgl26_compile_fail(on_part_as_state "'indicator' is a part. lv::on takes the part first, then the state")
+lvgl26_compile_fail(on_unknown_name "'knop' is neither a part nor a state. The parts: main, .* The states: default, ")
+lvgl26_compile_fail(on_any "'any' is neither a part nor a state")
+lvgl26_compile_fail(on_inside_on "an lv::on cannot hold another lv::on. Put them side by side")
+lvgl26_compile_fail(on_not_a_value "a theme or an lv::on cannot hold the style property 'enabled'")
+lvgl26_compile_fail(on_bound_font "a theme and an lv::on hold constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(on_in_part_slot "lv::on goes in .style, because it names its own part and state")
+lvgl26_compile_fail(theme_on_in_part_slot "lv::on goes in .style, because it names its own part and state")
 lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
 lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
 lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
