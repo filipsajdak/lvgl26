@@ -24,6 +24,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
 | Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
 
+- The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
 - A check belongs in the pull request run if it takes a few minutes and a change can
   plausibly break it. Anything long goes to the nightly run.
 - A test must be safe to run next to every other test: no shared file, no fixed port.
@@ -60,7 +61,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
 - A look shared by all widgets of a kind is a theme (`lv::theme`, `include/lv/theme.hpp`), given to
   the display. A theme's styles are built in constant evaluation with `std::define_static_array`,
-  so they need no template argument and no heap. `include/lv/signal/*.json` is written by
+  so they need no template argument and no heap. A style for one part in one state is `lv::on(...)`
+  merged into `.style` (also in a theme): a constant `lv_style_t` the style keeps in its last member,
+  `layers`. Do not add a style member per part and state. `include/lv/signal/*.json` is written by
   `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
   run the tool.
 - `lv/signal.hpp` draws no font and reads no typography token. Signal's typefaces, their tokens (`include/lv/signal/type.json`) and the themes with fonts are in `lv/signal_type.hpp`. Both headers build their themes from the one description in `lv/signal.hpp`. Measure a change to `lv/signal.hpp` against main in instructions: it must not cost more.
@@ -166,6 +169,7 @@ A feature pull request also:
 - Adds the feature to the feature list in `site/index.html` and in `README.md`.
 - Adds or updates an example, and the site media in `site/media/` when the feature is visual.
 - Records any new rule in `CLAUDE.md`.
+- Updates `docs/migration/coverage.json` when it changes what a port can use: a row of a toolkit, or a gap that closes. The migration table of the status page is written from it: run `python3 tools/migration_matrix.py`. The tests `migration_matrix` and `migration_tools` fail when the page is out of date.
 
 ## Documentation
 

@@ -137,6 +137,41 @@ The values are design tokens, as in every style. The token file of this example 
 
 The members are in alphabetical order, as designated initializers need.
 
+## Style a part in a state
+
+A member styles one part or one state: `style_knob` is the knob, `style_pressed` is the widget while pressed.
+For a part in a state, such as the knob while pressed, put a selector into `style` with `lv::on`.
+
+```cpp
+constexpr auto mine = lv::theme({
+    .slider = {.style = lv::style({.bg_color = tok.color.rule})
+                        | lv::on("knob", "pressed", {.bg_color = tok.color.accent})
+                        | lv::on("indicator", "checked", {.bg_color = tok.color.ink})},
+});
+```
+
+- The first name is a part: `main`, `scrollbar`, `indicator`, `knob`, `selected`, `items`, `cursor`.
+- The second name is a state: `default`, `checked`, `focused`, `pressed`, `disabled` and the others of LVGL.
+- With one name, `lv::on` styles a part in the default state, or a state of the main part.
+- A wrong name stops the build, and the message lists the right ones.
+- A selector goes in `style` only. It names its own part, so `style_knob` cannot hold one.
+- A node of a tree takes selectors the same way: `.style = base | lv::on("knob", "pressed", {...})`.
+
+The compiler makes a constant style of each selector, as it does for the rest of the theme.
+A selector costs no heap, and equal selectors share one style.
+
+### Signal and selectors
+
+Signal's themes are one description in `lv/signal.hpp`, the function `themed`.
+A part in a state goes into its `style` members the same way, with Signal's tokens.
+A ring with a knob that lights up while it is dragged would read:
+
+```cpp
+.arc = {.style = lv::style({.arc_color = Tok.color.line}) | lv::on("knob", "pressed", {.bg_color = Tok.color.active})},
+```
+
+Both Signal headers build their themes from that one description, so a selector added there reaches `dark`, `day` and the themes with fonts.
+
 ## Give it to a display
 
 The theme is the last argument of a display. This function draws the screen with any theme:
@@ -178,7 +213,8 @@ The option is off by default.
 ## Rules
 
 - A theme is applied after LVGL's own theme. It only says what differs. Without LVGL's theme (see above) it is the whole look.
-- A node still has the last word: its `.style` wins over the theme.
+- A node still has the last word: its `.style` wins over the theme for the same part and state.
+- A style for a state wins over one for the default state, wherever it comes from. A theme's `lv::on("knob", "pressed", ...)` beats a node's `.style_knob` while the knob is pressed. This is how LVGL picks a style.
 - A widget gets the styles of its own kind only. A slider does not get those of `bar`.
-- A member styles one part or one state. A part in a state (the indicator of a checked switch) is not there yet.
+- A member styles one part or one state. A part in a state is a selector in `style`: see above.
 - A display takes its theme when it is made. It cannot change it later.

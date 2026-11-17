@@ -10,7 +10,7 @@ with all the quality presets.
 | LVGL `widgets`: buttonmatrix, dropdown, spinbox, textarea, image, scale, keyboard | 22 | 44 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
 | LVGL other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll`, others | 0 | 199 | Same pixels as the C original |
 | Qt for MCUs demos and examples | 0 | 35 | Screenshots; written from the documented behaviour only |
-| Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 0 | about 60 | Screenshots |
+| Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 1 | about 60 | Screenshots; [treadmill](ports/qt/treadmill/README.md) is the Qt Design Studio port (`tests/ports_treadmill.cpp`) |
 
 ## Not ported yet
 
@@ -21,9 +21,9 @@ with all the quality presets.
 | `slider_styling`, `switch_styling`, `checkbox_styling` | A style for one part in one state (the knob while pressed) |
 | `obj_draggable` | The input device (`lv_indev_get_vect`), which the framework does not wrap |
 | `obj_transform` | `LV_DRAW_TRANSFORM_USE_MATRIX`, which the test build does not enable |
-| `roller_*` (6 of 6) | A quoted enumerator beside a string: `.options = {"Mon\nTue", "normal"}` is refused (see Findings) |
-| `roller_bind_value` | A state that follows a roller: LVGL names its bind function `lv_roller_bind_value`, the setter is `selected` |
-| `spinner_basic` | `.arc_sweep = 270 * deg` does not compile (see Findings) |
+| `roller_*` (6 of 6) | Can be ported now: a name beside a string works. Not done yet |
+| `roller_bind_value` | Can be ported now: a state follows a roller. Not done yet |
+| `spinner_basic` | Can be ported now: `.arc_sweep = 270 * deg` compiles. Not done yet |
 | `table_*` (8 of 8) | More than one cell: `.cell_value` takes a row, a column and a text, and a props struct names it once |
 | `buttonmatrix_button_ctrl`, `_button_width`, `_one_checked`, `_popover`, `_recolor`, `keyboard_custom_map` | An array of control flags, written with LVGL's C enumerators |
 | `buttonmatrix_styling`, `textarea_cursor` | A style for one part in one state (`items` and checked, `cursor` and focused) |
@@ -67,12 +67,6 @@ A control map is an array of enumerators, and there is no way to write them by n
 constexpr lv_buttonmatrix_ctrl_t ctrl[] = {"none", "checkable"};  // wanted
 ```
 
-The names of `lv_image_align_t` are not shortened, because `_lv_image_align_auto_transform` has no `LV_` prefix like the others.
-The port writes `.inner_align = "lv_image_align_top_left"`, where the other enumerators read `"top_left"`.
-
-A state follows a dropdown in one direction only, because LVGL names its bind function `lv_dropdown_bind_value` and the setter is `selected`.
-`dropdown_bind_value` writes the choice back in an `on_value_changed` handler.
-
 The theme gives a screen a gap between its children.
 An example that lays out the screen itself (a row or a column with `space_evenly`) needs that gap.
 Its port sets the layout on the screen with `screen.set({...})`, as the `switch_orientation` port does.
@@ -85,3 +79,31 @@ A group in the screen's place has no gap, and the pictures differ.
 - A port that differs from the original says so in a comment at the top of the file.
 - Qt for MCUs sources are under a commercial licence: they are not read into this
   repository and no asset is copied from them.
+
+Found while porting the treadmill panel of Qt Design Studio ([examples/ports/qt/treadmill](ports/qt/treadmill/README.md)).
+Each is a gap in lvgl26, and the port leaves the feature out or says how it differs.
+
+The opacity of a widget cannot be animated, because LVGL has no setter for it (`lv_obj_set_style_opa` is a style).
+The original fades its splash screen and its logos in and out:
+
+```cpp
+co_await lv::animate(page, {.opa = {100 * lv::pct, 0 * lv::pct}}, 1000 * lv::ms);  // no member `opa`
+```
+
+A style cannot follow a state, so a look that changes while the program runs is a new tree.
+The original changes three themes of colors in place:
+
+```cpp
+lv::group({.style = {.bg_color = lv::bind(background)}})  // a style takes a token, not a binding
+```
+
+A position cannot follow a state of a plain number. A binding to `.x` accepts only a length, and no state holds one:
+
+```cpp
+struct place { int value; };
+constinit lv::state<place> where{place{0}};
+lv::image({.x = lv::bind(where)})  // this property cannot be bound to a state of that type
+```
+
+A text that has two numbers in it (`6:05`, `14.3`) has no formatted binding, because a format holds one `{}`.
+The port writes the text in an effect and binds the label to a `lv::state<const char*>`.

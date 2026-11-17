@@ -292,10 +292,10 @@ void apply_node(lv_obj_t* w) {
   template for (constexpr auto i : set_members<Tree, Path...>) {
     constexpr auto m = members_of_kept<W>[i];
     if constexpr (is_maybe<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
-      add_const_style<style_at<Tree, i, Path...>>(w, selector_of<targets<W>[i]>());
+      add_const_style<style_at<Tree, i, Path...>, selector_of<targets<W>[i]>()>(w);
     } else {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
-      static_assert(a.bound == nullptr || bindable<W, i>(),
+      static_assert(!a.follows || bindable<W, i>(),
                     "lv: this property cannot follow a state. LVGL has no bind function "
                     "for it and it takes more than one value.");
       apply_member<W, i, std::remove_cvref_t<decltype(a)>, true>(w, a);

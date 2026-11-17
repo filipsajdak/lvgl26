@@ -316,12 +316,16 @@ tbody th { font-weight: 600; }
 td.num { font: 700 0.95rem/1.45 var(--mono); white-space: nowrap; }
 td .path, .path { font: 400 0.78rem/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
 
+.note { color: var(--muted); font-size: 0.93rem; margin: 0.4rem 0 0.9rem; }
+
 .pill {
   display: inline-block; font: 600 0.68rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em;
   padding: 0.3rem 0.45rem; border: 1px solid currentColor; white-space: nowrap;
 }
 .pill.ok { color: var(--ok); }
 .pill.plan { color: var(--plan); }
+.pill.part { color: var(--accent); }
+.pill.none { color: var(--muted); }
 
 /* ---- the feature lists of the status page ------------------------------------
    One <li> per feature, with the same parts in "works today" and in "planned",

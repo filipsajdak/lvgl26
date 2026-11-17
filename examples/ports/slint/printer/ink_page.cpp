@@ -51,6 +51,7 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
     tube("yellow", tok.ink.yellow, "90%", 0), tube("cyan", tok.ink.cyan, "50%", 1),
     tube("magenta", tok.ink.magenta, "80%", 2), tube("black", tok.ink.black, "10%", 3)];
 
+//! [rise]
 // The ink rises to its level, a moment after the page appears.
 lv::task<> fill(lv::obj ink, int level) {
   co_await lv::animate(ink, {.height = {0 * px, tube_height * level / 100 * px}}, tok.motion.ink_time,
@@ -64,6 +65,7 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
   lv::spawn(fill(c, levels[2]), c);
   lv::spawn(fill(d, levels[3]), d);
 }
+//! [rise]
 
 }  // namespace
 

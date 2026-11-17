@@ -23,7 +23,9 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [web-emulator.md](web-emulator.md) | Whether a small own emulator can run the firmware in a browser instead of QEMU, with a survey of small emulators and measured size and speed. |
 | [dev-container.md](dev-container.md) | Which base image and install route give a dev container with GCC 16 on both architectures. |
 | [constexpr-limits.md](constexpr-limits.md) | What the constant-evaluation limit costs us: the operations each file needs, what a very high limit risks, and how fonts can need none. |
+| [compile-time.md](compile-time.md) | What GCC 16.2 and plugins show about constant evaluation, where the compile time goes (the analyzer, the ports), and a ranked list of levers that cut it. |
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
+| [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
 
 ## How each claim is marked
 
