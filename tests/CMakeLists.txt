@@ -230,6 +230,11 @@ add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
+# The printer panel of examples/ports/slint/printer: each page, compared with a reference picture.
+add_executable(ports_printer ports_printer.cpp)
+target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
+add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
+
 # The treadmill panel of examples/ports/qt/treadmill: each scene, compared with a reference picture.
 add_executable(ports_treadmill ports_treadmill.cpp)
 target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
