@@ -7,6 +7,7 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSIO
 endif()
 
 option(LVGL26_BUILD_TESTS "Build the lvgl26 tests" ${PROJECT_IS_TOP_LEVEL})
+option(LVGL26_BUILD_WINDOW_EXAMPLES "Build the examples that open a window (needs SDL2)" OFF)
 option(LVGL26_BUILD_MCU_EXAMPLE "Build the slice for a microcontroller (preset arm-m4)" OFF)
 option(LVGL26_PNG "Build LVGL with its PNG decoder, for PNG files decoded on the device (lv::encoded_image)" OFF)
 option(LVGL26_JPEG "Build LVGL with its JPEG decoder, for JPEG files decoded on the device (lv::encoded_image)" OFF)
@@ -47,6 +48,14 @@ endif()
 if(LVGL26_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(LVGL26_BUILD_TESTS OR LVGL26_BUILD_WINDOW_EXAMPLES)
+  add_subdirectory(examples/ports/slint/printer)
+endif()
+
+if(LVGL26_BUILD_WINDOW_EXAMPLES)
+  add_subdirectory(examples/window)
 endif()
 
 if(LVGL26_BUILD_MCU_EXAMPLE)

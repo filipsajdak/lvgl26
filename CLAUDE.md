@@ -192,6 +192,7 @@ clangd cannot parse the headers, so editors read stubs: the public API as plain 
 - Every function of a template in a stub has a body, `{ __builtin_unreachable(); }` when nothing else fits. Clang warns about a function without one when its arguments have no linkage. The stub tests run with `-Werror`.
 - The stubs are read by Clang only, and may use what our own code may not (`__builtin_unreachable`, an include guard in `tools/editor/fallback/contracts`).
 - A new member kind or value text in the reference data needs a rule in `tools/editor/reference_stubs.py`: `editor_tools` fails when a value becomes `stub::anything`.
+- A file under `examples/` that needs a build setting the editor check lacks, such as the SDL driver, says `// editor-check: skip, <reason>` in its first ten lines. The check prints it as skipped.
 
 ## Research
 

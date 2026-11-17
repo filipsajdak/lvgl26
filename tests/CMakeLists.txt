@@ -237,6 +237,11 @@ add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
+# The printer panel of examples/ports/slint/printer: each page, compared with a reference picture.
+add_executable(ports_printer ports_printer.cpp)
+target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
+add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
+
 lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
