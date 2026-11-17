@@ -12,13 +12,8 @@ namespace {
 // ---- the side bar ----------------------------------------------------------------
 
 template <page P>
-constexpr bool differs(page now) { return now != P; }
-template <page P>
 constexpr bool is(page now) { return now == P; }
 
-constinit lv::computed not_home{&differs<page::home>, active_page};
-constinit lv::computed not_settings{&differs<page::settings>, active_page};
-constinit lv::computed not_ink{&differs<page::ink>, active_page};
 constinit lv::computed is_home{&is<page::home>, active_page};
 constinit lv::computed is_settings{&is<page::settings>, active_page};
 constinit lv::computed is_ink{&is<page::ink>, active_page};
@@ -32,18 +27,18 @@ void go() {
 constexpr int icon_size = 40;
 constexpr int icon_step = 64;
 
-// A side bar icon: a rounded square. The current page's is lit.
-template <const auto& Icon, class Off, class On>
-constexpr auto side_icon(const Off& unlit, const On& lit, void (*go_to)(), int row) {
-  return lv::group({.align = "top_mid", .size = {icon_size * px, icon_size * px}, .y = (margin + row * icon_step) * px})[
-      lv::group({.hidden = lv::bind(unlit),
-                 .size = {100 * pct, 100 * pct},
-                 .style = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid, .radius = tok.sidebar.icon_radius}}),
-      lv::group({.hidden = lv::bind(lit), .size = {100 * pct, 100 * pct}})[picture<Icon>(tok.sidebar.icon)],
-      lv::group({.hidden = lv::bind(unlit), .size = {100 * pct, 100 * pct}})[picture<Icon>(tok.sidebar.icon_active)],
-      lv::button({.on_clicked = go_to,
-                  .size = {100 * pct, 100 * pct},
-                  .style = {.bg_opa = tok.clear, .shadow_width = lv::raw(0 * px)}})];
+// A side bar icon: a rounded square, lit while it is the current page's. Its picture is checked with it.
+// The picture follows the page itself: a state that is set before the children exist does not trickle.
+template <const auto& Icon, class Current>
+constexpr auto side_icon(const Current& current, void (*go_to)(), int row) {
+  return lv::group({.align = "top_mid", .checked = lv::bind(current), .on_clicked = go_to,
+                    .size = {icon_size * px, icon_size * px},
+                    .style = {.radius = tok.sidebar.icon_radius},
+                    .style_checked = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid},
+                    .y = (margin + row * icon_step) * px})[
+      lv::image({.align = "center", .checked = lv::bind(current), .src = lv::image_file<Icon>,
+                 .style = {.image_recolor = tok.sidebar.icon, .image_recolor_opa = tok.tint},
+                 .style_checked = {.image_recolor = tok.sidebar.icon_active}})];
 }
 
 constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
@@ -53,9 +48,9 @@ constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
     lv::group({.hidden = true, .id = "sub", .size = {page_width * px, 100 * pct}, .x = sidebar_width * px}),
     lv::group({.size = {sidebar_width * px, 100 * pct},
                .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid}})[
-        side_icon<icons::home>(not_home, is_home, &go<page::home>, 0),
-        side_icon<icons::settings>(not_settings, is_settings, &go<page::settings>, 1),
-        side_icon<icons::ink>(not_ink, is_ink, &go<page::ink>, 2)]];
+        side_icon<icons::home>(is_home, &go<page::home>, 0),
+        side_icon<icons::settings>(is_settings, &go<page::settings>, 1),
+        side_icon<icons::ink>(is_ink, &go<page::ink>, 2)]];
 
 // ---- the pages -------------------------------------------------------------------
 
