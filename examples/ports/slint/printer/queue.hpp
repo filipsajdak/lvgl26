@@ -1,43 +1,48 @@
 #pragma once
 
-// The print queue: the jobs, and what the buttons do to them. The two views of the queue
-// (the column on the home page and the list of the Print page) show this, and both follow
-// `queue_revision`.
+// The print queue: the jobs, and what the buttons do to them. The two views of the queue (the
+// column on the home page and the list of the Print page) are `lv::each` over `queue`. A change
+// of a job touches the widgets of that job only.
 
 #include <lv/lv.hpp>
 
 #include <cstddef>
-#include <string>
-#include <vector>
 
 namespace printer {
 
-struct job {
-  std::string title;
-  std::string owner = "joe@example.com";
-  std::string size = "100kB";
-  std::string submitted = "11:41 25/01/26";
-  int pages = 1;
-  int progress = 0;  // percent; the first job gains one a second
-  bool printing = false;
+// Names a job. No job has the id 0.
+struct job_id {
+  int value;
 };
 
-// Changes whenever the jobs do.
-inline constinit lv::state<lv::counter> queue_revision{lv::counter{0}};
+inline constexpr std::size_t queue_capacity = 32;
+
+struct job {
+  job_id id;
+  const char* title;
+  const char* owner = "joe@example.com";
+  const char* size = "100kB";
+  const char* submitted = "11:41 25/01/26";
+  lv::counter pages{1};
+  lv::counter progress{};  // percent; the first job gains one a second
+  lv::counter left{100};  // 100 less `progress`; the bar on the Print page grows with both
+  bool printing = false;
+  char status[16] = "WAITING...";  // "63% - PRINTING", "WAITING..."; follows `progress`
+};
 
 // The jobs, in the order they print.
-const std::vector<job>& jobs();
+inline constinit lv::list<job, queue_capacity> queue;
 
-// Adds a job to the end of the queue, as the Start buttons do.
-void start_job(const char* title);
+// The four jobs that the panel starts with.
+void load_demo_queue();
+
+// Adds a job to the end of the queue, as the Start buttons do. Gives its id, or 0 when the queue is full.
+job_id start_job(const char* title);
 
 // Removes a job, as the Delete button does.
-void cancel_job(std::size_t index);
+void cancel_job(job_id id);
 
 // The print head: once a second the first job gains a percent, and leaves at a hundred.
 lv::task<> run_queue();
-
-// The line that tells a job's state: "63% - PRINTING", "WAITING...".
-std::string status_line(const job& j);
 
 }  // namespace printer

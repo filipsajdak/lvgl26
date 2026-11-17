@@ -189,28 +189,44 @@ The original shows the queue with a `for` over a model:
 for queue-item[idx] in PrinterQueue.printer-queue: NarrowPrintQueueElement {
 ```
 
-lvgl26 has no list over a model yet.
-The port keeps the jobs in a `std::vector` in `queue.cpp`, and a state, `queue_revision`, counts every change.
-The column on the home page follows that count and mounts a card for each job again.
+The port keeps the jobs in an `lv::list` in `queue.hpp`, and both views of the queue are `lv::each` over it.
+A job is one row: its title and details are text that the row points to, and its progress is an `lv::counter`.
+A change of a job touches the widgets of that job only.
+A second of printing sets the status line of the first job and moves nothing else.
 
-<!-- snippet: examples/ports/slint/printer/queue_view.cpp rebuild -->
+<!-- snippet: examples/ports/slint/printer/queue_view.cpp card -->
 ```cpp
-void rebuild(lv::counter) {
-  cards.clear();
-  if (!list) return;
-  for (const job& j : jobs()) {
-    if (j.printing)
-      add_card<card<true>>(list.get(), j);
-    else
-      add_card<card<false>>(list.get(), j);
-  }
-}
-
-constinit lv::effect follow{&rebuild, queue_revision};
+// One card for every job. The dot and the words are blue while the job prints and gray while it
+// waits. A tap checks the card, and the checked card shows the details under its title.
+constexpr auto card =
+    lv::group({.checkable = true, .flex_flow = "column", .size = {card_width * px, lv::size_content},
+               .state_trickle = true,
+               .style = {.bg_color = tok.queue.card, .bg_opa = tok.solid, .border_color = tok.queue.card_border,
+                         .border_width = tok.control.thin, .pad_all = tok.space.card, .pad_gap = tok.space.gap,
+                         .radius = tok.queue.radius}})[
+        lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
+                   .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
+            lv::group({.checked = lv::bind(&job::printing), .size = {8 * px, 8 * px},
+                       .style = {.bg_color = tok.label.tertiary, .bg_opa = tok.solid, .radius = tok.queue.dot},
+                       .style_checked = {.bg_color = tok.label.secondary}}),
+            lv::label({.checked = lv::bind(&job::printing),
+                       .style = {.text_color = tok.label.tertiary, .text_font = status_font},
+                       .style_checked = {.text_color = tok.label.secondary},
+                       .text = lv::bind(&job::status)})],
+        lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .state_trickle = true})[
+            lv::label({.size = {100 * pct, lv::size_content},
+                       .style = {.text_color = tok.label.primary, .text_font = small_font},
+                       .text = lv::bind(&job::title)}),
+            lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
+                       .style = {.max_height = tok.space.none},
+                       .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap}})[
+                detail_line("Job Owner", lv::bind(&job::owner)), detail_line("Pages", lv::bind(&job::pages, "{}")),
+                detail_line("Size", lv::bind(&job::size)), detail_line("Submitted", lv::bind(&job::submitted))]]];
 ```
 
-This is simple, and it is fine for a handful of cards.
-It is not a design for hundreds of rows.
+One tree serves both looks of a card.
+The dot and the status line are checked while the job prints, and `.style_checked` gives them the blue.
+The card is checkable, so a tap checks it, and the details under the title show their height while it is checked.
 
 ## Four concepts side by side
 
@@ -377,7 +393,6 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 | Gradients run vertically or horizontally. The original's tiles run at 135 degrees, and its color button has four stops. | A style takes two colors and a direction. |
 | Only the Gradient theme is ported, and the side bar has no theme menu. The original has three more themes. | A theme cannot change at run time yet. |
 | The settings page has no translations. | `@tr` has no counterpart yet. |
-| The queue mounts its cards again when it changes. | There is no list over a model yet. |
 | Every sub-page slides in. In the original source only the Print page animates its position. | One pager serves all four sub-pages. |
 | The ink tubes have no line at the surface of the ink. | The port does not draw it. |
 | Pause does nothing. | It does nothing in the original either. |
@@ -407,7 +422,7 @@ Several jobs at once multiply the memory.
 ## Memory on the device
 
 The heap use of this port is not measured.
-The jobs of the queue sit in a `std::vector`, because the port runs on a host.
+The jobs of the queue sit in an `lv::list` of fixed capacity, so the queue itself never allocates.
 On a Cortex-M4, LVGL's heap takes about 200 bytes for a label or a button, and 11064 bytes for a list of 51 widgets.
 These numbers are in `docs/research/memory.md`.
 `app.heap()` tells you what a mounted page really takes: see [the decisions you must make](from-slint.md#decisions-you-must-make).
@@ -420,7 +435,7 @@ These numbers are in `docs/research/memory.md`.
 | When a page has widgets | Mounted when shown, deleted when it goes | All pages mounted and moved off screen, as the original does for its sub-pages | A page that is not shown has no widgets |
 | Reusable parts | C++ functions in `parts.hpp` | Waiting for components with their own state | Components are planned and not built |
 | Where state lives | At file scope in the page's file, or in `state.hpp` when pages share it | State inside a component made with the page | Components with state are planned. A page's state keeps its value while the page is away |
-| The queue | Mount a card for each job again on a change | Update the cards in place, or a list over a model | There is no list over a model yet |
+| The queue | An `lv::list` of jobs, shown by `lv::each` | Mount a card for each job again on a change | A change touches the widgets of its own job |
 | Fonts | Made in the file that uses them, with `lv::typeface` | One file that makes every size | A page pays compile time only for the sizes it shows, and a size is one font in memory |
 | Icons | PNG files decoded by the compiler, tinted by a token | SVG on the device, or one picture for each color | The device needs no decoder, and one picture serves every color |
 | Photos | `lv::encoded_image`: the JPEG stays a file | `lv::image_file`: decoded by the compiler | A photo of 314 x 362 pixels is far above the compiler's limit of 16384 pixels |

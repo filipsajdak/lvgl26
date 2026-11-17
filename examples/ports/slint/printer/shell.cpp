@@ -119,6 +119,7 @@ bool start(lv::obj screen) {
   sub_pager.host(window->get<"sub">());
   sub_host = lv::weak<lv::obj>{window->get<"sub">()};
   lv::spawn(hide_when_empty(window->get<"sub">()), window->get<"sub">());
+  load_demo_queue();
   lv::spawn(run_queue());
   return follow_page.start() && follow_subpage.start();
 }

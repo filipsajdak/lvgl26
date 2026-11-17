@@ -12,6 +12,8 @@ inline constexpr int page_width = window_width - sidebar_width;
 inline constexpr int header_height = 102;
 inline constexpr int gap = 16;
 inline constexpr int item_width = (page_width - gap - 2 * margin) / 2;
+inline constexpr int tile_width = 162;  // the four actions of the home page
+inline constexpr int tile_height = 192;
 inline constexpr int control_height = 40;
 inline constexpr int choice_height = 78;  // a name, 4 px, and a box of 52 px
 

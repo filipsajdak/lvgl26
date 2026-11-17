@@ -7,8 +7,6 @@
 namespace printer {
 namespace {
 
-constexpr int tile_width = 162;
-constexpr int tile_height = 192;
 constexpr int inner_size = 64;
 constexpr int block_top = 48;  // the picture and the name are centered in the tile, 96 px high together
 constexpr int tiles_width = 2 * tile_width + gap;

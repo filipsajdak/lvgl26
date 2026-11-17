@@ -53,13 +53,13 @@ template <class F>
 change measured(lv::application& app, lv::obj screen, F f) {
   // The drawing makes and frees heap blocks of its own, so it is stopped while the change runs.
   app.step();
-  lv_timer_pause(lv_display_get_refr_timer(nullptr));
+  lv_timer_pause(lv_display_get_refr_timer(lv_display_get_default()));
   std::vector<lv::weak<lv::obj>> before;
   collect(screen.raw(), before);
   const lv_mem_monitor_t was = heap();
   f();
   const lv_mem_monitor_t now = heap();
-  lv_timer_resume(lv_display_get_refr_timer(nullptr));
+  lv_timer_resume(lv_display_get_refr_timer(lv_display_get_default()));
   std::size_t deleted = 0;
   for (const auto& w : before) deleted += w.expired() ? std::size_t{1} : std::size_t{0};
   const std::size_t after = widgets(screen);
@@ -97,19 +97,24 @@ int main() {
   std::printf("widgets: home %zu, print %zu\n", home_widgets, print_widgets);
   check(home > empty && print > home);
 
-  const std::size_t jobs_before = jobs().size();
+  const std::size_t jobs_before = queue.size();
   // Each change twice: the first run makes what later runs share.
   for (int round = 0; round < 2; ++round) {
     const change tick = measured(app, screen, [&] { a_second(app); });
     const change added = measured(app, screen, [] { start_job("New.pdf"); });
-    const change cancelled = measured(app, screen, [] { cancel_job(1); });
+    const change cancelled = measured(app, screen, [] { cancel_job(queue[1].id); });
     if (round == 1) {
       show("one second of printing", tick);
       show("a job is added", added);
       show("a job is cancelled", cancelled);
+      // Only the widgets of the changed job change: none for a second of printing.
+      check(tick.deleted == 0 && tick.made == 0);
+      check(added.deleted == 0 && added.made > 0);
+      check(cancelled.deleted > 0 && cancelled.made == 0);
+      check(added.made == cancelled.deleted);
     }
   }
-  check(jobs().size() == jobs_before);
+  check(queue.size() == jobs_before);
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }
