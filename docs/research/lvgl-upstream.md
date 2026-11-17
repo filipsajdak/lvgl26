@@ -100,3 +100,139 @@ Name conflict: `pedapudi/lvgl_cpp` uses the name `lvgl_cpp` and `namespace lvgl`
 2. Callbacks are C function pointers with `void* user_data`.
 3. `LV_USE_EXT_DATA` is off by default. It attaches data and a destructor to objects, events, subjects, animations and timers.
 4. Use only the public `include/lvgl` API. Take `lv_lock` from other threads.
+
+## `lv_obj_add_style` does not check its realloc
+
+Found 2026-11-18 while sketching storage for lvgl26 (`docs/research/node-storage.md`, sketch (vii)).
+Marks are dated 2026-11-18.
+The report below is a draft for the owner to file; it was not filed.
+
+### Findings
+
+| Finding | Mark |
+|---|---|
+| `lv_obj_add_style` assigns `lv_realloc` straight to `obj->styles`, line 148 of `src/core/lv_obj_style.c` in v9.6.0, the v10 pin `53819fe` and master `2ee56544` | `source` |
+| On failure `obj->styles` becomes NULL, the old array leaks, and the shift loop (line 153) and `lv_memzero` (line 156) write through NULL | `measured`, ASan and UBSan on master |
+| `LV_ASSERT_MALLOC` is the only check, and `LV_USE_ASSERT_MALLOC` is 0 by default and in `lv_conf_template.h` | `source` |
+| The default theme calls `lv_obj_add_style` while a widget is created: `lv_obj_create` crashed at 7 of 128 heap sizes | `measured` on master |
+| `get_local_style` and `get_trans_style` in the same file check the same realloc since pull request 9984, merged 2026-04-20 | `source` |
+| The shrinking realloc in `lv_obj_remove_style` (line 1684 on master) is also unchecked. TLSF shrinks in place; not reproduced | `source` |
+| LVGL's review instructions say: "NULL dereference: every `lv_malloc`/`lv_realloc` result must be checked" | `source`, `.github/copilot-instructions.md` |
+| In 2024 a maintainer answered that a failed small allocation is hard to recover from "and the system will crash anyway"; `LV_ASSERT_MALLOC` was added then | `source`, issue 6865 |
+| The fix below, applied to master, makes both reproductions pass; the new test fails before it and passes after | `measured`, outside LVGL's test runner |
+
+### Already reported or fixed?
+
+Searched lvgl/lvgl issues and pull requests, open and closed, on 2026-11-18.
+
+| Item | What it is | Same bug? |
+|---|---|---|
+| [#6865](https://github.com/lvgl/lvgl/issues/6865), closed 2024-10-02 | `style_cnt` overflow in v8; a comment asks what happens when this realloc fails | No: closed with an assertion, which is off by default |
+| [#9984](https://github.com/lvgl/lvgl/pull/9984), merged 2026-04-20 | Checks the realloc in `get_local_style` and `get_trans_style` | No: it missed `lv_obj_add_style` in the same file |
+| [#8614](https://github.com/lvgl/lvgl/issues/8614), closed | Integer overflow of `style_cnt` in `lv_obj_add_style`, v8.3 | No: a count overflow, not a failed allocation |
+| [#7489](https://github.com/lvgl/lvgl/issues/7489), closed as stale | Missing allocation checks in `lv_draw.c`; discusses `ptr = realloc(ptr, n)` in general | Related, not this site |
+| [#9794](https://github.com/lvgl/lvgl/issues/9794), closed | The same pattern in `lv_obj_class_create_obj` | Same pattern, another function |
+| [#10406](https://github.com/lvgl/lvgl/pull/10406), open | Out-of-memory checks in `lv_array` | No |
+
+No issue or pull request names this call.
+
+### The report
+
+```markdown
+Title: fix(obj_style): lv_obj_add_style() writes through NULL when lv_realloc() fails
+
+### LVGL version
+
+master 2ee5654440bfc21a2cade4aa6e248f8d34b5e33e (2026-11-17); also v9.6.0.
+
+### What happened?
+
+`lv_obj_add_style()` grows the style list with
+
+    obj->style_cnt++;
+    obj->styles = lv_realloc(obj->styles, obj->style_cnt * sizeof(lv_obj_style_t));
+    LV_ASSERT_MALLOC(obj->styles);
+
+(src/core/lv_obj_style.c:148). When the allocation fails, `obj->styles` becomes NULL,
+the old array leaks, and the loop at line 153 and `lv_memzero()` at line 156 write
+through the NULL pointer. `LV_USE_ASSERT_MALLOC` is 0 by default, so nothing stops it.
+
+The default theme calls `lv_obj_add_style()` from `lv_obj_create()`, so creating any
+widget when the heap is nearly full can crash. #9984 fixed the same pattern in
+`get_local_style()` and `get_trans_style()` of this file; this call was not covered.
+
+### How to reproduce?
+
+Default configuration (`LV_CONF_SKIP`), builtin allocator, `LV_MEM_SIZE` 65536:
+
+    #include "lvgl.h"
+    #include <stdio.h>
+
+    static void fill_heap(void)
+    {
+        for(size_t size = (size_t)1 << 20; size >= 8; size /= 2) {
+            while(lv_malloc(size) != NULL) {}
+        }
+    }
+
+    int main(void)
+    {
+        lv_init();
+        lv_display_create(320, 240);
+        lv_obj_t * obj = lv_obj_create(lv_screen_active());
+
+        static lv_style_t style;
+        lv_style_init(&style);
+        lv_style_set_bg_opa(&style, LV_OPA_COVER);
+
+        fill_heap();
+        lv_obj_add_style(obj, &style, 0);   /* crashes */
+        printf("returned\n");
+        return 0;
+    }
+
+Built with `-fsanitize=address,undefined`:
+
+    src/core/lv_obj_style.c:153:9: runtime error: applying non-zero offset 48 to null pointer
+    ==11718==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000020
+        #1 in lv_obj_add_style lv_obj_style.c:153
+
+The same happens inside `lv_obj_create()` through `theme_apply()` (lv_theme_default.c:698)
+when only a few hundred bytes are free.
+
+### Expected
+
+`lv_obj_add_style()` leaves the object with its previous styles and returns, as
+`get_local_style()` does since #9984.
+
+### Suggested fix
+
+    lv_obj_style_t * new_styles = lv_realloc(obj->styles, obj->style_cnt * sizeof(lv_obj_style_t));
+    if(new_styles == NULL) {
+        obj->style_cnt--;
+        LV_LOG_WARN("couldn't allocate styles");
+        return;
+    }
+    obj->styles = new_styles;
+
+A pull request with this change and a test in tests/src/test_cases/test_style.c follows.
+```
+
+### The fix, prepared
+
+A local clone of master holds it on the branch `fix/obj-add-style-realloc`, commit `eda5f02`, not pushed.
+It changes `lv_obj_add_style` as the report suggests, and adds `test_add_style_out_of_memory` to `tests/src/test_cases/test_style.c`.
+The test takes all of the builtin heap and adds a style: the count and the array must not change.
+Then it frees the heap and adds the style again.
+It runs only with the builtin allocator, which is the one a test can exhaust.
+`scripts/commit_msg_check.py` accepts the message.
+`scripts/code-format.py` was not run: it needs astyle 3.4.12, which is not installed here.
+LVGL's test runner was not run: it needs Python packages and libraries not installed here.
+
+### LVGL's rules for a contribution
+
+- Commit messages: `<type>(<scope>): <subject>`, imperative, lower case, no period, at most 90 characters (`docs/src/contributing/pull_requests.mdx`).
+- The pull request title becomes the commit: the project squash-merges, and a check verifies the title.
+- The template asks for `Fixes #xxxx`, a description, tests where applicable, and `scripts/code-format.py` with astyle 3.4.12.
+- Contributions fall under the Developer's Certificate of Origin; no sign-off line is required ("no further action is needed").
+- No rule about AI-assisted contributions was found in `docs/src/contributing` or `.github`.
