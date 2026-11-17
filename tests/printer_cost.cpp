@@ -92,8 +92,10 @@ lv::owned<lv::obj> settings_probed(lv::obj host) {
 // Switches from the home page to the settings page in a host of its own, and tells the peak heap.
 // `delete_first` is how the pager does it; the other way is the plain assignment of the new page.
 // Either way one page is left in the host: the owner deletes the old page in both.
-void switch_home_to_settings(lv::obj screen, bool delete_first, std::size_t& peak, std::size_t& left) {
+void switch_home_to_settings(lv::obj screen, bool delete_first, std::size_t& before, std::size_t& peak,
+                             std::size_t& left) {
   lv::owned<lv::obj> host{lv::obj{lv_obj_create(screen.raw())}};
+  before = used_bytes();
   lv::owned<lv::obj> slot = mount_home(host.get());
   if (delete_first) {
     replace_page(slot, host.get(), &settings_probed);
@@ -142,14 +144,20 @@ int main() {
   }
   check(queue.size() == jobs_before);
 
-  // Plain assignment builds the new page while the old one exists: the order is the whole difference.
-  std::size_t peak_first = 0, peak_plain = 0, left_first = 0, left_plain = 0;
-  switch_home_to_settings(screen, true, peak_first, left_first);
-  switch_home_to_settings(screen, false, peak_plain, left_plain);
-  std::printf("home to settings: peak heap %zu bytes deleting first, %zu bytes assigning (%zu more)\n", peak_first,
-              peak_plain, peak_plain - peak_first);
+  // The switch from the home page to the settings page, both ways, in a host of its own. The heap
+  // before it is taken with the host empty, so the peak above it is what the pages need at once.
+  std::size_t before_first = 0, before_plain = 0, peak_first = 0, peak_plain = 0, left_first = 0, left_plain = 0;
+  // Twice: the first run makes what later runs share (the decoded pictures, for one).
+  for (int round = 0; round < 2; ++round) {
+    switch_home_to_settings(screen, true, before_first, peak_first, left_first);
+    switch_home_to_settings(screen, false, before_plain, peak_plain, left_plain);
+  }
+  std::printf("home to settings, deleting first: peak heap %zu bytes, %zu above the empty host\n", peak_first,
+              peak_first - before_first);
+  std::printf("home to settings, assigning: peak heap %zu bytes, %zu above the empty host\n", peak_plain,
+              peak_plain - before_plain);
   check(left_first == 1 && left_plain == 1);
-  check(peak_plain > peak_first);
+  check(peak_plain - before_plain > peak_first - before_first);
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }
