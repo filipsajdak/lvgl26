@@ -15,6 +15,7 @@
 
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/detail/source.hpp>
 #include <lv/event.hpp>
 #include <lv/style.hpp>
 #include <lv/units.hpp>
@@ -24,6 +25,8 @@
 #include <concepts>
 #include <cstdarg>
 #include <cstdint>
+#include <cstring>
+#include <new>
 #include <type_traits>
 #include <span>
 #include <string_view>
@@ -330,18 +333,18 @@ T from_number(std::int32_t n, as<T>) {
     return T{};  // no state type converts to T, so no binding to it can exist
 }
 
-// from_subject(subject, type): the value of a subject as the type a setter takes.
-inline lv_color_t from_subject(lv_subject_t* s, as<lv_color_t>) { return lv_subject_get_color(s); }
+// from_value(value, type): the value of a state as the type a setter takes.
+inline lv_color_t from_value(const subject_value& v, as<lv_color_t>) { return v.color; }
 
 template <class T>
   requires std::is_pointer_v<T>
-T from_subject(lv_subject_t* s, as<T>) {
-  return static_cast<T>(const_cast<void*>(lv_subject_get_pointer(s)));
+T from_value(const subject_value& v, as<T>) {
+  return static_cast<T>(const_cast<void*>(v.pointer));
 }
 
 template <class T>
-T from_subject(lv_subject_t* s, as<T>) {
-  return from_number(lv_subject_get_int(s), as<T>{});
+T from_value(const subject_value& v, as<T>) {
+  return from_number(v.number, as<T>{});
 }
 
 // Whether `f` is one of LVGL's bind functions of a property: it takes the widget and
@@ -436,33 +439,173 @@ consteval bool bindable() {
     return binder<t> != std::meta::info{} || std::meta::parameters_of(t).size() == 2;
 }
 
-// The observer of a generic binding: calls the setter with the subject's value.
-// A named function, not a lambda: GCC's analyzer reports a null `this` for the
-// function pointer made from a lambda here.
-template <fixed W, std::size_t I, class V>
-void follow_subject(lv_observer_t* observer, lv_subject_t* s) {
-  auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
-  [:targets<W>[I]:](target, lower(from_subject(s, as<V>{})));
+// lv_<widget>_get_<prop> for the setter lv_<widget>_set_<prop>, if it takes the widget
+// alone and returns an integer. A widget the user changes is read back with it.
+consteval std::meta::info number_getter_of(std::meta::info setter) {
+  const auto name = std::meta::identifier_of(setter);
+  const auto at = name.find("_set_");
+  const auto g = find(str(name.substr(0, at)) + "_get_" + str(name.substr(at + 5)));
+  if (g == std::meta::info{} || std::meta::parameters_of(g).size() != 1) return {};
+  const auto r = std::meta::remove_cv(std::meta::dealias(std::meta::return_type_of(g)));
+  return std::meta::is_integral_type(r) ? g : std::meta::info{};
 }
 
-// Makes member number I of props<W> follow the state it is bound to.
+// Whether a property follows a state through LVGL's own bind function, and so through an
+// LVGL subject. Every other property follows it through a watcher of the state.
+//
+// LVGL's bind function does what the public API cannot in two cases:
+//   - The setter takes more than the value (the animation of a bar, a slider or a roller).
+//     LVGL animates the change only once the widget has been drawn, and tells that by a
+//     field that is not public.
+//   - The setter takes a bool and has no getter: a widget state such as `checked`, which
+//     LVGL writes back to the subject when the user changes it. lvgl26 finds the getter
+//     by name and has none to find.
+consteval bool keeps_lvgl_binder(std::meta::info setter, std::meta::info native) {
+  if (native == std::meta::info{}) return false;
+  const auto params = std::meta::parameters_of(setter);
+  if (params.size() > 2) return true;
+  const auto value = std::meta::remove_cv(std::meta::dealias(std::meta::type_of(params[1])));
+  const bool is_bool = value == ^^bool;
+  return is_bool && number_getter_of(setter) == std::meta::info{};
+}
+
+// keeps_lvgl_binder(Setter) and number_getter_of(Setter), found once for each setter: both
+// search LVGL's whole API by name.
+template <std::meta::info Setter>
+inline constexpr bool keeps_binder = keeps_lvgl_binder(Setter, binder<Setter>);
+
+template <std::meta::info Setter>
+inline constexpr std::meta::info number_getter = number_getter_of(Setter);
+
+// A property that follows a state: the widget, and what to ask the state.
+struct bound_node : watch_node {
+  lv_obj_t* widget = nullptr;
+  const void* source = nullptr;
+  source_ops_fn ops = nullptr;
+};
+
+// A bound text that is formatted by LVGL's printf into room behind the node, so that the
+// label shows the buffer and a change allocates nothing.
+struct text_node : bound_node {
+  const char* format = nullptr;
+  std::size_t room = 0;
+
+  char* text() { return reinterpret_cast<char*>(this + 1); }
+};
+
+// The widget goes: the watcher goes with it.
+inline void drop_node(lv_event_t* e) {
+  auto* n = static_cast<bound_node*>(lv_event_get_user_data(e));
+  watch_list::remove(*n);
+  lv_free(n);
+}
+
+// Shows the state's value through the setter of member I of props<W>.
+template <fixed W, std::size_t I, class V>
+void show_value(watch_node& n) {
+  auto& b = static_cast<bound_node&>(n);
+  [:targets<W>[I]:](b.widget, lower(from_value(b.ops().read(b.source), as<V>{})));
+}
+
+template <fixed W, std::meta::info Target, bool Constant, class... V>
+void set_property(lv_obj_t* o, V... v);
+
+// Shows the state's number in a text, through the setter of member I of props<W>.
+template <fixed W, std::size_t I>
+void show_text(watch_node& n) {
+  auto& t = static_cast<text_node&>(n);
+  lv_snprintf(t.text(), t.room, t.format, t.ops().read(t.source).number);
+  set_property<W, targets<W>[I], true>(t.widget, static_cast<const char*>(t.text()));
+}
+
+// A widget that the user changes writes its value back to the state.
+template <std::meta::info Getter>
+void write_back(lv_event_t* e) {
+  auto* n = static_cast<bound_node*>(lv_event_get_user_data(e));
+  if (!n->linked()) return;  // the state has gone
+  n->ops().write(n->source, static_cast<std::int32_t>([:Getter:](lv_event_get_current_target_obj(e))));
+}
+
+// The widest number a format is given: a 32-bit integer.
+inline constexpr std::size_t widest_number = 11;
+
+// Makes the node of a binding, with `extra` bytes behind it. It is freed with the widget.
+// Null if LVGL has no memory.
+template <class Node>
+Node* make_node(lv_obj_t* o, const void* source, source_ops_fn ops, void (*changed)(watch_node&),
+                std::size_t extra = 0) {
+  void* memory = lv_malloc(sizeof(Node) + extra);
+  if (memory == nullptr) return nullptr;
+  Node* n = ::new (memory) Node{};
+  n->widget = o;
+  n->source = source;
+  n->ops = ops;
+  n->changed = changed;
+  if (lv_obj_add_event_cb(o, &drop_node, LV_EVENT_DELETE, n) == nullptr) {
+    lv_free(n);
+    return nullptr;
+  }
+  return n;
+}
+
+// The node of a bound text, if the binding has a format: a number shown through it.
+template <fixed W, std::size_t I, class A>
+bound_node* make_text_node(lv_obj_t* o, const A& a, source_ops_fn ops) {
+  const std::size_t room = std::strlen(a.bound_format) + widest_number + 1;
+  auto* t = make_node<text_node>(o, a.bound, ops, &show_text<W, I>, room);
+  if (t == nullptr) return nullptr;
+  t->format = a.bound_format;
+  t->room = room;
+  return t;
+}
+
+// Adds the handler that writes a widget's value back to the state it follows.
+template <fixed W, std::size_t I>
+void write_back_to(lv_obj_t* o, bound_node& node) {
+  constexpr auto setter = targets<W>[I];
+  if constexpr (binder<setter> != std::meta::info{} && number_getter<setter> != std::meta::info{}) {
+    constexpr auto getter = number_getter<setter>;
+    if (node.ops().write != nullptr) lv_obj_add_event_cb(o, &write_back<getter>, LV_EVENT_VALUE_CHANGED, &node);
+  }
+}
+
+// Makes member number I of props<W> follow the state it is bound to, through a watcher.
+template <fixed W, std::size_t I, class A>
+void watch_member(lv_obj_t* o, const A& a) {
+  using value_type = std::tuple_element_t<0, typename A::types>;
+  const source_ops_fn ops = a.bound_ops;
+  bound_node* node = nullptr;
+  if constexpr (std::same_as<value_type, const char*>) {
+    if (a.bound_format != nullptr) {
+      node = make_text_node<W, I>(o, a, ops);
+      if (node == nullptr) return;
+    }
+  }
+  if (node == nullptr) node = make_node<bound_node>(o, a.bound, ops, &show_value<W, I, value_type>);
+  if (node == nullptr) return;
+  ops().watchers(a.bound).append(*node);
+  node->changed(*node);
+  write_back_to<W, I>(o, *node);
+}
+
+// Makes member number I of props<W> follow the state it is bound to: through LVGL's bind
+// function where there is no other way (keeps_lvgl_binder), through a watcher otherwise.
 template <fixed W, std::size_t I, class A>
 void bind_member(lv_obj_t* o, const A& a) {
   constexpr auto setter = targets<W>[I];
-  lv_subject_t* subject = a.bound_subject(a.bound);
-  if (subject == nullptr) return;  // LVGL had no memory for the subject
-
   constexpr auto native = binder<setter>;
-  if constexpr (native != std::meta::info{} && std::meta::parameters_of(native).size() == 3) {
-    [:native:](o, subject, a.bound_format);
-  } else if constexpr (native != std::meta::info{}) {
-    [:native:](o, subject);
+  if constexpr (keeps_binder<setter>) {
+    lv_subject_t* subject = a.bound_ops().subject(a.bound);
+    if (subject == nullptr) return;  // LVGL had no memory for the subject
+    if constexpr (std::meta::parameters_of(native).size() == 3)
+      [:native:](o, subject, a.bound_format);
+    else
+      [:native:](o, subject);
   } else if constexpr (std::tuple_size_v<typename A::types> != 1) {
     // lv::mount rejects this at compile time; set() at run time ends up here.
     contract_assert(false && "this property takes several values and cannot follow a state");
   } else {
-    using value_type = std::tuple_element_t<0, typename A::types>;
-    lv_subject_add_observer_obj(subject, &follow_subject<W, I, value_type>, o, nullptr);
+    watch_member<W, I, A>(o, a);
   }
 }
 

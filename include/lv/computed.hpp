@@ -34,14 +34,15 @@
 //   nothing is bound to costs no memory and no work. Keep the function cheap and
 //   free of side effects.
 //
-//   Binding it (or asking for raw()) creates one lv_subject_t, as for a state, and
-//   one LVGL observer on the subject of each dependency. From then on every change
-//   of a dependency runs the function again and writes the result to the subject.
-//   LVGL tells the bound widgets only if the result is a different value (a pointer
-//   result is always passed on: LVGL cannot compare what it points at).
+//   Binding it makes it follow its dependencies: one watcher on each of them, in their own
+//   lists (lv/state.hpp), and no LVGL subject. From then on every change of a dependency
+//   runs the function again and tells the bound widgets if the result is a different value
+//   (a pointer result is always passed on: it cannot be compared). The last result is kept
+//   for that comparison, as long as the computed follows.
 //
-//   The subject is an output. C code can read and observe it; what C code or a
-//   widget writes into it is replaced at the next change and is not seen by get().
+//   raw() gives an LVGL subject, made on first use, as for a state. The subject is an
+//   output. C code can read and observe it; what C code or a widget writes into it is
+//   replaced at the next change and is not seen by get().
 //
 // States that change together
 //
@@ -57,14 +58,14 @@
 // Lifetime
 //
 //   - A dependency must outlive what depends on it. A temporary is refused.
-//   - A computed or an effect owns its observers. reset(), and the destructor,
-//     delete them (and a computed's subject): widgets bound to the computed stop
-//     following, the effect stops running. Neither can be copied or moved, because
-//     the observers point at the object.
-//   - reset() of a dependency deletes its subject, and LVGL deletes the observers on
-//     it. What depends on it stops following that dependency; get() stays correct.
-//     To follow again, reset() the computed and bind it again, or reset() and
-//     start() the effect. reset() is safe in any order.
+//   - A computed or an effect holds its watchers. reset(), and the destructor, take them
+//     out of the dependencies (and delete a computed's subject): widgets bound to the
+//     computed stop following, the effect stops running. Neither can be copied or moved,
+//     because the dependencies point at the object.
+//   - reset() of a dependency takes every watcher out of its list. What depends on it stops
+//     following that dependency; get() stays correct. To follow again, reset() the
+//     computed and bind it again, or reset() and start() the effect. reset() is safe in
+//     any order.
 //   - Like a state, release everything with reset() before lv_deinit().
 //
 // Like all of LVGL, use these from the UI thread only.
@@ -178,22 +179,21 @@ consteval std::string_view bad_result() {
       "lv_color_t or a pointer (for text: const char*). For a side effect, use lv::effect.");
 }
 
-// The LVGL subject behind a computed, created on first use.
-template <class C>
-lv_subject_t* raw_of(const void* source) {
-  return static_cast<const C*>(source)->raw();
-}
+// A watcher of a dependency, with the computed or effect it belongs to.
+struct dependency_node : watch_node {
+  void* owner = nullptr;
+};
 
-// The dependencies of a computed or an effect, and its observers on them.
+// The dependencies of a computed or an effect, and its watchers on them.
 template <class... Deps>
 class dependencies {
   static constexpr std::size_t count = sizeof...(Deps);
 
   std::tuple<const Deps*...> deps_;
-  // Mutable: binding a computed is what subscribes it, and a binding only has a
+  // Mutable: binding a computed is what makes it follow, and a binding only has a
   // pointer to const.
-  mutable std::array<lv_observer_t*, count> observers_{};
-  mutable std::array<std::uint32_t, count> epochs_{};
+  mutable std::array<dependency_node, count> nodes_{};
+  mutable bool following_ = false;
 
  public:
   constexpr explicit dependencies(const Deps&... deps) : deps_{&deps...} {}
@@ -204,40 +204,29 @@ class dependencies {
     return std::apply([&f](const Deps*... d) -> decltype(auto) { return f(d->get()...); }, deps_);
   }
 
-  // Adds an observer to every dependency, or to none: false if LVGL has no memory.
-  // LVGL calls a new observer once at once; the callback must ignore those calls.
-  bool subscribe(lv_observer_cb_t changed, void* owner) const {
+  bool following() const { return following_; }
+
+  // Adds a watcher to every dependency: `changed` runs when one changes, and finds `owner`
+  // in the node. Does nothing if it follows already.
+  void follow(void (*changed)(watch_node&), void* owner) const {
+    if (following_) return;
+    following_ = true;
     std::size_t i = 0;
-    const bool ok = std::apply(
-        [&](const Deps*... d) { return (follow(*d, i++, changed, owner) && ...); }, deps_);
-    if (!ok) unsubscribe();
-    return ok;
+    std::apply([&](const Deps*... d) { (add(*d, nodes_[i++], changed, owner), ...); }, deps_);
   }
 
-  // Deletes the observers that still exist.
-  void unsubscribe() const {
-    const bool lvgl_is_up = lv_is_initialized();
-    std::size_t i = 0;
-    std::apply([&](const Deps*... d) { (unfollow(*d, i++, lvgl_is_up), ...); }, deps_);
+  // Takes the watchers out of the dependencies that still have them.
+  void unfollow() const {
+    for (auto& node : nodes_) watch_list::remove(node);
+    following_ = false;
   }
 
  private:
   template <class D>
-  bool follow(const D& dep, std::size_t i, lv_observer_cb_t changed, void* owner) const {
-    lv_subject_t* subject = dep.raw();
-    if (subject == nullptr) return false;
-    observers_[i] = lv_subject_add_observer(subject, changed, owner);
-    epochs_[i] = graph_access::epoch(dep);
-    return observers_[i] != nullptr;
-  }
-
-  // The observer is gone already if the dependency deleted its subject since
-  // follow(), or if LVGL was shut down.
-  template <class D>
-  void unfollow(const D& dep, std::size_t i, bool lvgl_is_up) const {
-    const bool exists = observers_[i] != nullptr && epochs_[i] == graph_access::epoch(dep);
-    if (exists && lvgl_is_up) lv_observer_delete(observers_[i]);
-    observers_[i] = nullptr;
+  static void add(const D& dep, dependency_node& node, void (*changed)(watch_node&), void* owner) {
+    node.changed = changed;
+    node.owner = owner;
+    graph_access::watchers(dep).append(node);
   }
 };
 
@@ -245,7 +234,7 @@ class dependencies {
 
 // A value made from states and other computeds by a function. See the top of this file.
 template <class F, class... Deps>
-class computed {
+class computed : detail::watched<typename detail::result_of_call<const F&, detail::value_of<Deps>...>::type> {
   static constexpr bool dependencies_ok = (dependency<Deps> && ...);
   static_assert(dependencies_ok, detail::bad_dependency("lv::computed"));
   static_assert(!dependencies_ok || std::invocable<const F&, detail::value_of<Deps>...>,
@@ -265,11 +254,12 @@ class computed {
                 "one), an lv::counter, or a named type: `struct tab_index { int value; };`. To "
                 "allow plain integers, set lv::config::raw_integer_state.");
 
+  using base = detail::watched<value_type>;
+  friend detail::graph_access;
+  friend detail::source_functions<computed>;
+
   F f_;
   detail::dependencies<Deps...> deps_;
-  mutable lv_subject_t* subject_ = nullptr;
-  mutable std::uint32_t epoch_ = 0;  // see detail::graph_access
-  friend detail::graph_access;
 
  public:
   constexpr computed(F f, const Deps&... deps) : f_(std::move(f)), deps_(deps...) {}
@@ -291,40 +281,37 @@ class computed {
   // The current value: the function of the dependencies' current values.
   value_type get() const { return deps_.call(f_); }
 
-  // The LVGL subject, created on first use, with an observer on every dependency.
-  // Needs lv_init() to have run. Null only if LVGL has no memory left.
+  // The LVGL subject, created on first use. The computed follows its dependencies from
+  // then on. Needs lv_init() to have run. Null only if LVGL has no memory left.
   lv_subject_t* raw() const {
-    if (subject_ == nullptr) subject_ = make_subject();
-    return subject_;
+    follow();
+    return base::subject();
   }
 
-  // Deletes the subject and the observers. Widgets bound to it stop following.
-  // Called by the destructor. Const, as raw() is: a `const` computed can be bound,
-  // so it can be released.
+  // Stops following the dependencies, tells the widgets bound to it to stop following it,
+  // and deletes the subject. Called by the destructor. Const, as raw() is: a `const`
+  // computed can be bound, so it can be released.
   void reset() const {
-    if (subject_ == nullptr) return;
-    deps_.unsubscribe();
-    if (lv_is_initialized()) lv_subject_delete(subject_);
-    ++epoch_;
-    subject_ = nullptr;
+    deps_.unfollow();
+    base::release();
   }
 
  private:
-  lv_subject_t* make_subject() const {
-    lv_subject_t* s = lv_subject_create(detail::subject_type<value_type>());
-    if (s == nullptr) return nullptr;
-    // subject_ is still null here, so changed() ignores LVGL's first calls.
-    if (!deps_.subscribe(&changed, const_cast<void*>(static_cast<const void*>(this)))) {
-      lv_subject_delete(s);
-      return nullptr;
+  // The watchers of this computed. Asking for them makes it follow its dependencies, with
+  // the result of now as the one to compare with.
+  detail::watch_list& follow() const {
+    if (!deps_.following()) {
+      this->value_ = get();
+      deps_.follow(&changed, const_cast<void*>(static_cast<const void*>(this)));
     }
-    detail::write_subject(s, get());
-    return s;
+    return this->watchers_;
   }
 
-  static void changed(lv_observer_t* observer, lv_subject_t*) {
-    const auto* self = static_cast<const computed*>(lv_observer_get_user_data(observer));
-    if (self->subject_ != nullptr) detail::write_subject(self->subject_, self->get());
+  value_type current_value() const { return base::current(); }
+
+  static void changed(detail::watch_node& node) {
+    const auto* self = static_cast<const computed*>(static_cast<detail::dependency_node&>(node).owner);
+    self->publish(self->get());
   }
 };
 
@@ -334,14 +321,14 @@ computed(F, D&&...) -> computed<F, typename detail::dependency_argument<D>::type
 // Binds a property to a computed: .hidden = lv::bind(over_limit).
 template <class F, class... Deps>
 constexpr binding<typename computed<F, Deps...>::value_type> bind(const computed<F, Deps...>& c) {
-  return {&c, &detail::raw_of<computed<F, Deps...>>};
+  return {&c, &detail::source_ops_of<computed<F, Deps...>>};
 }
 
 // Binds a text property to a computed through a format: lv::bind(gap, "{} over").
 template <class F, class... Deps>
 constexpr formatted_binding<typename computed<F, Deps...>::value_type> bind(
     const computed<F, Deps...>& c, text_format format) {
-  return {&c, &detail::raw_of<computed<F, Deps...>>, format.printf};
+  return {&c, &detail::source_ops_of<computed<F, Deps...>>, format.printf};
 }
 
 // A function that runs when states or computeds change. See the top of this file.
@@ -364,27 +351,26 @@ class effect {
   ~effect() { reset(); }
 
   // Runs the function once, now, and from then on after every change of a
-  // dependency. Does nothing if the effect runs already. Needs lv_init() to have
-  // run. False only if LVGL has no memory left: then nothing is observed.
+  // dependency. Does nothing if the effect runs already. Always true: following a
+  // state takes no memory from LVGL.
   bool start() {
     if (running_) return true;
-    // running_ is still false here, so changed() ignores LVGL's first calls.
-    if (!deps_.subscribe(&changed, this)) return false;
+    deps_.follow(&changed, this);
     running_ = true;
     deps_.call(f_);
     return true;
   }
 
-  // Stops: deletes the observers. start() runs the effect again.
+  // Stops: takes the watchers out of the dependencies. start() runs the effect again.
   // Called by the destructor.
   void reset() {
-    deps_.unsubscribe();
+    deps_.unfollow();
     running_ = false;
   }
 
  private:
-  static void changed(lv_observer_t* observer, lv_subject_t*) {
-    auto* self = static_cast<effect*>(lv_observer_get_user_data(observer));
+  static void changed(detail::watch_node& node) {
+    auto* self = static_cast<effect*>(static_cast<detail::dependency_node&>(node).owner);
     if (self->running_) self->deps_.call(self->f_);
   }
 };
