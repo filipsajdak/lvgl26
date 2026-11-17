@@ -15,7 +15,6 @@ void toggle_turbo() { turbo = !turbo.get(); }
 void toggle_eco() { eco = !eco.get(); }
 void toggle_sort() { sort_pages = !sort_pages.get(); }
 
-constexpr int plain_header_height = 86;
 constexpr int box_size = 32;
 constexpr int label_x = margin;
 constexpr int control_x = 170;
@@ -64,10 +63,7 @@ constexpr auto name(const char* text, int x, int y) {
 constexpr auto drop(const char* options, int x, int y, int width) {
   return lv::dropdown({.options = options,
                        .size = {width * px, 52 * px},
-                       .style = {.bg_color = tok.control.background, .bg_opa = tok.solid,
-                                 .border_color = tok.control.border, .border_width = tok.control.line,
-                                 .image_recolor = tok.label.primary, .image_recolor_opa = tok.tint,
-                                 .radius = tok.control.radius, .text_font = body_font},
+                       .style = dropdown_look(body_font),
                        .symbol = lv::image_file<icons::down>,
                        .x = x * px,
                        .y = y * px});
@@ -75,13 +71,7 @@ constexpr auto drop(const char* options, int x, int y, int width) {
 
 constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
-    lv::group({.size = {100 * pct, plain_header_height * px},
-               .style = {.bg_color = tok.header.background, .bg_opa = tok.solid}})[
-        lv::label({.style = {.text_color = tok.label.primary, .text_font = title_font}, .text = "Settings",
-                   .x = margin * px, .y = 28 * px}),
-        lv::group({.size = {100 * pct, 2 * px},
-                   .style = {.bg_color = tok.header.separator, .bg_opa = tok.solid},
-                   .y = (plain_header_height - 2) * px})],
+    plain_header("Settings", title_font),
     heading("General", plain_header_height + margin),
     name("TURBO mode", label_x, row_general - 14), check_box("", turbo, &toggle_turbo, control_x, row_general),
     name("Power Management", second_label_x, row_general - 14),

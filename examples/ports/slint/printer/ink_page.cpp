@@ -7,7 +7,6 @@
 namespace printer {
 namespace {
 
-constexpr int plain_header_height = 86;
 constexpr int tube_gap = 50;
 constexpr int tube_width = (page_width * 3 / 4 - 3 * tube_gap) / 4;
 constexpr int tube_height = (window_height - plain_header_height) * 65 / 100;
@@ -41,13 +40,7 @@ constexpr int levels[] = {90, 50, 80, 10};
 
 constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
-    lv::group({.size = {100 * pct, plain_header_height * px},
-               .style = {.bg_color = tok.header.background, .bg_opa = tok.solid}})[
-        lv::label({.style = {.text_color = tok.label.primary, .text_font = title_font}, .text = "Ink Level",
-                   .x = margin * px, .y = 28 * px}),
-        lv::group({.size = {100 * pct, 2 * px},
-                   .style = {.bg_color = tok.header.separator, .bg_opa = tok.solid},
-                   .y = (plain_header_height - 2) * px})],
+    plain_header("Ink Level", title_font),
     tube("yellow", tok.ink.yellow, "90%", 0), tube("cyan", tok.ink.cyan, "50%", 1),
     tube("magenta", tok.ink.magenta, "80%", 2), tube("black", tok.ink.black, "10%", 3)];
 

@@ -10,6 +10,7 @@ inline constexpr int sidebar_width = 64;
 inline constexpr int margin = 24;
 inline constexpr int page_width = window_width - sidebar_width;
 inline constexpr int header_height = 102;
+inline constexpr int plain_header_height = 86;  // the header of Settings and Ink, which have no way back
 inline constexpr int gap = 16;
 inline constexpr int item_width = (page_width - gap - 2 * margin) / 2;
 inline constexpr int tile_width = 162;  // the four actions of the home page

@@ -23,10 +23,9 @@ constexpr auto tile(const char* name, const Colors& colors, void (*open)(), int 
                     .y = row * (tile_height + gap) * px})[
       lv::button({.on_clicked = open,
                   .size = {tile_width * px, tile_height * px},
-                  .style = {.bg_color = colors.from, .bg_grad_color = colors.to, .bg_grad_dir = "ver",
-                            .bg_opa = tok.solid, .pad_all = tok.space.none,
-                            .radius = tok.tile.radius,
-                            .shadow_width = lv::raw(0 * px)}})[
+                  .style = lv::style({.bg_color = colors.from, .bg_grad_color = colors.to, .bg_grad_dir = "ver",
+                                      .bg_opa = tok.solid, .pad_all = tok.space.none, .radius = tok.tile.radius,
+                                      .shadow_width = no_shadow})})[
           lv::group({.size = {inner_size * px, inner_size * px},
                      .style = {.bg_color = tok.tile.inner, .bg_opa = tok.tile.inner_strength,
                                .radius = tok.tile.inner_radius},

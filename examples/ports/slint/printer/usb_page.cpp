@@ -68,13 +68,7 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
     lv::label({.style = {.text_color = tok.label.primary, .text_font = label_font}, .text = "Color",
                .x = (column + side) * px, .y = y_color * px}),
     lv::group({.x = (column + side) * px, .y = (y_color + 26) * px})[
-        lv::button({.on_clicked = &toggle_color,
-                    .size = {control_width * px, 50 * px},
-                    .style = {.bg_color = tok.button.color.from, .bg_grad_color = tok.button.color.to,
-                              .bg_grad_dir = "hor", .bg_opa = tok.solid, .radius = tok.button.radius,
-                              .shadow_width = lv::raw(0 * px)}})[
-            lv::label({.align = "center", .style = {.text_color = tok.label.on_button, .text_font = body_font},
-                       .text = lv::bind(color_label)})]],
+        color_button(color_label, control_width, 50, &toggle_color, body_font)],
     lv::group({.x = (column + side) * px, .y = (y_start + 26) * px})[
         wide_button("Start printing", control_width, 60, &start, tok.button.primary, tok.button.primary, label_font)]];
 
