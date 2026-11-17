@@ -32,3 +32,27 @@ Not confirmed: which machine models the browser build of QEMU includes. Its demo
 2. The emulator route needs no new compiler. It shows the device's own binary, which is a stronger claim than a separate web build.
 3. Keep the code ready: nothing in lvgl26 may assume a desktop or an operating system. The freestanding build already checks that.
 4. WebGL itself matters only for the 3D showpiece. A flat screen needs a canvas, not WebGL.
+
+## The two-stage idea (2026-11-17)
+
+A colleague asked whether lvgl26 could be built as a static library that Rust, or Emscripten and Clang, then turns into WebAssembly.
+This section checks it. Marks follow [README.md](README.md).
+
+| Finding | Link | Mark |
+|---|---|---|
+| GCC has no WebAssembly target in a release. A static library that GCC builds is native code, so Rust and Emscripten cannot link it into a wasm module. | [GCC back end RFC](https://patchwork.sourceware.org/project/gcc/patch/20260505223045.347444-4-feedabl3@gmail.com/) | `summary` |
+| The GCC Steering Committee approved a wasm back end in concept in mid-2026. It covers the direction, not the patches. Initial support could come in GCC 17.1. | [Phoronix](https://www.phoronix.com/news/GCC-WASM-WebAssembly) | `summary` |
+| The back end was still unmerged in late October 2026. It lacks reference types, tables, exceptions, debug info and data sections. | [Phoronix](https://www.phoronix.com/news/GCC-WASM-WebAssembly) | `summary` |
+| No upstream Clang reflection was found. Bloomberg's `clang-p2996` fork is still the reference, and it says it is experimental and not for production. | [repository](https://github.com/bloomberg/clang-p2996) | `summary` |
+| Emscripten accepts another LLVM and Clang through `EM_LLVM_ROOT` or `LLVM_ROOT` in `.emscripten`, built with lld, clang and the WebAssembly target. | [Emscripten docs](https://emscripten.org/docs/building_from_source/configuring_emscripten_settings.html) | `summary` |
+| lvgl26 would still need contracts and `template for` from a Clang that has neither. A Clang route is a port of the library, not a build option. | `CLAUDE.md`, "Known tool limits" | `source` |
+
+What a two-stage build can mean:
+
+1. **GCC makes a native library, Rust or Emscripten link it.** This does not work today: the object code is not WebAssembly.
+2. **GCC writes portable source, Clang builds it.** Stage one writes plain C or C++20 for the screen.
+   It holds the LVGL calls, the styles, the fonts and the pictures, which the compiler already computes as constants. Stage two can be any compiler. Logic written in C++26 does not travel, so only a static screen with bound values would. Not tried.
+3. **GCC's own wasm back end.** One stage, one compiler, no Rust. It waits for GCC 17.
+4. **The firmware in an emulator.** The route that works today: see [web-emulator.md](web-emulator.md).
+
+A Rust binding of lvgl26 itself is not possible: the library is header-only templates and constant evaluation, with no stable ABI to bind to. The Rust binding of LVGL is a separate note: `docs/research/rust-binding.md`, in its own pull request.

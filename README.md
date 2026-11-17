@@ -251,6 +251,18 @@ them (`color.primary`), and component tokens that alias those (`card.radius`). U
 
 Styles in a mounted tree are stored as `const lv_style_t` in read-only memory.
 
+A style for one part in one state is a selector, merged into the style with `|`:
+
+```cpp
+.style = base | lv::on("knob", "pressed", {.bg_color = tok.color.active})
+             | lv::on("indicator", "checked", {.bg_color = tok.color.accent})
+```
+
+The names are LVGL's parts (`knob`, `indicator`, `items`, `cursor`, ...) and states (`pressed`, `checked`, `focused`, ...).
+With one name it is a part in the default state, or a state of the main part: `lv::on("pressed", {...})` does what `.style_pressed` does.
+A wrong name is a compile error that lists the right ones.
+Each selector is a constant style in read-only memory, so it costs no heap beyond LVGL's entry in the widget's list of styles.
+
 A theme gives every widget of a kind its styles, so a screen needs none of its own. It is one
 constant, kept in read-only memory, and the last argument of a display:
 
