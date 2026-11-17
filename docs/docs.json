@@ -17,7 +17,8 @@
         "from-qt.md",
         "from-slint.md",
         "from-touchgfx.md",
-        "port-slint-printer.md"
+        "port-slint-printer.md",
+        "port-lvgl-examples.md"
       ]
     },
     {
