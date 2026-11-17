@@ -39,10 +39,11 @@ Re-read for `docs/port-slint-printer.md` on 2026-11-17, from [`demos/printerdemo
 
 | Fact | File |
 |---|---|
-| 21 `.slint` files, 2172 lines in all. Four themes in `common.slint`, switched by a menu in `components/sidebar.slint`. | `ui/` |
+| 21 `.slint` files, 2175 lines in all. Four themes in `common.slint`, switched by a menu in `components/sidebar.slint`. | `ui/` |
 | The window shows a page with `if PrinterState.active-page == Page.home: home-page := HomePage { }`, one for each page. | `printerdemo.slint` |
 | The queue is a `for queue-item[idx] in PrinterQueue.printer-queue` over a model. | `pages/printer_queue.slint` |
 | `SpinBox` owns `value`, `minimum` and `maximum`. | `components/spinbox.slint` |
+| The four sub-pages are children of the home page, each with `x` bound to the sub-page state. Only `PrintPage` has `animate x` (125 ms, `ease`). | `pages/home_page.slint` |
 | The ink page starts a 30 ms `Timer`, then the state `inactive` leaves and the height animates for 750 ms with `ease-in-out`. | `pages/ink_page.slint` |
 
 The toolkit itself is under GPLv3, a royalty-free licence or a commercial one. The royalty-free licence excludes embedded use. `summary` 2026-11-15, [licence summary](https://components.espressif.com/components/slint/slint/versions/1.17.0/license?language=en).

@@ -16,13 +16,15 @@ It is MIT licensed, Copyright © SixtyFPS GmbH <info@slint.dev>, and the design 
 The short Slint excerpts below are quoted from that commit under the same licence.
 
 The demo is one window of 772 x 504 pixels.
-It has 21 `.slint` files with 2172 lines, and four themes that a menu in the side bar switches.
+It has 21 `.slint` files with 2175 lines, and four themes that a menu in the side bar switches.
 A side bar leads to three pages: home, settings and ink levels.
 The home page has four actions and the print queue.
-Print, Scan, Copy and USB are sub-pages that slide in over the home page.
+Print, Scan, Copy and USB are sub-pages that open over the home page.
+The original keeps all four in the home page and moves each off screen with its `x` property.
+Only the Print page animates that move, so the other three appear at once.
 
 The port has the same screens and the same behaviour.
-It is 1368 lines of C++, with its screenshot tool and window, and a token file of 466 lines.
+It is about 1350 lines of C++, with its screenshot tool and window, and a token file of 466 lines.
 The test `ports_printer` shows every page on each push and compares it with a reference picture.
 The two pictures above are written by the test `ports_printer_shot`, which runs the port's own screenshot tool.
 On LVGL v9.6.0, the tests `ports_printer_picture_home` and `ports_printer_picture_copy` fail when a picture here differs from what the port draws.
@@ -376,7 +378,7 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 | Only the Gradient theme is ported, and the side bar has no theme menu. The original has three more themes. | A theme cannot change at run time yet. |
 | The settings page has no translations. | `@tr` has no counterpart yet. |
 | The queue mounts its cards again when it changes. | There is no list over a model yet. |
-| Every sub-page slides. In the original source only the Print page animates its position. | One pager serves all four sub-pages. |
+| Every sub-page slides in. In the original source only the Print page animates its position. | One pager serves all four sub-pages. |
 | The ink tubes have no line at the surface of the ink. | The port does not draw it. |
 | Pause does nothing. | It does nothing in the original either. |
 
@@ -415,7 +417,7 @@ These numbers are in `docs/research/memory.md`.
 | Decision | The port | The option not taken | Why |
 |---|---|---|---|
 | How many trees | One tree for each page, in its own file | One tree for the whole window | The compiler works on one page at a time |
-| When a page has widgets | Mounted when shown, deleted when it goes | All pages mounted, the hidden ones not shown | A page that is not shown has no widgets |
+| When a page has widgets | Mounted when shown, deleted when it goes | All pages mounted and moved off screen, as the original does for its sub-pages | A page that is not shown has no widgets |
 | Reusable parts | C++ functions in `parts.hpp` | Waiting for components with their own state | Components are planned and not built |
 | Where state lives | At file scope in the page's file, or in `state.hpp` when pages share it | State inside a component made with the page | Components with state are planned. A page's state keeps its value while the page is away |
 | The queue | Mount a card for each job again on a change | Update the cards in place, or a list over a model | There is no list over a model yet |
