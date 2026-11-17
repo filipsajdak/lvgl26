@@ -56,6 +56,18 @@ class strict {
   constexpr T raw() const { return v_; }
 };
 
+/// A unit value for a setter that takes it unsigned, such as a spinner's sweep:
+/// `.arc_sweep = 270 * lv::deg`. A negative value does not compile.
+template <class U>
+class nonnegative {
+  U v_{};
+
+ public:
+  constexpr nonnegative() = default;
+  constexpr nonnegative(U u) : v_(u) {}
+  constexpr U get() const { return v_; }
+};
+
 /// An event handler in a props struct: a function, or a lambda without captures.
 /// It takes nothing, or an lv::event.
 struct handler {
@@ -222,8 +234,10 @@ struct id_name {
   char text[capacity]{};
 
   constexpr id_name() = default;
-  constexpr id_name(const char* name) {
-    for (std::size_t i = 0; i + 1 < capacity && name[i] != '\0'; ++i) text[i] = name[i];
+  constexpr id_name(const char* name) : id_name(std::string_view{name}) {}
+  /// A name that a function passes on: `.id = id` where `id` is a std::string_view.
+  constexpr id_name(std::string_view name) {
+    for (std::size_t i = 0; i + 1 < capacity && i < name.size(); ++i) text[i] = name[i];
   }
   constexpr std::string_view sv() const { return std::string_view{text}; }
 };

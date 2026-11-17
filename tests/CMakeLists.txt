@@ -57,6 +57,10 @@ lvgl26_test(task)
 lvgl26_test(static_text)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
+lvgl26_test(unsigned_values)
+add_test(NAME unsigned_values_violation_negative
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:unsigned_values> -DCASE=negative
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(application)
 lvgl26_test(theme)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
@@ -86,6 +90,13 @@ foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold
                    ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
 endforeach()
 target_link_libraries(theme PRIVATE lvgl26_test_data)
+lvgl26_test(style_selectors)
+# A layer of lv::on in a style for another part, and two layered styles merged at run time.
+foreach(case part_slot merge)
+  add_test(NAME style_selectors_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:style_selectors> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # LVGL's state is global: a second application ends the program.
 add_test(NAME application_violation_twice
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:application> -DCASE=twice
@@ -161,6 +172,57 @@ target_link_libraries(examples_get_started PRIVATE
   lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_get_started)
 add_test(NAME examples_get_started COMMAND examples_get_started)
 
+# LVGL's examples/widgets, one test per widget folder. The arguments after the
+# folder are the ported examples: lv_example_<folder>_<name>.c is compared with
+# examples/lvgl/widgets/<folder>_<name>.cpp. ASSETS names the pictures they use.
+set(LVGL26_C_WIDGETS ${lvgl_SOURCE_DIR}/examples/widgets)
+set(LVGL26_WIDGETS ${CMAKE_CURRENT_SOURCE_DIR}/../examples/lvgl/widgets)
+function(lvgl26_widget_ports folder)
+  cmake_parse_arguments(arg "" "" "ASSETS" ${ARGN})
+  set(originals)
+  set(ports)
+  foreach(name ${arg_UNPARSED_ARGUMENTS})
+    list(APPEND originals ${LVGL26_C_WIDGETS}/${folder}/lv_example_${folder}_${name}.c)
+    list(APPEND ports ${LVGL26_WIDGETS}/${folder}_${name}.cpp)
+  endforeach()
+  # The pictures an example draws with come from LVGL's examples/assets.
+  foreach(asset ${arg_ASSETS})
+    list(APPEND originals ${lvgl_SOURCE_DIR}/examples/assets/${asset}.c)
+  endforeach()
+  add_library(lvgl_c_widgets_${folder} STATIC EXCLUDE_FROM_ALL ${originals})
+  target_link_libraries(lvgl_c_widgets_${folder} PRIVATE lvgl::lvgl)
+  target_compile_definitions(lvgl_c_widgets_${folder} PRIVATE LV_BUILD_EXAMPLES=1)
+
+  add_executable(examples_widgets_${folder} examples_widgets_${folder}.cpp ${ports})
+  target_compile_options(examples_widgets_${folder} PRIVATE --embed-dir=${LVGL26_WIDGETS})
+  target_link_libraries(examples_widgets_${folder} PRIVATE
+    lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_widgets_${folder})
+  add_test(NAME examples_widgets_${folder} COMMAND examples_widgets_${folder})
+endfunction()
+
+lvgl26_widget_ports(label bind_text long_mode recolor set_text_newline styling text_align)
+lvgl26_widget_ports(button basic event states styling)
+lvgl26_widget_ports(arc bind_value change_rate event img_indicator mode pie_chart rotation
+                    set_angles styling value_range
+                    ASSETS img_arc_bg img_arc_indicator)
+lvgl26_widget_ports(bar bind_value img_indicator modes orientation styling value_range
+                    ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(slider bind_state bind_value event img_indicator modes reversed_direction
+                    value_range_orientation
+                    ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(switch event orientation state)
+lvgl26_widget_ports(checkbox bind_checked event states text)
+lvgl26_widget_ports(led brightness color styling)
+lvgl26_widget_ports(line points)
+lvgl26_widget_ports(obj bind_style)
+lvgl26_widget_ports(buttonmatrix event map)
+lvgl26_widget_ports(dropdown bind_value direction event text)
+lvgl26_widget_ports(spinbox bind_value format rollover styling value)
+lvgl26_widget_ports(textarea placeholder)
+lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
+lvgl26_widget_ports(scale modes range styling ticks)
+lvgl26_widget_ports(keyboard modes popovers textarea)
+
 add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
@@ -184,6 +246,29 @@ add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
+# The printer panel of examples/ports/slint/printer: each page, compared with a reference picture.
+add_executable(ports_printer ports_printer.cpp)
+target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
+add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
+
+# The pictures of docs/port-slint-printer.md are the ones the port's screenshot tool writes.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
+add_test(NAME ports_printer_shot COMMAND printer_shot ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
+set_tests_properties(ports_printer_shot PROPERTIES FIXTURES_SETUP ports_printer_pictures)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  foreach(scene home copy)
+    add_test(NAME ports_printer_picture_${scene}
+             COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out/${scene}.png
+                     ${PROJECT_SOURCE_DIR}/docs/media/printer-${scene}.png)
+    set_tests_properties(ports_printer_picture_${scene} PROPERTIES FIXTURES_REQUIRED ports_printer_pictures)
+  endforeach()
+endif()
+
+# The treadmill panel of examples/ports/qt/treadmill: each scene, compared with a reference picture.
+add_executable(ports_treadmill ports_treadmill.cpp)
+target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
+add_test(NAME ports_treadmill COMMAND ports_treadmill ${CMAKE_CURRENT_SOURCE_DIR}/ref/treadmill_)
+
 lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
@@ -204,6 +289,8 @@ lvgl26_compile_fail(units_rgb_too_large "contract predicate is false in constant
 lvgl26_compile_fail(values_token_not_whole "contract predicate is false in constant expression")
 lvgl26_compile_fail(values_token_not_whole_negative "contract predicate is false in constant expression")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned_folded "contract predicate is false in constant expression")
 # The same mistakes inside a larger expression. GCC 16.2 folds such a call without its
 # contracts, so each of these compiled before lv/detail/checked.hpp.
 lvgl26_compile_fail(units_negative_time_folded "contract predicate is false in constant expression")
@@ -219,7 +306,7 @@ lvgl26_compile_fail(match_not_an_enumerator_folded "contract predicate is false 
 lvgl26_compile_fail(style_needs_token "It takes a design token \\(for example tok.space.md\\) or lv::raw\\(...\\), holding a length .*You gave lv::length")
 lvgl26_compile_fail(style_raw_color "It takes a design token .*You gave lv_color_t")
 lvgl26_compile_fail(theme_needs_token "It takes a design token .*You gave lv::length")
-lvgl26_compile_fail(theme_not_a_value "a theme cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
+lvgl26_compile_fail(theme_not_a_value "a theme or an lv::on cannot hold the style property 'enabled': LVGL keeps no value for it in a style")
 lvgl26_compile_fail(encoded_image_not_a_picture "lv::encoded_image takes a PNG or a JPEG file, and this is neither")
 lvgl26_compile_fail(encoded_image_progressive "this JPEG file is progressive, or of another form than baseline")
 lvgl26_compile_fail(encoded_image_empty "this picture is 0 x 0 pixels. LVGL holds a picture of 1 to 65535 pixels each way")
@@ -242,7 +329,18 @@ lvgl26_compile_fail(scaled_font_raw_needs_ttf "lv::scaled_font needs LVGL's Tiny
 target_compile_options(fail_scaled_font_raw_needs_ttf PRIVATE -ULV_USE_TINY_TTF)
 lvgl26_compile_fail(scaled_font_plain_size "the size of a font comes from a typography token")
 lvgl26_compile_fail(scaled_font_bound_to_number "lv::bind\\(font\\) is for a font property of a style")
-lvgl26_compile_fail(theme_bound_font "a theme holds constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(theme_bound_font "a theme and an lv::on hold constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(on_unknown_part "widgets have no part 'knop'. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first\\.")
+lvgl26_compile_fail(on_state_as_part "'pressed' is a state. lv::on takes the part first, then the state")
+lvgl26_compile_fail(on_unknown_state "widgets have no state 'presed'. The states: default, alt, checked, focused, .*pressed")
+lvgl26_compile_fail(on_part_as_state "'indicator' is a part. lv::on takes the part first, then the state")
+lvgl26_compile_fail(on_unknown_name "'knop' is neither a part nor a state. The parts: main, .* The states: default, ")
+lvgl26_compile_fail(on_any "'any' is neither a part nor a state")
+lvgl26_compile_fail(on_inside_on "an lv::on cannot hold another lv::on. Put them side by side")
+lvgl26_compile_fail(on_not_a_value "a theme or an lv::on cannot hold the style property 'enabled'")
+lvgl26_compile_fail(on_bound_font "a theme and an lv::on hold constants, and a font bound with lv::bind is drawn on the device")
+lvgl26_compile_fail(on_in_part_slot "lv::on goes in .style, because it names its own part and state")
+lvgl26_compile_fail(theme_on_in_part_slot "lv::on goes in .style, because it names its own part and state")
 lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
 lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
 lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
@@ -338,6 +436,7 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
 lvgl26_compile_fail(enumerator_unknown_name "align has no value 'centre'. Its values: default, top_left")
+lvgl26_compile_fail(enumerator_unknown_name_beside_text "roller_mode has no value .endless.. Its values: normal, infinite")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
 lvgl26_compile_fail(frame_without_size "lv::frame<Width, Height>: both must be greater than 0")
 lvgl26_compile_fail(band_without_screen "lv::band<Width, Height, Lines>: the screen must be larger than 0")
@@ -473,6 +572,9 @@ if(Python3_FOUND)
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # The token files of the Signal theme are written from the design system.
   add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
+  # The migration table of the status page is written from docs/migration/coverage.json.
+  add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
+  add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
@@ -502,6 +604,16 @@ file(GLOB LVGL26_MCP_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuz
 foreach(input ${LVGL26_MCP_CORPUS})
   get_filename_component(name ${input} NAME)
   add_test(NAME fuzz_corpus_mcp_${name} COMMAND fuzz_mcp_message ${input})
+endforeach()
+
+# The stream serve() reads may be any bytes, a line without end among them. Its fuzz
+# target replays its corpus here in the same way.
+add_executable(fuzz_mcp_stream ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/mcp_stream.cpp)
+target_link_libraries(fuzz_mcp_stream PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(GLOB LVGL26_STREAM_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/stream/*)
+foreach(input ${LVGL26_STREAM_CORPUS})
+  get_filename_component(name ${input} NAME)
+  add_test(NAME fuzz_corpus_stream_${name} COMMAND fuzz_mcp_stream ${input})
 endforeach()
 
 # ---- editor support (tools/editor, cmake/editor.cmake) -----------------------------

@@ -132,11 +132,14 @@ constexpr auto card = lv::style({.bg_color = tok.color.ink,
                                  .radius = lv::raw(3 * px)}) |
                       tok.card.border | tok.card.shadow | tok.card.fade | tok.text.label;
 constexpr auto loud = card | lv::style({.bg_color = tok.color.accent});
+constexpr auto knob = loud | lv::on("knob", "pressed", {.bg_color = tok.color.ink}) |
+                      lv::on("checked", {.bg_opa = tok.opacity.half});
 
 constexpr lv::theme_styles look = lv::theme({
     .button = {.style = card, .style_pressed = {.bg_color = tok.color.accent}},
     .obj = {.style = {.pad_gap = tok.space.gap}},
     .screen = {.style = {.bg_color = tok.color.ink}},
+    .slider = {.style = knob},
     .toggle = {.style_indicator = {.bg_opa = tok.opacity.half}},
 });
 static_assert(!look.empty() && lv::theme_styles{}.empty());
@@ -258,11 +261,13 @@ static_assert(widths.is_set() && widths.from() == lv::horizontal{80 * px} && wid
 constexpr lv::arg<lv::angle> turn{90 * deg};
 constexpr lv::strict<std::int32_t> whole{3};
 constexpr lv::strict<bool> truth{true};
+constexpr lv::nonnegative<lv::angle> sweep{270 * deg};
 constexpr lv::handler on_reset{&reset};
 constexpr lv::styled<lv::length> from_token{tok.space.gap};
 constexpr lv::styled<lv::length> not_from_token{lv::raw(3 * px)};
 constexpr lv::text_format in_kmh{"{} km/h"};
 static_assert(whole.raw() == 3 && truth.raw());
+static_assert(sweep.get() == 270 * deg);
 static_assert(std::same_as<decltype(lv::label()), lv::node<"label">>);
 static_assert(std::same_as<decltype(lv::view<"button">{}.next().clicked), lv::event_ref<LV_EVENT_CLICKED>>);  // C API
 static_assert(std::same_as<decltype(lv::mount<ui>(lv::obj{})), std::expected<lv::mounted<ui>, lv::mount_error>>);
@@ -443,6 +448,11 @@ std::size_t use_json(std::string_view text) {
   if (!document || !document->is(lv::json::kind::object)) return 0;
   const lv::json::member first = document->member_at(0);
   const lv::json::value list = (*document)["list"];
+  std::size_t walked = 0;
+  const lv::json::items<lv::json::member> members = document->members();
+  for (const lv::json::member m : members) walked += m.key.size();
+  for (const lv::json::value element : list.elements()) walked += element.text().size();
+  if (walked == 0) return 1;
   std::string out;
   auto sink = [&](std::string_view piece) { out += piece; };
   static_assert(lv::json::sink<decltype(sink)>);

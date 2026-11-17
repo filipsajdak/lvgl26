@@ -80,6 +80,10 @@ constexpr bool can_run_between(strict<I> from, strict<I> to) {
 constexpr bool can_run_between(angle, angle) { return true; }
 constexpr bool can_run_between(decidegrees, decidegrees) { return true; }
 constexpr bool can_run_between(opa, opa) { return true; }
+template <class U>
+constexpr bool can_run_between(nonnegative<U> from, nonnegative<U> to) {
+  return can_run_between(from.get(), to.get());
+}
 
 template <class T>
 struct ends {
@@ -145,6 +149,7 @@ consteval bool is_animatable_type(std::meta::info t) {
   for (auto unit : {(^^opa), (^^angle), (^^decidegrees), (^^length), std::meta::dealias(^^horizontal),
                     std::meta::dealias(^^vertical)})
     if (t == unit) return true;
+  if (is_made_from(t, ^^nonnegative)) return is_animatable_type(std::meta::template_arguments_of(t)[0]);
   return is_made_from(t, ^^strict) && std::meta::template_arguments_of(t)[0] != ^^bool;
 }
 
@@ -261,7 +266,7 @@ struct animation_source {
     context = done_context;
     // As for an event: without the record that ties the task to the widget, the
     // task ends here instead of waiting unprotected.
-    if (watch(owner, widget, true) == nullptr) {
+    if (watch(owner, widget) == nullptr) {
       cancel(owner);
       return true;  // stay suspended, with nothing armed, until the task is ended
     }

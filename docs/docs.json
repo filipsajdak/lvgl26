@@ -5,7 +5,30 @@
   "site": "https://filipsajdak.github.io/lvgl26/",
   "repository": "https://github.com/filipsajdak/lvgl26",
   "sections": [
-    {"title": "Start", "pages": ["quick-start.md"]},
-    {"title": "Guides", "pages": ["themes.md", "fonts.md", "images.md", "editor-support.md"]}
+    {
+      "title": "Start",
+      "pages": [
+        "quick-start.md"
+      ]
+    },
+    {
+      "title": "Coming from another framework",
+      "pages": [
+        "from-qt.md",
+        "from-slint.md",
+        "from-touchgfx.md",
+        "port-slint-printer.md",
+        "port-lvgl-examples.md"
+      ]
+    },
+    {
+      "title": "Guides",
+      "pages": [
+        "themes.md",
+        "fonts.md",
+        "images.md",
+        "editor-support.md"
+      ]
+    }
   ]
 }

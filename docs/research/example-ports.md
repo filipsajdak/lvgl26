@@ -35,7 +35,32 @@ Checked on a clone of `slint-ui/slint` at commit `f3c4537` of 2026-11-15. `sourc
 | Its photos | CC-BY-2.0 and CC-PDDC |
 | The Slint logo | CC-BY-ND; we do not use it |
 
+Re-read for `docs/port-slint-printer.md` on 2026-11-17, from [`demos/printerdemo/ui` at f3c4537](https://github.com/slint-ui/slint/tree/f3c4537/demos/printerdemo/ui). `source`. The quoted lines are verbatim and short.
+
+| Fact | File |
+|---|---|
+| 21 `.slint` files, 2175 lines in all. Four themes in `common.slint`, switched by a menu in `components/sidebar.slint`. | `ui/` |
+| The window shows a page with `if PrinterState.active-page == Page.home: home-page := HomePage { }`, one for each page. | `printerdemo.slint` |
+| The queue is a `for queue-item[idx] in PrinterQueue.printer-queue` over a model. | `pages/printer_queue.slint` |
+| `SpinBox` owns `value`, `minimum` and `maximum`. | `components/spinbox.slint` |
+| The four sub-pages are children of the home page, each with `x` bound to the sub-page state. Only `PrintPage` has `animate x` (125 ms, `ease`). | `pages/home_page.slint` |
+| The ink page starts a 30 ms `Timer`, then the state `inactive` leaves and the height animates for 750 ms with `ease-in-out`. | `pages/ink_page.slint` |
+
 The toolkit itself is under GPLv3, a royalty-free licence or a commercial one. The royalty-free licence excludes embedded use. `summary` 2026-11-15, [licence summary](https://components.espressif.com/components/slint/slint/versions/1.17.0/license?language=en).
+
+## Qt Design Studio examples, checked in their repository
+
+Checked on `public-demos/qtdesign-studio` at <https://git.qt.io/public-demos/qtdesign-studio>, commit `0c1ccf18` of 2026-05-08. `source` 2026-11-17.
+
+| Part | Licence |
+|---|---|
+| The QML of every example | `LICENSE.md` of the repository: a Qt header that offers a commercial licence or BSD-3-Clause. The QML files carry no header of their own |
+| The pictures and fonts | The same file covers them, but they are Git LFS files: fetch them from `/-/raw/master/...`, not the API's file route, which returns a pointer |
+| The Exo font of `TreadmillMcuDemo` | SIL Open Font License 1.1, read from the name table of each TTF (copyright 2017 The Exo Project Authors) |
+| The Qt logo in the splash screen | A Qt mark: not carried over |
+
+- The repository has 39 example folders under `examples/`. `washingMachineUI` lists its programs with a `ListView` over a `ListModel`; `EBikeDesign` has a `ListModel` and a scrolling map; `TreadmillMcuDemo` has neither.
+- `TreadmillMcuDemo` is the one the port uses: 800 x 480, a splash screen, one screen, three looks, and no list, chart, shader or 3D. See `examples/ports/qt/treadmill`.
 
 ## Qt, in detail
 

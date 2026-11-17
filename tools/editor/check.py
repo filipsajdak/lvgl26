@@ -86,9 +86,13 @@ def clang_command(clang: str, source: pathlib.Path, flags: list[str], stubs: pat
 
 
 def snippet_sources(docs: pathlib.Path) -> list[pathlib.Path]:
-    """The C++ files that the pages under `docs` show a part of. A path is from the repository's root."""
+    """The sources that the pages under `docs` show a part of. A path is from the repository's root.
+
+    A header is not read alone: a source that includes it is, and the headers a page shows are read there.
+    """
     root = docs.resolve().parent
-    return [root / path for page in sorted(docs.glob("*.md")) for path in SNIPPET.findall(page.read_text())]
+    shown = (root / path for page in sorted(docs.glob("*.md")) for path in SNIPPET.findall(page.read_text()))
+    return [path for path in shown if path.suffix == ".cpp"]
 
 
 def files_of(options: argparse.Namespace) -> list[pathlib.Path]:
@@ -101,12 +105,28 @@ def files_of(options: argparse.Namespace) -> list[pathlib.Path]:
     return list(dict.fromkeys(path.resolve() for path in files))
 
 
+SKIP = re.compile(r"^// editor-check: skip, (.+)$", re.MULTILINE)
+SKIP_LINES = 10  # the line is at the top of the file
+
+
+def skip_reason(source: pathlib.Path) -> str | None:
+    """Why a file asks not to be read, or None. It says so in a comment near its top."""
+    head = "\n".join(source.read_text().splitlines()[:SKIP_LINES])
+    found = SKIP.search(head)
+    return found.group(1) if found else None
+
+
 def check(options: argparse.Namespace) -> int:
     commands = commands_by_file(options.commands)
     files = files_of(options)
     failed = 0
+    skipped = 0
     for source in files:
         name = source.name if source.parent == pathlib.Path.cwd() else str(source)
+        if (reason := skip_reason(source)) is not None:
+            skipped += 1
+            print(f"skipped: {name} ({reason})")
+            continue
         command = clang_command(options.clang, source, flags_for(source, commands, options.like) + embed_flags(options.embed_dir), options.stubs,
                                 options.verify)
         done = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -114,7 +134,7 @@ def check(options: argparse.Namespace) -> int:
             failed += 1
             print(done.stderr)
         print(f"{'FAILED' if done.returncode else 'ok'}: {name}")
-    print(f"{len(files)} files, {failed} failed")
+    print(f"{len(files)} files, {failed} failed, {skipped} skipped")
     return 1 if failed or not files else 0
 
 

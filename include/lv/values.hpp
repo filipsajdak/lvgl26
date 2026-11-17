@@ -65,6 +65,36 @@ class strict {
   constexpr T raw() const { return v_; }
 };
 
+namespace detail {
+
+// A unit type whose plain value is a signed number: an angle, a length.
+template <class U>
+concept signed_unit = requires(const U& u) {
+  { u.raw() } -> std::signed_integral;
+};
+
+}  // namespace detail
+
+// A value of a unit type for a setter that takes it unsigned, such as the sweep of a
+// spinner: lv_spinner_set_arc_sweep(obj, uint32_t angle). LVGL receives it unsigned,
+// so a negative value is a contract violation, and a compile error for a constant.
+template <detail::signed_unit U>
+class nonnegative {
+  U v_{};
+
+ public:
+  constexpr nonnegative() = default;
+
+  constexpr nonnegative(U u)
+    pre(u.raw() >= 0)
+      : v_(u) {
+    detail::keep_checked(u.raw() >= 0);
+  }
+
+  constexpr U get() const { return v_; }
+  constexpr auto raw() const { return static_cast<std::make_unsigned_t<decltype(v_.raw())>>(v_.raw()); }
+};
+
 // An event handler stored in a props struct: a function or a lambda without captures.
 // For a handler with state, use view.on<LV_EVENT_...>() instead.
 // No default member initializers: see lv::arg. An empty handler is `handler{}`.
@@ -116,6 +146,8 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
 consteval std::string how_to_write(std::meta::info t) {
   if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (is_made_from(t, ^^nonnegative))
+    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
   if (t == ^^styled<const lv_font_t*>)
     return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
            "lv/font.hpp), or lv::raw(font) for a font that no token names";
@@ -338,6 +370,49 @@ using values = typename values_of<lowered<Ts>...>::type;
 
 }  // namespace detail
 
+namespace detail {
+
+// A text in quotes given for a parameter that takes the enum T: the name of an enumerator.
+template <class U, class T>
+concept quoted_name_for = std::is_enum_v<T> && std::is_array_v<std::remove_cvref_t<U>> &&
+                          std::same_as<std::remove_extent_t<std::remove_cvref_t<U>>, char>;
+
+// Whether one of the values Us, given for the parameters Ts, is such a name.
+template <class Ts, class Us>
+inline constexpr bool names_an_enumerator = false;
+template <class... Ts, class... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+inline constexpr bool names_an_enumerator<std::tuple<Ts...>, std::tuple<Us...>> =
+    (quoted_name_for<Us, Ts> || ...);
+
+// One value for a parameter that takes the enum E: an enumerator, or its name in quotes.
+// The name is read where it is written, so the values beside it may be made at run time.
+template <class E>
+struct enumerator_or_name {
+  E value;
+
+  constexpr enumerator_or_name(E e) : value(e) {}
+
+  template <std::size_t N>
+  consteval enumerator_or_name(const char (&name)[N]) : value(enumerator_named<E>(name)) {}
+};
+
+// What a property takes for a parameter of type T, where a name may stand for an enumerator.
+template <class T>
+using value_or_name = std::conditional_t<std::is_enum_v<T>, enumerator_or_name<T>, T>;
+
+template <class T>
+constexpr const T& given_value(const T& v) {
+  return v;
+}
+
+template <class E>
+constexpr E given_value(const enumerator_or_name<E>& v) {
+  return v.value;
+}
+
+}  // namespace detail
+
 // One member of a props struct: unset, the arguments of one setter, or a binding.
 //
 // It has no default member initializers and holds plain values, on purpose. An
@@ -348,6 +423,8 @@ using values = typename values_of<lowered<Ts>...>::type;
 template <class... Ts>
 struct arg {
   bool set;
+  bool follows;  // the property follows a state: `bound` is set. A flag, because under a
+                 // sanitizer GCC cannot tell at compile time that a state's address is not null
   detail::values<Ts...> v;  // v.v0, v.v1, ...: what LVGL takes
 
   // Set when the property follows a state instead of holding a value.
@@ -365,9 +442,10 @@ struct arg {
   template <class... U>
     requires(sizeof...(U) > 0) &&
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
-                                      detail::is_binding<std::remove_cvref_t<U>>) && ...)))
+                                      detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
+            (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
-      : set(true), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(false), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
 
   // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
@@ -375,12 +453,19 @@ struct arg {
   template <std::size_t... N>
     requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
   consteval arg(const char (&... name)[N])
-      : set(true), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
+      : set(true), follows(false), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_subject(nullptr), bound_format(nullptr) {}
+
+  // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
+  // setter that takes a text, then an enumerator.
+  constexpr arg(detail::value_or_name<Ts>... u)
+    requires(sizeof...(Ts) > 1) && (std::is_enum_v<Ts> || ...)
+      : set(true), follows(false), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
+        bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), v{}, bound(b.source), bound_subject(b.subject),
+      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject),
         bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
     using first = std::tuple_element_t<0, types>;
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
@@ -396,14 +481,14 @@ struct arg {
                   "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
   }
 
-  constexpr arg(font_binding b) : set(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+  constexpr arg(font_binding b) : set(true), follows(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
                   "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
+      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }
@@ -507,6 +592,14 @@ consteval std::meta::info unit_of(std::string_view prop, std::string_view parame
   return {};
 }
 
+// The unit type for a parameter of the C type `t`. A unit whose plain value is signed
+// becomes nonnegative<unit> for an unsigned parameter, which LVGL then receives unsigned.
+consteval std::meta::info unit_for_parameter(std::meta::info unit, std::meta::info t) {
+  if (!std::meta::is_unsigned_type(t)) return unit;  // most are signed: no lookup then
+  const auto plain = std::meta::dealias(std::meta::substitute(^^lowered, {unit}));
+  return std::meta::is_signed_type(plain) ? std::meta::substitute(^^nonnegative, {unit}) : unit;
+}
+
 // The C++ type that the parameter `param` of `setter` gets in the props struct.
 // The unit is inferred from the names LVGL uses, because C only says int32_t. Whether
 // an angle is in degrees or in tenths of a degree is not in the names either: that is
@@ -523,7 +616,7 @@ consteval std::meta::info value_type(std::meta::info setter, std::string_view pr
 
   if (std::meta::is_arithmetic_type(t) && t != ^^bool)
     if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
-      return unit == ^^angle ? angle_type_of<D>(setter) : unit;
+      return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
 }

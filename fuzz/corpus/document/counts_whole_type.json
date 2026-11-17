@@ -1,0 +1,3 @@
+{"type": "row", "children": [
+  {"type": "chart", "props": {"size": ["150px", "100px"], "div_line_count": [32767, 32767]}},
+  {"type": "scale", "props": {"size": ["150px", "60px"], "total_tick_count": 32767, "major_tick_every": 4294967295}}]}

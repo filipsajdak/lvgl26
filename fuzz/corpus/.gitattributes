@@ -1,0 +1,2 @@
+# Fuzz inputs are bytes: keep every carriage return and invalid byte as written.
+* -text

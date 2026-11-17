@@ -17,8 +17,15 @@
 
 namespace {
 
+// Every widget that both LVGL versions have (docs/reference/*.json): a document
+// may name any widget its program allows, so the fuzzer must reach all of them.
+// Except arclabel: LVGL v9.6 divides by zero drawing one with its default radius
+// of 0 (lv_arclabel.c:758), so every input that names it would be a crash in LVGL.
 using ui = lv::runtime<"obj", "label", "button", "arc", "bar", "slider", "switch", "checkbox",
-                       "textarea", "dropdown", "roller">;
+                       "textarea", "dropdown", "roller", "image", "animimg", "canvas",
+                       "buttonmatrix", "calendar", "chart", "imagebutton", "keyboard", "led", "line",
+                       "msgbox", "scale", "spangroup", "spinbox", "spinner", "table", "tabview",
+                       "tileview">;
 
 void require(bool ok) {
   if (!ok) __builtin_trap();
