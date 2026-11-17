@@ -22,6 +22,7 @@
 //
 // A widget gets the styles of its own kind only: a slider does not get those of `bar`.
 
+
 #include <lv/detail/theme_styles.hpp>
 #include <lv/props.hpp>
 #include <lv/style.hpp>
@@ -136,118 +137,6 @@ inline constexpr auto theme_members = std::define_static_array(
 // For each member of a theme: the class of its widgets, or null for `screen`.
 template <class D = void>
 inline constexpr std::span<const std::meta::info> theme_classes = std::define_static_array(theme_widgets());
-
-// A style property that sets several others. A constant style holds only the others.
-struct shorthand {
-  std::string_view name;
-  std::array<std::string_view, 4> sets;  // an empty name ends the list
-};
-
-inline constexpr shorthand shorthands[] = {
-    {"margin_all", {"margin_top", "margin_bottom", "margin_left", "margin_right"}},
-    {"margin_hor", {"margin_left", "margin_right"}},
-    {"margin_ver", {"margin_top", "margin_bottom"}},
-    {"pad_all", {"pad_top", "pad_bottom", "pad_left", "pad_right"}},
-    {"pad_gap", {"pad_row", "pad_column"}},
-    {"pad_hor", {"pad_left", "pad_right"}},
-    {"pad_ver", {"pad_top", "pad_bottom"}},
-    {"size", {"width", "height"}},
-    {"transform_scale", {"transform_scale_x", "transform_scale_y"}},
-};
-
-// The name of member `i` of lv::style.
-template <class D>
-consteval std::string_view style_name(std::size_t i) {
-  return std::meta::identifier_of(style_setters<D>[i]).substr(style_prefix.size());
-}
-
-// The style id of the property called `name`.
-template <class D>
-consteval lv_style_prop_t style_prop_named(std::string_view name) {
-  for (std::size_t i = 0; i < style_ids<D>.size(); ++i)
-    if (style_ids<D>[i] != std::meta::info{} && style_name<D>(i) == name)
-      return static_cast<lv_style_prop_t>(std::meta::extract<_lv_style_id_t>(style_ids<D>[i]));
-  fail("lv: LVGL has no style property '" + str(name) + "'.");
-}
-
-// The style ids that the shorthand `name` sets. A member of lv::style that is neither
-// a value nor a shorthand (`enabled`, which turns another style on and off) is refused.
-template <class D>
-consteval std::vector<lv_style_prop_t> long_forms(std::string_view name) {
-  std::vector<lv_style_prop_t> out;
-  for (const auto& s : shorthands) {
-    if (s.name != name) continue;
-    for (auto target : s.sets)
-      if (!target.empty()) out.push_back(style_prop_named<D>(target));
-    return out;
-  }
-  fail("lv: a theme cannot hold the style property '" + str(name) +
-       "': LVGL keeps no value for it in a style. Leave it out of the theme.");
-}
-
-consteval bool holds(const std::vector<lv_style_const_prop_t>& props, lv_style_prop_t prop) {
-  for (const auto& p : props)
-    if (p.prop == prop) return true;
-  return false;
-}
-
-// Adds what a shorthand stands for. A long form that the style sets itself wins.
-consteval void add_long_forms(std::vector<lv_style_const_prop_t>& props, const std::vector<lv_style_prop_t>& ids,
-                              std::span<const lv_style_value_t> values) {
-  for (std::size_t k = 0; k < ids.size(); ++k) {
-    if (holds(props, ids[k])) continue;
-    lv_style_const_prop_t p{};
-    p.prop = ids[k];
-    p.value = values[k < values.size() ? k : 0];  // `size` has a value for each; the others have one
-    props.push_back(p);
-  }
-}
-
-// The properties of `s` that have a style id.
-template <class S, class D>
-consteval std::vector<lv_style_const_prop_t> plain_props(const S& s) {
-  std::vector<lv_style_const_prop_t> props;
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    if constexpr (style_ids<D>[i] != std::meta::info{}) {
-      if (s.[:style_members<D>[i]:].set) {
-        if (s.[:style_members<D>[i]:].bound != nullptr)
-          fail("lv: a theme holds constants, and a font bound with lv::bind is drawn on the device. Give the "
-               "theme a font made by the compiler (lv::typeface), or bind the font in the widget's own style.");
-        lv_style_const_prop_t p{};
-        p.prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
-        p.value = style_value(s.[:style_members<D>[i]:].v.v0);
-        props.push_back(p);
-      }
-    }
-  }
-  return props;
-}
-
-// Adds the properties of `s` that have no style id, as the ones they stand for.
-template <class S, class D>
-consteval void add_shorthands(std::vector<lv_style_const_prop_t>& props, const S& s) {
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    if constexpr (style_ids<D>[i] == std::meta::info{}) {
-      if (s.[:style_members<D>[i]:].set) {
-        const auto& [... x] = s.[:style_members<D>[i]:].v;
-        const std::array values{style_value(lower(x))...};
-        add_long_forms(props, long_forms<D>(style_name<D>(i)), values);
-      }
-    }
-  }
-}
-
-// `s` as a constant lv_style_t with static storage: what LV_STYLE_CONST_INIT makes.
-template <class S, class D>
-consteval const lv_style_t* stored_style(const S& s) {
-  auto props = plain_props<S, D>(s);
-  add_shorthands<S, D>(props, s);
-  lv_style_const_prop_t end{};
-  end.prop = LV_STYLE_PROP_INV;
-  props.push_back(end);
-  const std::vector<lv_style_t> one{const_style(std::define_static_array(props).data())};
-  return std::define_static_array(one).data();
-}
 
 // The styles that `look` sets, for the widgets of `widget`.
 template <class D>

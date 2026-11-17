@@ -132,6 +132,8 @@ constexpr auto card = lv::style({.bg_color = tok.color.ink,
                                  .radius = lv::raw(3 * px)}) |
                       tok.card.border | tok.card.shadow | tok.card.fade | tok.text.label;
 constexpr auto loud = card | lv::style({.bg_color = tok.color.accent});
+constexpr auto knob = loud | lv::on("knob", "pressed", {.bg_color = tok.color.ink}) |
+                      lv::on("checked", {.bg_opa = tok.opacity.half});
 
 constexpr lv::theme_styles look = lv::theme({
     .button = {.style = card, .style_pressed = {.bg_color = tok.color.accent}},
