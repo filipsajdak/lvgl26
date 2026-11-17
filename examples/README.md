@@ -10,7 +10,7 @@ with all the quality presets.
 | LVGL `widgets`: buttonmatrix, dropdown, spinbox, textarea, image, scale, keyboard | 22 | 44 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
 | LVGL other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll`, others | 0 | 199 | Same pixels as the C original |
 | Qt for MCUs demos and examples | 0 | 35 | Screenshots; written from the documented behaviour only |
-| Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 0 | about 60 | Screenshots |
+| Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 1 | about 60 | Screenshots; [treadmill](ports/qt/treadmill/README.md) is the Qt Design Studio port (`tests/ports_treadmill.cpp`) |
 
 ## Not ported yet
 
@@ -79,3 +79,31 @@ A group in the screen's place has no gap, and the pictures differ.
 - A port that differs from the original says so in a comment at the top of the file.
 - Qt for MCUs sources are under a commercial licence: they are not read into this
   repository and no asset is copied from them.
+
+Found while porting the treadmill panel of Qt Design Studio ([examples/ports/qt/treadmill](ports/qt/treadmill/README.md)).
+Each is a gap in lvgl26, and the port leaves the feature out or says how it differs.
+
+The opacity of a widget cannot be animated, because LVGL has no setter for it (`lv_obj_set_style_opa` is a style).
+The original fades its splash screen and its logos in and out:
+
+```cpp
+co_await lv::animate(page, {.opa = {100 * lv::pct, 0 * lv::pct}}, 1000 * lv::ms);  // no member `opa`
+```
+
+A style cannot follow a state, so a look that changes while the program runs is a new tree.
+The original changes three themes of colors in place:
+
+```cpp
+lv::group({.style = {.bg_color = lv::bind(background)}})  // a style takes a token, not a binding
+```
+
+A position cannot follow a state of a plain number. A binding to `.x` accepts only a length, and no state holds one:
+
+```cpp
+struct place { int value; };
+constinit lv::state<place> where{place{0}};
+lv::image({.x = lv::bind(where)})  // this property cannot be bound to a state of that type
+```
+
+A text that has two numbers in it (`6:05`, `14.3`) has no formatted binding, because a format holds one `{}`.
+The port writes the text in an effect and binds the label to a `lv::state<const char*>`.

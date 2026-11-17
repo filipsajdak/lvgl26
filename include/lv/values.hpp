@@ -423,6 +423,8 @@ constexpr E given_value(const enumerator_or_name<E>& v) {
 template <class... Ts>
 struct arg {
   bool set;
+  bool follows;  // the property follows a state: `bound` is set. A flag, because under a
+                 // sanitizer GCC cannot tell at compile time that a state's address is not null
   detail::values<Ts...> v;  // v.v0, v.v1, ...: what LVGL takes
 
   // Set when the property follows a state instead of holding a value.
@@ -443,7 +445,7 @@ struct arg {
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
             (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
-      : set(true), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(false), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
 
   // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
@@ -451,7 +453,7 @@ struct arg {
   template <std::size_t... N>
     requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
   consteval arg(const char (&... name)[N])
-      : set(true), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
+      : set(true), follows(false), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_subject(nullptr), bound_format(nullptr) {}
 
   // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
@@ -463,7 +465,7 @@ struct arg {
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), v{}, bound(b.source), bound_subject(b.subject),
+      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject),
         bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
     using first = std::tuple_element_t<0, types>;
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
@@ -479,14 +481,14 @@ struct arg {
                   "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
   }
 
-  constexpr arg(font_binding b) : set(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+  constexpr arg(font_binding b) : set(true), follows(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
                   "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
+      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }

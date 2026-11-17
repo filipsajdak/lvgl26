@@ -37,6 +37,20 @@ Checked on a clone of `slint-ui/slint` at commit `f3c4537` of 2026-11-15. `sourc
 
 The toolkit itself is under GPLv3, a royalty-free licence or a commercial one. The royalty-free licence excludes embedded use. `summary` 2026-11-15, [licence summary](https://components.espressif.com/components/slint/slint/versions/1.17.0/license?language=en).
 
+## Qt Design Studio examples, checked in their repository
+
+Checked on `public-demos/qtdesign-studio` at <https://git.qt.io/public-demos/qtdesign-studio>, commit `0c1ccf18` of 2026-05-08. `source` 2026-11-17.
+
+| Part | Licence |
+|---|---|
+| The QML of every example | `LICENSE.md` of the repository: a Qt header that offers a commercial licence or BSD-3-Clause. The QML files carry no header of their own |
+| The pictures and fonts | The same file covers them, but they are Git LFS files: fetch them from `/-/raw/master/...`, not the API's file route, which returns a pointer |
+| The Exo font of `TreadmillMcuDemo` | SIL Open Font License 1.1, read from the name table of each TTF (copyright 2017 The Exo Project Authors) |
+| The Qt logo in the splash screen | A Qt mark: not carried over |
+
+- The repository has 39 example folders under `examples/`. `washingMachineUI` lists its programs with a `ListView` over a `ListModel`; `EBikeDesign` has a `ListModel` and a scrolling map; `TreadmillMcuDemo` has neither.
+- `TreadmillMcuDemo` is the one the port uses: 800 x 480, a splash screen, one screen, three looks, and no list, chart, shader or 3D. See `examples/ports/qt/treadmill`.
+
 ## Qt, in detail
 
 - The QML and images of Qt for MCUs must not be copied into this MIT repository. `source` 2026-11-13.
