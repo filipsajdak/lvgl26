@@ -9,7 +9,8 @@ Every mark is dated 2026-11-17 unless its row says otherwise.
 - `measured`: a sketch compiled and run in this session; "Measured here" says how.
 - `summary` and `recalled`: as the README says.
 
-The question comes from two answers of the owner about `lv::shown(state)[...]` and `lv::when(flag)[tree]`.
+The question comes from the owner's answers about `lv::shown(state)[...]` and `lv::when(flag)[tree]`.
+The last two quotes are his two principles for all of lvgl26's design.
 
 - On storage: "I want to avoid allocation - can we research the best solution that will also be extendable, maintainable, and follow open-close principle."
 - On the time of a switch: "We should avoid allocation. Research better approaches."
@@ -41,7 +42,7 @@ What the compiler can size, it sizes, and the caller decides where it lives.
 | Can one mechanism give every node kind its storage, sized at compile time? | Yes: each kind declares a nested `storage<Tree, Path...>`; the tree's storage is their aggregate, made by reflection | Sketch (i) |
 | Can a new kind be added without touching the mount code? | Yes: `proto_stamp.hpp` added a kind; the mount code's hash did not change | Sketch (i) |
 | Does a shown node switch without lvgl26 allocating? | Yes: 4,000 switches, nested shown nodes and bindings in the arms, no call of ours that allocates, the heap flat | Sketch (ii) |
-| What does the mount cost beyond the widgets? | One LVGL event handler on the root: 48 bytes in 2 blocks on the host. With `watch::none`, nothing | Sketches (ii), (vi) |
+| What does the mount cost beyond the widgets? | With a handler on the root: 48 bytes in 2 blocks on the host. Watched through the parent: nothing after the parent's first tree | Sketches (ii), (vi), (ix) |
 | Can the whole storage live on the caller's stack? | Yes: `auto root = proto::mount<ui>(parent);`, built in place, 224 bytes in the frame | Sketch (vi) |
 | Can it be placed with placement new in a region laid out at compile time? | Yes: two screens in a `constinit` region of 296 bytes, its size a constant expression | Sketch (vi) |
 | Can `mount` still return `std::expected<mounted, mount_error>`? | Not with the storage inside: failure is known only after the build at the final address. `mounted` carries the failure itself | Sketch (vi), reasoned |
@@ -86,6 +87,7 @@ The sketch uses a state with an intrusive list of watchers, as the spike did, wi
 | (ii) | The root deleted with `lv_obj_delete` from the C API, then the state changed | Only the probe is told: no node of the tree is left on the state |
 | (iii) | The five policies, with a real click, a task, and holders that cannot be drawn | See "B. When a switch happens" |
 | (viii) | A watcher unlinks the one the walk visits next; unlinks itself; changes the same state inside the walk | Told 1, 0, 1; then 2, 2, 2; then 1, 2, 2: as wanted |
+| (ix), (x) | Four ways to watch the root | See "The root watch without an allocation" |
 | (iii) | The drains' own setup | One timer and one display handler, made once at the first mount |
 | (iii) | 2,000 deferred switches drained by the refresh | 13,024 bytes and 142 blocks before and after; 0 calls of ours |
 | (v) | Five ways for a style value to follow a state | See "A style value that follows a state" |
@@ -366,7 +368,7 @@ The owner chose handlers whose parameters name widgets by type, `lv::view<"label
   The spike measured that.
 - Through the public API, the only free hook per widget is `lv_obj_set_external_data`, which needs `LV_USE_EXT_DATA`.
 - So the rule: "a widget of a mounted tree goes with its tree".
-  A checked build can test `lv_obj_is_valid` before each update.
+  A checked build can look the widget up by address below the root before each update; `lv_obj_is_valid` reads it.
 - `lv::spawn(work, owner)` allocates the frame, a watch record and its handler.
   A task slot in the storage removes the frame; the record can be part of the slot.
 - A task tied to an arm ends when the arm's widgets go, as today: sketch (iii) saw the task end once in every policy.
@@ -521,6 +523,84 @@ What is still open.
 - Fonts and images: already in flash; a cache or a decoded image needs its own region.
 - LVGL's own allocations that we cause: the root's handler, the display's handler, timers.
 
+## The root watch without an allocation
+
+Researched 2026-11-18, after the owner asked for a watch that allocates nothing.
+A mounted tree must notice when its root goes from outside: its parent deleted through the C API, a screen replaced, the root deleted alone.
+Otherwise a state change later writes into freed widgets.
+
+### What LVGL offers
+
+All rows are `source` in v9.6.0 and the v10 pin, unless marked.
+
+| Facility | What it gives | Allocation |
+|---|---|---|
+| An `LV_EVENT_DELETE` handler on the root | The root's deletion, before its children go | One descriptor per root, and the event array grows |
+| `LV_EVENT_DELETE` reaching the parent by bubbling | Nothing: `event_is_bubbled` never bubbles `LV_EVENT_DELETE`, `LV_EVENT_CHILD_DELETED` or `LV_EVENT_CHILD_CHANGED` | |
+| `LV_EVENT_CHILD_DELETED` on the parent | Sent by `lv_obj_delete` after the child is gone, with no parameter, and not when the parent itself is being deleted | One descriptor per parent |
+| `LV_EVENT_DELETE` on the parent | The parent's deletion, while its children still exist | One descriptor per parent |
+| An event of the display or the application when any widget goes | None exists | |
+| `lv_obj_class_t` hooks: constructor, destructor, event | The struct is in `src/core/lv_obj_class_private.h`: not public | |
+| `lv_obj_set_external_data(obj, data, free_cb)` | `free_cb` runs in `lv_obj_destruct`, after the children are deleted | None, but only with `LV_USE_EXT_DATA`, default 0; every widget grows by two pointers |
+| `lv_obj_free_id(obj)` with `LV_USE_OBJ_ID` and our own id functions | One global call for every deleted widget | None, but it takes over the program's widget ids |
+| `lv_obj_null_on_delete(&p)` | Sets a pointer to null when the widget goes | It adds an event handler: one descriptor |
+| `lv_obj_is_valid`, alias of `lv_obj_is_in_widget_tree` | Reads the widget's parent chain | Reads freed memory for a deleted widget; `measured`, sketch (iii) |
+| A list of every screen of a display | Not public: `screens` is in the private display struct | |
+
+So no public facility notices a deletion with neither an allocation nor a configuration of LVGL.
+The smallest cost is one allocation per parent, not per mount.
+
+### The options, measured
+
+Sketch (ix) mounts a tree of four widgets with one binding, twice under one parent, then deletes things from outside.
+`proto_watch.hpp` holds the ways; sketch (x) is the external data, with LVGL built again with `LV_USE_EXT_DATA=1`.
+Every row ran on v9.6.0 and on the v10 pin, with the same numbers.
+Heap is compared with the same tree mounted with no watch.
+That costs 1,176 bytes in 18 blocks the first time, 1,032 in 16 the second.
+
+| Way | Calls of ours that allocate: first mount, second mount under the same parent | Heap more than no watch: first, second | Parent deleted | Root deleted alone | Root deleted in its own event | Screen replaced with auto-delete | Our handlers run in 100 frames |
+|---|---|---|---|---|---|---|---|
+| W1 a handler on the root | 1, 1 | 48 B in 2 blocks, 48 B in 2 blocks | Noticed | Noticed | Noticed | Noticed | 0 |
+| W2 two handlers per parent, shared | 2, 0 | 112 B in 3 blocks, none | Noticed | Noticed | Noticed | Noticed | 0 |
+| W3 `LV_USE_EXT_DATA`, LVGL built with it | 0, 0 | 80 B, 0 blocks: 16 bytes per widget of the tree | Noticed | Noticed | Noticed | Noticed | 0 |
+| W4 no watch | 0, 0 | none | Missed | Missed | Missed | Missed | 0 |
+
+After each noticed deletion the state changed, and only a probe was told: no storage of the dead tree was still linked.
+The second mount under W2 cost 24 bytes less than with no watch, in the same number of blocks: the parent's lists, not the watch.
+
+How each one works, and its limits.
+
+- W1 is what sketch (vi) measured: one `LV_EVENT_DELETE` handler per root, 48 bytes in 2 blocks on the host.
+- W2 adds `LV_EVENT_DELETE` and `LV_EVENT_CHILD_DELETED` handlers to the parent, once, found again in the parent's event list.
+  The trees are in one intrusive list of ours; each entry is two pointers and the parent and root, inside the `mounted` object.
+  On the parent's deletion every tree under it ends its storage while its widgets still exist.
+  On a child's deletion a tree whose root is no longer among the parent's children ends its storage; only addresses are compared.
+  The handlers stay on the parent after the trees go, so mounting under it again costs nothing.
+  They run only for those two events of the parent: LVGL filters by event code before calling.
+- W3 is free per mount and needs no handler, but it is a configuration of LVGL that every widget pays for.
+  The data is one per widget, so it must be the root's, and a user who also sets it on the root replaces ours.
+- W4 is the rule "the parent outlives the `mounted`", with nothing to check it.
+- A global hook through `lv_obj_free_id` would be one function for the program.
+  It needs `LV_USE_OBJ_ID` and takes the ids from the user.
+  Reasoned, not run.
+- A holder that lvgl26 creates anyway: `lv::display` creates or owns its screens.
+  It can put W2's handlers on them once, when the display starts.
+  Then a tree mounted on a display's screen costs nothing at mount, and the program pays two descriptors per screen at its start.
+
+With W2 and W3, the storage of a tree whose root went alone ends after its widgets are deleted.
+So a kind's destructor must not touch a widget: the rule of "How it works" holds without exceptions.
+`each_view::close()` today removes handlers from its rows; in the migration it lets them go with the rows.
+
+Recommended: W2, with its handlers put on `lv::display`'s screens and layers when the display starts.
+
+- A tree mounted on a screen of `lv::display` allocates nothing at mount.
+  The handlers were made once at the start, as the owner's region goal wants.
+- A tree mounted under any other parent pays two descriptors once for that parent, never again for it.
+- W3 is used instead when LVGL is built with `LV_USE_EXT_DATA`: found by reflection, as `detail::find` finds optional functions.
+- `watch::none` then means W4: no handler, not even on the parent, under the documented rule that the parent outlives the `mounted`.
+  A checked build adds W1 to such a tree and reports a root that went first.
+  That costs one descriptor, in that build only.
+
 ## Recommendation
 
 ### A: storage
@@ -529,8 +609,8 @@ What is still open.
 2. A kind keeps run-time data by declaring `template <const auto& Tree, std::size_t... Path> struct storage;`, checked by a concept.
 3. `lv::mounted<Tree>` contains it, is not movable, owns its widgets, and carries its own failure in the shape of `std::expected`.
 4. `lv::storage_size<Tree>` and `alignof` are constants; `lv::mount_in` and `lv::place` take caller memory.
-5. One handler on the root ends the storage, whoever deletes the root.
-   `watch::none` drops it, under a documented rule.
+5. The root is watched through its parent: two handlers per parent, made at the start for `lv::display`'s screens.
+   `watch::none` drops the watch, under a documented rule.
 6. Arms share a union; with `.leave`, a region of the largest and the second largest arm.
 
 ### B: switch timing
@@ -568,6 +648,8 @@ Deferred, drained at the start of the display's refresh, with `lv::settle()` to 
 | The five ways of a bound style value | Yes, both versions | | |
 | Out of memory at every point of a mount, nothing left | Yes, both versions, without LVGL's theme | | |
 | The safe walk: unlinking the next watcher, itself, a nested change | Yes, both versions | | |
+| Four ways to watch the root, including LVGL built with `LV_USE_EXT_DATA` | Yes, both versions | | |
+| A watch through `lv_obj_free_id`; W2's handlers put on `lv::display`'s screens | | | Yes |
 | The wake of a deferred switch for a hidden holder and a screen not loaded | Yes, both versions | | |
 | Compile cost and operations of the storage computation | | Yes, v9.6 | |
 | Arms of a leave played backwards from both ends of a region | | | Yes |
@@ -601,13 +683,13 @@ Deferred, drained at the start of the display's refresh, with `lv::settle()` to 
    Options: a nested template found by reflection; a trait; a concept; a function found by lookup.
    Recommendation: the nested template, checked by a concept.
    Cost: a kind's author writes a template with `Tree` and `Path`.
-4. May a mounted tree watch its root, at one LVGL handler per mount?
-   Options: always; never, with the rule that the parent outlives the `mounted`; a choice per mount.
-   Recommendation: watch by default, `watch::none` as a choice.
-   Cost: 48 bytes in 2 blocks per mount on the host, or a rule that is not checked.
+4. How does a mounted tree notice that its root went from outside?
+   Options: W1 a handler per root; W2 two handlers per parent, shared; W3 LVGL's external data; W4 no watch, a rule.
+   Recommendation: W2, put on `lv::display`'s screens at the start; W3 when LVGL has it; W4 as `watch::none`.
+   Cost: two descriptors per parent other than a display's screen, 112 bytes in 3 blocks on the host, once.
 5. A widget of a mounted tree deleted alone through the C API?
    Options: a rule, checked in a checked build; a handler per bound widget; LVGL's external data when enabled.
-   Recommendation: the rule, with `lv_obj_is_valid` before an update in a checked build.
+   Recommendation: the rule, checked in a checked build by our own address lookup: `lv_obj_is_valid` reads the widget.
    Cost: such a deletion is a bug that a release build does not see.
 6. How large is the region of `lv::shown`'s arms?
    Options: the union; the largest plus the second largest; two slots of the largest; the sum.
@@ -633,3 +715,22 @@ Deferred, drained at the start of the display's refresh, with `lv::settle()` to 
     Options: report it with the failing case; work around it in our tests only.
     Recommendation: report it, and keep our out-of-memory tests without LVGL's theme until it is fixed.
     Cost: an issue to follow on both LVGL versions.
+
+## What the owner decided
+
+Decided 2026-11-18, over the list above.
+The number is the decision it answers.
+
+| # | Decision |
+|---|---|
+| 1 | A tree's storage lives inside a non-movable `mounted`. Caller memory goes through `lv::place` and `lv::mount_in`. Page functions use storage they declare. |
+| 2 | `mounted` carries its own failure: `if (!root)`, `root->`, `root.error()`. A global uses `page.mount(parent)`. |
+| 3 | A kind declares a nested `storage<Tree, Path...>` template, checked by a concept. |
+| 4 | Not decided: the owner asked for an allocation-free watch first. "The root watch without an allocation" is that research. |
+| 5 | A widget deleted alone through the C API is under a documented rule, checked in a checked build with our own address lookup. |
+| 6 | The arm region is the largest arm, or the largest plus the second largest with a leave animation. |
+| 7 | A page function's size is declared by the page and checked in its own file. |
+| 8 | The switch is deferred to the display's next refresh, with `lv::settle()`. A node may opt into immediate. |
+| 9 | A bound style value keeps its `lv_style_t` in the node's storage, changed in place. |
+| 10 | `lv::state` gets its own watcher list, as the first slice. |
+| 11 | The LVGL bug is drafted as an upstream report for the owner to file: `docs/research/lvgl-upstream.md`. |
