@@ -124,6 +124,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - GCC 16.2 runs a call whose arguments are all constants twice when it is written inside a
   function template: once when the template is instantiated, once when the function runs. Hand
   the result of a scan in as an argument (see `scan_base` in `include/lv/props.hpp`).
+- Repetition (`lv::for_each`, `lv::for_each_field`, `include/lv/repeat.hpp`) is expanded by the compiler into the children of the parent: a `detail::repeated` value is flattened by `splice` in `include/lv/tree.hpp`, so the tree is the one written by hand. A part sets no `.id`. A caption is a string literal, since an annotation holds a structural type and GCC 16.2 refuses `std::string_view` there. A record with a text literal is taken by reference (`[]<const auto& R>`), because a literal is no template argument. Clang reads no annotation, so `tests/editor/api_uses.cpp` repeats the members of a row type in a template that is never instantiated.
 - A node of a tree keeps `detail::kept<W>`, not `props<W>`. A props struct has thousands of
   members, and the compiler walks every one each time it copies a node.
 - `lv::arg` and what it holds have no default member initializer, so that an unset property is
@@ -178,7 +179,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   `constexpr` variable, before any other use of the same arguments. A `static_assert` does not
   evaluate the precondition.
 
-- A part (a function that returns a piece of tree) constrains its parameters with the public concepts of `docs/concepts.md`: `lv::tree_handler` (a handler in a constexpr tree), `lv::event_handler` (run time), `lv::dependency`, `lv::tree_node`, `lv::view_value`, `lv::style_value`, `lv::font_value`, `lv::token_value`. Never `void (*)()` for a handler, and never a bare `template <class Count>` for a state. A new concept is public (`lv::`, not `lv::detail::`), has `static_assert`s in `tests/concepts.cpp`, a compile-fail test in `tests/fail/part_*.cpp`, and its stub in `tools/editor/stubs/lv/`.
+- A part (a function that returns a piece of tree) constrains its parameters with the public concepts of `docs/concepts.md`: `lv::tree_handler` (a handler in a constexpr tree), `lv::event_handler` (run time), `lv::dependency`, `lv::tree_node`, `lv::view_value`, `lv::style_value`, `lv::font_value`, `lv::token_value`, and `lv::repeat_part` for the part of `lv::for_each`. Never `void (*)()` for a handler, and never a bare `template <class Count>` for a state. A new concept is public (`lv::`, not `lv::detail::`), has `static_assert`s in `tests/concepts.cpp`, a compile-fail test in `tests/fail/part_*.cpp`, and its stub in `tools/editor/stubs/lv/`.
 - Clang 21 does not read `template <lv::dependency auto& Count>`: write `template <auto& Count> requires lv::dependency<std::remove_cvref_t<decltype(Count)>>` in code that the editor stubs or `tests/editor/api_uses.cpp` read.
 - A handler in a constexpr tree is a function pointer: a function or a lambda without captures. A part that needs state names it as a template argument.
 

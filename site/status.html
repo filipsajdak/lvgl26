@@ -98,6 +98,7 @@
       <li><strong>Signal's typefaces</strong> <span><code>lv/signal_type.hpp</code> makes Signal's fonts from its typography tokens. <code>lv::signal::dark_with_type</code> and <code>lv::signal::day_with_type</code> set all text in Barlow and the text of a button in Barlow Condensed. <code>lv::signal::numerals</code> makes a font with the sixteen characters of a reading. <code>lv/signal.hpp</code> alone draws no font, so it compiles as fast as before.</span> <small>lv/signal_type.hpp, tests/signal_type.cpp, ref/signal_type_dark.png, ref/signal_type_day.png, fail/signal_numerals_not_a_numeral.cpp, examples/signal_type</small></li>
       <li><strong>State and bindings</strong> <span><code>lv::state</code> holds a measure (an mp-units quantity with an integer number), an <code>lv::counter</code>, a one-member struct, a bool, an enum, a color or a pointer. <code>lv::bind</code> ties a property to it. A state is an <code>lv_subject_t</code> underneath.</span> <small>state.hpp; state.cpp, state_plain.cpp</small></li>
       <li><strong>Lists</strong> <span><code>lv::each(tracks, &amp;track::id)[row]</code> shows a row template for each row of an <code>lv::list&lt;T, N&gt;</code>, whose capacity is fixed at compile time. A change touches the widgets of its own row. <code>lv::bind(&amp;track::title)</code> follows a field of a row, and <code>.selected</code> makes a state follow the selected row. See <a href="docs/lists.html">Lists</a>.</span> <small>list.hpp; lists.cpp, lists_selection.cpp, lists_printer.cpp, examples/lists</small></li>
+      <li><strong>Repetition by reflection</strong> <span><code>lv::for_each&lt;E&gt;(part)</code> makes one part for each enumerator of an enum (<code>lv::but</code> leaves some out), <code>lv::for_each_field&lt;T&gt;(part)</code> one for each member with an <code>[[=lv::caption{"key"}]]</code>, and <code>lv::for_each&lt;items&gt;(part)</code> one for each record of a constant array. The compiler expands them into the children of the tree: no list, no allocation. <code>lv::name_of</code> and <code>lv::like</code> derive a text or a member from an enumerator's name. See <a href="docs/repetition.html">Repetition</a>.</span> <small>repeat.hpp, tree.hpp; for_each.cpp, fail/for_each_*.cpp, examples/repeat</small></li>
       <li><strong>Concepts for parts</strong> <span>A part is a function that returns a piece of tree, and constrains its parameters with the public concepts: <code>lv::tree_handler</code>, <code>lv::event_handler</code>, <code>lv::dependency</code>, <code>lv::state_value</code>, <code>lv::tree_node</code>, <code>lv::view_value</code>, <code>lv::style_value</code>, <code>lv::font_value</code>, <code>lv::token_value</code> and <code>lv::token_of</code>. A captureless lambda is a handler in a constexpr tree, and a state can be a template argument. A wrong argument is refused at the call, and a lambda with a capture says why. See <a href="docs/concepts.html">Concepts for parts</a>.</span> <small>view.hpp, computed.hpp, state.hpp, tree.hpp, style.hpp, values.hpp; concepts.cpp, handlers.cpp, fail/part_*.cpp, fail/handler_capturing_lambda.cpp, examples/parts</small></li>
       <li><strong><code>lv::computed</code> and <code>lv::effect</code></strong> <span>A value derived from states, bound to a widget like a state, and code that runs when states change. The dependencies are fixed at compile time; nothing is registered at run time.</span> <small>computed.hpp; computed.cpp</small></li>
       <li><strong>Coroutine tasks</strong> <span><code>lv::task&lt;T&gt;</code> on LVGL's loop. <code>view.next().clicked</code> and every other event, <code>lv::sleep</code>, <code>lv::first</code>, <code>lv::spawn</code>. A deleted widget cancels the task. <code>lv::spawn(task, owner)</code> starts a task that ends with a widget.</span> <small>task.hpp; task.cpp</small></li>
@@ -218,7 +219,7 @@
     </ul>
 
     <h3 id="migration-qt">Qt Quick</h3>
-    <p class="note">13 of 29 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
+    <p class="note">14 of 30 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -244,6 +245,7 @@
           <tr><th scope="row">Colors and sizes in one design file</th><td><span class="pill ok">Works</span></td><td>A W3C Design Tokens file, read at compile time</td><td></td></tr>
           <tr><th scope="row">Component, a reusable item with properties</th><td><span class="pill plan">Planned</span></td><td>A C++ function that returns a piece of tree</td><td><a href="#gap-components">Components</a></td></tr>
           <tr><th scope="row">Repeater, ListView, GridView over a model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(model, &amp;row::id)[delegate] over an <code>lv::list</code> of fixed capacity; a ListView that recycles rows is planned</td><td></td></tr>
+          <tr><th scope="row">Repeater with a constant model</th><td><span class="pill ok">Works</span></td><td><code>lv::for_each</code>&lt;E&gt;(part), <code>lv::for_each_field</code>&lt;T&gt;(part) or <code>lv::for_each</code>&lt;items&gt;(part): the compiler writes the delegates</td><td></td></tr>
           <tr><th scope="row">TableView</th><td><span class="pill plan">Planned</span></td><td>One cell can be set. A list of cells is missing</td><td><a href="#gap-table-cells">Several values in one property</a></td></tr>
           <tr><th scope="row">qsTr and translations</th><td><span class="pill plan">Planned</span></td><td>Not built</td><td><a href="#gap-translations">Translations and text resources</a></td></tr>
           <tr><th scope="row">Charts, TabBar, Dialog</th><td><span class="pill plan">Planned</span></td><td>Not built: they need children that a widget creates</td><td><a href="#gap-add-calls">Children that a widget creates itself</a></td></tr>
@@ -257,7 +259,7 @@
     </div>
 
     <h3 id="migration-slint">Slint</h3>
-    <p class="note">13 of 25 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
+    <p class="note">14 of 26 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -280,6 +282,7 @@
           <tr><th scope="row">Switch the theme at run time</th><td><span class="pill plan">Planned</span></td><td>Slint's printer themes are not ported</td><td><a href="#gap-runtime-theming">A style that follows a state</a></td></tr>
           <tr><th scope="row">Gradients</th><td><span class="pill plan">Planned</span></td><td>Vertical or horizontal, two colors</td><td><a href="#gap-gradients">More gradients</a></td></tr>
           <tr><th scope="row">for item in model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(tracks, &amp;track::id)[row template] over an <code>lv::list</code> of fixed capacity</td><td></td></tr>
+          <tr><th scope="row">for over a fixed set</th><td><span class="pill ok">Works</span></td><td><code>lv::for_each</code>&lt;E&gt;(part) over an enum, a captioned struct or a constant array: written by the compiler</td><td></td></tr>
           <tr><th scope="row">component and @children</th><td><span class="pill plan">Planned</span></td><td>A C++ function that returns a piece of tree</td><td><a href="#gap-components">Components</a></td></tr>
           <tr><th scope="row">StandardTableView</th><td><span class="pill plan">Planned</span></td><td>One cell can be set. A list of cells is missing</td><td><a href="#gap-table-cells">Several values in one property</a></td></tr>
           <tr><th scope="row">TabWidget, PopupWindow</th><td><span class="pill plan">Planned</span></td><td>Not built: they need children that a widget creates</td><td><a href="#gap-add-calls">Children that a widget creates itself</a></td></tr>
