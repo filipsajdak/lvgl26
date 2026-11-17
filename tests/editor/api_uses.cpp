@@ -362,6 +362,49 @@ int use_application() {
   return app.run();
 }
 
+// ---- lists ------------------------------------------------------------------------
+
+struct track_id {
+  int value;
+};
+struct track {
+  track_id id;
+  const char* title;
+  lv::counter plays;
+};
+
+constinit lv::list<track, 8> tracks;
+void row_built(lv::obj, const track&) {}
+
+constexpr auto track_row = lv::row[lv::label({.id = "title", .text = lv::bind(&track::title)}),
+                                   lv::label({.text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto playlist = lv::column[
+    lv::each(tracks, &track::id, {.on_row = &row_built})[track_row]];
+
+static_assert(std::same_as<decltype(lv::bind(&track::title)), lv::detail::row_binding<const char*>>);
+static_assert(std::same_as<decltype(lv::bind(&track::plays, "{} plays")), lv::detail::row_formatted_binding<lv::counter>>);
+static_assert(lv::list<track, 8>::capacity() == 8);
+
+int use_lists(lv::obj screen) {
+  auto root = lv::mount<playlist>(screen);
+  if (!root) return 1;
+  const std::expected<void, lv::list_error> added = tracks.push_back({{1}, "Intro", {}});
+  if (!added) return added.error() == lv::list_error::full ? 2 : 3;
+  if (!tracks.insert(0, {{2}, "Outro", {}})) return 4;
+  const track more[] = {{{3}, "Bridge", {}}};
+  if (!tracks.assign(more)) return 5;
+  tracks.update(0, [](track& t) { ++t.plays; });
+  tracks.move(0, 0);
+  int sum = static_cast<int>(tracks.size()) + (tracks.empty() ? 1 : 0) + (tracks.telling() ? 1 : 0);
+  for (const track& t : tracks) sum += t.id.value + tracks[0].plays.value + tracks.count().get().value;
+  const lv::row_view<track_row> first{lv::obj{lv_obj_get_child(root->root().raw(), 0)}};  // C API
+  static_assert(std::same_as<decltype(first.get<"title">()), lv::view<"label">>);
+  static_cast<void>(first.root());
+  tracks.erase(0);
+  tracks.clear();
+  return sum;
+}
+
 // ---- tasks ------------------------------------------------------------------------
 
 lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {

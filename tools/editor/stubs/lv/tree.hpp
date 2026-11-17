@@ -34,6 +34,14 @@ inline constexpr bool is_node<node<W, Kids...>> = true;
 template <class T>
 concept tree_node = is_node<std::remove_cvref_t<T>>;
 
+/// A node that builds no widget of its own, such as lv::each (lv/list.hpp).
+template <class T>
+inline constexpr bool is_structural = false;
+
+/// What a node takes as a child: a node, or a structural node.
+template <class T>
+concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
+
 }  // namespace detail
 
 /// One widget of a tree: its id and its children. (The real one also keeps the properties.)
@@ -44,7 +52,7 @@ struct node {
   std::tuple<Kids...> kids{};
 
   /// The children: lv::column()[lv::label(...), lv::arc(...)].
-  template <detail::tree_node... K>
+  template <detail::tree_child... K>
     requires(sizeof...(Kids) == 0)
   constexpr node<W, K...> operator[](const K&... k) const {
     return {name, {k...}};
@@ -55,6 +63,13 @@ struct node {
 };
 
 namespace stub {
+
+// The ids under a structural node, such as those of a row of lv::each, are not the tree's.
+template <class S>
+  requires detail::is_structural<S>
+constexpr std::string_view kind_with_id(const S&, std::string_view) {
+  return {};
+}
 
 // The kind of the node of a tree that has the id `id`: "arc". Empty when no node has it.
 template <detail::fixed W, class... Kids>
@@ -85,7 +100,7 @@ struct factory {
   constexpr node<W> operator()(const props<W>& p = {}) const { return {p.id}; }
 
   /// A node without properties, with these children.
-  template <detail::tree_node... Kids>
+  template <detail::tree_child... Kids>
   constexpr node<W, Kids...> operator[](const Kids&... kids) const {
     return {{}, {kids...}};
   }

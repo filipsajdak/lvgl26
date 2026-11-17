@@ -1,0 +1,11 @@
+#include <lv/lv.hpp>
+struct track_id {
+  int value;
+};
+struct track {
+  track_id id;
+  lv::counter plays;
+};
+constinit lv::list<track, 4> tracks;
+constexpr auto ui = lv::column[lv::each(tracks, &track::id)[lv::bar({.range = lv::bind(&track::plays)})]];
+void f(lv::obj screen) { lv::mount<ui>(screen); }
