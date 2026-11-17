@@ -22,6 +22,7 @@
 #include <array>
 #include <expected>
 #include <span>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -72,6 +73,50 @@ constexpr const auto& kid(const List& l) {
   return l.[:kid_members<List>[I]:];
 }
 
+// The widgets that lv::for_each made, not yet the children of a parent: the parent's
+// operator[] takes each of them in turn into its own children (see splice).
+template <class... Nodes>
+struct repeated {
+  kids<Nodes...> items;
+};
+
+template <class T>
+inline constexpr bool is_repeated = false;
+template <class... Nodes>
+inline constexpr bool is_repeated<repeated<Nodes...>> = true;
+
+// What a parent takes in []: a child, or the widgets of a repetition.
+template <class T>
+concept tree_kid = tree_child<T> || is_repeated<std::remove_cvref_t<T>>;
+
+// References to the children that a value gives its parent: itself, or each widget of a
+// repetition.
+template <class K>
+constexpr std::tuple<const K&> kid_refs(const K& k) {
+  return {k};
+}
+template <class... Nodes>
+constexpr std::tuple<const Nodes&...> kid_refs(const repeated<Nodes...>& r) {
+  return [&]<std::size_t... I>(std::index_sequence<I...>) {
+    return std::tuple<const Nodes&...>{kid<I>(r.items)...};
+  }(std::index_sequence_for<Nodes...>{});
+}
+
+// The node `self` (which has no children) with the children `k`, each repetition among
+// them replaced by its widgets.
+template <class Node, class... K>
+constexpr auto splice(const Node& self, const K&... k) {
+  return std::apply(
+      [&](const auto&... flat) {
+        static_assert((std::size_t{0} + ... + std::size_t{is_structural<std::remove_cvref_t<decltype(flat)>>}) <= 1,
+                      "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
+                      "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
+        return node<Node::kind, std::remove_cvref_t<decltype(flat)>...>{
+            self.p, kids<std::remove_cvref_t<decltype(flat)>...>{flat...}, self.bare};
+      },
+      std::tuple_cat(kid_refs(k)...));
+}
+
 }  // namespace detail
 
 // One widget of a tree: its properties and its children.
@@ -91,6 +136,14 @@ struct node {
                   "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
                   "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
     return {p, {k...}, bare};
+  }
+
+  // The same with lv::for_each among the children: its widgets become children of this one,
+  // in their place.
+  template <detail::tree_kid... K>
+    requires(sizeof...(Kids) == 0 && (detail::is_repeated<K> || ...))
+  constexpr auto operator[](const K&... k) const {
+    return detail::splice(*this, k...);
   }
 
   constexpr std::string_view id() const {
@@ -127,7 +180,7 @@ struct factory {
     return make_node<W, D>(p);
   }
 
-  template <tree_child... Kids>
+  template <tree_kid... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return (*this)()[kids...];
   }
@@ -148,7 +201,7 @@ struct group_factory {
   // The call names a type that depends on Kids. A plain (*this)() does not depend on
   // anything, so the compiler would work it out, and generate props<"obj">, while it
   // reads this header.
-  template <tree_child... Kids>
+  template <tree_kid... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];
   }
@@ -164,7 +217,7 @@ struct flex_factory {
     return make_flex<D>(p, flow);
   }
 
-  template <tree_child... Kids>
+  template <tree_kid... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];  // see group_factory
   }
