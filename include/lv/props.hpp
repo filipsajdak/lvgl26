@@ -327,6 +327,13 @@ inline duration from_subject(lv_subject_t* s, as<duration>) {
   return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
 }
 
+// A state of a unit, for a setter that takes it unsigned. A negative state breaks
+// the contract of nonnegative.
+template <class U>
+nonnegative<U> from_subject(lv_subject_t* s, as<nonnegative<U>>) {
+  return from_subject(s, as<U>{});
+}
+
 // Anything else: built from the integer if it can be, such as strict<int>.
 template <class T>
 T from_subject(lv_subject_t* s, as<T>) {

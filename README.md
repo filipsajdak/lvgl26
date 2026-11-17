@@ -34,6 +34,8 @@ How it works:
   tenths are taken. LVGL says which is which only in its doc comments.
   lvgl26 reads them from the embedded headers at compile time (`include/lv/detail/angle_docs.hpp`).
   A test checks the result against the pixels LVGL draws.
+  A setter that takes its value unsigned, such as a spinner's `.arc_sweep = 270 * deg`, gets an `lv::nonnegative<lv::angle>`.
+  A negative constant there is a compile error, and a negative value at run time breaks a contract.
 - **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
   `.flex_align = {"center", "center", "start"}`.
   The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.

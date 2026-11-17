@@ -57,6 +57,10 @@ lvgl26_test(task)
 lvgl26_test(static_text)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
+lvgl26_test(unsigned_values)
+add_test(NAME unsigned_values_violation_negative
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:unsigned_values> -DCASE=negative
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(application)
 lvgl26_test(theme)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
@@ -199,6 +203,8 @@ lvgl26_compile_fail(units_rgb_too_large "contract predicate is false in constant
 lvgl26_compile_fail(values_token_not_whole "contract predicate is false in constant expression")
 lvgl26_compile_fail(values_token_not_whole_negative "contract predicate is false in constant expression")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned_folded "contract predicate is false in constant expression")
 # The same mistakes inside a larger expression. GCC 16.2 folds such a call without its
 # contracts, so each of these compiled before lv/detail/checked.hpp.
 lvgl26_compile_fail(units_negative_time_folded "contract predicate is false in constant expression")

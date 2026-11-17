@@ -56,6 +56,18 @@ class strict {
   constexpr T raw() const { return v_; }
 };
 
+/// A unit value for a setter that takes it unsigned, such as a spinner's sweep:
+/// `.arc_sweep = 270 * lv::deg`. A negative value does not compile.
+template <class U>
+class nonnegative {
+  U v_{};
+
+ public:
+  constexpr nonnegative() = default;
+  constexpr nonnegative(U u) : v_(u) {}
+  constexpr U get() const { return v_; }
+};
+
 /// An event handler in a props struct: a function, or a lambda without captures.
 /// It takes nothing, or an lv::event.
 struct handler {

@@ -65,6 +65,36 @@ class strict {
   constexpr T raw() const { return v_; }
 };
 
+namespace detail {
+
+// A unit type whose plain value is a signed number: an angle, a length.
+template <class U>
+concept signed_unit = requires(const U& u) {
+  { u.raw() } -> std::signed_integral;
+};
+
+}  // namespace detail
+
+// A value of a unit type for a setter that takes it unsigned, such as the sweep of a
+// spinner: lv_spinner_set_arc_sweep(obj, uint32_t angle). LVGL receives it unsigned,
+// so a negative value is a contract violation, and a compile error for a constant.
+template <detail::signed_unit U>
+class nonnegative {
+  U v_{};
+
+ public:
+  constexpr nonnegative() = default;
+
+  constexpr nonnegative(U u)
+    pre(u.raw() >= 0)
+      : v_(u) {
+    detail::keep_checked(u.raw() >= 0);
+  }
+
+  constexpr U get() const { return v_; }
+  constexpr auto raw() const { return static_cast<std::make_unsigned_t<decltype(v_.raw())>>(v_.raw()); }
+};
+
 // An event handler stored in a props struct: a function or a lambda without captures.
 // For a handler with state, use view.on<LV_EVENT_...>() instead.
 // No default member initializers: see lv::arg. An empty handler is `handler{}`.
@@ -116,6 +146,8 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
 consteval std::string how_to_write(std::meta::info t) {
   if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (is_made_from(t, ^^nonnegative))
+    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
   if (t == ^^styled<const lv_font_t*>)
     return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
            "lv/font.hpp), or lv::raw(font) for a font that no token names";
@@ -558,6 +590,14 @@ consteval std::meta::info unit_of(std::string_view prop, std::string_view parame
   return {};
 }
 
+// The unit type for a parameter of the C type `t`. A unit whose plain value is signed
+// becomes nonnegative<unit> for an unsigned parameter, which LVGL then receives unsigned.
+consteval std::meta::info unit_for_parameter(std::meta::info unit, std::meta::info t) {
+  if (!std::meta::is_unsigned_type(t)) return unit;  // most are signed: no lookup then
+  const auto plain = std::meta::dealias(std::meta::substitute(^^lowered, {unit}));
+  return std::meta::is_signed_type(plain) ? std::meta::substitute(^^nonnegative, {unit}) : unit;
+}
+
 // The C++ type that the parameter `param` of `setter` gets in the props struct.
 // The unit is inferred from the names LVGL uses, because C only says int32_t. Whether
 // an angle is in degrees or in tenths of a degree is not in the names either: that is
@@ -574,7 +614,7 @@ consteval std::meta::info value_type(std::meta::info setter, std::string_view pr
 
   if (std::meta::is_arithmetic_type(t) && t != ^^bool)
     if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
-      return unit == ^^angle ? angle_type_of<D>(setter) : unit;
+      return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
   return raw;
 }

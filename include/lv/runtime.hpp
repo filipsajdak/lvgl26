@@ -152,6 +152,8 @@ template <class I>
 inline constexpr bool readable<strict<I>> = true;
 template <class T>
 inline constexpr bool readable<styled<T>> = readable<T>;
+template <class U>
+inline constexpr bool readable<nonnegative<U>> = readable<U>;
 
 // read(value, out): one overload per kind of property value. Each returns false
 // when the JSON value does not fit.
@@ -188,6 +190,14 @@ inline bool read(json::value v, json_value<angle>& out) {
   const auto m = read_measured(v);
   if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
   return out.value = angle{rounded_i32(m.number)}, true;
+}
+
+// A value for a setter that takes it unsigned. A negative one does not fit.
+template <class U>
+bool read(json::value v, json_value<nonnegative<U>>& out) {
+  json_value<U> plain;
+  if (!read(v, plain) || plain.value.raw() < 0) return false;
+  return out.value = plain.value, true;
 }
 
 // An angle with tenths of a degree: 22.5 or "22.5deg". A finer fraction, or more

@@ -203,7 +203,8 @@ struct target {
 
 consteval bool is_angle(std::meta::info type) {
   return type == ^^lv::angle || type == ^^lv::decidegrees || type == ^^lv::styled<lv::angle> ||
-         type == ^^lv::styled<lv::decidegrees>;
+         type == ^^lv::styled<lv::decidegrees> || type == ^^lv::nonnegative<lv::angle> ||
+         type == ^^lv::nonnegative<lv::decidegrees>;
 }
 
 // lv_<widget>_create(parent), by "lv_<widget>".
