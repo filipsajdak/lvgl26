@@ -252,7 +252,7 @@ lvgl26_compile_fail(font_no_glyph "the font file has no glyph for the character 
 lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
-lvgl26_compile_fail(font_bitmap_too_large "the pixels of this font take [0-9]+ bytes; LVGL's font format holds at most 1048575")
+lvgl26_compile_fail(font_bitmap_too_large "the pixels of this font take 1538941 bytes. LVGL's font format holds at most 1048575")
 lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
 lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
 lvgl26_compile_fail(signal_numerals_not_a_numeral "the typeface has no file for the family 'Barlow' at weight 500. Add it")

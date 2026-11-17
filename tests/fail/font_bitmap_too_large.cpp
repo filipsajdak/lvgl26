@@ -1,5 +1,5 @@
-// A font whose pixels take more than the 1 MB that LVGL's font format can address: 190
-// characters at 240 px.
+// A font whose pixels take more than the 1 MB that LVGL's font format can address: 189
+// characters at 240 px. The message gives the exact count, which the test checks.
 #include <lv/lv.hpp>
 
 using namespace lv::units;

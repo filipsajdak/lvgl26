@@ -42,6 +42,9 @@ constexpr const lv_font_t* odd = lv::font<barlow_ttf>(32 * px);
 constexpr const lv_font_t* digits = lv::font<condensed_ttf>(64 * px, "0123456789:");
 constexpr const lv_font_t* two = lv::font<barlow_ttf>(16 * px, "\xC2\xB0""C9");  // the degree sign, C and 9: not in a row
 
+// A font of blank glyphs only: it has no pixels at all.
+constexpr const lv_font_t* blank = lv::font<barlow_ttf>(16 * px, " ");
+
 // A font whose first character kerns with its second.
 constexpr const lv_font_t* pair = lv::font<barlow_ttf>(32 * px, "AV");
 
@@ -89,6 +92,11 @@ void holds_its_characters() {
   check(!glyph_of(two, 'C').dsc.is_placeholder);
 }
 
+void holds_blank_glyphs_only() {
+  const auto space = glyph_of(blank, ' ');
+  check(space.found && space.dsc.box_w == 0 && space.dsc.adv_w > 0);
+}
+
 void measures_as_the_file_says() {
   // Barlow Medium at 32 px: A advances 20 px and stands 23 px high on the baseline.
   const auto a = glyph_of(odd, 'A').dsc;
@@ -131,6 +139,7 @@ int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   holds_its_characters();
+  holds_blank_glyphs_only();
   measures_as_the_file_says();
   kerns();
   reads_other_files();
