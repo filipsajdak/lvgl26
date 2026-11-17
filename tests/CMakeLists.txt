@@ -64,6 +64,7 @@ foreach(case index erase move move_from_end move_from_far move_to_end insert set
 endforeach()
 target_link_libraries(computed PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
+lvgl26_test(watchers)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
