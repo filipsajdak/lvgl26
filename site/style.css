@@ -426,6 +426,7 @@ td .path, .path { font: 400 0.78rem/1.5 var(--mono); color: var(--muted); overfl
 }
 .port .screen .montage img { border-color: var(--line); }
 .cap.original { margin-top: 0.4rem; }
+.gaps { margin-top: 2rem; font: 600 0.92rem/1.5 var(--mono); }
 .cap.notice { margin-top: 1.5rem; max-width: 60rem; }
 
 /* The original and the port, each at the size of the original's picture. */

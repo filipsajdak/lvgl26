@@ -187,6 +187,8 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       </div>
     </article>
 
+    <p class="gaps"><a href="status.html#migration-gaps">What a port still has to work around</a>: the status page lists each gap, and what it blocks.</p>
+
     <p class="cap notice"><strong>Notice.</strong> The printer panel follows the layout, colors and behaviour of the printer demo of Slint, MIT, Copyright &copy; SixtyFPS GmbH, original design by Matthias Grimme. Its icons are system-uicons (Unlicense) and its font is Inter (OFL 1.1). The treadmill panel follows TreadmillMcuDemo of Qt Design Studio, BSD-3-Clause, Copyright &copy; The Qt Company Ltd. The picture marked "Original" is that project's own, unchanged. The LVGL examples are MIT, Copyright &copy; LVGL Kft. Qt, Slint and TouchGFX are names of their owners, used here to say what a port came from. No logo of theirs is used. The full texts are in <a href="media/NOTICE.txt">media/NOTICE.txt</a>.</p>
   </div>
 </section>
@@ -214,7 +216,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt><code>NumberAnimation</code>, <code>Behavior</code>, easing</dt><dd><code>lv::animate(widget, {.value = {0, 100}}, 300 * ms, lv::ease::in_quad)</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-qt.html">Read the guide for Qt Quick</a></p>
-        <p class="more">What is not there yet: <a href="status.html#migration-qt">the list for Qt Quick</a>.</p>
+        <p class="more"><strong>12 of 29 concepts work.</strong> <a href="status.html#migration-qt">See what is missing</a>.</p>
       </div>
       <div class="card" id="migrate-slint">
         <span class="tag">Slint</span>
@@ -226,7 +228,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt><code>animate x { duration: 200ms; }</code></dt><dd><code>lv::animate(widget, {.x = {0 * px, 80 * px}}, 200 * ms, lv::ease::in_quad)</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-slint.html">Read the guide for Slint</a></p>
-        <p class="more">What is not there yet: <a href="status.html#migration-slint">the list for Slint</a>.</p>
+        <p class="more"><strong>12 of 25 concepts work.</strong> <a href="status.html#migration-slint">See what is missing</a>.</p>
       </div>
       <div class="card" id="migrate-touchgfx">
         <span class="tag">TouchGFX</span>
@@ -238,7 +240,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt>A timer tick, <code>handleTickEvent</code></dt><dd><code>co_await lv::sleep(20 * ms)</code> in an <code>lv::task</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-touchgfx.html">Read the guide for TouchGFX</a>. There is no TouchGFX port yet.</p>
-        <p class="more">What is not there yet: <a href="status.html#migration-touchgfx">the list for TouchGFX</a>.</p>
+        <p class="more"><strong>10 of 21 concepts work.</strong> <a href="status.html#migration-touchgfx">See what is missing</a>.</p>
       </div>
     </div>
   </div>
