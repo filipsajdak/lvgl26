@@ -1,6 +1,7 @@
 #include <lv/lv.hpp>
 
 #include "check.hpp"
+#include "full_heap.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -97,6 +98,30 @@ void weak_views(lv::obj screen) {
   check(!copy.get());
 }
 
+// Copy and move assignment of a weak view work whichever of the two comes first in
+// memory, and onto the view itself.
+void weak_views_assign(lv::obj screen) {
+  const auto label = screen.add<"label">();
+  for (int from : {1, 0}) {
+    const int to = 1 - from;
+    lv::weak<label_view> pair[2];
+    pair[from] = lv::weak<label_view>{label};
+    pair[to] = pair[from];
+    check(pair[to].get() == label && pair[from].get() == label);
+    pair[to] = lv::weak<label_view>{};
+    pair[to] = std::move(pair[from]);
+    check(pair[to].get() == label && pair[from].expired());
+  }
+  lv::weak<label_view> self{label};
+  lv::weak<label_view>& same = self;
+  self = same;
+  check(self.get() == label);
+  self = std::move(same);
+  check(self.get() == label);
+  lv_obj_delete(label.raw());
+  check(self.expired());
+}
+
 void owned_views(lv::obj screen) {
   const auto count = [&] { return lv_obj_get_child_count(screen.raw()); };
   const auto before = count();
@@ -158,6 +183,60 @@ void owned_views(lv::obj screen) {
   check(self && count() == before + 1);
 }
 
+// An owner that LVGL has no memory to tie to its widget deletes the widget at once:
+// a widget it cannot track would either stay on the screen for ever, or be deleted
+// by its parent while the owner still holds it.
+void an_owner_without_memory_deletes_its_widget(lv::obj screen) {
+  const auto count = [&] { return lv_obj_get_child_count(screen.raw()); };
+  const auto before = count();
+  {
+    const auto label = screen.add<"label">();
+    full_heap heap{0};
+    lv::owned<label_view> o{label};
+    heap.release();
+    check(!o);
+    check(count() == before);
+  }
+  check(count() == before);
+}
+
+// Moving an owner while LVGL's heap is full keeps the widget owned.
+void an_owner_moves_without_memory(lv::obj screen) {
+  const auto count = [&] { return lv_obj_get_child_count(screen.raw()); };
+  const auto before = count();
+  {
+    lv::owned<label_view> o{screen.add<"label">()};
+    full_heap heap{0};
+    lv::owned<label_view> p = std::move(o);
+    lv::owned<label_view> q;
+    q = std::move(p);
+    heap.release();
+    check(q && !p && !o);
+    check(count() == before + 1);
+  }
+  check(count() == before);
+}
+
+constexpr auto one_label = lv::label({.text = "x"});
+
+// Each run gives mount a little more of LVGL's heap. Whatever allocation fails, mount
+// either owns the whole tree or reports the failure and leaves nothing behind.
+void mount_owns_its_tree_or_leaves_nothing(lv::obj screen) {
+  const auto count = [&] { return lv_obj_get_child_count(screen.raw()); };
+  const auto before = count();
+  constexpr std::size_t step = sizeof(void*);
+  bool mounted = false;
+  for (std::size_t room = 0; !mounted; room += step) {
+    full_heap heap{room};
+    auto m = lv::mount<one_label>(screen);
+    heap.release();
+    mounted = m.has_value();
+    check(count() == before + (mounted ? 1 : 0));
+    check(!mounted || m->root());
+  }
+  check(count() == before);
+}
+
 }  // namespace
 
 int main() {
@@ -173,7 +252,11 @@ int main() {
     properties(root);
     events(root);
     weak_views(root);
+    weak_views_assign(root);
     owned_views(root);
+    an_owner_without_memory_deletes_its_widget(root);
+    an_owner_moves_without_memory(root);
+    mount_owns_its_tree_or_leaves_nothing(root);
     lv_obj_delete(root.raw());
     f = free_bytes();
   }

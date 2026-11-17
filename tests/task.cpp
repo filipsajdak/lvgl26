@@ -1,8 +1,10 @@
 #include <lv/lv.hpp>
 
 #include "check.hpp"
+#include "full_heap.hpp"
 
 #include <cstring>
+#include <optional>
 #include <utility>
 
 namespace {
@@ -444,6 +446,86 @@ void a_task_is_small(lv::obj screen) {
   check(free_bytes() == nothing);
 }
 
+// Resetting a state deletes its subject, and LVGL frees every observer on it, also the
+// one of a task that waits for a change. Ending the task later must not delete that
+// observer again: LVGL may have given its memory to a new observer by then.
+void a_reset_state_leaves_its_waiting_task_safe(lv::obj screen) {
+  auto panel = screen.add<"obj">();
+  lv::state<lv::counter> source;
+  int seen = -1;
+  bool ended = false;
+  check(lv::spawn(follows(source, &seen, &ended), panel));
+  source.reset();
+  int calls = 0;
+  check(source.observe([p = &calls](lv::counter) { ++*p; }) != nullptr);
+  lv_obj_delete(panel.raw());  // ends the task, which must leave the new observer alone
+  check(ended);
+  const int before = calls;
+  source = lv::counter{9};
+  check(calls == before + 1);
+  check(lv_mem_test() == LV_RESULT_OK);
+  source.reset();
+}
+
+// Gives the heap back, then sleeps for a moment.
+lv::task<> frees_the_heap_then_sleeps(std::optional<full_heap>* heap, bool* ended) {
+  at_exit cleanup{ended};
+  heap->reset();
+  co_await lv::sleep(10 * ms);
+}
+
+// Without memory to tie a task to its owner, lv::spawn must not start it: the task
+// would outlive the owner it was given.
+void a_task_without_a_tie_to_its_owner_does_not_start(lv::obj screen) {
+  auto panel = screen.add<"obj">();
+  bool ended = false;
+  std::optional<full_heap> heap;
+  auto work = frees_the_heap_then_sleeps(&heap, &ended);
+  heap.emplace(sizeof(lv::detail::widget_watch));  // the record fits, its LVGL handler not
+  const bool started = lv::spawn(std::move(work), panel);
+  heap.reset();
+  check(!started);
+  lv_obj_delete(panel.raw());
+  check(!started || ended);
+}
+
+// Without memory to tie a task to a widget it waits on, the task ends at once:
+// it must not wait on, and later touch, a widget that may be deleted.
+void a_wait_without_a_tie_to_its_widget_ends_the_task(lv::obj screen) {
+  auto button = screen.add<"button">();
+  bool ended = false;
+  auto work = count_clicks(button, &ended);
+  std::optional<full_heap> heap{std::in_place, sizeof(lv::detail::widget_watch)};
+  check(lv::spawn(std::move(work)));
+  heap.reset();
+  check(ended);
+  lv_obj_delete(button.raw());
+  check(ended);
+}
+
+// Waits for the deletion of a widget, then for a long time.
+lv::task<> waits_for_the_end_of(lv::view<"button"> button, bool* gone, bool* ended) {
+  at_exit cleanup{ended};
+  co_await button.next().gone;
+  *gone = true;
+  co_await lv::sleep(60000 * ms);
+}
+
+// Without memory to tie a task to the widget whose deletion it waits for, the task
+// ends at once: it must not wait for ever, still holding the widget.
+void a_wait_for_deletion_without_a_tie_ends_the_task(lv::obj screen) {
+  auto button = screen.add<"button">();
+  bool gone = false;
+  bool ended = false;
+  auto work = waits_for_the_end_of(button, &gone, &ended);
+  std::optional<full_heap> heap{std::in_place, sizeof(lv::detail::widget_watch)};
+  check(lv::spawn(std::move(work)));
+  heap.reset();
+  check(ended && !gone);
+  lv_obj_delete(button.raw());
+  check(ended);
+}
+
 void nothing_is_left_behind(lv::obj screen) {
   // Run the main paths once more and compare the heap before and after.
   const auto before = free_bytes();
@@ -489,6 +571,10 @@ int main() {
   a_lost_wait_for_deletion(screen);
   moving_a_task();
   a_task_is_small(screen);
+  a_reset_state_leaves_its_waiting_task_safe(screen);
+  a_task_without_a_tie_to_its_owner_does_not_start(screen);
+  a_wait_without_a_tie_to_its_widget_ends_the_task(screen);
+  a_wait_for_deletion_without_a_tie_ends_the_task(screen);
   nothing_is_left_behind(screen);
 
   clicks.reset();
