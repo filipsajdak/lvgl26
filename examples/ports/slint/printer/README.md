@@ -44,7 +44,7 @@ The compiler works on one page at a time, with the project's normal limit for co
 | `pager.hpp` | The page switch: `pager` replaces a page, `slide_pager` slides it in and out |
 | `home_page.cpp`, `settings_page.cpp`, `ink_page.cpp` | The three pages of the side bar |
 | `print_page.cpp`, `copy.cpp`, `scan.cpp`, `usb_page.cpp` | The four sub-pages |
-| `queue.cpp`, `queue_view.cpp` | The jobs, and the column of cards on the home page |
+| `queue.cpp`, `queue_column.hpp` | The jobs, and the column of cards that the home page nests |
 | `parts.hpp` | Components: icon button, spin box, choice, back header |
 | `fonts.hpp`, `icons.hpp`, `tokens.json` | Inter, the pictures, and the design tokens |
 
@@ -64,10 +64,9 @@ The time is the processor time of the compiler. The memory is its peak.
 | `scan.cpp` | 23 s | 1.8 GB |
 | `print_page.cpp` | 30 s | 3.1 GB |
 | `usb_page.cpp` | 27 s | 0.9 GB |
-| `home_page.cpp` | 22 s | 0.8 GB |
+| `home_page.cpp` | 29 s | 2.7 GB |
 | `settings_page.cpp` | 22 s | 1.3 GB |
 | `ink_page.cpp` | 17 s | 1.7 GB |
-| `queue_view.cpp` | 29 s | 1.0 GB |
 | `shell.cpp` | 15 s | 0.6 GB |
 | `queue.cpp` | 4 s | 0.4 GB |
 

@@ -50,7 +50,7 @@ A window needs SDL2: the [README of the port](../examples/ports/slint/printer/RE
 | `DemoPalette` and `ComponentTheme` in `common.slint` | `tokens.json` |
 | The global `PrinterState` | `state.hpp` |
 | `if page == ...` in the window | `pager.hpp` and an `lv::effect` in `shell.cpp` |
-| The global `PrinterQueue` | `queue.cpp` and `queue_view.cpp` |
+| The global `PrinterQueue` | `queue.cpp` and `queue_column.hpp` |
 
 ### Tokens
 
@@ -124,28 +124,29 @@ A change to one page recompiles one file.
 
 A pager is a place on the screen where one page is mounted.
 Showing another page deletes the one before it, and only then builds the new one.
-Assigning the new page first would build it while the old one still exists, and the heap would hold both at its peak.
+The order matters, although `owned` does delete the old page when it is assigned over.
+The new page is built before the assignment runs, so the host would hold two pages for a while.
+The test `printer_cost` switches from the home page to the settings page both ways.
+The peak heap is 102728 bytes when the old page goes first, and 132440 bytes when it does not.
+One page is left either way.
+A page that follows the state, planned as `lv::shown`, will replace this pager.
 
 <!-- snippet: examples/ports/slint/printer/pager.hpp pager -->
 ```cpp
+// Replaces the page in `slot` with the one `make` builds under `host`.
+// The page before is deleted first, so two pages never exist at once.
+inline void replace_page(lv::owned<lv::obj>& slot, lv::obj host, make_page make) {
+  slot.reset();
+  slot = make(host);
+}
+
 class pager {
  public:
   void host(lv::obj where) { host_ = where; }
-
-  // Replaces the page that is shown with the one `make` builds.
-  void show(make_page make) { delete_then_build(make); }
-
-  // Deletes the page.
+  void show(make_page make) { replace_page(current_, host_, make); }
   void clear() { current_.reset(); }
 
  protected:
-  // The old page goes before the new one is built: `current_ = make(host_)` would build the new page
-  // while the old one still exists, and the heap would hold both at its peak.
-  void delete_then_build(make_page make) {
-    current_.reset();
-    current_ = make(host_);
-  }
-
   lv::obj host_;
   lv::owned<lv::obj> current_;
 };
@@ -208,7 +209,7 @@ A job is one row: its title and details are text that the row points to, and its
 A change of a job touches the widgets of that job only.
 A second of printing sets the status line of the first job and moves nothing else.
 
-<!-- snippet: examples/ports/slint/printer/queue_view.cpp card -->
+<!-- snippet: examples/ports/slint/printer/queue_column.hpp card -->
 ```cpp
 // One card for every job. The dot and the words are blue while the job prints and gray while it
 // waits. A tap checks the card, and the checked card shows the details under its title.
@@ -425,14 +426,13 @@ The time is the processor time of the compiler, and the memory is its peak.
 | `scan.cpp` | 23 s | 1.8 GB |
 | `print_page.cpp` | 30 s | 3.1 GB |
 | `usb_page.cpp` | 27 s | 0.9 GB |
-| `home_page.cpp` | 22 s | 0.8 GB |
+| `home_page.cpp` | 29 s | 2.7 GB |
 | `settings_page.cpp` | 22 s | 1.3 GB |
 | `ink_page.cpp` | 17 s | 1.7 GB |
-| `queue_view.cpp` | 29 s | 1.0 GB |
 | `shell.cpp` | 15 s | 0.6 GB |
 | `queue.cpp` | 4 s | 0.4 GB |
 
-The files add up to about 215 s of processor time.
+The files add up to about 190 s of processor time.
 Plan for this: keep each page in its own file, build with several jobs, and give the build machine memory for the largest page.
 Several jobs at once multiply the memory.
 
@@ -445,16 +445,16 @@ Both ran on LVGL v9.6.0 with GCC 16.2 on the same machine, with the same four jo
 
 | What | Before | After |
 |---|---|---|
-| Lines of C++ in the port, without the screenshot tool and the window | 1326 | 1256 |
+| Lines of C++ in the port, without the screenshot tool and the window | 1326 | 1244 |
 | Heap in use after the home page is shown | 48544 bytes | 47920 bytes |
 | Heap in use after the Print page is open too | 89128 bytes | 89232 bytes |
 | Widgets with the Print page open | 258 | 270 |
 | A second of printing: widgets deleted, widgets made | 196, 196 | 0, 0 |
 | A job is added: widgets deleted, widgets made | 196, 245 | 0, 52 |
 | A job is cancelled: widgets deleted, widgets made | 245, 196 | 52, 0 |
-| Compile of the ten port files: instructions | 2339 billion | 2277 billion |
-| Compile of the ten port files: constant evaluation | 135.6 s | 126.5 s |
-| Compile, the largest file: peak memory | 2.7 GB | 3.4 GB |
+| Compile of the nine port files: instructions | 2339 billion | 2177 billion |
+| Compile of the nine port files: constant evaluation | 135.6 s | 125.4 s |
+| Compile, the largest file: peak memory | 2.7 GB | 2.7 GB |
 
 What the table says:
 
@@ -466,8 +466,9 @@ What the table says:
   LVGL's heap does not count its calls, so the test counts widgets, and each widget is several heap blocks.
 - The queue holds its jobs in a fixed array, and the text of a job is not copied.
   It makes no allocation of its own.
-- The compile is a little cheaper in instructions.
-  The largest file, `print_page.cpp`, needs more memory, because its card now carries the bindings.
+- The compile is cheaper in instructions.
+  The home page nests the queue column in its own tree, so the two files that built it become one.
+  The largest file, `home_page.cpp`, now holds both trees and needs more memory.
 
 ## Memory on the device
 
