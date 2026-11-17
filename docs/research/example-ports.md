@@ -94,3 +94,15 @@ What the ports force us to build: an image widget, lists from a data model, page
 - [SEGGER emWin demos](https://www.segger.com/products/user-interface/emwin/technology/demos) and [samples](https://www.segger.com/emwin-samples.html)
 - [Embedded Wizard on Arm Keil](https://www.keil.arm.com/boards/nxp-imx-rt1060-guis-powered-by-embedded-wizard-c280cd5/projects/?page=1)
 - [Crank Storyboard samples](https://resources.cranksoftware.com/cranksoftware/v4.0.0/docs/ch12.html)
+
+## Pictures of the originals
+
+Where each original's own picture is, and whether the site may show it. Checked 2026-11-17. `source`.
+
+| Original | The picture | Licence | On the site |
+|---|---|---|---|
+| Slint printer demo | `https://slint.dev/resources/printerdemo_screenshot.png`, linked from `demos/printerdemo/README.md`. A thumbnail in `demos/README.md` is a GitHub attachment | None stated. Neither file is in the repository, so its MIT licence does not cover them | No. The card links the demo and its live simulation, `https://snapshots.slint.dev/master/demos/printerdemo/` |
+| Qt Design Studio `TreadmillMcuDemo` | `examples/dataImports/DataModels/images/treadmill_demo.png` at commit `0c1ccf18`, 250 x 160, the Sporty look. Fetch it from `https://git.qt.io/public-demos/qtdesign-studio/-/raw/0c1ccf18/examples/dataImports/DataModels/images/treadmill_demo.png` | `LICENSE.md` of the repository, BSD-3-Clause option | Yes, unchanged, in `site/media/originals/`. The copyright line and the licence are in `site/media/NOTICE.txt` |
+
+- The Slint repository's `REUSE.toml` lists no licence for either screenshot. A written licence for the image would change the answer.
+- The `readme_screenshots/` of `TreadmillMcuDemo` show the Design Studio editor, not the running screens. They are not used.

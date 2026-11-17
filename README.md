@@ -48,6 +48,7 @@ How it works:
   contains only the LVGL calls for the properties that are set.
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
   `lv::weak<T>` empties itself when LVGL deletes the widget.
+- **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
 [mp-units](https://github.com/mpusz/mp-units) quantities:

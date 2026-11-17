@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>lvgl26: a C++26 framework over LVGL</title>
-<meta name="description" content="lvgl26 is an open-source C++26 framework over LVGL. Screens are compile-time trees, mistakes are compile errors, and an AI agent can drive the running screen over MCP. MIT, no licence fees.">
+<meta name="description" content="Port a Qt, Slint or TouchGFX UI to LVGL with an agent. lvgl26 is an open-source C++26 framework over LVGL: screens are compile-time trees, mistakes are compile errors, and an AI agent can drive the running screen over MCP. MIT, no licence fees.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23b83a0a'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -35,11 +35,12 @@
     <div class="hero-grid">
       <div>
         <p class="eyebrow">A C++26 framework over LVGL</p>
-        <h1>Embedded UI that is checked before it runs.</h1>
-        <p class="lede">lvgl26 lets you write an <strong>LVGL screen as one C++ expression</strong>. The compiler checks every property, unit, id and design token. An AI agent can load, change and inspect the running screen. It is open source and free of licence fees.</p>
+        <h1 class="long">Already have a Qt, Slint or TouchGFX UI? Port it with an agent, and let the compiler check every screen.</h1>
+        <p class="lede"><strong>Two ports are done:</strong> a Slint printer panel and a Qt treadmill panel. Each follows the screens and behaviour of the original, and 67 of LVGL's own widget examples are ported too. lvgl26 writes an LVGL screen as one C++ expression, and the compiler checks every property, unit, id and design token. It is open source and free of licence fees.</p>
         <div class="actions">
-          <a class="btn primary" href="#start">Get started</a>
-          <a class="btn" href="https://github.com/filipsajdak/lvgl26">Source on GitHub</a>
+          <a class="btn primary" href="#ports">See the ports</a>
+          <a class="btn" href="#migrate">Migration guides</a>
+          <a class="btn" href="#start">Get started</a>
         </div>
       </div>
 
@@ -75,6 +76,173 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       <div><dt>Compiler</dt><dd>GCC 16 or newer</dd></div>
       <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
     </dl>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band" id="ports">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Ports</div>
+      <div>
+        <h2>Move your UI over.</h2>
+        <p>Two UIs of other frameworks are ported, and so are LVGL's own examples. A port follows the original's screens and behaviour. A test shows every screen, and its README lists what differs.</p>
+      </div>
+    </div>
+
+    <article class="port" id="port-slint">
+      <div class="shot">
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/port-slint-printer.png" width="1200" height="792" alt="Four screens of the printer panel: the home page with four large action buttons and the print queue, the Copy page with its settings, the Print page with the queue, and the ink levels as four tubes.">
+          </div>
+          <figcaption>examples/ports/slint/printer/screenshot.png, four of the seven pages. Drawn by lvgl26, on the host, with no display. tests/ports_printer.cpp compares every page with a reference picture in tests/ref/.</figcaption>
+        </figure>
+        <p class="cap original">Original: <a href="https://github.com/slint-ui/slint/tree/master/demos/printerdemo">Slint's printer demo</a> (MIT), with a <a href="https://snapshots.slint.dev/master/demos/printerdemo/">live simulation</a>.</p>
+      </div>
+      <div class="prose">
+        <span class="tag">From Slint</span>
+        <h3>Printer panel</h3>
+        <p>Same screens and behaviour as the original: the layout, the colors and the page transitions follow it.</p>
+        <dl class="spec">
+          <div><dt>Came from</dt><dd>The printer demo of Slint: <code>.slint</code> files, seven pages.</dd></div>
+          <div><dt>Checked by</dt><dd><code>tests/ports_printer.cpp</code> shows every page and compares it with a reference picture in <code>tests/ref/</code>.</dd></div>
+          <div><dt>To compile</dt><dd>None of the ten files measured took more than 30 s or 3.1 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
+          <div><dt>Differs</dt><dd>Gradients are vertical or horizontal, and one of the original's four themes is ported. <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/slint/printer/README.md#what-differs-from-the-original">All differences</a>.</dd></div>
+        </dl>
+        <ul class="links">
+          <li><a href="https://github.com/filipsajdak/lvgl26/tree/main/examples/ports/slint/printer">Source</a></li>
+          <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/slint/printer/README.md">README of the port</a></li>
+          <li><a href="docs/from-slint.html">Coming from Slint</a></li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="port" id="port-qt">
+      <div class="shot">
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/port-qt-treadmill.png" width="1152" height="704" alt="Four screens of the treadmill panel: an orange splash screen with a wordmark and a slogan, then the main screen in the Light, Dark and Sporty looks, each with readings for heart rate, elevation, time, incline, speed and pace, and the buttons START, PAUSE and STOP.">
+          </div>
+          <figcaption>examples/ports/qt/treadmill/screenshot.png: the splash screen, then the Light, Dark and Sporty looks. Drawn by lvgl26, on the host, with no display. tests/ports_treadmill.cpp compares every scene with a reference picture in tests/ref/.</figcaption>
+        </figure>
+        <div class="versus">
+          <figure class="screen">
+            <div class="frame">
+              <img src="media/originals/qt-treadmill-original.png" width="250" height="160" alt="The original's Sporty look on an orange background: heart rate and elevation readings, the time 04:33, incline, pace and speed, and the buttons START, PAUSE and STOP.">
+            </div>
+            <figcaption>Original, Sporty look: the thumbnail of TreadmillMcuDemo in <a href="https://git.qt.io/public-demos/qtdesign-studio">Qt Design Studio's examples</a>, unchanged. &copy; The Qt Company Ltd, BSD-3-Clause.</figcaption>
+          </figure>
+          <figure class="screen">
+            <div class="frame">
+              <img src="media/port-qt-treadmill-sporty.png" width="250" height="150" alt="The port's Sporty look on an orange background: heart rate and elevation readings, the time 00:03, incline, pace and speed, and the buttons START, PAUSE and STOP.">
+            </div>
+            <figcaption>The port, same look: tests/ref/treadmill_sporty.png, which tests/ports_treadmill.cpp compares, scaled to 250 x 150. The readings differ: this is the test's scene, at 00:03.</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="prose">
+        <span class="tag">From Qt Quick</span>
+        <h3>Treadmill panel</h3>
+        <p>Same screens and behaviour as the original: the colors, the layout and the three looks follow it.</p>
+        <dl class="spec">
+          <div><dt>Came from</dt><dd><code>TreadmillMcuDemo</code> of Qt Design Studio: QML, a splash screen and one screen in three looks.</dd></div>
+          <div><dt>Checked by</dt><dd><code>tests/ports_treadmill.cpp</code> shows every scene and compares it with a reference picture in <code>tests/ref/</code>. It also presses the buttons and runs the clocks.</dd></div>
+          <div><dt>To compile</dt><dd>None of the six files measured took more than 52 s or 1.7 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
+          <div><dt>Differs</dt><dd>The splash screen does not fade, and a look is a new tree. <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/qt/treadmill/README.md#what-differs-from-the-original">All differences</a>.</dd></div>
+        </dl>
+        <ul class="links">
+          <li><a href="https://github.com/filipsajdak/lvgl26/tree/main/examples/ports/qt/treadmill">Source</a></li>
+          <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/qt/treadmill/README.md">README of the port</a></li>
+          <li><a href="docs/from-qt.html">Coming from Qt Quick</a></li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="port" id="port-lvgl">
+      <figure class="screen">
+        <div class="frame montage">
+          <img src="media/lvgl-arc_pie_chart.png" width="320" height="240" alt="A pie chart made of five arcs: red, orange, green, blue and purple.">
+          <img src="media/lvgl-arc_styling.png" width="320" height="240" alt="A white card with a blue arc and a round knob.">
+          <img src="media/lvgl-bar_styling.png" width="320" height="240" alt="Two horizontal bars: a green one on a dark track and a thin blue one.">
+          <img src="media/lvgl-button_states.png" width="320" height="240" alt="Three buttons: Normal in blue, Checked in red and Disabled in pale blue.">
+          <img src="media/lvgl-slider_modes.png" width="320" height="240" alt="Three sliders in the modes Normal, Symmetrical and Range.">
+          <img src="media/lvgl-switch_state.png" width="320" height="240" alt="Four switches: off, on, disabled and off, disabled and on.">
+        </div>
+        <figcaption>Six of the ported examples, drawn by lvgl26 from examples/lvgl/widgets/: arc_pie_chart, arc_styling, bar_styling, button_states, slider_modes and switch_state, 320 x 240 each. tests/examples_widgets_arc.cpp, _bar.cpp, _button.cpp, _slider.cpp and _switch.cpp compare each with LVGL's C original.</figcaption>
+      </figure>
+      <div class="prose">
+        <span class="tag">LVGL's own examples</span>
+        <h3>67 of 96 examples, for 17 widgets</h3>
+        <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
+        <dl class="spec">
+          <div><dt>Ported</dt><dd>67 of the 96 examples of the 17 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
+          <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
+        </dl>
+        <ul class="links">
+          <li><a href="https://github.com/filipsajdak/lvgl26/tree/main/examples/lvgl/widgets">Source</a></li>
+          <li><a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/README.md">What is ported</a></li>
+        </ul>
+      </div>
+    </article>
+
+    <p class="gaps"><a href="status.html#migration-gaps">What a port still has to work around</a>: the status page lists each gap, and what it blocks.</p>
+
+    <p class="cap notice"><strong>Notice.</strong> The printer panel follows the layout, colors and behaviour of the printer demo of Slint, MIT, Copyright &copy; SixtyFPS GmbH, original design by Matthias Grimme. Its icons are system-uicons (Unlicense) and its font is Inter (OFL 1.1). The treadmill panel follows TreadmillMcuDemo of Qt Design Studio, BSD-3-Clause, Copyright &copy; The Qt Company Ltd. The picture marked "Original" is that project's own, unchanged. The LVGL examples are MIT, Copyright &copy; LVGL Kft. Qt, Slint and TouchGFX are names of their owners, used here to say what a port came from. No logo of theirs is used. The full texts are in <a href="media/NOTICE.txt">media/NOTICE.txt</a>.</p>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="migrate">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Migrate</div>
+      <div>
+        <h2>Coming from Qt Quick, Slint or TouchGFX?</h2>
+        <p>Each guide maps what you know to what lvgl26 has today, and says what is not there yet. Here are four of its rows.</p>
+      </div>
+    </div>
+
+    <div class="three stretch">
+      <div class="card" id="migrate-qt">
+        <span class="tag">Qt Quick</span>
+        <h3>QML to a constexpr tree</h3>
+        <dl class="map">
+          <div><dt>A <code>.qml</code> file with an <code>Item</code> tree</dt><dd><code>lv::column({...})[children]</code>, a <code>constexpr</code> value</dd></div>
+          <div><dt>A property binding <code>text: speed</code></dt><dd><code>.text = lv::bind(speed)</code></dd></div>
+          <div><dt><code>Timer { onTriggered: ... }</code></dt><dd><code>co_await lv::sleep(100 * ms)</code> in an <code>lv::task</code></dd></div>
+          <div><dt><code>NumberAnimation</code>, <code>Behavior</code>, easing</dt><dd><code>lv::animate(widget, {.value = {0, 100}}, 300 * ms, lv::ease::in_quad)</code></dd></div>
+        </dl>
+        <p class="more"><a href="docs/from-qt.html">Read the guide for Qt Quick</a></p>
+        <p class="more"><strong>12 of 29 concepts work.</strong> <a href="status.html#migration-qt">See what is missing</a>.</p>
+      </div>
+      <div class="card" id="migrate-slint">
+        <span class="tag">Slint</span>
+        <h3>A component to a constexpr tree</h3>
+        <dl class="map">
+          <div><dt><code>export component App inherits Window</code></dt><dd><code>lv::column({...})[children]</code>, a <code>constexpr</code> value</dd></div>
+          <div><dt><code>in-out property &lt;int&gt; speed</code></dt><dd>An <code>lv::state</code>. A measure has a unit in its type</dd></div>
+          <div><dt><code>value &lt;=&gt; root.speed</code>, two-way</dt><dd><code>.value = lv::bind(speed)</code> on an arc or a slider: it follows the state and writes back</dd></div>
+          <div><dt><code>animate x { duration: 200ms; }</code></dt><dd><code>lv::animate(widget, {.x = {0 * px, 80 * px}}, 200 * ms, lv::ease::in_quad)</code></dd></div>
+        </dl>
+        <p class="more"><a href="docs/from-slint.html">Read the guide for Slint</a></p>
+        <p class="more"><strong>12 of 25 concepts work.</strong> <a href="status.html#migration-slint">See what is missing</a>.</p>
+      </div>
+      <div class="card" id="migrate-touchgfx">
+        <span class="tag">TouchGFX</span>
+        <h3>Designer screens to a constexpr tree</h3>
+        <dl class="map">
+          <div><dt>A screen made in Designer</dt><dd><code>lv::column({...})[children]</code>, a <code>constexpr</code> value</dd></div>
+          <div><dt>The Model and its Presenter</dt><dd>An <code>lv::state</code>, and an <code>lv::computed</code> for a value made from states</dd></div>
+          <div><dt>A screen transition</dt><dd>A page is mounted by <code>lv::mount&lt;tree&gt;</code> and animated with <code>lv::animate</code></dd></div>
+          <div><dt>A timer tick, <code>handleTickEvent</code></dt><dd><code>co_await lv::sleep(20 * ms)</code> in an <code>lv::task</code></dd></div>
+        </dl>
+        <p class="more"><a href="docs/from-touchgfx.html">Read the guide for TouchGFX</a>. There is no TouchGFX port yet.</p>
+        <p class="more"><strong>10 of 21 concepts work.</strong> <a href="status.html#migration-touchgfx">See what is missing</a>.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -276,7 +444,8 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Runtime JSON screens</strong> and patches by id</li>
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
-        <li><strong>Example ports</strong>: LVGL's four <code>get_started</code> examples, pixel for pixel</li>
+        <li><strong>Example ports</strong>: 71 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
+        <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>
       </ul>
       <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>
     </div>
@@ -402,7 +571,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
           <tr><th scope="row">Contracts</th><td>C++26 <code>pre</code> and <code>post</code> state what is a bug at run time. Bad input from outside is never a contract: it is a <code>std::expected</code>.</td><td class="path">include/lv/</td></tr>
           <tr><th scope="row">Sanitizers</th><td>AddressSanitizer and UndefinedBehaviorSanitizer on both LVGL versions, ThreadSanitizer on v9.6.</td><td class="path">host-v96-asan, host-v10-asan, host-v96-tsan</td></tr>
           <tr><th scope="row">Static analyzer</th><td>GCC's <code>-fanalyzer</code> over the library and its tests.</td><td class="path">host-v96-analyze</td></tr>
-          <tr><th scope="row">Pixel tests</th><td>Screens are rendered headless and compared with reference pictures. The four ported LVGL examples are compared with the C originals.</td><td class="path">tests/ref/, tests/examples_get_started.cpp</td></tr>
+          <tr><th scope="row">Pixel tests</th><td>Screens are rendered headless and compared with reference pictures. The ported LVGL examples are compared with the C originals.</td><td class="path">tests/ref/, tests/examples_*.cpp, tests/ports_*.cpp</td></tr>
           <tr><th scope="row">Complexity and CRAP</th><td>A function over complexity 8 is split, not excused. CI fails above the limit.</td><td class="path">tools/crap.py, .github/workflows/ci.yml</td></tr>
           <tr><th scope="row">Mutation testing</th><td>Changed lines are mutated. Every surviving mutant gets a test, or a reason.</td><td class="path">tools/mutation.py</td></tr>
           <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents and MCP messages each have a target. The 13 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
