@@ -41,6 +41,15 @@ inline constexpr bool is_node<node<W, Kids...>> = true;
 template <class T>
 concept tree_node = is_node<std::remove_cvref_t<T>>;
 
+// A node that builds no widget of its own but decides which widgets its parent gets, such
+// as lv::each (lv/list.hpp). Such a type has a static `build<Tree, Path...>(parent, state)`.
+template <class T>
+inline constexpr bool is_structural = false;
+
+// What a node takes as a child: a node, or a structural node.
+template <class T>
+concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
+
 template <class... Kids>
 struct kids_of {
   struct type;
@@ -74,9 +83,13 @@ struct node {
   bool bare = false;  // start without the theme's styles: see lv::group
 
   // The children: lv::column()[lv::label(...), lv::arc(...)].
-  template <detail::tree_node... K>
+  template <detail::tree_child... K>
     requires(sizeof...(Kids) == 0)
   constexpr node<W, K...> operator[](const K&... k) const {
+    // Its rows are the widget's children from a fixed place on.
+    static_assert((std::size_t{0} + ... + std::size_t{detail::is_structural<K>}) <= 1,
+                  "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
+                  "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
     return {p, {k...}, bare};
   }
 
@@ -114,7 +127,7 @@ struct factory {
     return make_node<W, D>(p);
   }
 
-  template <tree_node... Kids>
+  template <tree_child... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return (*this)()[kids...];
   }
@@ -135,7 +148,7 @@ struct group_factory {
   // The call names a type that depends on Kids. A plain (*this)() does not depend on
   // anything, so the compiler would work it out, and generate props<"obj">, while it
   // reads this header.
-  template <tree_node... Kids>
+  template <tree_child... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];
   }
@@ -151,7 +164,7 @@ struct flex_factory {
     return make_flex<D>(p, flow);
   }
 
-  template <tree_node... Kids>
+  template <tree_child... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];  // see group_factory
   }
@@ -190,6 +203,12 @@ struct id_entry {
   std::string_view name;
   std::meta::info view;  // the view<...> type of the node
 };
+
+// The ids under a structural node belong to what it builds, such as one row of lv::each:
+// they are not ids of the tree.
+template <class S>
+  requires is_structural<S>
+consteval void collect(std::vector<id_entry>&, const S&) {}
 
 template <fixed W, class... Kids>
 consteval void collect(std::vector<id_entry>& out, const node<W, Kids...>& n) {
@@ -254,6 +273,20 @@ constexpr const auto& descend(const Node& n) {
   return descend<Rest...>(kid<First>(n.kids));
 }
 
+// Whether a structural node lies on the way from `n` down the path Path, such as the
+// lv::each whose row template holds the node at the end of it.
+template <class Node>
+consteval bool structural_above(const Node&) {
+  return false;
+}
+template <std::size_t First, std::size_t... Rest, class Node>
+consteval bool structural_above(const Node& n) {
+  if constexpr (is_structural<Node>)
+    return true;
+  else
+    return structural_above<Rest...>(kid<First>(n.kids));
+}
+
 // Names one style of one node of a tree, for add_const_style.
 template <const auto& Tree, std::size_t Member, std::size_t... Path>
 struct style_at {
@@ -295,17 +328,38 @@ void apply_node(lv_obj_t* w) {
       add_const_style<style_at<Tree, i, Path...>, selector_of<targets<W>[i]>()>(w);
     } else {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
-      static_assert(!a.follows || bindable<W, i>(),
-                    "lv: this property cannot follow a state. LVGL has no bind function "
-                    "for it and it takes more than one value.");
-      apply_member<W, i, std::remove_cvref_t<decltype(a)>, true>(w, a);
+      if constexpr (a.follows == follows_row_field) {
+        // lv::each sets it with the row's value, after the row is built.
+        static_assert(structural_above<Path...>(Tree),
+                      "lv: lv::bind(&T::field) follows a field of a row, and this node is not "
+                      "in a row. Use it in the row template of lv::each: "
+                      "lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].");
+      } else {
+        static_assert(a.follows == follows_nothing || bindable<W, i>(),
+                      "lv: this property cannot follow a state. LVGL has no bind function "
+                      "for it and it takes more than one value.");
+        apply_member<W, i, std::remove_cvref_t<decltype(a)>, true>(w, a);
+      }
     }
   }
 }
 
-// Builds one node of the constexpr tree `Tree` under `parent`, with its children.
+template <const auto& Tree, std::size_t... Path>
+lv_obj_t* build_widget(lv_obj_t* parent, build_state& st);
+
+// Builds one node of the constexpr tree `Tree` under `parent`, with its children. A
+// structural node builds what it decides on.
 template <const auto& Tree, std::size_t... Path>
 lv_obj_t* build(lv_obj_t* parent, build_state& st) {
+  using node_type = std::remove_cvref_t<decltype(descend<Path...>(Tree))>;
+  if constexpr (is_structural<node_type>)
+    return node_type::template build<Tree, Path...>(parent, st);
+  else
+    return build_widget<Tree, Path...>(parent, st);
+}
+
+template <const auto& Tree, std::size_t... Path>
+lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
   constexpr const auto& N = descend<Path...>(Tree);
   using node_type = std::remove_cvref_t<decltype(N)>;
 
