@@ -105,8 +105,7 @@ The file gives the shell one function, and the shell owns what the function retu
 ```cpp
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
-constexpr auto ui = job_page("Copy", copies, color_label, {&fewer, &more, &toggle_color, &start}, "Size",
-                             "100%\n75%\n50%", "Start copying", fonts);
+constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
 
 }  // namespace
 
@@ -115,7 +114,8 @@ lv::owned<lv::obj> mount_copy(lv::obj parent) { return mount_page<ui>(parent); }
 
 `mount_page` in `pages.hpp` mounts the tree under the given parent and hands its widgets over as one `lv::owned`.
 The owner deletes them.
-Copy and Scan share `job_page` from `parts.hpp`, and differ in a few texts and in their own state.
+Copy and Scan share `job_page` in `job_page.hpp`, and differ in a few texts.
+Their state is `job_options<Kind>`: one template, one state for each kind of page.
 
 The compiler works on one page at a time, with the project's normal limit for constant evaluation.
 A change to one page recompiles one file.
@@ -308,10 +308,11 @@ TextButton {
 In the port the flag is a state, and a `lv::computed` makes the word from it.
 A label's `.text = lv::bind(color_label)` follows the computed.
 
-<!-- snippet: examples/ports/slint/printer/copy.cpp color -->
+<!-- snippet: examples/ports/slint/printer/job_options.hpp color -->
 ```cpp
-constinit lv::state<bool> in_color{true};
-constinit lv::computed color_label{&color_name, in_color};
+  static inline constinit lv::state<lv::counter> count{lv::counter{1}};
+  static inline constinit lv::state<bool> in_color{true};
+  static inline constinit lv::computed color_label{&color_name, in_color};
 ```
 
 <!-- snippet: examples/ports/slint/printer/state.hpp color_name -->
@@ -337,17 +338,17 @@ IconTextButton {
 ```
 
 In the port a callback is a plain function.
-The page hands its functions to the tree: `{&fewer, &more, &toggle_color, &start}`.
+The page gets its functions from `job_options<Kind>`, and the tree takes their addresses: `&options::fewer`.
 
-<!-- snippet: examples/ports/slint/printer/copy.cpp actions -->
+<!-- snippet: examples/ports/slint/printer/job_options.hpp actions -->
 ```cpp
-void fewer() { copies.update(&one_fewer); }
-void more() { copies.update(&one_more); }
-void toggle_color() { in_color = !in_color.get(); }
-void start() {
-  start_job("Copy");
-  close_subpage();
-}
+  static void fewer() { count.update(&one_fewer); }
+  static void more() { count.update(&one_more); }
+  static void toggle_color() { in_color = !in_color.get(); }
+  static void start() {
+    start_job(job_name(Kind));
+    close_subpage();
+  }
 ```
 
 ### An animation

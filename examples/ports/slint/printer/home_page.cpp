@@ -53,8 +53,8 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct}})[
 lv::owned<lv::obj> mount_home(lv::obj parent) {
   lv::owned<lv::obj> page = mount_page<ui>(parent);
   if (page) {
-    lv::owned<lv::obj> queue = mount_queue_view(page.get());
-    queue.release();  // the queue lives and dies with the page
+    lv::owned<lv::obj> column = mount_queue_view(page.get());
+    column.release();  // the queue lives and dies with the page
   }
   return page;
 }

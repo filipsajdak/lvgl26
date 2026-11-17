@@ -2,33 +2,15 @@
 
 #include "fonts.hpp"
 #include "pages.hpp"
-#include "parts.hpp"
-#include "queue.hpp"
+#include "job_page.hpp"
 
 namespace printer {
 namespace {
 
-constinit lv::state copies{lv::counter{1}};
-//! [color]
-constinit lv::state<bool> in_color{true};
-constinit lv::computed color_label{&color_name, in_color};
-//! [color]
-
-//! [actions]
-void fewer() { copies.update(&one_fewer); }
-void more() { copies.update(&one_more); }
-void toggle_color() { in_color = !in_color.get(); }
-void start() {
-  start_job("Copy");
-  close_subpage();
-}
-//! [actions]
-
 //! [page]
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
-constexpr auto ui = job_page("Copy", copies, color_label, {&fewer, &more, &toggle_color, &start}, "Size",
-                             "100%\n75%\n50%", "Start copying", fonts);
+constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
 
 }  // namespace
 
