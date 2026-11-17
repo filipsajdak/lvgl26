@@ -97,6 +97,21 @@ struct field {
 
 namespace detail {
 
+// The failed expression is what the compiler prints for a part that captures something, so
+// its name says what to do.
+template <class F>
+inline constexpr bool a_part_captures_nothing__name_what_it_needs_as_a_template_argument =
+    std::is_class_v<std::remove_cvref_t<F>> && std::is_empty_v<std::remove_cvref_t<F>>;
+
+}  // namespace detail
+
+// What lv::for_each takes as its part: a generic lambda that captures nothing, as it runs in
+// the compiler. What it needs, it names as a template argument or reads from a constant.
+template <class F>
+concept repeat_part = detail::a_part_captures_nothing__name_what_it_needs_as_a_template_argument<F>;
+
+namespace detail {
+
 template <class T>
 inline constexpr bool is_but = false;
 template <auto... V>
@@ -207,7 +222,7 @@ consteval N checked_part(N n) {
 }
 
 // The part called for the value A, which a template argument gives it.
-template <auto A, class F>
+template <auto A, repeat_part F>
 consteval auto part_for(const F& f) {
   static_assert(requires { f.template operator()<A>(); },
                 "lv: the part of lv::for_each does not accept this element as a template argument. "
@@ -217,7 +232,7 @@ consteval auto part_for(const F& f) {
 }
 
 // The same for a record that a constant array holds, by reference.
-template <const auto& A, class F>
+template <const auto& A, repeat_part F>
 consteval auto part_for_record(const F& f) {
   static_assert(requires { f.template operator()<A>(); },
                 "lv: the part of lv::for_each does not accept this record as a template argument. "
@@ -272,7 +287,7 @@ inline constexpr auto like = [:detail::like_member<V, Scope>():];
 // One part for each enumerator of E (without those in Left, if given), as children of the
 // widget that holds it:
 //   lv::row[lv::for_each<subpage, lv::but<subpage::none>>([]<subpage Page> { ... })]
-template <class E, class Left = but<>, class F>
+template <class E, class Left = but<>, repeat_part F>
 consteval auto for_each(const F& f) {
   static_assert(detail::is_but<Left>, "lv: what lv::for_each leaves out is lv::but<subpage::none>.");
   constexpr auto values = detail::kept_enumerators<E, Left>;
@@ -284,7 +299,7 @@ consteval auto for_each(const F& f) {
 
 // One part for each captioned member of T, as children of the widget that holds it:
 //   lv::column[lv::for_each_field<job>([]<lv::field F> { ... })]
-template <class T, class F>
+template <class T, repeat_part F>
 consteval auto for_each_field(const F& f) {
   constexpr auto members = detail::captioned<T>;
   return [&]<std::size_t... I>(std::index_sequence<I...>) {
@@ -297,7 +312,7 @@ consteval auto for_each_field(const F& f) {
 // holds it:
 //   constexpr tube tubes[] = {{...}, {...}};
 //   lv::row[lv::for_each<tubes>([]<tube T> { ... })]
-template <const auto& items, class F>
+template <const auto& items, repeat_part F>
   requires detail::constant_array<std::remove_cvref_t<decltype(items)>>
 consteval auto for_each(const F& f) {
   static_assert(std::size(items) > 0, "lv: lv::for_each<items> has no record to repeat: the array is empty.");

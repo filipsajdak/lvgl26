@@ -503,7 +503,7 @@ consteval auto make_style_slots() {
     std::size_t n = 0;
     template for (constexpr auto i : indices<members_of_props<"obj", D>.size()>) {
       using member = typename[:std::meta::type_of(members_of_props<"obj", D>[i]):];
-      if (a_style<member, D>) ++n;
+      if (style_value<member, D>) ++n;
     }
     return n;
   }();
@@ -511,7 +511,7 @@ consteval auto make_style_slots() {
   std::size_t k = 0;
   template for (constexpr auto i : indices<members_of_props<"obj", D>.size()>) {
     using member = typename[:std::meta::type_of(members_of_props<"obj", D>[i]):];
-    if constexpr (a_style<member, D>) {
+    if constexpr (style_value<member, D>) {
       slots[k++] = {std::meta::identifier_of(members_of_props<"obj", D>[i]),
                     selector_of<targets<"obj", D>[i]>()};
     }

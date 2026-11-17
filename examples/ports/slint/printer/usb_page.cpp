@@ -4,6 +4,7 @@
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"
+#include "job_options.hpp"
 #include "queue.hpp"
 
 #include <array>
@@ -34,14 +35,8 @@ constexpr int photo_height = window_height - header_height - 2 * 20;
 constexpr int side = 20;
 constexpr int control_width = column - 2 * side;
 
-constinit lv::state copies{lv::counter{1}};
-constinit lv::state<bool> in_color{true};
-constinit lv::computed color_label{&color_name, in_color};
+using options = job_options<job_kind::usb>;
 lv::weak<lv::view<"dropdown">> file_choice;
-
-void fewer() { copies.update(&one_fewer); }
-void more() { copies.update(&one_more); }
-void toggle_color() { in_color = !in_color.get(); }
 
 void start() {
   if (file_choice) start_job(names[file_choice.get().get<"selected">()]);
@@ -64,17 +59,11 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
     lv::group({.x = (column + side) * px, .y = y_file * px})[
         choice("Select File:", "cat.jpg\ndog.jpg\nelephant.jpg\nsnake.jpg", label_font, control_width, "file")],
     lv::group({.x = (column + side) * px, .y = y_copies * px})[
-        spin_box("Copies", copies, &fewer, &more, body_font)],
+        spin_box("Copies", options::count, &options::fewer, &options::more, body_font)],
     lv::label({.style = {.text_color = tok.label.primary, .text_font = label_font}, .text = "Color",
                .x = (column + side) * px, .y = y_color * px}),
     lv::group({.x = (column + side) * px, .y = (y_color + 26) * px})[
-        lv::button({.on_clicked = &toggle_color,
-                    .size = {control_width * px, 50 * px},
-                    .style = {.bg_color = tok.button.color.from, .bg_grad_color = tok.button.color.to,
-                              .bg_grad_dir = "hor", .bg_opa = tok.solid, .radius = tok.button.radius,
-                              .shadow_width = lv::raw(0 * px)}})[
-            lv::label({.align = "center", .style = {.text_color = tok.label.on_button, .text_font = body_font},
-                       .text = lv::bind(color_label)})]],
+        color_button(options::color_label, control_width, 50, &options::toggle_color, body_font)],
     lv::group({.x = (column + side) * px, .y = (y_start + 26) * px})[
         wide_button("Start printing", control_width, 60, &start, tok.button.primary, tok.button.primary, label_font)]];
 

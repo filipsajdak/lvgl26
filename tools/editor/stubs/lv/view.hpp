@@ -28,12 +28,18 @@ inline constexpr bool is_view = false;
 template <fixed W>
 inline constexpr bool is_view<view<W>> = true;
 
-/// A view of some widget: lv::view<"label">, lv::obj.
-template <class T>
-concept a_view = is_view<T>;
+}  // namespace detail
 
+/// A view of some widget: lv::view<"label">, lv::obj. Where a part takes a widget.
+template <class T>
+concept view_value = detail::is_view<T>;
+
+/// Something that handles an event: a function, or a lambda, that takes an lv::event or
+/// nothing. What view.on<>() takes and what a part passes on to `.on_clicked`.
 template <class F>
 concept event_handler = std::invocable<F&, event> || std::invocable<F&>;
+
+namespace detail {
 
 template <fixed W, fixed P, class... A>
 concept has_getter = requires(lv_obj_t* o, A&&... a) { stub::getter<W, P>::call(o, std::forward<A>(a)...); };
@@ -109,7 +115,7 @@ class view {
 
   /// Adds a handler: on<LV_EVENT_CLICKED>(handler). It takes lv::event or nothing, and
   /// captures nothing or one pointer-sized value.
-  template <lv_event_code_t Code, detail::event_handler F>
+  template <lv_event_code_t Code, event_handler F>
   view on(F) const { return *this; }
 };
 

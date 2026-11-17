@@ -18,27 +18,25 @@ constinit lv::frame<printer::window_width, printer::window_height> frame;
 
 // A Start button adds a job to the end of the queue and a Delete button removes it.
 void the_queue_follows_its_buttons() {
-  const std::size_t before = printer::jobs().size();
-  const lv::counter revision = printer::queue_revision.get();
-  printer::start_job("report.pdf");
-  check(printer::jobs().size() == before + 1);
-  check(printer::jobs().back().title == "report.pdf" && printer::jobs().back().progress == 0);
-  check(printer::queue_revision.get().value == revision.value + 1);
-  printer::cancel_job(before);
-  check(printer::jobs().size() == before);
-  printer::cancel_job(before + 10);  // there is no such job
-  check(printer::jobs().size() == before);
+  const std::size_t before = printer::queue.size();
+  const printer::job_id id = printer::start_job("report.pdf");
+  check(id.value != 0 && printer::queue.size() == before + 1);
+  check(std::string{printer::queue[before].title} == "report.pdf" && printer::queue[before].progress.value == 0);
+  printer::cancel_job(id);
+  check(printer::queue.size() == before);
+  printer::cancel_job(printer::job_id{0});  // there is no such job
+  check(printer::queue.size() == before);
 }
 
 // The first job gains a percent each second, and shows it.
 void the_print_head_moves(lv::application& app) {
-  const int before = printer::jobs().front().progress;
+  const int before = printer::queue[0].progress.value;
   for (int step = 0; step < 100; ++step) {
     app.advance(10 * lv::ms);
     app.step();
   }
-  check(printer::jobs().front().progress == before + 1);
-  check(printer::status_line(printer::jobs().front()) == std::to_string(before + 1) + "% - PRINTING");
+  check(printer::queue[0].progress.value == before + 1);
+  check(std::string{printer::queue[0].status} == std::to_string(before + 1) + "% - PRINTING");
 }
 
 }  // namespace

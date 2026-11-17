@@ -6,12 +6,12 @@
 
 namespace lv {
 
-template <detail::a_view V>
+template <view_value V>
 class owned;
 
 // A view that empties itself when LVGL deletes the widget.
 // Use it for a widget that something else may delete, such as its parent.
-template <detail::a_view V>
+template <view_value V>
 class weak {
   lv_obj_t* p_ = nullptr;
   lv_delete_dsc_t* dsc_ = nullptr;
@@ -74,7 +74,7 @@ class weak {
 // Safe when the parent deletes the widget first.
 // An owner that LVGL has no memory to track its widget with deletes the widget at
 // once and is empty: check it with operator bool.
-template <detail::a_view V>
+template <view_value V>
 class owned {
   weak<V> w_;
 

@@ -9,17 +9,17 @@
 namespace printer {
 
 //! [pager]
+// Replaces the page in `slot` with the one `make` builds under `host`.
+// The page before is deleted first, so two pages never exist at once.
+inline void replace_page(lv::owned<lv::obj>& slot, lv::obj host, make_page make) {
+  slot.reset();
+  slot = make(host);
+}
+
 class pager {
  public:
   void host(lv::obj where) { host_ = where; }
-
-  // Replaces the page that is shown with the one `make` builds.
-  void show(make_page make) {
-    current_.reset();
-    current_ = make(host_);
-  }
-
-  // Deletes the page.
+  void show(make_page make) { replace_page(current_, host_, make); }
   void clear() { current_.reset(); }
 
  protected:
@@ -42,7 +42,7 @@ class slide_pager : public pager {
  public:
   void show(make_page make) {
     leave();
-    current_ = make(host_);
+    replace_page(current_, host_, make);
     if (current_) lv::spawn(slide_in(current_.get()), current_.get());
   }
 

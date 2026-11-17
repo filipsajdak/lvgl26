@@ -11,8 +11,21 @@
 
 #include <cstddef>
 #include <string_view>
+#include <type_traits>
 
 namespace lv {
+
+namespace detail {
+
+template <class F>
+inline constexpr bool a_part_captures_nothing__name_what_it_needs_as_a_template_argument =
+    std::is_class_v<std::remove_cvref_t<F>> && std::is_empty_v<std::remove_cvref_t<F>>;
+
+}  // namespace detail
+
+/// What lv::for_each takes as its part: a generic lambda that captures nothing.
+template <class F>
+concept repeat_part = detail::a_part_captures_nothing__name_what_it_needs_as_a_template_argument<F>;
 
 /// The enumerators that lv::for_each leaves out: lv::for_each<subpage, lv::but<subpage::none>>.
 template <auto... Values>
@@ -62,19 +75,19 @@ template <auto V, class Scope>
 inline constexpr stub::anything like{};
 
 /// One part for each enumerator of E (without those in Left, if given).
-template <class E, class Left = but<>, class F>
+template <class E, class Left = but<>, repeat_part F>
 constexpr detail::repeated_stub for_each(const F& part) {
   return {};
 }
 
 /// One part for each captioned member of T.
-template <class T, class F>
+template <class T, repeat_part F>
 constexpr detail::repeated_stub for_each_field(const F& part) {
   return {};
 }
 
 /// One part for each record of the constant array `items`.
-template <const auto& items, class F>
+template <const auto& items, repeat_part F>
 constexpr detail::repeated_stub for_each(const F& part) {
   return {};
 }

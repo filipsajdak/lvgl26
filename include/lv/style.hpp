@@ -219,8 +219,14 @@ struct style_of {
 template <class D = void>
 using style_t = typename style_of<D>::type;
 
+}  // namespace detail
+
+// The type of a widget's `.style`: lv::style. Where a part takes a style to apply.
+// D only delays generating the type until it is used.
 template <class S, class D = void>
-concept a_style = std::same_as<S, style_t<D>>;
+concept style_value = std::same_as<std::remove_cvref_t<S>, detail::style_t<D>>;
+
+namespace detail {
 
 template <class D = void>
 inline constexpr auto style_members = std::define_static_array(members_before_braces(^^style_t<D>));
@@ -249,7 +255,7 @@ void set_style_value(lv_obj_t* o, const A& a, Setter setter, lv_style_selector_t
 
 // True when at least one property of the style is set, not counting its layers.
 template <class S, class D = void>
-  requires a_style<S, D>
+  requires style_value<S, D>
 constexpr bool sets_a_value(const S& s) {
   bool any = false;
   template for (constexpr auto m : style_members<D>) any = any || s.[:m:].set;
@@ -258,7 +264,7 @@ constexpr bool sets_a_value(const S& s) {
 
 // True when the style sets a property or has a layer.
 template <class S, class D = void>
-  requires a_style<S, D>
+  requires style_value<S, D>
 constexpr bool is_set(const S& s) {
   return s.layers.count != 0 || sets_a_value<S, D>(s);
 }
@@ -275,7 +281,7 @@ inline void add_layers(lv_obj_t* o, style_layers layers) {
 // Applies a style with LVGL's local style setters. Used at run time. A layer names its
 // own part and state, so only the style of the main part in the default state has any.
 template <class S, class D = void>
-  requires a_style<S, D>
+  requires style_value<S, D>
 void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector)
   pre(s.layers.count == 0 || selector == LV_PART_MAIN)
 {
@@ -294,7 +300,7 @@ void apply_style_local(lv_obj_t* o, const S& s, lv_style_selector_t selector)
 
 // The numbers of the members of lv::style that `s` sets.
 template <class S, class D = void>
-  requires a_style<S, D>
+  requires style_value<S, D>
 consteval std::vector<std::size_t> set_style_members(const S& s) {
   std::vector<std::size_t> out;
   template for (constexpr auto i : indices<style_members<D>.size()>) {
@@ -326,21 +332,21 @@ inline constexpr std::size_t const_count = [] {
   return n;
 }();
 
-constexpr lv_style_value_t style_value(lv_color_t c) {
+constexpr lv_style_value_t lvgl_style_value(lv_color_t c) {
   lv_style_value_t v{};
   v.color = c;
   return v;
 }
 template <class T>
   requires std::is_pointer_v<T>
-constexpr lv_style_value_t style_value(T p) {
+constexpr lv_style_value_t lvgl_style_value(T p) {
   lv_style_value_t v{};
   v.ptr = p;
   return v;
 }
 template <class T>
   requires(!std::is_pointer_v<T>)
-constexpr lv_style_value_t style_value(T n) {
+constexpr lv_style_value_t lvgl_style_value(T n) {
   lv_style_value_t v{};
   v.num = static_cast<std::int32_t>(n);
   return v;
@@ -354,7 +360,7 @@ consteval std::array<lv_style_const_prop_t, const_count<Where, D> + 1> const_pro
   template for (constexpr auto i : set_in<Where, D>) {
     if constexpr (is_const_member<Where, i, D>) {
       out[k].prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
-      out[k].value = style_value(Where::get().[:style_members<D>[i]:].v.v0);
+      out[k].value = lvgl_style_value(Where::get().[:style_members<D>[i]:].v.v0);
       ++k;
     }
   }
@@ -487,7 +493,7 @@ consteval std::vector<lv_style_const_prop_t> plain_props(const S& s) {
                "Give them a font made by the compiler (lv::typeface), or bind the font in the widget's own style.");
         lv_style_const_prop_t p{};
         p.prop = static_cast<lv_style_prop_t>([:style_ids<D>[i]:]);
-        p.value = style_value(s.[:style_members<D>[i]:].v.v0);
+        p.value = lvgl_style_value(s.[:style_members<D>[i]:].v.v0);
         props.push_back(p);
       }
     }
@@ -502,7 +508,7 @@ consteval void add_shorthands(std::vector<lv_style_const_prop_t>& props, const S
     if constexpr (style_ids<D>[i] == std::meta::info{}) {
       if (s.[:style_members<D>[i]:].set) {
         const auto& [... x] = s.[:style_members<D>[i]:].v;
-        const std::array values{style_value(lower(x))...};
+        const std::array values{lvgl_style_value(lower(x))...};
         add_long_forms(props, long_forms<D>(style_name<D>(i)), values);
       }
     }
@@ -646,7 +652,7 @@ constexpr token<T> part(T v) {
 //   lv::style({.bg_color = tok.color.card}) | tok.elevation.card | tok.border.card
 
 template <class S, class D = void>
-  requires detail::a_style<S, D>
+  requires style_value<S, D>
 constexpr S operator|(S s, const token<shadow_token>& t) {
   s.shadow_color = detail::part(t->color);
   s.shadow_offset_x = detail::part(t->offset_x);
@@ -657,7 +663,7 @@ constexpr S operator|(S s, const token<shadow_token>& t) {
 }
 
 template <class S, class D = void>
-  requires detail::a_style<S, D>
+  requires style_value<S, D>
 constexpr S operator|(S s, const token<border_token>& t) {
   s.border_color = detail::part(t->color);
   s.border_width = detail::part(t->width);
@@ -667,14 +673,14 @@ constexpr S operator|(S s, const token<border_token>& t) {
 // Only the letter spacing: choosing an lv_font_t from a family, size and weight
 // needs the font assets, which are not part of the framework yet.
 template <class S, class D = void>
-  requires detail::a_style<S, D>
+  requires style_value<S, D>
 constexpr S operator|(S s, const token<typography_token>& t) {
   s.text_letter_space = detail::part(t->letter_spacing);
   return s;
 }
 
 template <class S, class D = void>
-  requires detail::a_style<S, D>
+  requires style_value<S, D>
 constexpr S operator|(S s, const token<transition_token>& t) {
   s.anim_duration = detail::part(t->duration);
   return s;
@@ -688,7 +694,7 @@ namespace detail {
 // where the compiler looks for operators on it.
 // The layers of both are kept, those of the right one last.
 template <class S, class D = void>
-  requires a_style<S, D>
+  requires style_value<S, D>
 constexpr S operator|(S base, const S& over) {
   template for (constexpr auto m : style_members<D>) {
     if (over.[:m:].set) base.[:m:] = over.[:m:];

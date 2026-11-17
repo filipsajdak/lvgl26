@@ -17,6 +17,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [components.md](components.md) | Components: reusable behaviour and its lifetime, dynamic content on small devices, slots, parameters and invariants, in other frameworks and for our trees. |
 | [lists.md](lists.md) | Lists whose rows change: a fixed-capacity model, keyed rows, bindings to a row's fields, the selected row, the heap and code a row costs, and the API of recycling and sorted views. |
 | [node-storage.md](node-storage.md) | Run-time storage of structural nodes without heap: sized at compile time, placed by the caller, open to new kinds. When a shown tree switches, a style value that follows a state, and what a region for the whole program still needs. |
+| [shown-theme-format.md](shown-theme-format.md) | Design of four planned features: a node that shows one of several trees for a state, a look that changes at run time, text from several values in a fixed buffer, and handler arguments injected by reflection. Sketches compiled with GCC 16.2, decisions for the owner. |
 | [lsp.md](lsp.md) | Editor support for code that only GCC compiles: clangd and reflection, stub headers, completion inside a string, GCC's diagnostics, what agents can use. |
 | [fonts.md](fonts.md) | LVGL's font format, what its converter does, the TrueType a rasteriser needs, SDF and MSDF, and our spike that rasterises a TTF in the compiler. |
 | [image-formats.md](image-formats.md) | Web and embedded image formats: ratio, decoder size and RAM, what decodes line by line, and whether an own format is justified. |
@@ -29,6 +30,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [compile-time.md](compile-time.md) | What GCC 16.2 and plugins show about constant evaluation, where the compile time goes (the analyzer, the ports), and a ranked list of levers that cut it. |
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 | [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
+| [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |
 
 ## How each claim is marked
 

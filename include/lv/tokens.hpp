@@ -269,9 +269,9 @@ consteval quantity read_quantity(json::value v) {
 // read_token(type, root, value): one overload per token type. `root` is the
 // document, for aliases inside composite tokens.
 template <class T>
-using token_of = std::type_identity<T>;
+using read_as = std::type_identity<T>;
 
-consteval lv_color_t read_token(token_of<lv_color_t>, json::value, json::value v) {
+consteval lv_color_t read_token(read_as<lv_color_t>, json::value, json::value v) {
   if (v.is(json::kind::string)) return color_from_hex(v.string());
   if (auto hex = v["hex"]) return color_from_hex(hex.string());
   const auto parts = v["components"];
@@ -283,7 +283,7 @@ consteval lv_color_t read_token(token_of<lv_color_t>, json::value, json::value v
   return c;
 }
 
-consteval length read_token(token_of<length>, json::value, json::value v) {
+consteval length read_token(read_as<length>, json::value, json::value v) {
   const auto q = read_quantity(v);
   if (q.unit == "px" || q.unit.empty()) return length::px(rounded(q.value));
   if (q.unit == "rem") return length::px(rounded(q.value * 16));
@@ -291,33 +291,33 @@ consteval length read_token(token_of<length>, json::value, json::value v) {
   token_fail("the dimension unit '" + str(q.unit) + "' is not px, rem or %");
 }
 
-consteval duration read_token(token_of<duration>, json::value, json::value v) {
+consteval duration read_token(read_as<duration>, json::value, json::value v) {
   const auto q = read_quantity(v);
   if (q.unit == "ms" || q.unit.empty()) return {static_cast<std::uint32_t>(rounded(q.value))};
   if (q.unit == "s") return {static_cast<std::uint32_t>(rounded(q.value * 1000))};
   token_fail("the duration unit '" + str(q.unit) + "' is not ms or s");
 }
 
-consteval double read_token(token_of<double>, json::value, json::value v) {
+consteval double read_token(read_as<double>, json::value, json::value v) {
   if (!v.is(json::kind::number)) token_fail("a number token must be a JSON number");
   return v.number();
 }
 
-consteval std::int32_t read_token(token_of<std::int32_t>, json::value, json::value v) {
+consteval std::int32_t read_token(read_as<std::int32_t>, json::value, json::value v) {
   if (v.is(json::kind::number)) return rounded(v.number());
   if (v.string() == "normal") return 400;
   if (v.string() == "bold") return 700;
   token_fail("the font weight '" + str(v.string()) + "' is not a number, normal or bold");
 }
 
-consteval std::string_view read_token(token_of<std::string_view>, json::value, json::value v) {
+consteval std::string_view read_token(read_as<std::string_view>, json::value, json::value v) {
   // A font family may be a list of fallbacks: the first one is used.
   if (v.is(json::kind::array)) return v.at(0).string();
   if (v.is(json::kind::object)) return "custom";  // a strokeStyle written as an object
   return v.string();
 }
 
-consteval bezier read_token(token_of<bezier>, json::value, json::value v) {
+consteval bezier read_token(read_as<bezier>, json::value, json::value v) {
   if (!v.is(json::kind::array) || v.size() != 4)
     token_fail("a cubicBezier token must be a list of four numbers");
   return {v.at(0).number(), v.at(1).number(), v.at(2).number(), v.at(3).number()};
@@ -328,11 +328,11 @@ template <class T>
 consteval T read_part(json::value root, json::value v, std::string_view what) {
   if (!v) token_fail("a composite token has no '" + str(what) + "'");
   if (v.is(json::kind::string) && v.string().starts_with("{") && v.string().ends_with("}"))
-    return read_token(token_of<T>{}, root, follow_alias(root, v.string(), 0).value);
-  return read_token(token_of<T>{}, root, v);
+    return read_token(read_as<T>{}, root, follow_alias(root, v.string(), 0).value);
+  return read_token(read_as<T>{}, root, v);
 }
 
-consteval shadow_token read_token(token_of<shadow_token>, json::value root, json::value v) {
+consteval shadow_token read_token(read_as<shadow_token>, json::value root, json::value v) {
   const auto s = v.is(json::kind::array) ? v.at(0) : v;
   return {read_part<lv_color_t>(root, s["color"], "color"),
           read_part<length>(root, s["offsetX"], "offsetX"),
@@ -341,13 +341,13 @@ consteval shadow_token read_token(token_of<shadow_token>, json::value root, json
           read_part<length>(root, s["spread"], "spread")};
 }
 
-consteval border_token read_token(token_of<border_token>, json::value root, json::value v) {
+consteval border_token read_token(read_as<border_token>, json::value root, json::value v) {
   return {read_part<lv_color_t>(root, v["color"], "color"),
           read_part<length>(root, v["width"], "width"),
           read_part<std::string_view>(root, v["style"], "style")};
 }
 
-consteval typography_token read_token(token_of<typography_token>, json::value root, json::value v) {
+consteval typography_token read_token(read_as<typography_token>, json::value root, json::value v) {
   return {read_part<std::string_view>(root, v["fontFamily"], "fontFamily"),
           read_part<length>(root, v["fontSize"], "fontSize"),
           read_part<std::int32_t>(root, v["fontWeight"], "fontWeight"),
@@ -355,13 +355,13 @@ consteval typography_token read_token(token_of<typography_token>, json::value ro
           read_part<double>(root, v["lineHeight"], "lineHeight")};
 }
 
-consteval transition_token read_token(token_of<transition_token>, json::value root, json::value v) {
+consteval transition_token read_token(read_as<transition_token>, json::value root, json::value v) {
   return {read_part<duration>(root, v["duration"], "duration"),
           read_part<duration>(root, v["delay"], "delay"),
           read_part<bezier>(root, v["timingFunction"], "timingFunction")};
 }
 
-consteval gradient_token read_token(token_of<gradient_token>, json::value root, json::value v) {
+consteval gradient_token read_token(read_as<gradient_token>, json::value root, json::value v) {
   gradient_token g{};
   if (!v.is(json::kind::array) || v.size() > g.stops.size())
     token_fail("a gradient token must be a list of at most eight stops");
@@ -379,9 +379,9 @@ template <class T>
 inline constexpr bool is_token_leaf<token<T>> = true;
 
 template <class T>
-struct token_value;
+struct token_payload;
 template <class T>
-struct token_value<token<T>> {
+struct token_payload<token<T>> {
   using type = T;
 };
 
@@ -402,7 +402,7 @@ consteval G fill_tokens(json::value group, token_type inherited) {
 
     using M = typename[:std::meta::type_of(m):];
     if constexpr (is_token_leaf<M>)
-      out.[:m:] = M{read_token(token_of<typename token_value<M>::type>{}, root,
+      out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root,
                                resolve_token(root, child, inherited).value),
                     from_design_tokens{}};
     else

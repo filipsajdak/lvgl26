@@ -92,5 +92,6 @@ For a record that holds a text, write `[]<const auto& T> { ... }`. A C array and
 - A part returns a widget. A part that sets `.id` is a compile error: the repeated widgets are not reached by id, and one id repeated would be used twice.
 - A part that does not accept the element, such as `[]<other_enum E>` for a `page`, is a compile error that says how to write it.
 - `lv::but` names enumerators of the enum. Naming another is a compile error, and so is leaving no enumerator.
-- A part is a captureless generic lambda. It cannot capture, as it runs in the compiler.
+- A part is a captureless generic lambda, the concept `lv::repeat_part` of [Concepts for parts](concepts.md). A capture is refused at the call. What a part needs it names as a template argument or reads from a constant.
+- The widget a part returns satisfies `lv::tree_node`, and a part that returns anything else is refused.
 - Compile time grows with the number of repeated widgets as it does for widgets written by hand. `tests/large_tree.cpp` shows that a tree that does not repeat is no dearer.

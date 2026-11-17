@@ -14,6 +14,13 @@
 
 namespace lv {
 
+/// What a state can hold: a bool, an enum, an integer quantity, a named value, an lv_color_t
+/// or a pointer. Where a part takes a value that it keeps in a state. (The editor accepts any
+/// class type here; the compiler checks the members.)
+template <class T>
+concept state_value = std::same_as<T, bool> || std::is_enum_v<T> || std::is_integral_v<T> || std::is_class_v<T> ||
+                      std::is_pointer_v<T>;
+
 /// A value that widgets can follow. It holds a quantity (`0 * km / h`, with mp-units),
 /// an lv::counter, a struct with one member, a bool, an enum, a color or a pointer.
 /// O is the settings tag; leave it out.

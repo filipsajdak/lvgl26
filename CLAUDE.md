@@ -178,6 +178,10 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   `constexpr` variable, before any other use of the same arguments. A `static_assert` does not
   evaluate the precondition.
 
+- A part (a function that returns a piece of tree) constrains its parameters with the public concepts of `docs/concepts.md`: `lv::tree_handler` (a handler in a constexpr tree), `lv::event_handler` (run time), `lv::dependency`, `lv::tree_node`, `lv::view_value`, `lv::style_value`, `lv::font_value`, `lv::token_value`, and `lv::repeat_part` for the part of `lv::for_each`. Never `void (*)()` for a handler, and never a bare `template <class Count>` for a state. A new concept is public (`lv::`, not `lv::detail::`), has `static_assert`s in `tests/concepts.cpp`, a compile-fail test in `tests/fail/part_*.cpp`, and its stub in `tools/editor/stubs/lv/`.
+- Clang 21 does not read `template <lv::dependency auto& Count>`: write `template <auto& Count> requires lv::dependency<std::remove_cvref_t<decltype(Count)>>` in code that the editor stubs or `tests/editor/api_uses.cpp` read.
+- A handler in a constexpr tree is a function pointer: a function or a lambda without captures. A part that needs state names it as a template argument.
+
 ## Definition of done for a feature
 
 A feature pull request also:
