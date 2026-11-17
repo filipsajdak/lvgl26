@@ -22,6 +22,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [image-formats.md](image-formats.md) | Web and embedded image formats: ratio, decoder size and RAM, what decodes line by line, and whether an own format is justified. |
 | [images.md](images.md) | What LVGL draws from read-only memory, its compression and decoders, what other frameworks choose at build time, and a rule for the compile-time path. |
 | [memory.md](memory.md) | Where lvgl26 duplicates or copies data that LVGL already holds, what each copy costs in bytes, and which copies can go without changing LVGL. |
+| [memory-region.md](memory-region.md) | Everything an lvgl26 program allocates, measured; how a program declares its whole memory as one typed layout reserved at the start, with LVGL's heap and task frames inside it; how to prove it asks for no more. |
 | [web-emulator.md](web-emulator.md) | Whether a small own emulator can run the firmware in a browser instead of QEMU, with a survey of small emulators and measured size and speed. |
 | [dev-container.md](dev-container.md) | Which base image and install route give a dev container with GCC 16 on both architectures. |
 | [constexpr-limits.md](constexpr-limits.md) | What the constant-evaluation limit costs us: the operations each file needs, what a very high limit risks, and how fonts can need none. |
