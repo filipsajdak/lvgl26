@@ -417,58 +417,66 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 
 ## What a page costs to compile
 
-Measured once with GCC 16.2 on a loaded machine, at the project's normal limit for constant evaluation.
+Measured on 2026-11-17 with GCC 16.2 and nothing else compiling, at the project's normal limit for constant evaluation.
 The time is the processor time of the compiler, and the memory is its peak.
 
 | File | Time | Memory |
 |---|---|---|
-| `copy.cpp` | 26 s | 1.2 GB |
-| `scan.cpp` | 23 s | 1.8 GB |
-| `print_page.cpp` | 30 s | 3.1 GB |
-| `usb_page.cpp` | 27 s | 0.9 GB |
-| `home_page.cpp` | 29 s | 2.7 GB |
-| `settings_page.cpp` | 22 s | 1.3 GB |
-| `ink_page.cpp` | 17 s | 1.7 GB |
-| `shell.cpp` | 15 s | 0.6 GB |
-| `queue.cpp` | 4 s | 0.4 GB |
+| `copy.cpp` | 19 s | 2.6 GB |
+| `scan.cpp` | 19 s | 2.6 GB |
+| `print_page.cpp` | 25 s | 3.4 GB |
+| `usb_page.cpp` | 18 s | 2.6 GB |
+| `home_page.cpp` | 28 s | 2.8 GB |
+| `settings_page.cpp` | 19 s | 2.3 GB |
+| `ink_page.cpp` | 15 s | 1.7 GB |
+| `shell.cpp` | 11 s | 0.7 GB |
+| `queue.cpp` | 3 s | 0.4 GB |
 
-The files add up to about 190 s of processor time.
+The files add up to about 157 s of processor time.
 Plan for this: keep each page in its own file, build with several jobs, and give the build machine memory for the largest page.
 Several jobs at once multiply the memory.
 
 ## What it costs
 
-The test `printer_cost` measures the running panel, and `tools/compile_report.py` measures the compile.
-The first column is the port before it used `lv::each`, `lv::match`, shared looks and flex layout.
-The second is the port as this page shows it.
-Both ran on LVGL v9.6.0 with GCC 16.2 on the same machine, with the same four jobs in the queue.
+The first column is the port as it is on `origin/main` (`747c741`), before this change.
+The second is the port as this page shows it (`d0df2dd`).
+Both were measured on 2026-11-17 on one machine in one sitting, with LVGL v9.6.0 and GCC 16.2, with the same test and the same four jobs in the queue.
+Nothing else was compiling during the compile measurements.
 
 | What | Before | After |
 |---|---|---|
 | Lines of C++ in the port, without the screenshot tool and the window | 1326 | 1244 |
-| Heap in use after the home page is shown | 48544 bytes | 47920 bytes |
-| Heap in use after the Print page is open too | 89128 bytes | 89232 bytes |
-| Widgets with the Print page open | 258 | 270 |
+| Heap in use after the home page is shown | 48544 bytes | 43080 bytes |
+| Heap in use after the Print page is open too | 89128 bytes | 83720 bytes |
+| Widgets with the Print page open | 258 | 251 |
 | A second of printing: widgets deleted, widgets made | 196, 196 | 0, 0 |
 | A job is added: widgets deleted, widgets made | 196, 245 | 0, 52 |
 | A job is cancelled: widgets deleted, widgets made | 245, 196 | 52, 0 |
-| Compile of the nine port files: instructions | 2339 billion | 2177 billion |
-| Compile of the nine port files: constant evaluation | 135.6 s | 125.4 s |
-| Compile, the largest file: peak memory | 2.7 GB | 2.7 GB |
+| Switch home to settings, deleting first: peak heap above an empty host | 14616 bytes | 14912 bytes |
+| The same by assigning the new page: peak heap above an empty host | 46288 bytes | 44688 bytes |
+| Compile of the port's sources: instructions | 2340 billion (10 files) | 2178 billion (9 files) |
+| Compile of the port's sources: constant evaluation | 136.7 s | 124.5 s |
+| Compile, the largest file: peak memory | 2.7 GB (`queue_view.cpp`) | 3.4 GB (`print_page.cpp`) |
+
+Reproduce the heap and widget rows with the test `printer_cost`.
+For the before column, copy `tests/printer_cost.cpp` into a checkout of `origin/main`, and add it to `tests/CMakeLists.txt`.
+Count the lines with `wc -l` over the `.cpp` and `.hpp` files of `examples/ports/slint/printer`, minus `shot.cpp` and `window.cpp`.
+Compile with `python3 tools/compile_report.py build/host-v96 <the nine or ten sources> --table`.
 
 What the table says:
 
-- The heap does not shrink.
-  The card of a job costs what it did, and the new cards have one more widget each.
-- What changes is the churn.
+- The heap after a page is smaller, and the churn is gone.
   A change of a job touches the widgets of that job, so a second of printing no longer deletes and makes every card.
 - The widgets made are the allocations that a change causes.
   LVGL's heap does not count its calls, so the test counts widgets, and each widget is several heap blocks.
 - The queue holds its jobs in a fixed array, and the text of a job is not copied.
   It makes no allocation of its own.
-- The compile is cheaper in instructions.
-  The home page nests the queue column in its own tree, so the two files that built it become one.
-  The largest file, `home_page.cpp`, now holds both trees and needs more memory.
+- The order of a page switch is about the same cost as before.
+  Deleting the old page first keeps the peak at the larger of the two pages.
+  Assigning the new page first would hold both, about 30 kB more here.
+- The compile is cheaper in instructions, and the largest file needs more memory.
+  The home page nests the queue column in its own tree, so two files become one.
+  The peak memory of one file moves by a gigabyte from run to run on this machine, so read it as a rough size.
 
 ## Memory on the device
 
