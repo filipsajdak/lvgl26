@@ -22,6 +22,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [memory.md](memory.md) | Where lvgl26 duplicates or copies data that LVGL already holds, what each copy costs in bytes, and which copies can go without changing LVGL. |
 | [web-emulator.md](web-emulator.md) | Whether a small own emulator can run the firmware in a browser instead of QEMU, with a survey of small emulators and measured size and speed. |
 | [dev-container.md](dev-container.md) | Which base image and install route give a dev container with GCC 16 on both architectures. |
+| [constexpr-limits.md](constexpr-limits.md) | What the constant-evaluation limit costs us: the operations each file needs, what a very high limit risks, and how fonts can need none. |
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 
 ## How each claim is marked
