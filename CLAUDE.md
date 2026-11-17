@@ -120,6 +120,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Compare compile times in instructions, not in seconds: on a busy machine the same compile takes
   several times longer. `/usr/bin/time -l` prints "instructions retired", but for the process it
   starts, so start `cc1plus` itself: `g++ -###` prints its command.
+  `tools/compile_report.py <build dir> <file>...` does this and prints one JSON row per file (see `docs/research/compile-time.md`).
 
 ## Test adequacy
 
