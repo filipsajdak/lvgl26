@@ -327,6 +327,13 @@ inline duration from_subject(lv_subject_t* s, as<duration>) {
   return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
 }
 
+// A state of a unit, for a setter that takes it unsigned. A negative state breaks
+// the contract of nonnegative.
+template <class U>
+nonnegative<U> from_subject(lv_subject_t* s, as<nonnegative<U>>) {
+  return from_subject(s, as<U>{});
+}
+
 // Anything else: built from the integer if it can be, such as strict<int>.
 template <class T>
 T from_subject(lv_subject_t* s, as<T>) {
@@ -336,28 +343,96 @@ T from_subject(lv_subject_t* s, as<T>) {
     return T{};  // no state type converts to T, so no binding to it can exist
 }
 
-// lv_<widget>_bind_<prop> for the setter lv_<widget>_set_<prop>, or a null reflection.
+// Whether `f` is one of LVGL's bind functions of a property: it takes the widget and
+// a subject, and optionally a format.
+consteval bool is_binder_shape(std::meta::info f) {
+  const auto params = std::meta::parameters_of(f);
+  const bool plain = params.size() == 2;
+  const bool with_format = params.size() == 3 && std::meta::type_of(params[2]) == ^^const char*;
+  return plain || with_format;
+}
+
+// Whether `setter`, lv_<widget>_set_<prop>, sets a plain integer (not a bool, not an
+// enum) that lv_<widget>_get_<prop> reads back.
+consteval bool sets_and_gets_integer(std::meta::info setter) {
+  const auto params = std::meta::parameters_of(setter);
+  if (params.size() < 2) return false;
+  const auto t = std::meta::remove_cv(std::meta::dealias(std::meta::type_of(params[1])));
+  if (!std::meta::is_integral_type(t) || t == ^^bool) return false;
+  const auto name = std::meta::identifier_of(setter);
+  const auto at = name.find("_set_");
+  const auto getter = find(str(name.substr(0, at)) + "_get_" + str(name.substr(at + 5)));
+  return getter != std::meta::info{} &&
+         std::meta::remove_cv(std::meta::dealias(std::meta::return_type_of(getter))) == t;
+}
+
+// The bind function of `widget` ("lv_roller_") that takes the widget and a subject and
+// whose name matches no setter, such as lv_roller_bind_value; or a null reflection.
+consteval std::meta::info unmatched_binder(std::string_view widget) {
+  const std::string prefix = str(widget) + "bind_";
+  for (auto f : api) {
+    const auto id = std::meta::identifier_of(f);
+    if (!id.starts_with(prefix) || std::meta::parameters_of(f).size() != 2) continue;
+    if (find(str(widget) + "set_" + str(id.substr(prefix.size()))) == std::meta::info{}) return f;
+  }
+  return {};
+}
+
+// The only setter of `widget` that sets and gets a plain integer, or a null reflection
+// when it has none or several.
+consteval std::meta::info only_integer_setter(std::string_view widget) {
+  const std::string prefix = str(widget) + "set_";
+  std::meta::info found{};
+  for (auto f : api) {
+    if (!std::meta::identifier_of(f).starts_with(prefix) || !sets_and_gets_integer(f)) continue;
+    if (found != std::meta::info{}) return {};
+    found = f;
+  }
+  return found;
+}
+
+// The setter that an unmatched bind function belongs to, found once for each of them.
+template <std::meta::info Binder>
+inline constexpr std::meta::info setter_of_binder =
+    only_integer_setter(std::meta::identifier_of(Binder).substr(
+        0, std::meta::identifier_of(Binder).find("bind_")));
+
+// The bind function of the setter lv_<widget>_set_<prop>, or a null reflection.
 // LVGL's own bind functions are used when they exist: they also write the widget's
-// value back to the subject (an arc, a slider).
+// value back to the subject (an arc, a slider). It is lv_<widget>_bind_<prop> when
+// LVGL names the two alike. LVGL names the one of a roller and of a dropdown
+// lv_<widget>_bind_value, for the setter lv_<widget>_set_selected: a bind function that
+// matches no setter belongs to the only property the widget sets and gets as a plain
+// integer, the value it binds.
 consteval std::meta::info binder_of(std::meta::info setter) {
   const auto name = std::meta::identifier_of(setter);
   const auto at = name.find("_set_");
-  const auto f = find(str(name.substr(0, at)) + "_bind_" + str(name.substr(at + 5)));
+  const auto widget = name.substr(0, at + 1);
+  if (const auto f = find(str(name.substr(0, at)) + "_bind_" + str(name.substr(at + 5)));
+      f != std::meta::info{})
+    return is_binder_shape(f) ? f : std::meta::info{};
+  if (!sets_and_gets_integer(setter)) return {};
+  const auto f = unmatched_binder(widget);
   if (f == std::meta::info{}) return f;
-  const auto params = std::meta::parameters_of(f);
-  const bool plain = params.size() == 2;
-  const bool with_format =
-      params.size() == 3 && std::meta::type_of(params[2]) == ^^const char*;
-  return (plain || with_format) ? f : std::meta::info{};
+  return std::meta::extract<std::meta::info>(
+             std::meta::substitute(^^setter_of_binder, {std::meta::reflect_constant(f)})) == setter
+             ? f
+             : std::meta::info{};
 }
+
+// binder_of(Setter), found once for each setter.
+template <std::meta::info Setter>
+inline constexpr std::meta::info binder = binder_of(Setter);
 
 // Whether member number I of props<W> can follow a state: LVGL has a bind function
 // for it, or it is a setter that takes one value.
 template <fixed W, std::size_t I>
 consteval bool bindable() {
-  const auto t = targets<W>[I];
-  if (t == std::meta::info{} || !std::meta::is_function(t)) return false;
-  return binder_of(t) != std::meta::info{} || std::meta::parameters_of(t).size() == 2;
+  constexpr auto t = targets<W>[I];
+  if constexpr (t == std::meta::info{} || !std::meta::is_function(t))
+    return false;
+  else
+    return binder<t> != std::meta::info{} || std::meta::parameters_of(t).size() == 2;
 }
 
 // The observer of a generic binding: calls the setter with the subject's value.
@@ -376,7 +451,7 @@ void bind_member(lv_obj_t* o, const A& a) {
   lv_subject_t* subject = a.bound_subject(a.bound);
   if (subject == nullptr) return;  // LVGL had no memory for the subject
 
-  constexpr auto native = binder_of(setter);
+  constexpr auto native = binder<setter>;
   if constexpr (native != std::meta::info{} && std::meta::parameters_of(native).size() == 3) {
     [:native:](o, subject, a.bound_format);
   } else if constexpr (native != std::meta::info{}) {

@@ -48,10 +48,10 @@ consteval std::string enumerator_names(std::meta::info e) {
   std::vector<lv::detail::enum_name> names;
   for (auto x : std::meta::enumerators_of(std::meta::dealias(e)))
     names.push_back({std::define_static_string(std::meta::identifier_of(x)), 0});
-  const std::size_t shared = lv::detail::shared_prefix(names);
+  const auto prefix = lv::detail::prefix_of(names);
   std::string out = "[";
   for (std::size_t i = 0; i < names.size(); ++i)
-    out += (i ? ", " : "") + quoted(lv::detail::lowercase(std::string_view{names[i].name}.substr(shared)));
+    out += (i ? ", " : "") + quoted(lv::detail::short_name(names[i].name, prefix));
   return out + "]";
 }
 

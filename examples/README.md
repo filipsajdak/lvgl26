@@ -21,9 +21,9 @@ with all the quality presets.
 | `slider_styling`, `switch_styling`, `checkbox_styling` | A style for one part in one state (the knob while pressed) |
 | `obj_draggable` | The input device (`lv_indev_get_vect`), which the framework does not wrap |
 | `obj_transform` | `LV_DRAW_TRANSFORM_USE_MATRIX`, which the test build does not enable |
-| `roller_*` (6 of 6) | A quoted enumerator beside a string: `.options = {"Mon\nTue", "normal"}` is refused (see Findings) |
-| `roller_bind_value` | A state that follows a roller: LVGL names its bind function `lv_roller_bind_value`, the setter is `selected` |
-| `spinner_basic` | `.arc_sweep = 270 * deg` does not compile (see Findings) |
+| `roller_*` (6 of 6) | Can be ported now: a name beside a string works. Not done yet |
+| `roller_bind_value` | Can be ported now: a state follows a roller. Not done yet |
+| `spinner_basic` | Can be ported now: `.arc_sweep = 270 * deg` compiles. Not done yet |
 | `table_*` (8 of 8) | More than one cell: `.cell_value` takes a row, a column and a text, and a props struct names it once |
 | `buttonmatrix_button_ctrl`, `_button_width`, `_one_checked`, `_popover`, `_recolor`, `keyboard_custom_map` | An array of control flags, written with LVGL's C enumerators |
 | `buttonmatrix_styling`, `textarea_cursor` | A style for one part in one state (`items` and checked, `cursor` and focused) |
@@ -66,12 +66,6 @@ A control map is an array of enumerators, and there is no way to write them by n
 ```cpp
 constexpr lv_buttonmatrix_ctrl_t ctrl[] = {"none", "checkable"};  // wanted
 ```
-
-The names of `lv_image_align_t` are not shortened, because `_lv_image_align_auto_transform` has no `LV_` prefix like the others.
-The port writes `.inner_align = "lv_image_align_top_left"`, where the other enumerators read `"top_left"`.
-
-A state follows a dropdown in one direction only, because LVGL names its bind function `lv_dropdown_bind_value` and the setter is `selected`.
-`dropdown_bind_value` writes the choice back in an `on_value_changed` handler.
 
 The theme gives a screen a gap between its children.
 An example that lays out the screen itself (a row or a column with `space_evenly`) needs that gap.

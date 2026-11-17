@@ -18,11 +18,11 @@ constexpr auto tile = lv::style({.bg_color = tok.image.tile_fill,
 // The same picture in three tiles of one size: at the top left, in the middle, at the bottom right.
 constexpr auto ui = lv::group({.flex_flow = "row",
                                .style = spread_out | lv::style({.pad_column = tok.gap.lg})})[
-    lv::widget<"image">({.inner_align = "lv_image_align_top_left", .size = {80 * px, 80 * px},
+    lv::widget<"image">({.inner_align = "top_left", .size = {80 * px, 80 * px},
                          .src = &img_example_lvgl_logo, .style = tile}),
-    lv::widget<"image">({.inner_align = "lv_image_align_center", .size = {80 * px, 80 * px},
+    lv::widget<"image">({.inner_align = "center", .size = {80 * px, 80 * px},
                          .src = &img_example_lvgl_logo, .style = tile}),
-    lv::widget<"image">({.inner_align = "lv_image_align_bottom_right", .size = {80 * px, 80 * px},
+    lv::widget<"image">({.inner_align = "bottom_right", .size = {80 * px, 80 * px},
                          .src = &img_example_lvgl_logo, .style = tile})];
 
 }  // namespace
