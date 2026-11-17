@@ -26,7 +26,7 @@ The printer demo of Slint is ported as an example: `examples/ports/slint/printer
 | `@image-url("a.png")` | `lv::image_file<a_png>`, decoded by the compiler. A photo may stay a file: `lv::encoded_image` |
 | `Palette`, a global `Theme` | A theme, `lv::theme({...})`, and a W3C Design Tokens file |
 | A font in a `Text` | A `lv::typeface` that the compiler makes from a TrueType file |
-| `for item in model` | Not there yet. See below |
+| `for item in model` | `lv::each(tracks, &track::id)[row template]` over an `lv::list`. See [Lists](lists.md) |
 | `@tr("...")` | Not there yet |
 | The Slint viewer and live preview | Screenshots: `lv::write_png`, and the agent tools |
 
@@ -64,7 +64,7 @@ The [walkthrough of the printer panel](port-slint-printer.md) follows them on a 
 | Decision | Options | Our advice |
 |---|---|---|
 | Reusable parts | C++ functions now, or wait for components with state and slots | Write functions, and pass the state in as an argument. A part that takes children has no counterpart yet |
-| Lists | Fixed children, mount the list again on a change, or wait for a `for` over a model | Fixed children for a fixed list. Mount again for a short list that rarely changes. A long scrolling list is a gap: decide before you start |
+| Lists | Fixed children, `lv::each` over an `lv::list`, or wait for a list that recycles its rows | `lv::each` for a list of up to a few dozen rows that changes. A long scrolling list that recycles its rows is a gap: decide before you start |
 | Translations | One language, one build for each language, or a switch at run time | `@tr` has no counterpart. Keep the texts of a build in one header. A switch at run time is a gap |
 | Fonts, sizes and glyphs | Compile-time fonts with `lv::typeface`, or `lv::scaled_font` for a size known at run time | List the sizes the design uses, and the characters it shows. Each size costs compile time and flash: see [Fonts](fonts.md). `lv::scaled_font` needs `LVGL26_TTF` |
 | Images | Compile-time pictures with `lv::image_file`, or files decoded on the device with `lv::encoded_image` | Icons and small art at compile time. Photos stay files, and a decoder is a CMake option: `LVGL26_PNG` or `LVGL26_JPEG`. Convert SVG to PNG at the size shown |
@@ -78,7 +78,7 @@ Numbers for the memory row come from `docs/research/memory.md`.
 
 ## Not there yet
 
-- **Models and lists.** A `for` over a model has no counterpart. The printer port mounts a card for each job again when the queue changes.
+- **A `ListView` over a long model.** `lv::each` builds a row for each row of an `lv::list`, up to its capacity. A list that recycles its rows while it scrolls is planned. The printer port still mounts its cards again; a test builds the same queue with `lv::each`.
 - **Components with their own state and slots.** `@children` has no counterpart. They are planned.
 - **A style that follows a color state.** A theme cannot change at run time yet, so Slint's four printer themes are not ported.
 - **Gradients.** A gradient is vertical or horizontal. Diagonal and multi-stop gradients are missing.

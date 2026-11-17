@@ -18,6 +18,7 @@ There is no second language, no code generator and no engine: the C++ compiler c
 | A property binding `text: speed` | `.text = lv::bind(speed)` |
 | A binding with an expression | `lv::computed`, bound the same way |
 | A `Q_PROPERTY` of a model object | An `lv::state`. It has a type, and a measure has a unit |
+| A `Repeater` over a model | `lv::each(tracks, &track::id)[row template]` over an `lv::list`. See [Lists](lists.md) |
 | `Timer { onTriggered: ... }` | A coroutine: `co_await lv::sleep(100 * ms)` in an `lv::task` |
 | `Connections { onSomething: ... }` | A coroutine that waits: `co_await button.next().clicked` |
 | `NumberAnimation`, `Behavior`, easing | `lv::animate(widget, {.value = {0, 100}}, 300 * ms, lv::ease::in_quad)` |
@@ -64,7 +65,7 @@ The [walkthrough of the printer panel](port-slint-printer.md) ports a Slint demo
 | Decision | Options | Our advice |
 |---|---|---|
 | Reusable parts | C++ functions now, or wait for components with state and slots | Write functions, and pass the state in as an argument. A part that takes children has no counterpart yet |
-| Lists | Fixed children, mount the list again on a change, or wait for a `Repeater` or `ListView` over a model | Fixed children for a fixed list. Mount again for a short list that rarely changes. A long scrolling list is a gap: decide before you start |
+| Lists | Fixed children, `lv::each` over an `lv::list`, or wait for a list that recycles its rows | `lv::each` for a list of up to a few dozen rows that changes. A long scrolling list that recycles its rows is a gap: decide before you start |
 | Translations | One language, one build for each language, or a switch at run time | `qsTr` has no counterpart. Keep the texts of a build in one header. A switch at run time is a gap |
 | Fonts, sizes and glyphs | Compile-time fonts with `lv::typeface`, or `lv::scaled_font` for a size known at run time | List the sizes the design uses, and the characters it shows. Each size costs compile time and flash: see [Fonts](fonts.md). `lv::scaled_font` needs `LVGL26_TTF` |
 | Images | Compile-time pictures with `lv::image_file`, or files decoded on the device with `lv::encoded_image` | Icons and small art at compile time. Photos stay files, and a decoder is a CMake option: `LVGL26_PNG` or `LVGL26_JPEG`. Convert SVG to PNG at the size shown |
@@ -79,7 +80,7 @@ Numbers for the memory row come from `docs/research/memory.md`.
 ## Not there yet
 
 - **Components.** A repeated part is a C++ function that returns a piece of tree. Components with their own state, parameters and slots are planned.
-- **Lists from a model.** There is no `Repeater` or `ListView` over a model. A list is written as children, and a changed list is mounted again.
+- **A `ListView` over a long model.** `lv::each` over an `lv::list` builds a row for each row, up to the list's capacity. A list that recycles its rows while it scrolls is planned.
 - **A style for one part in one state.** The knob of a slider while pressed has no form yet. Themes set a part or a state, not both.
 - **Translations.** `qsTr` has no counterpart yet.
 - **Qt Design Studio.** There is no visual editor. The workflow is text and a screenshot: `lv::write_png` and the agent tools.

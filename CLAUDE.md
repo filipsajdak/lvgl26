@@ -106,6 +106,12 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Inside a template, name what is generated for one widget through a template parameter
   (`members_of_props<"obj", D>`, `getter_table<"obj", D>`), never plainly. A name that depends on
   nothing is generated where the template is read: in every file that includes the header.
+  A state type reads `lv::cfg`, so a class template names it through its parameter
+  (`count_state` in `include/lv/list.hpp`); otherwise a project's settings come too late.
+- Under a sanitizer GCC 16.2 does not compare two different function addresses, nor the address of
+  an inline variable or a template parameter object with null, in a constant expression. Carry a
+  number instead (`follows` of `lv::arg` says what a property follows), or compare
+  `std::meta::reflect_constant` of both (see `detail::is_null` in `include/lv/list.hpp`).
 - GCC 16.2 runs a call whose arguments are all constants twice when it is written inside a
   function template: once when the template is instantiated, once when the function runs. Hand
   the result of a scan in as an argument (see `scan_base` in `include/lv/props.hpp`).
@@ -198,7 +204,7 @@ clangd cannot parse the headers, so editors read stubs: the public API as plain 
 
 ## Research
 
-`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics. Some are about the platform: LVGL upstream, C++26, a browser target, fonts, images, editor support and components. The others are the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, and documentation for agents.
+`docs/research/` holds what has already been looked up, with sources. Its `README.md` lists the topics. Some are about the platform: LVGL upstream, C++26, a browser target, fonts, images, editor support, components and lists. The others are the examples of other frameworks, device UI standards, the instrument cluster, 3D and effects, and documentation for agents.
 
 - Read `docs/research/README.md` and the topic file before a web search.
 - Search only for what the notes do not answer, or for a claim marked `summary` or `recalled` that the work depends on.

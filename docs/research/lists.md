@@ -35,15 +35,19 @@ GCC 16.2 on macOS arm64, LVGL v9.6.0, the `host-v96` build. Heap is LVGL's, read
 | Cards deleted when a job is added | 6 remounted, 0 with lv::each | same |
 | Cards deleted when the second job is cancelled | 7 remounted, 1 with lv::each | same |
 | Code of one row mounted once | 1040 bytes of `__text` | `size -m`, `-Os`, one file per case |
-| Code of one list with lv::each and five changes | 5632 bytes | same |
-| Code of a second list in the same file | 1428 more | same |
+| Code of one list with lv::each and five changes | 4260 bytes | same |
+| Code of a second list in the same file | 1384 more | same |
 | Compile cost of `tests/large_tree.cpp`, before | 89.60 to 89.76 G instructions; 5,768,554 constexpr operations | `cc1plus` under `/usr/bin/time -l`; bisecting `-fconstexpr-ops-limit` with `-fsyntax-only` |
+| The same, after | 90.04 to 90.17 G instructions, about 0.4 percent more; 5,768,554 constexpr operations | same |
+| Parsing `lv/lv.hpp`, which now includes `lv/list.hpp` | 33.31 G instructions with it and without it | an empty file that includes it |
+| `lv/list.hpp` with `<ranges>`, `<iterator>` and `<algorithm>`, as first written | 0.55 G instructions more in every file | same |
 
 What the numbers mean:
 
 - A row costs what its widgets cost. The 134 bytes saved per row are the copied texts and the owner of each tree.
 - The large saving is in work, not in bytes: a change rebuilds no other row, so animations, tasks and the focus go on.
 - The code of a view is in one class that is no template. Each further list adds its table and its row template only.
+- A list costs no compile time where it is not used. The standard headers it first included cost half a second in every file, so it uses none of them.
 
 ## Findings in LVGL and GCC
 
@@ -91,7 +95,7 @@ The last row means the guard of `tests/large_tree.cpp` does not stop a build tod
 
 ### Bindings to the fields of a row
 
-- `lv::bind(&track::title)` makes a constant that holds the member pointer and a reader. It fills the three pointers that a state binding fills.
+- `lv::bind(&track::title)` makes a constant that holds the member pointer and a reader. It fills the pointers that a state binding fills, and `follows` says it is a row field.
 - So `lv::arg` keeps its size, and a large tree pays nothing for it.
 - A node outside a row template refuses such a binding at compile time. `view.set()` at run time breaks a contract.
 - A field follows the rules of a state: a quantity, a named value, an enum, a bool, a color, a pointer, or a text.
@@ -116,7 +120,7 @@ The last row means the guard of `tests/large_tree.cpp` does not stop a build tod
 
 - `tree.hpp`: a trait for structural nodes, `operator[]` accepting them, `build` handing them over, and ids not collected below them.
 - `tree.hpp`: `apply_node` skips a row field and refuses one outside a row template.
-- `values.hpp`: the marker of a row binding, and its test by reflection.
+- `values.hpp`: a type for a row binding, and `follows` of `lv::arg` as a number: nothing, a state, or a row field.
 - `props.hpp`: `from_number`, the conversion a subject used, now shared with row fields.
 - `state.hpp` and `owned.hpp`: unchanged. The block of a view does not live in `mounted`, so the new storage of `mounted` can take it later.
 
@@ -228,3 +232,4 @@ constexpr auto both = lv::row[
 | `assign()` without memory | the view shows nothing until the next change, or undoes | show nothing: undoing a whole assign needs a second copy of the rows |
 | Pool size of a recycling view | from the size at mount, fixed at compile time | at mount, with `.pool` to fix it |
 | Two lists in one widget | refuse, allow | refuse: each list's rows start at a fixed child number |
+| Focus order after an insert or a move | keep LVGL's order of building, or reorder the group | reorder later: `lv_group_swap_obj` also moves the focus, which a selection follows |

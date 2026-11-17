@@ -24,6 +24,7 @@
     {
       "title": "Guides",
       "pages": [
+        "lists.md",
         "themes.md",
         "fonts.md",
         "images.md",

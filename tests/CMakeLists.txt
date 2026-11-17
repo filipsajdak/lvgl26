@@ -496,6 +496,20 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
   endif()
 endif()
 
+# The example of docs/lists.md. Its picture is the one on the page.
+add_executable(example_lists ${PROJECT_SOURCE_DIR}/examples/lists/main.cpp)
+target_compile_options(example_lists PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/lists)
+target_link_libraries(example_lists PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out)
+add_test(NAME example_lists COMMAND example_lists WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out)
+set_tests_properties(example_lists PROPERTIES FIXTURES_SETUP example_lists_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_lists_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out/lists.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/lists.png)
+  set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
+endif()
+
 # The example of docs/themes.md. Its pictures are the ones on the page.
 add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)
 target_compile_options(example_theme PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/theme)
