@@ -36,9 +36,13 @@
 // screenshot then takes the name of a file, not a path: letters, digits, '.', '_'
 // and '-', ending in ".png", not starting with a dot. The file is made new in
 // that directory; a file or a symbolic link of that name is never written to.
+// A server makes a limited number of files (detail::screenshot_file_limit), then
+// refuses. A file is no larger than a PNG of the screen, so the count bounds the space.
 //
 // Limits: keys and tool names are compared as written, so a client that escapes
 // them ("tools\/call") is not understood.
+// serve() reads lines of at most one mebibyte (detail::line_limit). A longer line is
+// dropped up to its line feed and answered with an Invalid Request error.
 // serve() blocks: nothing else of the program runs while it waits for a line.
 // Keep LVGL's log off stdout (LV_LOG_PRINTF), which belongs to the protocol.
 
@@ -49,9 +53,12 @@
 #include <lv/runtime.hpp>
 
 #include <array>
+#include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -168,10 +175,12 @@ struct request {
   json::value params;
 };
 
-// An id is a number, or a string that can be sent back on one line.
+// An id is a number, or a string that can be sent back as written: on one line, and
+// well-formed UTF-8.
 inline bool usable_id(json::value id) {
   if (id.is(json::kind::number)) return true;
-  return id.is(json::kind::string) && !has_control_character(id.text());
+  return id.is(json::kind::string) && !has_control_character(id.text()) &&
+         json::detail::well_formed(id.text());
 }
 
 // Reads a message. The error is the response to send.
@@ -306,11 +315,25 @@ inline std::string image_result(std::span<const std::uint8_t> png) {
   return out;
 }
 
+// How many bytes of a refused document a failure shows: enough to find the place,
+// little enough to keep a long document out of the agent's context.
+inline constexpr std::size_t failure_excerpt = 200;
+
+// How many screenshot files one server makes. An agent checks a screen a few dozen
+// times in a session; a client that asks for more must not fill the directory.
+inline constexpr std::size_t screenshot_file_limit = 100;
+
+// Whether a screenshot may have left a file: it did, or the file was made and then
+// could not be written, which leaves it behind. Such a file counts to the limit.
+inline bool may_have_made_a_file(const std::expected<void, png_error>& written) {
+  return written || written.error() == png_error::cannot_write;
+}
+
 // A refused document or patch, as a result the agent can act on.
 inline std::string failure(const load_failure& f) {
   std::string text{name_of(f.error)};
   text += ": ";
-  text += f.at.substr(0, 200);
+  text += json::detail::utf8_prefix(f.at, failure_excerpt);
   return text_result(text, true);
 }
 
@@ -335,16 +358,74 @@ constexpr bool usable_file_name(std::string_view name) {
 
 // ---- the stream ----------------------------------------------------------------
 
-// Reads up to the next line feed. False at the end of the stream.
-inline bool read_line(std::FILE* in, std::string& line) {
-  line.clear();
-  int c = std::fgetc(in);
-  for (; c != EOF && c != '\n'; c = std::fgetc(in)) line.push_back(static_cast<char>(c));
-  return c != EOF || !line.empty();
+// The longest line serve() takes, in bytes without its line feed: one mebibyte.
+// Without a limit a client that never sends a line feed makes the server hold all it
+// sends. A document of a screen is a few kilobytes, so this leaves room for any.
+inline constexpr std::size_t line_limit = std::size_t{1} << 20;
+
+// Gives the bytes of a stream one at a time, as std::fgetc does: EOF at the end.
+template <class S>
+concept byte_source = std::invocable<S&> && std::convertible_to<std::invoke_result_t<S&>, int>;
+
+// Takes a message and returns the answer, as server::handle does.
+template <class H>
+concept message_handler = std::invocable<H&, std::string_view> &&
+                          std::convertible_to<std::invoke_result_t<H&, std::string_view>, std::string>;
+
+// What read_line found.
+enum class line_status { line, too_long, end };
+
+// Drops the rest of a line.
+template <byte_source S>
+void skip_line(S& next) {
+  for (int c = std::invoke(next); c != EOF && c != '\n'; c = std::invoke(next)) {
+  }
 }
 
-inline void write_line(std::FILE* out, const std::string& line) {
-  std::fputs(line.c_str(), out);
+// Reads up to the next line feed into `line`. A line of more than `limit` bytes is
+// read to its end, dropped, and reported as too long; it never takes more memory.
+template <byte_source S>
+line_status read_line(S& next, std::string& line, std::size_t limit) {
+  line.clear();
+  int c = std::invoke(next);
+  for (; c != EOF && c != '\n'; c = std::invoke(next)) {
+    if (line.size() == limit) {
+      skip_line(next);
+      return line_status::too_long;
+    }
+    line.push_back(static_cast<char>(c));
+  }
+  return c == EOF && line.empty() ? line_status::end : line_status::line;
+}
+
+// The answer to a line that was too long. The id could not be read.
+inline std::string too_long(std::size_t limit) {
+  return error_message({}, invalid_request,
+                       "Invalid Request: a message is longer than " + std::to_string(limit) + " bytes");
+}
+
+// The answer to a line that was read: none for an empty one.
+template <message_handler H>
+std::string answer_line(H& handle, std::string_view line) {
+  if (line.find_first_not_of(" \t\r") == std::string_view::npos) return {};
+  return std::invoke(handle, line);
+}
+
+// Answers every line of `next` through `write`, until `next` ends. serve() with
+// any source of bytes and any sink, so that a test or a fuzzer can drive it.
+template <message_handler H, byte_source S, json::sink W>
+void serve_lines(H& handle, S& next, W& write, std::size_t limit) {
+  std::string line;
+  for (auto status = read_line(next, line, limit); status != line_status::end;
+       status = read_line(next, line, limit)) {
+    const std::string reply =
+        status == line_status::too_long ? too_long(limit) : answer_line(handle, line);
+    if (!reply.empty()) std::invoke(write, std::string_view{reply});
+  }
+}
+
+inline void write_line(std::FILE* out, std::string_view line) {
+  std::fwrite(line.data(), 1, line.size(), out);
   std::fputc('\n', out);
   std::fflush(out);
 }
@@ -359,6 +440,7 @@ class server {
   obj parent_;
   options options_;
   typename ui::loaded screen_;
+  std::size_t screenshot_files_ = 0;  // made, or perhaps left half written, by this server
 
  public:
   // The server shows documents under `parent`, and dumps and draws `parent`.
@@ -381,12 +463,10 @@ class server {
     pre(in != nullptr)
     pre(out != nullptr)
   {
-    std::string line;
-    while (detail::read_line(in, line)) {
-      if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
-      const std::string reply = handle(line);
-      if (!reply.empty()) detail::write_line(out, reply);
-    }
+    auto next = [in] { return std::fgetc(in); };
+    auto write = [out](std::string_view reply) { detail::write_line(out, reply); };
+    auto answer = [this](std::string_view message) { return handle(message); };
+    detail::serve_lines(answer, next, write, detail::line_limit);
   }
 
  private:
@@ -465,17 +545,22 @@ class server {
     return detail::text_result(text);
   }
 
-  std::string screenshot(json::value name) const {
+  std::string screenshot(json::value name) {
     if (name) return screenshot_file(name);
     const auto png = encode_png(parent_);
     if (!png) return detail::failure(png.error());
     return detail::image_result(*png);
   }
 
-  std::string screenshot_file(json::value name) const {
+  std::string screenshot_file(json::value name) {
     if (options_.screenshot_directory.empty())
       return detail::text_result(
           "this server does not write files: call screenshot without a name", true);
+    if (screenshot_files_ >= detail::screenshot_file_limit)
+      return detail::text_result("this server has written its " +
+                                     std::to_string(detail::screenshot_file_limit) +
+                                     " screenshot files: call screenshot without a name",
+                                 true);
     if (!detail::usable_file_name(name.string()))
       return detail::text_result(
           R"("name" must be a file name of letters, digits, '.', '_' and '-' that ends in .png)",
@@ -484,6 +569,7 @@ class server {
     file += "/";
     file += name.string();
     const auto written = write_new_png(parent_, file.c_str());
+    if (detail::may_have_made_a_file(written)) ++screenshot_files_;
     if (!written) return detail::failure(written.error());
     return detail::text_result("wrote " + file);
   }

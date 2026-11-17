@@ -261,7 +261,7 @@ struct animation_source {
     context = done_context;
     // As for an event: without the record that ties the task to the widget, the
     // task ends here instead of waiting unprotected.
-    if (watch(owner, widget, true) == nullptr) {
+    if (watch(owner, widget) == nullptr) {
       cancel(owner);
       return true;  // stay suspended, with nothing armed, until the task is ended
     }

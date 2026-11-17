@@ -30,6 +30,7 @@
 // Limits: text values are at most 127 characters and are not unescaped. The
 // document must stay alive as long as the loaded screen is used with find/apply
 // (the ids are views into it). At most 32 nodes of a document can have an id.
+// A table has at most 64 rows and columns, a chart 1024 points (detail::count_limits).
 
 #include <lv/detail/enum_names.hpp>
 #include <lv/dump.hpp>
@@ -43,6 +44,8 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <limits>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -109,16 +112,34 @@ constexpr measured read_measured(json::value v) {
   return {json::value{s.substr(0, n)}.number(), s.substr(n), true};
 }
 
-constexpr std::int32_t rounded_i32(double v) {
-  return static_cast<std::int32_t>(v < 0 ? v - 0.5 : v + 0.5);
+// Whether casting `v` to I is defined: false for NaN, an infinity and anything
+// whose whole part is outside the range of I. The cast drops the fraction, so the
+// bounds are one below the lowest value of I and the power of two just above its
+// highest one. Where one below is not exact in a double, it errs toward refusing.
+// (Not std::ldexp: <cmath> would put ::log and the like into every user's file.)
+template <integer I>
+constexpr bool castable_to(double v) {
+  using limits = std::numeric_limits<I>;
+  constexpr double below_lowest = static_cast<double>(limits::min()) - 1;
+  constexpr double past_highest = static_cast<double>(limits::max() / limits::radix + 1) * limits::radix;
+  return v > below_lowest && v < past_highest;
+}
+
+// The nearest whole number, halves away from zero, or nothing if an int32_t
+// cannot hold it.
+constexpr std::optional<std::int32_t> rounded_i32(double v) {
+  const double away = v < 0 ? v - 0.5 : v + 0.5;
+  if (!castable_to<std::int32_t>(away)) return std::nullopt;
+  return static_cast<std::int32_t>(away);
 }
 
 constexpr bool read_length(json::value v, length& out) {
   if (v.is(json::kind::string) && v.string() == "content") return out = size_content, true;
   const auto m = read_measured(v);
-  if (!m.ok) return false;
-  if (m.unit == "px" || m.unit.empty()) return out = length::px(rounded_i32(m.number)), true;
-  if (m.unit == "%") return out = length{percent{rounded_i32(m.number)}}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || !n) return false;
+  if (m.unit == "px" || m.unit.empty()) return out = length::px(*n), true;
+  if (m.unit == "%") return out = length{percent{*n}}, true;
   return false;
 }
 
@@ -186,8 +207,9 @@ bool read(json::value v, json_value<along<Axis>>& out) {
 
 inline bool read(json::value v, json_value<angle>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || !(m.unit.empty() || m.unit == "deg")) return false;
-  return out.value = angle{rounded_i32(m.number)}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || !(m.unit.empty() || m.unit == "deg") || !n) return false;
+  return out.value = angle{*n}, true;
 }
 
 // An angle with tenths of a degree: 22.5 or "22.5deg". A finer fraction, or more
@@ -206,14 +228,16 @@ constexpr double milliseconds(const measured& m) {
 
 inline bool read(json::value v, json_value<duration>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || m.number < 0 || milliseconds(m) < 0) return false;
-  return out.value = duration{static_cast<std::uint32_t>(rounded_i32(milliseconds(m)))}, true;
+  const auto ms = rounded_i32(milliseconds(m));
+  if (!m.ok || m.number < 0 || !ms || *ms < 0) return false;
+  return out.value = duration{static_cast<std::uint32_t>(*ms)}, true;
 }
 
 inline bool read(json::value v, json_value<opa>& out) {
   const auto m = read_measured(v);
-  if (!m.ok || m.unit != "%") return false;
-  return out.value = opa{percent{rounded_i32(m.number)}}, true;
+  const auto n = rounded_i32(m.number);
+  if (!m.ok || m.unit != "%" || !n) return false;
+  return out.value = opa{percent{*n}}, true;
 }
 
 inline bool read(json::value v, json_value<lv_color_t>& out) { return read_color(v, out.value); }
@@ -228,9 +252,8 @@ template <integer I>
 bool read(json::value v, json_value<strict<I>>& out) {
   if (!v.is(json::kind::number)) return false;
   const double n = v.number();
-  const auto whole = static_cast<std::int64_t>(n);
-  if (static_cast<double>(whole) != n || !std::in_range<I>(whole)) return false;
-  return out.value = strict<I>{static_cast<I>(whole)}, true;
+  if (!castable_to<I>(n) || static_cast<double>(static_cast<I>(n)) != n) return false;
+  return out.value = strict<I>{static_cast<I>(n)}, true;
 }
 
 // A style value. A document has no design tokens, so it is a raw one.
@@ -254,24 +277,103 @@ struct property_entry {
 template <class... Ts>
 inline constexpr bool all_readable = (readable<Ts> && ...);
 
-// Reads the arguments of a setter and calls it. One argument comes from the value
-// itself; several come from a list of that length.
+// Reads the arguments of a setter. One argument comes from the value itself;
+// several come from a list of that length.
+template <class... Ts>
+bool read_arguments(json::value v, std::tuple<json_value<Ts>...>& args) {
+  if constexpr (sizeof...(Ts) == 1) {
+    return read(v, std::get<0>(args));
+  } else {
+    if (!v.is(json::kind::array) || v.size() != sizeof...(Ts)) return false;
+    bool ok = true;
+    template for (constexpr auto i : indices<sizeof...(Ts)>) {
+      ok = ok && read(v.at(i), std::get<i>(args));
+    }
+    return ok;
+  }
+}
+
+// The setters whose whole numbers make LVGL allocate once per unit, and the most a
+// document may give them. LVGL does not report a failed allocation there:
+// lv_table_set_row_count(t, 4000000000) leaves a null array that the next layout
+// reads, and rows times columns can overflow. Reflection cannot tell a count from
+// any other number, so this list is written by hand, like copies_text below. It
+// holds every setter that a sweep of each whole-number property at the extremes
+// of its type made crash, alone or on a chart that its program gave a series.
+// A limit makes a failure unlikely, not impossible: enough tables at their limit
+// still use up a small heap.
+struct count_limit {
+  std::string_view setter;  // a literal: static storage
+  std::uint32_t most;
+};
+
+// Rows and columns of a table, and the index of one (an index past the end adds
+// rows or columns): at the limit a table has 65 x 65 cells, 33 KB of cell
+// pointers on a 64-bit host.
+inline constexpr std::uint32_t most_table_rows_or_columns = 64;
+// Points of a chart: LVGL reallocates each series to this many values, 4 KB each
+// at the limit, and draws from a null array when that fails.
+inline constexpr std::uint32_t most_chart_points = 1024;
+
+inline constexpr count_limit count_limits[] = {
+    {"lv_table_set_row_count", most_table_rows_or_columns},
+    {"lv_table_set_column_count", most_table_rows_or_columns},
+    {"lv_table_set_column_width", most_table_rows_or_columns},
+    {"lv_table_set_cell_ctrl", most_table_rows_or_columns},
+    {"lv_chart_set_point_count", most_chart_points},
+};
+
+// The most a whole-number argument of `setter` may be.
+consteval std::uint64_t most_for(std::meta::info setter) {
+  for (const auto& limit : count_limits)
+    if (limit.setter == std::meta::identifier_of(setter)) return limit.most;
+  return std::numeric_limits<std::uint64_t>::max();
+}
+
+// Whether T is a whole number of a document, strict<I>.
+template <class T>
+inline constexpr bool is_strict = false;
+template <class I>
+inline constexpr bool is_strict<strict<I>> = true;
+
+// The C type of value argument I of a setter: its parameter after the widget.
+template <std::meta::info Setter, std::size_t I>
+using parameter_t = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[I + 1]):];
+
+// Whether a value read from a document fits argument I of the setter: the C type
+// of the parameter (a negative length for an unsigned one does not), and, for a
+// whole number, the setter's count limit. A length or an angle is not a count.
+template <std::meta::info Setter, std::size_t I, class T>
+constexpr bool fits_argument(const T& value) {
+  using P = parameter_t<Setter, I>;
+  const auto& v = lower(value);
+  using V = std::remove_cvref_t<decltype(v)>;
+  if constexpr (integer<V> && integer<P>)
+    return std::in_range<P>(v) && (!is_strict<T> || std::cmp_less_equal(v, most_for(Setter)));
+  else
+    return true;
+}
+
+// A value that fits_argument accepted, as the parameter's type.
+template <class P, class V>
+constexpr P as_argument(const V& v) {
+  if constexpr (integer<V> && integer<P> && !std::same_as<P, V>)
+    return static_cast<P>(v);
+  else
+    return v;
+}
+
+// Reads the arguments of a setter and calls it, if they fit its parameters.
 template <std::meta::info Setter, class... Ts, class... Extra>
 bool call_from_json(lv_obj_t* o, json::value v, std::type_identity<std::tuple<Ts...>>,
                     Extra... extra) {
   std::tuple<json_value<Ts>...> args;
-  bool ok = true;
-  if constexpr (sizeof...(Ts) == 1) {
-    ok = read(v, std::get<0>(args));
-  } else {
-    if (!v.is(json::kind::array) || v.size() != sizeof...(Ts)) return false;
-    template for (constexpr auto i : indices<sizeof...(Ts)>) {
-      ok = ok && read(v.at(i), std::get<i>(args));
-    }
-  }
-  if (!ok) return false;
-  std::apply([&](const json_value<Ts>&... a) { [:Setter:](o, lower(a.value)..., extra...); }, args);
-  return true;
+  if (!read_arguments(v, args)) return false;
+  return [&]<std::size_t... I>(std::index_sequence<I...>) {
+    if (!(fits_argument<Setter, I>(std::get<I>(args).value) && ...)) return false;
+    [:Setter:](o, as_argument<parameter_t<Setter, I>>(lower(std::get<I>(args).value))..., extra...);
+    return true;
+  }(std::index_sequence_for<Ts...>{});
 }
 
 template <fixed W, std::size_t I>
@@ -417,8 +519,7 @@ template <class D = void>
 std::expected<void, load_failure> apply_style_document(lv_obj_t* o, json::value style,
                                                        lv_style_selector_t selector) {
   if (!style.is(json::kind::object)) return std::unexpected(load_failure{load_error::bad_value, style.text()});
-  for (std::size_t i = 0; i < style.size(); ++i) {
-    const auto m = style.member_at(i);
+  for (const json::member m : style.members()) {
     const style_entry* entry = nullptr;
     for (const auto& e : style_table_json<D>)
       if (e.name == m.key) entry = &e;
@@ -464,8 +565,8 @@ std::expected<void, load_failure> apply_properties(lv_obj_t* o, json::value prop
   if (!props) return {};
   if (!props.is(json::kind::object))
     return std::unexpected(load_failure{load_error::malformed, props.text()});
-  for (std::size_t i = 0; i < props.size(); ++i)
-    if (auto r = apply_property<W>(o, props.member_at(i)); !r) return r;
+  for (const json::member m : props.members())
+    if (auto r = apply_property<W>(o, m); !r) return r;
   return {};
 }
 
@@ -548,8 +649,8 @@ class runtime {
       const auto parsed = json::value::parse(patch);
       if (!parsed || !parsed->is(json::kind::object))
         return std::unexpected(load_failure{load_error::malformed, patch});
-      for (std::size_t i = 0; i < parsed->size(); ++i)
-        if (auto r = apply_one(parsed->member_at(i)); !r) return r;
+      for (const json::member m : parsed->members())
+        if (auto r = apply_one(m); !r) return r;
       return {};
     }
 
@@ -658,9 +759,9 @@ class runtime {
 
   static result build_children(json::value children, lv_obj_t* parent, loaded& out) {
     if (children && !children.is(json::kind::array)) return fail(load_error::malformed, children.text());
-    for (std::size_t i = 0; i < children.size(); ++i) {
+    for (const json::value node : children.elements()) {
       lv_obj_t* child = nullptr;
-      if (auto r = build(children.at(i), parent, child, out); !r) return r;
+      if (auto r = build(node, parent, child, out); !r) return r;
     }
     return {};
   }

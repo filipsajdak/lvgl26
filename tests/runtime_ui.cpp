@@ -4,7 +4,9 @@
 
 #include "check.hpp"
 
+#include <chrono>
 #include <cstring>
+#include <limits>
 
 namespace {
 
@@ -139,6 +141,7 @@ void rejects(lv::obj screen, bool holds_heap) {
   expect(R"({"type": "arc", "props": {"value": 1.5}})", lv::load_error::bad_value, "1.5");
   expect(R"({"type": "arc", "props": {"value": true}})", lv::load_error::bad_value, "true");
   expect(R"({"type": "arc", "props": {"range": [0]}})", lv::load_error::bad_value, "[0]");
+  expect(R"({"type": "arc", "props": {"range": [0, 240, 5]}})", lv::load_error::bad_value, "[0, 240, 5]");
   expect(R"({"type": "obj", "props": {"width": "12em"}})", lv::load_error::bad_value, R"("12em")");
   expect(R"({"type": "obj", "props": {"align": "middle"}})", lv::load_error::bad_value, R"("middle")");
   expect(R"({"type": "obj", "props": {"align": "centxr"}})", lv::load_error::bad_value, R"("centxr")");
@@ -266,6 +269,185 @@ void rejects(lv::obj screen, bool holds_heap) {
   if (holds_heap) check(free_bytes() == heap);
 }
 
+// Widgets whose setters take unsigned numbers, or allocate once per row.
+using counted = lv::runtime<"table", "scale", "chart">;
+
+// Expects `doc` to be refused as a bad value at `at`, leaving nothing behind.
+void expect_bad_value(std::string_view doc, std::string_view at, lv::obj screen) {
+  const auto before = lv_obj_get_child_count(screen.raw());
+  const auto r = counted::load(doc, screen);
+  check(!r.has_value() && r.error().error == lv::load_error::bad_value && r.error().at == at);
+  check(lv_obj_get_child_count(screen.raw()) == before);
+}
+
+// A table's rows and columns are limited: LVGL allocates rows times columns cells
+// and does not report a failed allocation, so 4000000000 rows crashed the next layout.
+void limit_table_rows_and_columns(lv::obj screen) {
+  const auto heap = free_bytes();
+  constexpr auto most = lv::detail::most_table_rows_or_columns;
+  const std::string n = std::to_string(most);
+  const std::string over = std::to_string(most + 1);
+  {
+    auto at_limit = counted::load(R"({"type": "table", "id": "t", "props": {"row_count": )" + n +
+                                      R"(, "column_count": )" + n + R"(, "column_width": [)" + n +
+                                      R"(, "10px"], "cell_ctrl": [)" + n + R"(, )" + n +
+                                      R"(, "merge_right"]}})",
+                                  screen);
+    check(at_limit.has_value());
+    if (at_limit) {
+      lv_obj_update_layout(screen.raw());
+      // An index at the limit adds one row or column past it.
+      check(lv_table_get_row_count(at_limit->find("t").raw()) == most + 1);
+      check(lv_table_get_column_count(at_limit->find("t").raw()) == most + 1);
+      const auto patched = at_limit->apply(R"({"t": {"row_count": )" + over + "}}");
+      check(!patched && patched.error().error == lv::load_error::bad_value);
+      check(lv_table_get_row_count(at_limit->find("t").raw()) == most + 1);
+    }
+  }
+  {
+    // The limit is on the counts and indices, not on a width beside them.
+    auto widths = counted::load(R"({"type": "table", "id": "t", "props": {"column_count": 2,
+        "column_width": [0, "100px"]}})", screen);
+    check(widths.has_value() && lv_table_get_column_width(widths->find("t").raw(), 0) == 100);
+    if (widths) check(widths->apply(R"({"t": {"column_width": [1, "50%"]}})").has_value());
+  }
+  expect_bad_value(R"({"type": "table", "props": {"row_count": )" + over + "}}", over, screen);
+  expect_bad_value(R"({"type": "table", "props": {"row_count": 4000000000}})", "4000000000", screen);
+  expect_bad_value(R"({"type": "table", "props": {"column_count": )" + over + "}}", over, screen);
+  expect_bad_value(R"({"type": "table", "props": {"column_width": [)" + over + R"(, "10px"]}})",
+                   "[" + over + R"(, "10px"])", screen);
+  expect_bad_value(R"({"type": "table", "props": {"cell_ctrl": [0, )" + over + R"(, "merge_right"]}})",
+                   "[0, " + over + R"(, "merge_right"])", screen);
+  expect_bad_value(R"({"type": "table", "props": {"cell_ctrl": [)" + over + R"(, 0, "merge_right"]}})",
+                   "[" + over + R"(, 0, "merge_right"])", screen);
+  check(free_bytes() == heap);
+}
+
+// A chart's points are limited. A document cannot add a series, but its program
+// can: then LVGL reallocates the series to the new count, and when that failed
+// (100000000 points) the next refresh read the null array.
+void limit_chart_points(lv::obj screen) {
+  constexpr auto most = lv::detail::most_chart_points;
+  // The limit the header documents: a chart takes 1024 points, a table 64 rows.
+  check(counted::load(R"({"type": "chart", "props": {"point_count": 1024}})", screen).has_value());
+  check(counted::load(R"({"type": "table", "props": {"row_count": 64, "column_count": 64}})", screen).has_value());
+  auto chart = counted::load(R"({"type": "chart", "id": "c", "props": {"size": ["300px", "100px"],
+      "point_count": )" + std::to_string(most) + "}}",
+                             screen);
+  check(chart.has_value());
+  if (!chart) return;
+  check(lv_chart_add_series(chart->find("c").raw(), lv_color_hex(0xff0000), LV_CHART_AXIS_PRIMARY_Y) != nullptr);
+  lv_refr_now(nullptr);
+  for (const std::string& count : {std::to_string(most + 1), std::string("100000000")}) {
+    const std::string patch = R"({"c": {"point_count": )" + count + "}}";
+    const auto r = chart->apply(patch);  // the failure is a view into the patch
+    check(!r && r.error().error == lv::load_error::bad_value && r.error().at == count);
+  }
+  lv_refr_now(nullptr);
+  check(lv_chart_get_point_count(chart->find("c").raw()) == most);
+}
+
+// The other counts need no limit, and get none. LVGL keeps a scale's ticks in 15
+// bits and draws at most 32767 division lines of a chart (an int16_t loop), so
+// the largest counts draw without a crash, in a fraction of a second.
+void capability_other_counts_take_their_whole_type(lv::obj screen) {
+  lv_refr_now(nullptr);  // the first refresh allocates what every later one reuses
+  const auto heap = free_bytes();
+  for (const char* most : {"32767", "4294967295"}) {
+    const std::string n = most;
+    auto chart = counted::load(R"({"type": "chart", "id": "c", "props": {"size": ["300px", "100px"],
+        "div_line_count": [)" + n + ", " + n + "]}}",
+                               screen);
+    auto scale = counted::load(R"({"type": "scale", "id": "s", "props": {"size": ["300px", "60px"],
+        "total_tick_count": )" + n + R"(, "major_tick_every": )" + n + "}}",
+                               screen);
+    check(chart.has_value() && scale.has_value());
+    if (chart && scale) {
+      lv_refr_now(nullptr);  // lays out and draws both
+      check(std::to_string(lv_chart_get_hor_div_line_count(chart->find("c").raw())) == n);
+    }
+  }
+  check(free_bytes() == heap);
+}
+
+// A setter's parameter type is checked, not only the property's: a negative angle
+// for lv_scale_set_angle_range(uint32_t) would arrive as about four billion.
+// Without the check such a widget did not even compile in an lv::runtime.
+void defect_unsigned_parameter_refuses_negative(lv::obj screen) {
+  auto fits = counted::load(R"({"type": "scale", "id": "s", "props": {"angle_range": 270}})", screen);
+  check(fits.has_value() && lv_scale_get_angle_range(fits->find("s").raw()) == 270);
+  expect_bad_value(R"({"type": "scale", "props": {"angle_range": -1}})", "-1", screen);
+  expect_bad_value(R"({"type": "scale", "props": {"angle_range": "-90deg"}})", R"("-90deg")", screen);
+}
+
+// A document is read in one pass. Each loop over members or children used to
+// count them and then find number i from the start: 10000 members of "props"
+// took 141 s in the Debug build. Now that takes well under a second, so the
+// bound below holds on a loaded machine and under the sanitizers, and the old
+// code misses it by minutes.
+void limit_document_is_read_in_linear_time(lv::obj screen) {
+  constexpr std::size_t members = 20000;
+  constexpr std::size_t children = 2000;
+  constexpr auto bound = std::chrono::seconds{10};
+  std::string props;
+  for (std::size_t i = 0; i < members; ++i) props += i == 0 ? R"("value": 1)" : R"(, "value": 1)";
+  std::string kids;
+  for (std::size_t i = 0; i < children; ++i) kids += i == 0 ? R"({"type": "obj"})" : R"(, {"type": "obj"})";
+  std::string patch;
+  for (std::size_t i = 0; i < members; ++i) patch += i == 0 ? R"("a": {"value": 2})" : R"(, "a": {"value": 2})";
+  const std::string doc = R"({"type": "arc", "id": "a", "props": {)" + props + R"(}, "children": [)" + kids + "]}";
+
+  const auto start = std::chrono::steady_clock::now();
+  auto loaded = ui::load(doc, screen);
+  check(loaded.has_value());
+  if (loaded) {
+    check(lv_obj_get_child_count(loaded->root().raw()) == children);
+    check(loaded->apply("{" + patch + "}").has_value());
+    check(lv::view<"arc">{loaded->find("a").raw()}.get<"value">() == 2);
+  }
+  check(std::chrono::steady_clock::now() - start < bound);
+}
+
+// A number too large for the integer it becomes, or not a number at all, is a bad
+// value. The cast of such a double is undefined: 1e99 for a width became
+// INT32_MAX on Arm, and only -fsanitize=float-cast-overflow
+// reported it. 0e999 is zero times infinity: NaN.
+void defect_number_outside_integer_is_refused(lv::obj screen) {
+  const auto heap = free_bytes();
+  const auto refused = [&](std::string_view doc, std::string_view at) {
+    const auto r = ui::load(doc, screen);
+    check(!r.has_value() && r.error().error == lv::load_error::bad_value && r.error().at == at);
+  };
+  refused(R"({"type": "obj", "props": {"size": [1e99, "10px"]}})", R"([1e99, "10px"])");
+  refused(R"({"type": "obj", "props": {"width": "99999999999999999999px"}})", R"("99999999999999999999px")");
+  refused(R"({"type": "obj", "props": {"width": "-99999999999%"}})", R"("-99999999999%")");
+  refused(R"({"type": "obj", "props": {"width": 0e999}})", "0e999");
+  refused(R"({"type": "arc", "props": {"value": 1e99}})", "1e99");
+  refused(R"({"type": "arc", "props": {"value": -1e99}})", "-1e99");
+  refused(R"({"type": "arc", "props": {"value": 0e999}})", "0e999");
+  refused(R"({"type": "arc", "props": {"value": 1e999}})", "1e999");
+  refused(R"({"type": "arc", "props": {"value": 2147483648}})", "2147483648");
+  refused(R"({"type": "arc", "props": {"value": -2147483649}})", "-2147483649");
+  refused(R"({"type": "arc", "props": {"value": -1.5}})", "-1.5");  // a fraction below zero too
+  refused(R"({"type": "arc", "props": {"rotation": -1e99}})", "-1e99");
+  refused(R"({"type": "arc", "props": {"rotation": 0e999}})", "0e999");
+  refused(R"({"type": "obj", "props": {"style": {"anim_duration": 0e999}}})", "0e999");
+  refused(R"({"type": "obj", "props": {"style": {"anim_duration": "99999999999s"}}})", R"("99999999999s")");
+  refused(R"({"type": "obj", "props": {"style": {"bg_opa": "99999999999%"}}})", R"("99999999999%")");
+  // The extremes of the integer itself still fit.
+  auto extremes = ui::load(R"({"type": "column", "children": [
+      {"type": "arc", "id": "high", "props": {"range": [-2147483648, 2147483647], "value": 2147483647}},
+      {"type": "arc", "id": "low", "props": {"range": [-2147483648, 2147483647], "value": -2147483648}}]})",
+                           screen);
+  check(extremes.has_value());
+  if (extremes) {
+    check(lv::view<"arc">{extremes->find("high").raw()}.get<"value">() == 2147483647);
+    check(lv::view<"arc">{extremes->find("low").raw()}.get<"value">() == -2147483648);
+  }
+  extremes = {};
+  check(free_bytes() == heap);
+}
+
 }  // namespace
 
 int main() {
@@ -294,6 +476,21 @@ int main() {
   static_assert(lv::detail::rounded_i32(-1.5) == -2 && lv::detail::rounded_i32(-2.4) == -2);
   static_assert(lv::detail::rounded_i32(-0.4) == 0 && lv::detail::rounded_i32(0) == 0);
   static_assert(lv::detail::rounded_i32(0.6) == 1 && lv::detail::rounded_i32(0.4) == 0);
+  // A cast to an integer is defined when the whole part fits, and never for NaN.
+  static_assert(lv::detail::castable_to<std::int32_t>(2147483647.9));
+  static_assert(!lv::detail::castable_to<std::int32_t>(2147483648.0));
+  static_assert(lv::detail::castable_to<std::int32_t>(-2147483648.9));
+  static_assert(!lv::detail::castable_to<std::int32_t>(-2147483649.0));
+  static_assert(lv::detail::castable_to<std::uint32_t>(-0.9) && !lv::detail::castable_to<std::uint32_t>(-1.0));
+  static_assert(lv::detail::castable_to<std::uint32_t>(4294967295.0));
+  static_assert(!lv::detail::castable_to<std::uint32_t>(4294967296.0));
+  static_assert(!lv::detail::castable_to<std::int32_t>(std::numeric_limits<double>::quiet_NaN()));
+  static_assert(!lv::detail::castable_to<std::int32_t>(std::numeric_limits<double>::infinity()));
+  static_assert(!lv::detail::castable_to<std::int32_t>(-std::numeric_limits<double>::infinity()));
+  static_assert(lv::detail::rounded_i32(2147483646.5) == 2147483647);
+  static_assert(!lv::detail::rounded_i32(2147483647.5));
+  static_assert(lv::detail::rounded_i32(-2147483647.5) == -2147483648);
+  static_assert(!lv::detail::rounded_i32(-2147483648.5));
   // The tables of properties have no empty slot either.
   static_assert(std::ranges::none_of(lv::detail::property_table<"obj">,
                                      [](const auto& e) { return e.name.empty(); }));
@@ -314,6 +511,12 @@ int main() {
   // The first run allocates a few bytes once, so only the second is held to the heap it began with.
   rejects(screen, false);
   rejects(screen, true);
+  limit_table_rows_and_columns(screen);
+  limit_chart_points(screen);
+  capability_other_counts_take_their_whole_type(screen);
+  defect_unsigned_parameter_refuses_negative(screen);
+  defect_number_outside_integer_is_refused(screen);
+  limit_document_is_read_in_linear_time(screen);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");

@@ -4,15 +4,15 @@
 // it reads one input file, which is how AFL++ drives it (fuzz/afl.sh mcp_message).
 //
 // The input is a session: one message per line. Whatever the lines are, every
-// answer must be one line of well-formed JSON with "jsonrpc" in it, and nothing may
-// crash or trip a sanitizer.
+// answer must be one line of well-formed JSON in well-formed UTF-8 with "jsonrpc" in
+// it, and nothing may crash or trip a sanitizer.
 //
 // Files: every line goes to two servers. One is as a host gets it by default and
 // may write no files. The other may make screenshots in a directory made for this
 // run, next to a second directory it must never reach. The first holds a file
 // (taken.png) and a symbolic link into the second (link.png). After the session
 // the file is as it was, the link is still a link, the second directory is empty,
-// and everything new in the first has the name of a PNG file.
+// and everything new in the first has the name of a PNG file and stays in the limit.
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
@@ -78,6 +78,10 @@ struct places {
                           std::filesystem::directory_iterator{}) == 2);
     for (const auto& entry : std::filesystem::directory_iterator{shots})
       require(lv::mcp::detail::usable_file_name(entry.path().filename().string()));
+    constexpr std::size_t made_here = 2;  // taken.png and link.png
+    require(static_cast<std::size_t>(std::distance(std::filesystem::directory_iterator{shots},
+                                                   std::filesystem::directory_iterator{})) <=
+            made_here + lv::mcp::detail::screenshot_file_limit);
   }
 };
 
@@ -85,6 +89,7 @@ void answer(server& agent, std::string_view message) {
   const std::string reply = agent.handle(message);
   if (reply.empty()) return;  // a notification
   require(reply.find('\n') == std::string::npos);
+  require(lv::json::detail::well_formed(reply));
   const auto parsed = lv::json::value::parse(reply);
   require(parsed.has_value());
   require((*parsed)["jsonrpc"].string() == "2.0");

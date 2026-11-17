@@ -6,10 +6,13 @@
 
 #include "check.hpp"
 
+#include <csignal>
 #include <cstring>
 #include <filesystem>
 #include <string>
 #include <string_view>
+
+#include <sys/resource.h>
 
 namespace {
 
@@ -75,6 +78,57 @@ void json_text() {
   text.clear();
   lv::json::write_number(sink, std::stoll("-9223372036854775807"));
   check(text == "-9223372036854775807");
+}
+
+// The writer passes each well-formed UTF-8 character as it is and writes U+FFFD for
+// each byte that is no part of one: the bounds of every range of table 3-7, from both sides.
+void the_writer_writes_only_well_formed_utf8() {
+  const auto written = [](std::string_view bytes) {
+    std::string text;
+    auto sink = [&](std::string_view piece) { text += piece; };
+    lv::json::write_string(sink, std::string{bytes});
+    return text.substr(1, text.size() - 2);
+  };
+  const auto replaced = [](std::size_t bytes) {
+    std::string text;
+    for (std::size_t i = 0; i < bytes; ++i) text += "\xef\xbf\xbd";
+    return text;
+  };
+  for (const char* character :
+       {"\x7f", "\xc2\x80", "\xdf\xbf", "\xe0\xa0\x80", "\xe0\xbf\xbf", "\xe1\x80\x80", "\xec\xbf\xbf",
+        "\xed\x80\x80", "\xed\x9f\xbf", "\xee\x80\x80", "\xef\xbf\xbf", "\xf0\x90\x80\x80", "\xf0\xbf\xbf\xbf",
+        "\xf1\x80\x80\x80", "\xf3\xbf\xbf\xbf", "\xf4\x80\x80\x80", "\xf4\x8f\xbf\xbf", "\xf0\x9f\x98\x80"}) {
+    check(written(character) == character);
+    check(lv::json::detail::well_formed(std::string{character}));
+  }
+  for (const char* broken :
+       {"\x80", "\xbf", "\xc0\x80", "\xc1\xbf", "\xe0\x9f\xbf", "\xe0\xc0\x80", "\xed\xa0\x80", "\xed\xbf\xbf",
+        "\xf0\x8f\xbf\xbf", "\xf0\xc0\x80\x80", "\xf4\x90\x80\x80", "\xf5\x80\x80\x80", "\xff",
+        "\xc2\xc0", "\xe1\x80\xc0", "\xf1\x80\x80\xc0", "\xf1\x80\xc0\x80"}) {
+    check(written(broken) == replaced(std::strlen(broken)));
+    check(!lv::json::detail::well_formed(std::string{broken}));
+  }
+  // A character cut short at the end, and one cut by an ASCII byte.
+  check(written(std::string{"a\xc3"}) == "a" + replaced(1));
+  check(written(std::string{"\xe2\x82"}) == replaced(2));
+  check(written(std::string{"\xf0\x9f\x98"}) == replaced(3));
+  check(written(std::string{"\xc2\x7f"}) == replaced(1) + "\x7f");
+  check(written(std::string{"\xe1\x7f\x80"}) == replaced(1) + "\x7f" + replaced(1));
+  check(written(std::string{"\xf4\x7f\x80\x80"}) == replaced(1) + "\x7f" + replaced(2));
+  check(written(std::string{"\xf1\x80\x80\"z"}) == replaced(3) + "\\\"z");
+  check(!lv::json::detail::well_formed(std::string{"ok\xe2\x82"}));
+  check(lv::json::detail::well_formed(std::string{}) && lv::json::detail::well_formed(std::string{"ok\xe2\x82\xac"}));
+
+  // A cut steps back to the start of the character it would split.
+  using lv::json::detail::utf8_prefix;
+  const std::string euro = "ab\xe2\x82\xac";
+  check(utf8_prefix(euro, 2) == "ab" && utf8_prefix(euro, 3) == "ab" && utf8_prefix(euro, 4) == "ab");
+  check(utf8_prefix(euro, 5) == euro && utf8_prefix(euro, 9) == euro && utf8_prefix(euro, 0).empty());
+  const std::string emoji = "a\xf0\x9f\x98\x80z";
+  check(utf8_prefix(emoji, 4) == "a" && utf8_prefix(emoji, 5) == "a\xf0\x9f\x98\x80");
+  // No further than one character reaches, whatever the bytes are.
+  const std::string continuations(8, '\x80');
+  check(utf8_prefix(continuations, 4).size() == 1 && utf8_prefix(continuations, 3).empty());
 }
 
 void tree_dump(lv::obj screen) {
@@ -528,6 +582,100 @@ void refuses(lv::obj screen) {
   check(!has(long_error, std::string(199, 'x')));
 }
 
+constexpr std::string_view replacement = "\xef\xbf\xbd";  // U+FFFD in UTF-8
+
+// A strict JSON client rejects a reply that is not UTF-8, so text from the client
+// goes back well-formed: a character intact, a byte that is no character replaced.
+void replies_are_well_formed_utf8(lv::obj screen) {
+  server agent{screen};
+  const auto message_of = [&](std::string_view reply) {
+    return std::string{lv::json::value{reply}["error"]["message"].string()};
+  };
+  // A valid emoji in a tool name echoes intact; an invalid byte becomes the replacement.
+  const auto emoji = agent.handle(call("4", "\xf0\x9f\x98\x80", "{}"));
+  check(one_json_line(emoji) && message_of(emoji) == "Unknown tool: \xf0\x9f\x98\x80");
+  const auto broken = agent.handle(call("4", "x\xff\xc3", "{}"));
+  check(one_json_line(broken) &&
+        message_of(broken) == "Unknown tool: x" + std::string{replacement} + std::string{replacement});
+  // An id goes back as written, so one that is not UTF-8 is refused.
+  const auto bad_id = agent.handle("{\"jsonrpc\":\"2.0\",\"id\":\"a\xff\",\"method\":\"ping\"}");
+  check(one_json_line(bad_id) && lv::json::value{bad_id}["error"]["code"].number() == -32600);
+  check(lv::json::value{bad_id}["id"].text() == "null" && !has(bad_id, "\xff"));
+  // An excerpt is cut before a character, not inside it: here 197 x and a euro sign
+  // that would straddle the cut.
+  const auto cut = agent.handle(call("5", "load_document",
+      R"({"document": {"type": "label", "props": {"text": [")" + std::string(197, 'x') +
+          "\xe2\x82\xac" + std::string(300, 'y') + "\"]}}}"));
+  check(one_json_line(cut) && has(cut, R"(bad_value: [\")" + std::string(197, 'x') + "\"}"));
+  check(!has(cut, "\xe2") && !has(cut, replacement));
+}
+
+// A client cannot fill the directory the host allows: a server writes a limited
+// number of screenshot files, and then refuses with a reason the agent can read.
+void screenshot_files_stop_at_the_limit(lv::obj screen, const std::string& dir) {
+  const std::string shots = dir + "/screenshot_limit";
+  std::filesystem::remove_all(shots);
+  std::filesystem::create_directory(shots);
+  const auto limit = lv::mcp::detail::screenshot_file_limit;
+  {
+    server agent{screen, {.screenshot_directory = shots}};
+    // A refused name does not count.
+    check(has(agent.handle(call("1", "screenshot", R"({"name": "x.txt"})")), "must be a file name"));
+    for (std::size_t i = 0; i < limit; ++i)
+      check(has(agent.handle(call("1", "screenshot", R"({"name": "shot)" + std::to_string(i) + R"(.png"})")),
+                R"("isError":false)"));
+    const auto refused = agent.handle(call("2", "screenshot", R"({"name": "one_more.png"})"));
+    check(one_json_line(refused) && has(refused, R"("isError":true)"));
+    check(has(refused, "has written its " + std::to_string(limit) + " screenshot files"));
+    // A picture without a file is still returned.
+    check(has(agent.handle(call("3", "screenshot", "{}")), R"("type":"image")"));
+  }
+  const auto files = std::distance(std::filesystem::directory_iterator{shots}, std::filesystem::directory_iterator{});
+  check(files == static_cast<std::ptrdiff_t>(limit) && !std::filesystem::exists(shots + "/one_more.png"));
+  std::filesystem::remove_all(shots);
+}
+
+// While it lives, no file of this process can grow past `bytes`: a write past that
+// fails (EFBIG) instead of ending the process (SIGXFSZ).
+struct file_size_limit {
+  rlimit before{};
+  void (*handler)(int) = std::signal(SIGXFSZ, SIG_IGN);
+  explicit file_size_limit(rlim_t bytes) {
+    getrlimit(RLIMIT_FSIZE, &before);
+    const rlimit lower{.rlim_cur = bytes, .rlim_max = before.rlim_max};
+    setrlimit(RLIMIT_FSIZE, &lower);
+  }
+  file_size_limit(const file_size_limit&) = delete;
+  file_size_limit& operator=(const file_size_limit&) = delete;
+  ~file_size_limit() {
+    setrlimit(RLIMIT_FSIZE, &before);
+    std::signal(SIGXFSZ, handler);
+  }
+};
+
+// A screenshot whose file was made but could not be written still counts: the file
+// stays in the directory, so the limit on files must hold for it too.
+void screenshot_files_that_fail_to_write_count_to_the_limit(lv::obj screen, const std::string& dir) {
+  const std::string shots = dir + "/screenshot_limit_failed";
+  std::filesystem::remove_all(shots);
+  std::filesystem::create_directory(shots);
+  const auto limit = lv::mcp::detail::screenshot_file_limit;
+  {
+    server agent{screen, {.screenshot_directory = shots}};
+    {
+      const file_size_limit full{0};
+      for (std::size_t i = 0; i < limit; ++i)
+        check(has(agent.handle(call("1", "screenshot", R"({"name": "shot)" + std::to_string(i) + R"(.png"})")),
+                  "cannot_write"));
+    }
+    const auto refused = agent.handle(call("2", "screenshot", R"({"name": "one_more.png"})"));
+    check(has(refused, R"("isError":true)") && has(refused, "screenshot files"));
+  }
+  const auto files = std::distance(std::filesystem::directory_iterator{shots}, std::filesystem::directory_iterator{});
+  check(files == static_cast<std::ptrdiff_t>(limit) && !std::filesystem::exists(shots + "/one_more.png"));
+  std::filesystem::remove_all(shots);
+}
+
 // The loop over a stream: one answer per request, none for the rest.
 void lines() {
   std::FILE* in = std::tmpfile();
@@ -565,6 +713,83 @@ void lines() {
   if (silence != nullptr) std::fclose(silence);
 }
 
+// What serve() writes for `input`, read through a temporary file as from stdin.
+std::string served(server& agent, std::string_view input) {
+  std::FILE* in = std::tmpfile();
+  std::FILE* out = std::tmpfile();
+  check(in != nullptr && out != nullptr);
+  std::string written;
+  if (in != nullptr && out != nullptr) {
+    std::fwrite(input.data(), 1, input.size(), in);
+    std::rewind(in);
+    agent.serve(in, out);
+    std::rewind(out);
+    for (int c = std::fgetc(out); c != EOF; c = std::fgetc(out)) written.push_back(static_cast<char>(c));
+  }
+  if (in != nullptr) std::fclose(in);
+  if (out != nullptr) std::fclose(out);
+  return written;
+}
+
+constexpr std::string_view ping_one = R"({"jsonrpc":"2.0","id":1,"method":"ping"})";
+constexpr std::string_view pong_one = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n";
+
+// `message` padded with spaces to `size` bytes: still the same JSON.
+std::string padded(std::string_view message, std::size_t size) {
+  std::string line{message};
+  line.resize(size, ' ');
+  return line;
+}
+
+// A client that never ends a line cannot make the server hold all it sends: a line
+// over the limit is dropped up to its line feed and answered with one error, and the
+// session goes on.
+void a_line_over_the_limit_is_refused_and_the_session_goes_on() {
+  server agent{lv::screen_active()};
+  const auto limit = lv::mcp::detail::line_limit;
+  const std::string refused =
+      "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":"
+      "\"Invalid Request: a message is longer than " + std::to_string(limit) + " bytes\"}}\n";
+
+  // A line exactly at the limit is read, with a line feed or at the end of the stream.
+  check(served(agent, padded(ping_one, limit) + "\n") == pong_one);
+  check(served(agent, padded(ping_one, limit)) == pong_one);
+  // One byte more is refused, and the next request is answered.
+  check(served(agent, padded(ping_one, limit + 1) + "\n" + std::string{ping_one} + "\n") ==
+        refused + std::string{pong_one});
+  // A line that never ends gets its one error, then the stream ends.
+  check(served(agent, std::string(limit * 2, 'x')) == refused);
+  // A tool call after an oversize line still works.
+  const std::string after = served(agent, std::string(limit + 1, '{') + "\n" + call("2", "dump_tree", "{}") + "\n");
+  check(after.starts_with(refused) && has(after, R"("id":2,"result":{"content":[{"type":"text")"));
+}
+
+// The line reader takes bytes from anything that gives them, here a text in memory,
+// and keeps no more than the limit of a line, whatever comes.
+void the_line_reader_keeps_at_most_the_limit() {
+  using lv::mcp::detail::line_status;
+  constexpr std::size_t limit = 4;
+  std::string_view input = "abcd\nabcde\n\nab\r\nabcdefgh";
+  auto next = [&input] {
+    if (input.empty()) return EOF;
+    const auto c = static_cast<unsigned char>(input.front());
+    input.remove_prefix(1);
+    return static_cast<int>(c);
+  };
+  std::string line;
+  const auto read = [&](line_status expected, std::string_view text) {
+    check(lv::mcp::detail::read_line(next, line, limit) == expected && line.size() <= limit);
+    check(expected == line_status::too_long || line == text);
+  };
+  read(line_status::line, "abcd");
+  read(line_status::too_long, "");
+  read(line_status::line, "");
+  read(line_status::line, "ab\r");
+  read(line_status::too_long, "");
+  read(line_status::end, "");
+  read(line_status::end, "");
+}
+
 void base64() {
   const auto encode = [](std::string_view text) {
     std::string out;
@@ -592,6 +817,7 @@ int main(int argc, char** argv) {
   auto screen = lv::screen_active();
 
   json_text();
+  the_writer_writes_only_well_formed_utf8();
   values();
   base64();
   tree_dump(screen);
@@ -600,7 +826,12 @@ int main(int argc, char** argv) {
   agent_changes_the_screen(screen, dir);
   requests_with_their_own_metadata(screen);
   refuses(screen);
+  replies_are_well_formed_utf8(screen);
+  screenshot_files_stop_at_the_limit(screen, dir);
+  screenshot_files_that_fail_to_write_count_to_the_limit(screen, dir);
   lines();
+  a_line_over_the_limit_is_refused_and_the_session_goes_on();
+  the_line_reader_keeps_at_most_the_limit();
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
