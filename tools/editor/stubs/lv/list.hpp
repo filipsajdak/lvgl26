@@ -82,10 +82,11 @@ struct field_type<char[M]> {
   using type = const char*;
 };
 
-/// What lv::each takes after the key: {.on_row = &start}.
+/// What lv::each takes after the key: {.on_row = &start, .selected = lv::bind(current)}.
 template <class T, class K>
 struct each_options {
   void (*on_row)(obj row, const T& value) = nullptr;
+  binding<K> selected{};
 };
 
 template <class S, class T, class K, class... Row>
@@ -119,7 +120,7 @@ consteval detail::row_formatted_binding<F> bind(F C::*, text_format) {
 
 /// A row of the row template for each row of `rows`, named by the key `key`:
 ///   lv::each(tracks, &track::id)[row template]
-///   lv::each(tracks, &track::id, {.on_row = &start})[row template]
+///   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)})[row template]
 template <class S, class T, class K>
   requires std::same_as<typename S::value_type, T>
 constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::each_options<T, K> options = {}) {

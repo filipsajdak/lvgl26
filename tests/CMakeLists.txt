@@ -51,6 +51,8 @@ endforeach()
 target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(computed)
 lvgl26_test(lists)
+lvgl26_test(lists_selection)
+target_link_libraries(lists_selection PRIVATE lvgl26_test_data)
 # An index out of range, or a list changed while its views follow a change, ends the program.
 foreach(case index erase move move_from_end move_from_far move_to_end insert set telling)
   add_test(NAME lists_violation_${case}
@@ -298,6 +300,8 @@ lvgl26_compile_fail(row_field_wrong_property "this property cannot be bound to a
 lvgl26_compile_fail(row_field_two_values "takes more than one value and cannot follow a field of a row")
 lvgl26_compile_fail(row_view_unknown_id "the row template has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(row_template_duplicate_id "the id 'a' is used twice in one row template")
+lvgl26_compile_fail(each_selected_wrong_type ".selected follows the key of the selected row. Bind a state of the key's type")
+lvgl26_compile_fail(each_selected_and_checked ".selected gives the selected row the checked state, and this row template sets .checked itself")
 lvgl26_compile_fail(props_without_braces "made_with_braces")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a width or x .*You gave int")

@@ -48,7 +48,9 @@
 //   quantity, a named value, an enum, a bool, a color or a pointer. lv::bind(&track::plays,
 //   "{} plays") formats a number. A state bound in a row template works as anywhere else.
 //
-//   .on_row = &start is called with each row that is built.
+//   .selected = lv::bind(current) makes a state of the key's type follow the selected row: a
+//   click or the focus selects a row, and the selected row is `checked`, so the row template
+//   styles it with .style_checked. .on_row = &start is called with each row that is built.
 //
 // What happens to a row when it goes
 //
@@ -781,10 +783,25 @@ namespace detail {
 
 // ---- lv::each ------------------------------------------------------------------
 
-// What lv::each takes after the key, all optional: {.on_row = &start}.
+// The selected row's key, as a binding to a state of the key's type: lv::bind(current).
+template <class K>
+struct selection {
+  binding<K> state{};
+
+  constexpr selection() = default;
+  template <class U>
+  constexpr selection(binding<U> b) : state{b.source, b.subject} {
+    static_assert(std::same_as<U, K>,
+                  "lv: .selected follows the key of the selected row. Bind a state of the key's "
+                  "type: `constinit lv::state<track_id> current{};`, then .selected = lv::bind(current).");
+  }
+};
+
+// What lv::each takes after the key, all optional: {.on_row = &start, .selected = lv::bind(current)}.
 template <class T, class K>
 struct each_options {
   void (*on_row)(obj row, const T& value) = nullptr;  // called with each row that is built
+  selection<K> selected{};                            // the state that follows the selected row
 };
 
 template <class S, class T, class K, class... Row>
@@ -801,6 +818,15 @@ class each_view;
 template <const auto& Tree, std::size_t... Path>
 struct each_parts;
 
+// Whether the root of a row template sets .checked: the state that .selected gives.
+template <class Node>
+consteval bool sets_checked(const Node& n) {
+  if constexpr (requires { n.p.checked; })
+    return n.p.checked.set;
+  else
+    return false;
+}
+
 // What a view needs of the list it shows and of its row template: one table for each lv::each
 // of a program, made at compile time. The logic is in each_view, which is no template, so
 // a program has its code once, however many lists it shows.
@@ -815,6 +841,7 @@ struct each_kind {
   lv_obj_t* (*build)(lv_obj_t* outlet, const void* row);
   void (*apply)(lv_obj_t* widgets, const void* row);  // sets the fields of a row again
   void (*on_row)(lv_obj_t* widgets, const void* row);  // .on_row, or null
+  lv_subject_t* (*selection)();                        // the state of .selected, or null
 };
 
 // The block that lv::each keeps for one view: it follows the list and keeps the key of each
@@ -828,6 +855,8 @@ class each_view : list_watcher {
   std::size_t first_;
   std::size_t shown_ = 0;
   bool broken_ = false;           // LVGL had no memory to follow a reset: no rows are shown
+  lv_obj_t* selected_ = nullptr;  // the row in the checked state
+  bool quiet_ = false;            // the view deletes a row: the focus that LVGL moves selects nothing
   std::int32_t* keys_;            // capacity + 1: a row with a new key is built before the old goes
 
   each_view(const each_kind& kind, const void* rows, lv_obj_t* outlet, std::int32_t* keys)
@@ -853,7 +882,7 @@ class each_view : list_watcher {
       return false;
     }
     kind.watchers(rows).link(self);
-    return self->fill();
+    return self->follow_selection() && self->fill();
   }
 
  private:
@@ -871,6 +900,8 @@ class each_view : list_watcher {
   // Lets go of the list, and of the rows, which LVGL deletes after this.
   void close() {
     if (rows_ != nullptr) kind_->watchers(rows_).unlink(this);
+    if (kind_->selection == nullptr) return;
+    for (std::size_t i = 0; i < shown_; ++i) lv_obj_remove_event_cb_with_user_data(row(i), &each_view::on_row_event, this);
   }
 
   static bool follow(list_watcher* w, const list_change& c) {
@@ -926,16 +957,25 @@ class each_view : list_watcher {
     const void* value = value_at(at);
     lv_obj_t* w = kind_->build(outlet_, value);
     if (w == nullptr) return false;
+    if (!hook(w)) {
+      lv_obj_delete(w);
+      return false;
+    }
     lv_obj_move_to_index(w, static_cast<std::int32_t>(first_ + at));
     shift(keys_, shown_, at);
     keys_[at] = kind_->key(value);
     ++shown_;
+    mark(w, at);
     if (kind_->on_row != nullptr) kind_->on_row(w, value);
     return true;
   }
 
   void erase_row(std::size_t at) {
-    lv_obj_delete(row(at));
+    lv_obj_t* w = row(at);
+    if (w == selected_) selected_ = nullptr;
+    quiet_ = true;
+    lv_obj_delete(w);
+    quiet_ = false;
     shift(keys_, at, shown_ - 1);
     --shown_;
   }
@@ -1001,6 +1041,56 @@ class each_view : list_watcher {
     kind_->apply(row(i), value_at(i));
     return true;
   }
+
+  // ---- selection ----
+
+  // Follows the state of .selected, if there is one.
+  bool follow_selection() {
+    if (kind_->selection == nullptr) return true;
+    lv_subject_t* s = kind_->selection();
+    return s != nullptr && lv_subject_add_observer_obj(s, &each_view::on_selected, outlet_, this) != nullptr;
+  }
+
+  // Lets a click or the focus select the row `w`.
+  bool hook(lv_obj_t* w) {
+    if (kind_->selection == nullptr) return true;
+    return lv_obj_add_event_cb(w, &each_view::on_row_event, LV_EVENT_ALL, this) != nullptr;
+  }
+
+  // Gives row `w`, at `at`, the checked state if its key is the selected one.
+  void mark(lv_obj_t* w, std::size_t at) {
+    if (kind_->selection == nullptr) return;
+    lv_subject_t* s = kind_->selection();
+    if (s != nullptr && lv_subject_get_int(s) == keys_[at]) select_row(w);
+  }
+
+  void select_row(lv_obj_t* w) {
+    if (w == selected_) return;
+    if (selected_ != nullptr) lv_obj_remove_state(selected_, LV_STATE_CHECKED);
+    if (w != nullptr) lv_obj_add_state(w, LV_STATE_CHECKED);
+    selected_ = w;
+  }
+
+  // The selected key changed: the checked state moves to its row, or to none.
+  static void on_selected(lv_observer_t* o, lv_subject_t* s) {
+    auto* self = static_cast<each_view*>(lv_observer_get_user_data(o));
+    const std::int32_t k = lv_subject_get_int(s);
+    lv_obj_t* w = nullptr;
+    for (std::size_t i = 0; i < self->shown_ && w == nullptr; ++i)
+      if (self->keys_[i] == k) w = self->row(i);
+    self->select_row(w);
+  }
+
+  // A click on a row, or the focus moving to it, selects it.
+  static void on_row_event(lv_event_t* e) {
+    const lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_CLICKED && code != LV_EVENT_FOCUSED) return;
+    auto* self = static_cast<each_view*>(lv_event_get_user_data(e));
+    if (self->quiet_) return;
+    lv_obj_t* w = lv_event_get_current_target_obj(e);
+    const auto at = static_cast<std::size_t>(lv_obj_get_index(w)) - self->first_;
+    if (lv_subject_t* s = self->kind_->selection()) lv_subject_set_int(s, self->keys_[at]);
+  }
 };
 
 // The table of one lv::each: the node at Path of `Tree`.
@@ -1031,8 +1121,18 @@ struct each_parts {
   static void apply(lv_obj_t* w, const void* row) { apply_row<Tree, Path..., 0>(w, row); }
   static void on_row(lv_obj_t* w, const void* row) { node.options.on_row(obj{w}, *static_cast<const row_type*>(row)); }
 
+  static_assert(is_null(node.options.selected.state.source) || !sets_checked(descend<Path..., 0>(Tree)),
+                "lv: .selected gives the selected row the checked state, and this row template sets "
+                ".checked itself. Keep one of them.");
+
+  static lv_subject_t* selection() {
+    const auto& b = node.options.selected.state;
+    return b.subject(b.source);
+  }
+
   static constexpr each_kind kind{source::capacity(), &size, &at, &key, &watchers, &build_row, &apply,
-                                  is_null(node.options.on_row) ? nullptr : &on_row};
+                                  is_null(node.options.on_row) ? nullptr : &on_row,
+                                  is_null(node.options.selected.state.source) ? nullptr : &selection};
 };
 
 template <class S, class T, class K, class... Row>
@@ -1065,7 +1165,7 @@ struct each_node {
 
 // A row of the row template for each row of `rows`, named by the key `key`. See the top of this file.
 //   lv::each(tracks, &track::id)[row template]
-//   lv::each(tracks, &track::id, {.on_row = &start})[row template]
+//   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)})[row template]
 template <detail::row_source S, class T, class K>
   requires std::same_as<typename S::value_type, T>
 constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::each_options<T, K> options = {}) {

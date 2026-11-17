@@ -374,12 +374,13 @@ struct track {
 };
 
 constinit lv::list<track, 8> tracks;
+constinit lv::state picked{track_id{0}};
 void row_built(lv::obj, const track&) {}
 
 constexpr auto track_row = lv::row[lv::label({.id = "title", .text = lv::bind(&track::title)}),
                                    lv::label({.text = lv::bind(&track::plays, "{} plays")})];
 constexpr auto playlist = lv::column[
-    lv::each(tracks, &track::id, {.on_row = &row_built})[track_row]];
+    lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)})[track_row]];
 
 static_assert(std::same_as<decltype(lv::bind(&track::title)), lv::detail::row_binding<const char*>>);
 static_assert(std::same_as<decltype(lv::bind(&track::plays, "{} plays")), lv::detail::row_formatted_binding<lv::counter>>);
