@@ -50,7 +50,9 @@ constexpr auto ui = lv::column({.flex_align = {"center", "end", "space_between"}
                                 .size = {200 * px, 100 * px}})[
     lv::label({.align = "bottom_right", .id = "corner", .style = look, .text = "x"}),
     lv::label({.id = "plain", .text = "y"}),
-    lv::image({.id = "picture", .inner_align = "top_left"})];
+    lv::image({.id = "picture", .inner_align = "top_left"}),
+    // A name beside a value of another kind: lv_roller_set_options takes a text, then a mode.
+    lv::roller({.id = "days", .options = {"Mon\nTue\nWed", "infinite"}})];
 
 void names_reach_lvgl() {
   auto screen = lv::screen_active();
@@ -79,12 +81,40 @@ void names_reach_lvgl() {
   check(lv_image_get_inner_align(picture.raw()) == LV_IMAGE_ALIGN_COVER);
 }
 
+// The other values beside a name need not be constants: only the name is read at
+// compile time.
+void names_beside_values() {
+  auto screen = lv::screen_active();
+  auto root = lv::mount<ui>(screen);
+  check(root.has_value());
+  auto days = root->get<"days">();
+  check(lv_roller_get_option_count(days.raw()) == 3);
+  // An infinite roller repeats its options; a normal one does not.
+  check(std::string_view{lv_roller_get_options(days.raw())}.starts_with("Mon\nTue\nWed\nMon"));
+
+  char months[] = "Jan\nFeb";
+  const char* given = months;
+  days.set({.options = {given, "normal"}});
+  check(lv_roller_get_option_count(days.raw()) == 2);
+  check(std::string_view{lv_roller_get_options(days.raw())} == "Jan\nFeb");
+
+  // A name, a C enumerator and a value made at run time may be mixed.
+  auto column = lv::view<"obj">{lv_obj_get_child(screen.raw(), 0)};
+  const lv_flex_align_t cross = days.raw() != nullptr ? LV_FLEX_ALIGN_START : LV_FLEX_ALIGN_END;
+  column.set({.flex_align = {"space_around", cross, "center"}});
+  check(lv_obj_get_style_flex_main_place(column.raw(), LV_PART_MAIN) == LV_FLEX_ALIGN_SPACE_AROUND);
+  check(lv_obj_get_style_flex_cross_place(column.raw(), LV_PART_MAIN) == LV_FLEX_ALIGN_START);
+  check(lv_obj_get_style_flex_track_place(column.raw(), LV_PART_MAIN) == LV_FLEX_ALIGN_CENTER);
+}
+
 }  // namespace
 
 int main() {
   lv_init();
   lv_test_display_create(320, 240);
   names_reach_lvgl();
+  lv_obj_clean(lv::screen_active().raw());
+  names_beside_values();
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;

@@ -332,6 +332,7 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
 lvgl26_compile_fail(enumerator_unknown_name "align has no value 'centre'. Its values: default, top_left")
+lvgl26_compile_fail(enumerator_unknown_name_beside_text "roller_mode has no value .endless.. Its values: normal, infinite")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
 lvgl26_compile_fail(frame_without_size "lv::frame<Width, Height>: both must be greater than 0")
 lvgl26_compile_fail(band_without_screen "lv::band<Width, Height, Lines>: the screen must be larger than 0")

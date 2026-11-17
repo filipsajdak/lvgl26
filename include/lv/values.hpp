@@ -338,6 +338,49 @@ using values = typename values_of<lowered<Ts>...>::type;
 
 }  // namespace detail
 
+namespace detail {
+
+// A text in quotes given for a parameter that takes the enum T: the name of an enumerator.
+template <class U, class T>
+concept quoted_name_for = std::is_enum_v<T> && std::is_array_v<std::remove_cvref_t<U>> &&
+                          std::same_as<std::remove_extent_t<std::remove_cvref_t<U>>, char>;
+
+// Whether one of the values Us, given for the parameters Ts, is such a name.
+template <class Ts, class Us>
+inline constexpr bool names_an_enumerator = false;
+template <class... Ts, class... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+inline constexpr bool names_an_enumerator<std::tuple<Ts...>, std::tuple<Us...>> =
+    (quoted_name_for<Us, Ts> || ...);
+
+// One value for a parameter that takes the enum E: an enumerator, or its name in quotes.
+// The name is read where it is written, so the values beside it may be made at run time.
+template <class E>
+struct enumerator_or_name {
+  E value;
+
+  constexpr enumerator_or_name(E e) : value(e) {}
+
+  template <std::size_t N>
+  consteval enumerator_or_name(const char (&name)[N]) : value(enumerator_named<E>(name)) {}
+};
+
+// What a property takes for a parameter of type T, where a name may stand for an enumerator.
+template <class T>
+using value_or_name = std::conditional_t<std::is_enum_v<T>, enumerator_or_name<T>, T>;
+
+template <class T>
+constexpr const T& given_value(const T& v) {
+  return v;
+}
+
+template <class E>
+constexpr E given_value(const enumerator_or_name<E>& v) {
+  return v.value;
+}
+
+}  // namespace detail
+
 // One member of a props struct: unset, the arguments of one setter, or a binding.
 //
 // It has no default member initializers and holds plain values, on purpose. An
@@ -365,7 +408,8 @@ struct arg {
   template <class... U>
     requires(sizeof...(U) > 0) &&
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
-                                      detail::is_binding<std::remove_cvref_t<U>>) && ...)))
+                                      detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
+            (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
       : set(true), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
@@ -377,6 +421,13 @@ struct arg {
   consteval arg(const char (&... name)[N])
       : set(true), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_subject(nullptr), bound_format(nullptr) {}
+
+  // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
+  // setter that takes a text, then an enumerator.
+  constexpr arg(detail::value_or_name<Ts>... u)
+    requires(sizeof...(Ts) > 1) && (std::is_enum_v<Ts> || ...)
+      : set(true), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
+        bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
