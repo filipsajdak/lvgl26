@@ -544,6 +544,16 @@ foreach(input ${LVGL26_MCP_CORPUS})
   add_test(NAME fuzz_corpus_mcp_${name} COMMAND fuzz_mcp_message ${input})
 endforeach()
 
+# The stream serve() reads may be any bytes, a line without end among them. Its fuzz
+# target replays its corpus here in the same way.
+add_executable(fuzz_mcp_stream ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/mcp_stream.cpp)
+target_link_libraries(fuzz_mcp_stream PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(GLOB LVGL26_STREAM_CORPUS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../fuzz/corpus/stream/*)
+foreach(input ${LVGL26_STREAM_CORPUS})
+  get_filename_component(name ${input} NAME)
+  add_test(NAME fuzz_corpus_stream_${name} COMMAND fuzz_mcp_stream ${input})
+endforeach()
+
 # ---- editor support (tools/editor, cmake/editor.cmake) -----------------------------
 #
 # The stubs that let clangd read lvgl26 code must say what the real headers say.
