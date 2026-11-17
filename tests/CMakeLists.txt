@@ -135,17 +135,18 @@ add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.pn
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
-# This file needs 5.9 million, on both LVGL versions. With nodes that held a whole
+# This file needs 5.8 million, on both LVGL versions; the limit below is 6.5 million. With nodes that held a whole
 # props struct, as they first did, it needed more than 170 million, and a tree of 100
 # widgets took the compiler 8 GB of memory. The limit leaves room for LVGL to grow,
 # not for that to come back.
 add_executable(large_tree large_tree.cpp)
 target_link_libraries(large_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
-target_compile_options(large_tree PRIVATE -fconstexpr-ops-limit=9000000)
 # Not for the analyzer: it follows every path through the 112 functions that build this
 # tree, which takes it minutes. They are the functions the small trees are built with,
-# and those it does check. A source file's options come last, after -fanalyzer.
-set_source_files_properties(large_tree.cpp PROPERTIES COMPILE_OPTIONS -fno-analyzer)
+# and those it does check. A source file's options come last, after -fanalyzer, and
+# after the limit that lvgl26 raises for its users: GCC keeps the last one it reads.
+set_source_files_properties(large_tree.cpp PROPERTIES
+  COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=6500000")
 add_test(NAME large_tree COMMAND large_tree)
 
 add_executable(tokens tokens.cpp)
