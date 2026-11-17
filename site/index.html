@@ -92,13 +92,15 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
     </div>
 
     <article class="port" id="port-slint">
-      <figure class="screen">
-        <div class="frame">
-          <img src="media/port-slint-printer.png" width="1200" height="792" alt="Four screens of the printer panel: the home page with four large action buttons and the print queue, the Copy page with its settings, the Print page with the queue, and the ink levels as four tubes.">
-        </div>
-        <figcaption>examples/ports/slint/printer/screenshot.png, four of the seven pages. Drawn by lvgl26, on the host, with no display.</figcaption>
-        <p class="cap original">Original: <a href="https://github.com/slint-ui/slint/tree/master/demos/printerdemo">Slint's printer demo</a> (MIT), with a <a href="https://slint.dev/snapshots/master/demos/printerdemo/">live simulation</a>.</p>
-      </figure>
+      <div class="shot">
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/port-slint-printer.png" width="1200" height="792" alt="Four screens of the printer panel: the home page with four large action buttons and the print queue, the Copy page with its settings, the Print page with the queue, and the ink levels as four tubes.">
+          </div>
+          <figcaption>examples/ports/slint/printer/screenshot.png, four of the seven pages. Drawn by lvgl26, on the host, with no display. tests/ports_printer.cpp compares every page with a reference picture in tests/ref/.</figcaption>
+        </figure>
+        <p class="cap original">Original: <a href="https://github.com/slint-ui/slint/tree/master/demos/printerdemo">Slint's printer demo</a> (MIT), with a <a href="https://snapshots.slint.dev/master/demos/printerdemo/">live simulation</a>.</p>
+      </div>
       <div class="prose">
         <span class="tag">From Slint</span>
         <h3>Printer panel</h3>
@@ -106,7 +108,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <dl class="spec">
           <div><dt>Came from</dt><dd>The printer demo of Slint: <code>.slint</code> files, seven pages.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/ports_printer.cpp</code> shows every page and compares it with a reference picture in <code>tests/ref/</code>.</dd></div>
-          <div><dt>To compile</dt><dd>Ten source files. None took more than 30 s or 3.1 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
+          <div><dt>To compile</dt><dd>None of the ten files measured took more than 30 s or 3.1 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
           <div><dt>Differs</dt><dd>Gradients are vertical or horizontal, and one of the original's four themes is ported. <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/slint/printer/README.md#what-differs-from-the-original">All differences</a>.</dd></div>
         </dl>
         <ul class="links">
@@ -118,11 +120,13 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
     </article>
 
     <article class="port" id="port-qt">
-      <figure class="screen">
-        <div class="frame">
-          <img src="media/port-qt-treadmill.png" width="1152" height="704" alt="Four screens of the treadmill panel: an orange splash screen with a wordmark and a slogan, then the main screen in the Light, Dark and Sporty looks, each with readings for heart rate, elevation, time, incline, speed and pace, and the buttons START, PAUSE and STOP.">
-        </div>
-        <figcaption>examples/ports/qt/treadmill/screenshot.png: the splash screen, then the Light, Dark and Sporty looks. Drawn by lvgl26, on the host, with no display.</figcaption>
+      <div class="shot">
+        <figure class="screen">
+          <div class="frame">
+            <img src="media/port-qt-treadmill.png" width="1152" height="704" alt="Four screens of the treadmill panel: an orange splash screen with a wordmark and a slogan, then the main screen in the Light, Dark and Sporty looks, each with readings for heart rate, elevation, time, incline, speed and pace, and the buttons START, PAUSE and STOP.">
+          </div>
+          <figcaption>examples/ports/qt/treadmill/screenshot.png: the splash screen, then the Light, Dark and Sporty looks. Drawn by lvgl26, on the host, with no display. tests/ports_treadmill.cpp compares every scene with a reference picture in tests/ref/.</figcaption>
+        </figure>
         <div class="versus">
           <figure class="screen">
             <div class="frame">
@@ -134,10 +138,10 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
             <div class="frame">
               <img src="media/port-qt-treadmill-sporty.png" width="250" height="150" alt="The port's Sporty look on an orange background: heart rate and elevation readings, the time 00:03, incline, pace and speed, and the buttons START, PAUSE and STOP.">
             </div>
-            <figcaption>The port, same look: tests/ref/treadmill_sporty.png, scaled to 250 x 150. The readings differ: this is the test's scene, at 00:03.</figcaption>
+            <figcaption>The port, same look: tests/ref/treadmill_sporty.png, which tests/ports_treadmill.cpp compares, scaled to 250 x 150. The readings differ: this is the test's scene, at 00:03.</figcaption>
           </figure>
         </div>
-      </figure>
+      </div>
       <div class="prose">
         <span class="tag">From Qt Quick</span>
         <h3>Treadmill panel</h3>
@@ -145,7 +149,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <dl class="spec">
           <div><dt>Came from</dt><dd><code>TreadmillMcuDemo</code> of Qt Design Studio: QML, a splash screen and one screen in three looks.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/ports_treadmill.cpp</code> shows every scene and compares it with a reference picture in <code>tests/ref/</code>. It also presses the buttons and runs the clocks.</dd></div>
-          <div><dt>To compile</dt><dd>Six source files. None took more than 52 s or 1.7 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
+          <div><dt>To compile</dt><dd>None of the six files measured took more than 52 s or 1.7 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
           <div><dt>Differs</dt><dd>The splash screen does not fade, and a look is a new tree. <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/qt/treadmill/README.md#what-differs-from-the-original">All differences</a>.</dd></div>
         </dl>
         <ul class="links">
@@ -166,14 +170,14 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <img src="media/lvgl-slider_modes.png" width="320" height="240" alt="Three sliders in the modes Normal, Symmetrical and Range.">
           <img src="media/lvgl-switch_state.png" width="320" height="240" alt="Four switches: off, on, disabled and off, disabled and on.">
         </div>
-        <figcaption>Six of the ported examples, drawn by lvgl26 from examples/lvgl/widgets/: arc_pie_chart, arc_styling, bar_styling, button_states, slider_modes and switch_state, 320 x 240 each.</figcaption>
+        <figcaption>Six of the ported examples, drawn by lvgl26 from examples/lvgl/widgets/: arc_pie_chart, arc_styling, bar_styling, button_states, slider_modes and switch_state, 320 x 240 each. tests/examples_widgets_arc.cpp, _bar.cpp, _button.cpp, _slider.cpp and _switch.cpp compare each with LVGL's C original.</figcaption>
       </figure>
       <div class="prose">
         <span class="tag">LVGL's own examples</span>
-        <h3>67 of 96 widget examples</h3>
+        <h3>67 of 96 examples, for 17 widgets</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
-          <div><dt>Ported</dt><dd>67 of 96 widget examples, and 4 of 4 <code>get_started</code>. The rest wait for something lvgl26 lacks, and <code>examples/README.md</code> says what.</dd></div>
+          <div><dt>Ported</dt><dd>67 of the 96 examples of the 17 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
         </dl>
         <ul class="links">
