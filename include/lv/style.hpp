@@ -610,20 +610,25 @@ consteval style_t<D> layer_of(lv_style_selector_t selector, const style_t<D>& s)
   return out;
 }
 
+// The layers of `a`, then those of `b`, made by the compiler.
+consteval style_layers joined_while_compiling(style_layers a, style_layers b) {
+  std::vector<style_layer> all(a.list().begin(), a.list().end());
+  all.insert(all.end(), b.list().begin(), b.list().end());
+  return style_layers(std::define_static_array(all));
+}
+
 // The layers of `a`, then those of `b`. Layers are made by the compiler, so two lists
-// are joined while compiling; at run time one of them must be empty.
+// are joined while compiling. At run time one of them must be empty: two styles with
+// lv::on layers are merged with | while compiling only.
 template <class D = void>
 constexpr style_layers joined(style_layers a, style_layers b) {
   if (a.count == 0) return b;
   if (b.count == 0) return a;
   if consteval {
-    std::vector<style_layer> all(a.list().begin(), a.list().end());
-    all.insert(all.end(), b.list().begin(), b.list().end());
-    return style_layers(std::define_static_array(all));
-  } else {
-    contract_assert(false && "two styles with lv::on layers are merged with | while compiling only");
-    return b;
+    return joined_while_compiling(a, b);
   }
+  contract_assert(false);
+  return b;
 }
 
 }  // namespace detail

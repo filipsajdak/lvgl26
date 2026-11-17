@@ -233,6 +233,23 @@ void set_at_run_time(lv::display& display) {
   check(same(bg(slider.raw(), LV_PART_KNOB), red));
 }
 
+// A layered style merged with a plain one at run time keeps its layers, in either order.
+void merge_with_a_plain_style_at_run_time(lv::display& display) {
+  auto root = lv::mount<runtime_ui>(display.screen());
+  check(root.has_value());
+  if (!root) return;
+  auto slider = root->get<"slider">();
+  style_type layered = styled_knob;
+  style_type plain = base;
+  slider.set({.style = layered | plain});
+  lv_obj_add_state(slider.raw(), LV_STATE_PRESSED);
+  check(same(bg(slider.raw(), LV_PART_KNOB), red));
+  lv_obj_remove_state(slider.raw(), LV_STATE_PRESSED);
+  slider.set({.style = plain | layered});
+  lv_obj_add_state(slider.raw(), LV_STATE_PRESSED);
+  check(same(bg(slider.raw(), LV_PART_KNOB), red));
+}
+
 // The cases that break a contract: a layer in a style for another part, and two layered
 // styles merged at run time.
 int violates(const char* which) {
@@ -265,6 +282,7 @@ int main(int argc, char** argv) {
     one_name_is_a_slot(display);
     costs_one_list_entry(display);
     set_at_run_time(display);
+    merge_with_a_plain_style_at_run_time(display);
   }
   theme_with_a_layer(app);
   return failures;
