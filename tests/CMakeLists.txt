@@ -161,6 +161,57 @@ target_link_libraries(examples_get_started PRIVATE
   lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_get_started)
 add_test(NAME examples_get_started COMMAND examples_get_started)
 
+# LVGL's examples/widgets, one test per widget folder. The arguments after the
+# folder are the ported examples: lv_example_<folder>_<name>.c is compared with
+# examples/lvgl/widgets/<folder>_<name>.cpp. ASSETS names the pictures they use.
+set(LVGL26_C_WIDGETS ${lvgl_SOURCE_DIR}/examples/widgets)
+set(LVGL26_WIDGETS ${CMAKE_CURRENT_SOURCE_DIR}/../examples/lvgl/widgets)
+function(lvgl26_widget_ports folder)
+  cmake_parse_arguments(arg "" "" "ASSETS" ${ARGN})
+  set(originals)
+  set(ports)
+  foreach(name ${arg_UNPARSED_ARGUMENTS})
+    list(APPEND originals ${LVGL26_C_WIDGETS}/${folder}/lv_example_${folder}_${name}.c)
+    list(APPEND ports ${LVGL26_WIDGETS}/${folder}_${name}.cpp)
+  endforeach()
+  # The pictures an example draws with come from LVGL's examples/assets.
+  foreach(asset ${arg_ASSETS})
+    list(APPEND originals ${lvgl_SOURCE_DIR}/examples/assets/${asset}.c)
+  endforeach()
+  add_library(lvgl_c_widgets_${folder} STATIC EXCLUDE_FROM_ALL ${originals})
+  target_link_libraries(lvgl_c_widgets_${folder} PRIVATE lvgl::lvgl)
+  target_compile_definitions(lvgl_c_widgets_${folder} PRIVATE LV_BUILD_EXAMPLES=1)
+
+  add_executable(examples_widgets_${folder} examples_widgets_${folder}.cpp ${ports})
+  target_compile_options(examples_widgets_${folder} PRIVATE --embed-dir=${LVGL26_WIDGETS})
+  target_link_libraries(examples_widgets_${folder} PRIVATE
+    lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units lvgl_c_widgets_${folder})
+  add_test(NAME examples_widgets_${folder} COMMAND examples_widgets_${folder})
+endfunction()
+
+lvgl26_widget_ports(label bind_text long_mode recolor set_text_newline styling text_align)
+lvgl26_widget_ports(button basic event states styling)
+lvgl26_widget_ports(arc bind_value change_rate event img_indicator mode pie_chart rotation
+                    set_angles styling value_range
+                    ASSETS img_arc_bg img_arc_indicator)
+lvgl26_widget_ports(bar bind_value img_indicator modes orientation styling value_range
+                    ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(slider bind_state bind_value event img_indicator modes reversed_direction
+                    value_range_orientation
+                    ASSETS img_bar_bg img_bar_indicator)
+lvgl26_widget_ports(switch event orientation state)
+lvgl26_widget_ports(checkbox bind_checked event states text)
+lvgl26_widget_ports(led brightness color styling)
+lvgl26_widget_ports(line points)
+lvgl26_widget_ports(obj bind_style)
+lvgl26_widget_ports(buttonmatrix event map)
+lvgl26_widget_ports(dropdown bind_value direction event text)
+lvgl26_widget_ports(spinbox bind_value format rollover styling value)
+lvgl26_widget_ports(textarea placeholder)
+lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
+lvgl26_widget_ports(scale modes range styling ticks)
+lvgl26_widget_ports(keyboard modes popovers textarea)
+
 add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
