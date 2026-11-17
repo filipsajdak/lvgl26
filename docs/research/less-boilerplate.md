@@ -745,3 +745,23 @@ They overlap: lever 1 includes the words that inherited text saves.
 13. In which order?
     Recommendation: sub-trees (no library change), `lv::look<"path">` with the design registration, `lv::for_each`, options, then `.look`, texts and captions.
     Cost: the port changes in several steps.
+
+## What the owner decided
+
+Decided 2026-11-18, in an interview over the list above.
+
+| # | Decision |
+|---|---|
+| 1 | Named looks stay, although they mostly move words: the code says what an element is, and the token file says how it looks. First as a style value, `.style = lv::look<"queue.card">`. A `.look` member of every node comes after its cost to `tests/large_tree.cpp` is measured. |
+| 2 | A project names its token file once, in the style of `lv::cfg`. No token argument is passed around. |
+| 3 | A variant is several looks in one string, and a later one wins: `"tile tile.print"`. |
+| 4 | Text style reaches a label by LVGL's inheritance from the look of its parent. |
+| 5 | A look may carry fixed sizes, padding and flex settings. Positions and percentages stay in the tree. |
+| 6 | An enumerator in the token file is a string, which lvgl26 reads and checks. |
+| 7 | A look that sets `bg_color` does not set `bg_opa` by itself. |
+| 8 | Repetition is `lv::for_each<E>(part)` and `lv::for_each_field<T>(part)`. |
+| 9 | A caption is an annotation on the member, and its value is a key of the strings file. |
+| 10 | An option list is joined by the compiler: `.options = {"100%", "75%", "50%"}`. `lv::options_of<E>` makes one from an enum, and `.selected` binds to a state of that enum. |
+| 11 | Texts come from our own strings file, one file for each language, checked by the compiler. |
+| 12 | A sub-tree is a tree constant in a header for now. `lv::part` comes later. |
+| 13 | The levers that remove words come forward: repetition, option lists and `lv::look` as a style value are built beside the storage work. Then `.look`, strings and captions. |
