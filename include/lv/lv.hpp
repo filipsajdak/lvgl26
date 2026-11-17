@@ -7,6 +7,7 @@
 #include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
 #include <lv/image.hpp>
+#include <lv/list.hpp>
 #include <lv/match.hpp>
 #include <lv/owned.hpp>
 #include <lv/runtime.hpp>

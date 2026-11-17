@@ -110,6 +110,17 @@ inline constexpr bool is_binding<formatted_binding<T>> = true;
 template <>
 inline constexpr bool is_binding<font_binding> = true;
 
+/// A property bound to a field of a row of lv::each: lv::bind(&track::title). It takes
+/// what a binding to a state takes.
+template <class T>
+struct row_binding : binding<T> {};
+template <class T>
+struct row_formatted_binding : formatted_binding<T> {};
+template <class T>
+inline constexpr bool is_binding<row_binding<T>> = true;
+template <class T>
+inline constexpr bool is_binding<row_formatted_binding<T>> = true;
+
 struct from_design_tokens {};
 
 }  // namespace detail

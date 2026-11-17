@@ -310,6 +310,39 @@ inline constexpr bool is_binding<formatted_binding<T>> = true;
 template <>
 inline constexpr bool is_binding<font_binding> = true;
 
+// What a property of a node follows: nothing, a state, or a field of a row of lv::each.
+// A number, because under a sanitizer GCC cannot tell at compile time that an address is
+// not null, nor that two functions differ.
+enum follow : unsigned char { follows_nothing, follows_state, follows_row_field };
+
+// A property bound to a field of a row: lv::bind(&track::title), see lv/list.hpp. It holds
+// what a state's binding holds, and tells lv::arg that it follows a row.
+template <class T>
+struct row_binding {
+  const void* source;
+  lv_subject_t* (*subject)(const void*);
+};
+template <class T>
+struct row_formatted_binding {
+  const void* source;
+  lv_subject_t* (*subject)(const void*);
+  const char* format;
+};
+template <class T>
+inline constexpr bool is_binding<row_binding<T>> = true;
+template <class T>
+inline constexpr bool is_binding<row_formatted_binding<T>> = true;
+
+// What a binding to a field of a row (lv::bind(&track::title), see lv/list.hpp) holds
+// where a state's binding has the function that finds its subject. lv::each applies such
+// a property with each row's value. A tree outside lv::each refuses it at compile time;
+// view.set() at run time reaches this function, which breaks its contract.
+inline lv_subject_t* row_field_marker(const void* field) {
+  contract_assert(field == nullptr &&
+                  "lv::bind(&T::field) follows a field of a row: use it in the row template of lv::each");
+  return nullptr;
+}
+
 }  // namespace detail
 
 namespace detail {
@@ -423,8 +456,7 @@ constexpr E given_value(const enumerator_or_name<E>& v) {
 template <class... Ts>
 struct arg {
   bool set;
-  bool follows;  // the property follows a state: `bound` is set. A flag, because under a
-                 // sanitizer GCC cannot tell at compile time that a state's address is not null
+  detail::follow follows;  // what the property follows; `bound` is set unless nothing
   detail::values<Ts...> v;  // v.v0, v.v1, ...: what LVGL takes
 
   // Set when the property follows a state instead of holding a value.
@@ -445,7 +477,7 @@ struct arg {
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
             (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
-      : set(true), follows(false), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(detail::follows_nothing), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
 
   // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
@@ -453,19 +485,19 @@ struct arg {
   template <std::size_t... N>
     requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
   consteval arg(const char (&... name)[N])
-      : set(true), follows(false), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
+      : set(true), follows(detail::follows_nothing), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_subject(nullptr), bound_format(nullptr) {}
 
   // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
   // setter that takes a text, then an enumerator.
   constexpr arg(detail::value_or_name<Ts>... u)
     requires(sizeof...(Ts) > 1) && (std::is_enum_v<Ts> || ...)
-      : set(true), follows(false), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(detail::follows_nothing), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject),
+      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(b.subject),
         bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
     using first = std::tuple_element_t<0, types>;
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
@@ -481,14 +513,25 @@ struct arg {
                   "`lv::state<lv::decidegrees> turn{90 * lv::deg};`.");
   }
 
-  constexpr arg(font_binding b) : set(true), follows(true), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+  // A field of a row of lv::each: checked as a state's binding, and marked.
+  template <class T>
+  constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.subject}) {
+    follows = detail::follows_row_field;
+  }
+
+  template <class T>
+  constexpr arg(detail::row_formatted_binding<T> b) : arg(formatted_binding<T>{b.source, b.subject, b.format}) {
+    follows = detail::follows_row_field;
+  }
+
+  constexpr arg(font_binding b) : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
                   "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), follows(true), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
+      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }

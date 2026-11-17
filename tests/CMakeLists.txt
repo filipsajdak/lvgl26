@@ -50,6 +50,15 @@ foreach(case fraction number whole)
 endforeach()
 target_link_libraries(state PRIVATE mp-units::mp-units)
 lvgl26_test(computed)
+lvgl26_test(lists)
+lvgl26_test(lists_selection)
+target_link_libraries(lists_selection PRIVATE lvgl26_test_data)
+# An index out of range, or a list changed while its views follow a change, ends the program.
+foreach(case index erase move move_from_end move_from_far move_to_end insert set telling)
+  add_test(NAME lists_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lists> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 target_link_libraries(computed PRIVATE mp-units::mp-units)
 lvgl26_test(state_plain)
 lvgl26_test(angle_units)
@@ -251,6 +260,10 @@ add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png
 add_executable(ports_printer ports_printer.cpp)
 target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
 add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
+# The print queue of that port, built with lv::each, against the way the port builds it.
+add_executable(lists_printer lists_printer.cpp)
+target_link_libraries(lists_printer PRIVATE printer_pages lvgl26_warnings)
+add_test(NAME lists_printer COMMAND lists_printer)
 
 # The pictures of docs/port-slint-printer.md are the ones the port's screenshot tool writes.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
@@ -277,6 +290,24 @@ lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
 lvgl26_compile_fail(unknown_id "the tree has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(duplicate_id "the id 'a' is used twice in one tree")
+lvgl26_compile_fail(list_without_rows "a list holds at least one row")
+lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
+lvgl26_compile_fail(each_without_row "lv::each needs a row template")
+lvgl26_compile_fail(each_plain_key "a key names one row")
+lvgl26_compile_fail(each_not_a_list "lv::each takes an lv::list and the member of its rows that holds the key")
+lvgl26_compile_fail(each_key_of_another_row "lv::each takes an lv::list and the member of its rows that holds the key")
+lvgl26_compile_fail(each_twice_in_one_widget "a widget holds at most one lv::each")
+lvgl26_compile_fail(row_field_outside_each "follows a field of a row, and this node is not in a row")
+lvgl26_compile_fail(row_field_plain_int "a field of a plain integer does not say what the number is")
+lvgl26_compile_fail(row_field_string_view "a std::string_view field has no ending zero")
+lvgl26_compile_fail(row_field_not_a_value "a field of a row follows like a state")
+lvgl26_compile_fail(row_field_function "follows a data member of a row")
+lvgl26_compile_fail(row_field_wrong_property "this property cannot be bound to a state of that type")
+lvgl26_compile_fail(row_field_two_values "takes more than one value and cannot follow a field of a row")
+lvgl26_compile_fail(row_view_unknown_id "the row template has no id 'titel'. Its ids: title")
+lvgl26_compile_fail(row_template_duplicate_id "the id 'a' is used twice in one row template")
+lvgl26_compile_fail(each_selected_wrong_type ".selected follows the key of the selected row. Bind a state of the key's type")
+lvgl26_compile_fail(each_selected_and_checked ".selected gives the selected row the checked state, and this row template sets .checked itself")
 lvgl26_compile_fail(props_without_braces "made_with_braces")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a width or x .*You gave int")
@@ -470,6 +501,20 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
                      ${PROJECT_SOURCE_DIR}/docs/media/quick-start.png)
     set_tests_properties(quick_start_picture PROPERTIES FIXTURES_REQUIRED quick_start_picture)
   endif()
+endif()
+
+# The example of docs/lists.md. Its picture is the one on the page.
+add_executable(example_lists ${PROJECT_SOURCE_DIR}/examples/lists/main.cpp)
+target_compile_options(example_lists PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/lists)
+target_link_libraries(example_lists PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out)
+add_test(NAME example_lists COMMAND example_lists WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out)
+set_tests_properties(example_lists PROPERTIES FIXTURES_SETUP example_lists_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_lists_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_lists_out/lists.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/lists.png)
+  set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
 endif()
 
 # The example of docs/themes.md. Its pictures are the ones on the page.

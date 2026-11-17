@@ -97,6 +97,7 @@
       <li><strong>Themes</strong> <span><code>lv::theme({...})</code> gives every widget of a kind its styles, for its parts and states, and a display takes it as its last argument. The styles are constants in read-only memory. <code>lv::signal::dark</code> and <code>lv::signal::day</code> are built in. <code>LVGL26_NO_DEFAULT_THEME</code> drops LVGL's own theme and its 2.5 KB of heap.</span> <small>lv/theme.hpp, lv/signal.hpp, tests/theme.cpp, tests/signal.cpp, tests/no_default_theme.cpp, examples/theme</small></li>
       <li><strong>Signal's typefaces</strong> <span><code>lv/signal_type.hpp</code> makes Signal's fonts from its typography tokens. <code>lv::signal::dark_with_type</code> and <code>lv::signal::day_with_type</code> set all text in Barlow and the text of a button in Barlow Condensed. <code>lv::signal::numerals</code> makes a font with the sixteen characters of a reading. <code>lv/signal.hpp</code> alone draws no font, so it compiles as fast as before.</span> <small>lv/signal_type.hpp, tests/signal_type.cpp, ref/signal_type_dark.png, ref/signal_type_day.png, fail/signal_numerals_not_a_numeral.cpp, examples/signal_type</small></li>
       <li><strong>State and bindings</strong> <span><code>lv::state</code> holds a measure (an mp-units quantity with an integer number), an <code>lv::counter</code>, a one-member struct, a bool, an enum, a color or a pointer. <code>lv::bind</code> ties a property to it. A state is an <code>lv_subject_t</code> underneath.</span> <small>state.hpp; state.cpp, state_plain.cpp</small></li>
+      <li><strong>Lists</strong> <span><code>lv::each(tracks, &amp;track::id)[row]</code> shows a row template for each row of an <code>lv::list&lt;T, N&gt;</code>, whose capacity is fixed at compile time. A change touches the widgets of its own row. <code>lv::bind(&amp;track::title)</code> follows a field of a row, and <code>.selected</code> makes a state follow the selected row. See <a href="docs/lists.html">Lists</a>.</span> <small>list.hpp; lists.cpp, lists_selection.cpp, lists_printer.cpp, examples/lists</small></li>
       <li><strong><code>lv::computed</code> and <code>lv::effect</code></strong> <span>A value derived from states, bound to a widget like a state, and code that runs when states change. The dependencies are fixed at compile time; nothing is registered at run time.</span> <small>computed.hpp; computed.cpp</small></li>
       <li><strong>Coroutine tasks</strong> <span><code>lv::task&lt;T&gt;</code> on LVGL's loop. <code>view.next().clicked</code> and every other event, <code>lv::sleep</code>, <code>lv::first</code>, <code>lv::spawn</code>. A deleted widget cancels the task. <code>lv::spawn(task, owner)</code> starts a task that ends with a widget.</span> <small>task.hpp; task.cpp</small></li>
       <li><strong>Animation</strong> <span><code>lv::animate(widget, {.property = {from, to}}, time)</code> for a property that takes one number: a whole number, a length, an angle or an opacity. The result says whether it ran to its end.</span> <small>animate.hpp; animate.cpp</small></li>
@@ -133,8 +134,8 @@
         <tbody>
           <tr><th scope="row">LVGL versions</th><td class="num">2</td><td>v9.6.0 and a pinned commit of the v10 development line. One reference picture serves both, because they render the same pixels.</td></tr>
           <tr><th scope="row">Build presets</th><td class="num">7</td><td><span class="path">host-v96, host-v10, host-v96-asan, host-v10-asan, host-v96-tsan, host-v96-analyze, host-v96-coverage</span>. All with warnings as errors.</td></tr>
-          <tr><th scope="row">Compile-fail tests</th><td class="num">164</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
-          <tr><th scope="row">Test programs</th><td class="num">42</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
+          <tr><th scope="row">Compile-fail tests</th><td class="num">182</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
+          <tr><th scope="row">Test programs</th><td class="num">46</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
           <tr><th scope="row">Reference pictures</th><td class="num">9</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png, font.png, image.png, encoded_image.png, signal_type_dark.png, signal_type_day.png</span></td></tr>
           <tr><th scope="row">Fuzz targets</th><td class="num">3</td><td>The JSON reader (libFuzzer, one minute on every push), runtime documents and MCP messages (AFL++).</td></tr>
           <tr><th scope="row">Corpus inputs replayed</th><td class="num">13</td><td>7 for JSON, 2 for documents, 4 for MCP messages. They run as tests under every preset, sanitizers included.</td></tr>
@@ -167,6 +168,7 @@
       <li><strong>Linter, profiler, debugger</strong> <span>Tools that a person or an agent can drive, exposed through the agent kit.</span> <small></small></li>
       <li><strong>More documentation, for people and agents</strong> <span>The reference, generated by reflection and as data; guides and explanations; walkthroughs of the ports and a decision guide for each toolkit; an error catalogue; skills for agents that write C++.</span> <small></small></li>
       <li><strong>Components</strong> <span>Components that hold state and a view, used several times in a tree.</span> <small><a href="#gap-components">Migration gap</a>: unblocks Qt Component, Slint @children, TouchGFX containers</small></li>
+      <li><strong>Long lists</strong> <span>A list that keeps the rows that fit and refills them as they scroll in, over a count and a function that gives a row. Views that sort or filter a list without copying a row.</span> <small>docs/research/lists.md</small></li>
       <li data-state="In development"><strong>Design showcase</strong> <span>One design system, Signal, for a family of eight devices: mood boards and the system are done (see <a href="design.html">Design</a>); the device screens and their lvgl26 firmware follow.</span> <small>design/signal</small></li>
       <li><strong>Design tool adapters</strong> <span>Adapters that write <code>tokens.json</code> from a design tool, so that tokens are never copied by hand. Figma, Penpot and Claude Design, driven by agents.</span> <small><a href="#gap-design-tools">Migration gap</a></small></li>
     </ul>
@@ -188,7 +190,7 @@
     <p class="note">The first two are built first. The rest is ordered by what each unblocks, and the order may change.</p>
     <ul class="features planned">
       <li id="gap-components"><strong>Components</strong> <span>Reusable parts with their own state, parameters and slots, used several times in a tree.</span> <small>Unblocks: Qt Component; Slint component and @children; TouchGFX custom container</small></li>
-      <li id="gap-lists"><strong>Lists and repeaters from a model</strong> <span>A list, a repeater or a scroll list built from a model that changes, with a fixed capacity on small devices.</span> <small>Unblocks: Qt Repeater and ListView; Slint for over a model; TouchGFX scroll lists; the printer queue</small></li>
+      <li id="gap-lists" data-state="Partial"><strong>Lists and repeaters from a model</strong> <span>A list, a repeater or a scroll list built from a model that changes, with a fixed capacity on small devices.</span> <small>Unblocks: Qt Repeater and ListView; Slint for over a model; TouchGFX scroll lists; the printer queue</small></li>
       <li id="gap-translations"><strong>Translations and text resources</strong> <span>Text per language, plural forms and a switch of language at run time.</span> <small>Unblocks: Qt qsTr; Slint @tr; TouchGFX text resources; LVGL label_translation</small></li>
       <li id="gap-runtime-theming"><strong>A style that follows a state</strong> <span>A style property bound to a state, so a theme or a look can change in place instead of mounting the tree again.</span> <small>Unblocks: Slint's four printer themes; the three looks of the Qt treadmill; dark and light switching</small></li>
       <li id="gap-gradients"><strong>More gradients</strong> <span>Diagonal gradients and gradients with several stops. Today a gradient is vertical or horizontal with two colors.</span> <small>Unblocks: the printer panel's tiles and color button; designer-made backgrounds</small></li>
@@ -215,7 +217,7 @@
     </ul>
 
     <h3 id="migration-qt">Qt Quick</h3>
-    <p class="note">12 of 29 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
+    <p class="note">13 of 29 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -240,7 +242,7 @@
           <tr><th scope="row">Gradients, LinearGradient</th><td><span class="pill plan">Planned</span></td><td>Vertical or horizontal, two colors</td><td><a href="#gap-gradients">More gradients</a></td></tr>
           <tr><th scope="row">Colors and sizes in one design file</th><td><span class="pill ok">Works</span></td><td>A W3C Design Tokens file, read at compile time</td><td></td></tr>
           <tr><th scope="row">Component, a reusable item with properties</th><td><span class="pill plan">Planned</span></td><td>A C++ function that returns a piece of tree</td><td><a href="#gap-components">Components</a></td></tr>
-          <tr><th scope="row">Repeater, ListView, GridView over a model</th><td><span class="pill plan">Planned</span></td><td>Children written by hand, mounted again on a change</td><td><a href="#gap-lists">Lists and repeaters from a model</a></td></tr>
+          <tr><th scope="row">Repeater, ListView, GridView over a model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(model, &amp;row::id)[delegate] over an <code>lv::list</code> of fixed capacity; a ListView that recycles rows is planned</td><td></td></tr>
           <tr><th scope="row">TableView</th><td><span class="pill plan">Planned</span></td><td>One cell can be set. A list of cells is missing</td><td><a href="#gap-table-cells">Several values in one property</a></td></tr>
           <tr><th scope="row">qsTr and translations</th><td><span class="pill plan">Planned</span></td><td>Not built</td><td><a href="#gap-translations">Translations and text resources</a></td></tr>
           <tr><th scope="row">Charts, TabBar, Dialog</th><td><span class="pill plan">Planned</span></td><td>Not built: they need children that a widget creates</td><td><a href="#gap-add-calls">Children that a widget creates itself</a></td></tr>
@@ -254,7 +256,7 @@
     </div>
 
     <h3 id="migration-slint">Slint</h3>
-    <p class="note">12 of 25 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
+    <p class="note">13 of 25 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -276,7 +278,7 @@
           <tr><th scope="row">Palette and a theme</th><td><span class="pill ok">Works</span></td><td><code>lv::theme</code> and design tokens</td><td></td></tr>
           <tr><th scope="row">Switch the theme at run time</th><td><span class="pill plan">Planned</span></td><td>Slint's printer themes are not ported</td><td><a href="#gap-runtime-theming">A style that follows a state</a></td></tr>
           <tr><th scope="row">Gradients</th><td><span class="pill plan">Planned</span></td><td>Vertical or horizontal, two colors</td><td><a href="#gap-gradients">More gradients</a></td></tr>
-          <tr><th scope="row">for item in model</th><td><span class="pill plan">Planned</span></td><td>The printer port mounts a card again for each job</td><td><a href="#gap-lists">Lists and repeaters from a model</a></td></tr>
+          <tr><th scope="row">for item in model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(tracks, &amp;track::id)[row template] over an <code>lv::list</code> of fixed capacity</td><td></td></tr>
           <tr><th scope="row">component and @children</th><td><span class="pill plan">Planned</span></td><td>A C++ function that returns a piece of tree</td><td><a href="#gap-components">Components</a></td></tr>
           <tr><th scope="row">StandardTableView</th><td><span class="pill plan">Planned</span></td><td>One cell can be set. A list of cells is missing</td><td><a href="#gap-table-cells">Several values in one property</a></td></tr>
           <tr><th scope="row">TabWidget, PopupWindow</th><td><span class="pill plan">Planned</span></td><td>Not built: they need children that a widget creates</td><td><a href="#gap-add-calls">Children that a widget creates itself</a></td></tr>
@@ -289,7 +291,7 @@
     </div>
 
     <h3 id="migration-touchgfx">TouchGFX</h3>
-    <p class="note">10 of 21 concepts work. <a href="docs/from-touchgfx.html">The concept map</a> explains each one.</p>
+    <p class="note">11 of 21 concepts work. <a href="docs/from-touchgfx.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -300,7 +302,7 @@
           <tr><th scope="row">TextArea, Button, ToggleButton</th><td><span class="pill ok">Works</span></td><td><code>lv::label</code>, <code>lv::button</code>, <code>lv::toggle</code></td><td></td></tr>
           <tr><th scope="row">Slider, Gauge, CircularProgress</th><td><span class="pill ok">Works</span></td><td><code>lv::slider</code>, <code>lv::arc</code>, <code>lv::bar</code></td><td></td></tr>
           <tr><th scope="row">ScrollWheel</th><td><span class="pill part">In review</span></td><td><code>lv::roller</code>. Names beside strings are in pull request 87</td><td><a href="#gap-string-enum">A name beside other values, and the roller</a></td></tr>
-          <tr><th scope="row">ScrollList, a dynamic list</th><td><span class="pill plan">Planned</span></td><td>Children written by hand</td><td><a href="#gap-lists">Lists and repeaters from a model</a></td></tr>
+          <tr><th scope="row">ScrollList, a dynamic list</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code> over an <code>lv::list</code> of fixed capacity; a list that refills a few rows as they scroll in is planned</td><td></td></tr>
           <tr><th scope="row">Model and Presenter</th><td><span class="pill ok">Works</span></td><td><code>lv::state</code> and <code>lv::computed</code></td><td></td></tr>
           <tr><th scope="row">Screen transitions</th><td><span class="pill part">Partial</span></td><td><code>lv::mount</code> and <code>lv::animate</code>. The page switcher lives in the examples</td><td><a href="#gap-pager">A page switcher in the library</a></td></tr>
           <tr><th scope="row">Animations and easing equations</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property</td><td><a href="#gap-animate-opacity">Animate a widget's opacity</a></td></tr>

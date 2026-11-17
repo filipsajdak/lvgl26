@@ -4,7 +4,7 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT
 
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -106,6 +106,30 @@ log.start();                                           // runs now, and after ev
 Binding a computed creates its `lv_subject_t` and one observer on each dependency.
 The result follows the rules of a state, so a function that returns a plain `int` is rejected.
 See `include/lv/computed.hpp` for how changes travel and who owns what.
+
+A list shows a row template for each row of an `lv::list`, and a change touches the widgets of its
+own row only:
+
+```cpp
+struct track_id { int value; };
+struct track { track_id id; const char* title; lv::counter plays; };
+
+constinit lv::list<track, 20> tracks;                   // room for 20 rows, no heap of its own
+constinit lv::state current{track_id{0}};
+
+constexpr auto ui = lv::column[
+    lv::each(tracks, &track::id, {.selected = lv::bind(current)})[
+        lv::row[lv::label({.text = lv::bind(&track::title)}),
+                lv::label({.text = lv::bind(&track::plays, "{} plays")})]]];
+
+auto added = tracks.push_back({{1}, "Intro"});          // builds one row, or says the list is full
+added = tracks.insert(0, {{2}, "Outro"});               // one more; the first keeps its widgets
+tracks.update(1, [](track& t) { ++t.plays; });          // sets that row's labels again
+```
+
+- The key names a row: `assign()` keeps the widgets of every key it finds again.
+- A text field is shown from the row itself, without a copy.
+- The selected row is `checked`, so `.style_checked` styles it. [docs/lists.md](docs/lists.md) has the rest.
 
 Sequences of UI steps are coroutines on LVGL's loop:
 
