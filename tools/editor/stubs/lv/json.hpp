@@ -4,6 +4,7 @@
 // editor does not work a value out, so here its functions are not constexpr.
 
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <string_view>
 
@@ -13,6 +14,8 @@ namespace lv::json {
 enum class kind { invalid, null, boolean, number, string, array, object };
 
 class value;
+template <class Item>
+class items;
 
 /// One member of an object: its key, and the text of its value.
 struct member {
@@ -39,6 +42,10 @@ class value {
   double number() const;
   /// The number of elements of an array, or of members of an object.
   std::size_t size() const;
+  /// The members of an object, walked once in document order; none for anything else.
+  items<member> members() const;
+  /// The elements of an array, walked once in order; none for anything else.
+  items<value> elements() const;
   member member_at(std::size_t index) const;
   value at(std::size_t index) const;
   /// The member of an object with this key, or an invalid value.
@@ -48,6 +55,24 @@ class value {
 
  private:
   std::string_view text_;
+};
+
+/// The members of an object or the elements of an array, for a range-for loop.
+template <class Item>
+class items {
+ public:
+  class iterator {
+   public:
+    using value_type = Item;
+    using difference_type = std::ptrdiff_t;
+    Item operator*() const { __builtin_unreachable(); }
+    iterator& operator++() { __builtin_unreachable(); }
+    iterator operator++(int) { __builtin_unreachable(); }
+    friend bool operator==(const iterator&, const iterator&) { __builtin_unreachable(); }
+    friend bool operator==(const iterator&, std::default_sentinel_t) { __builtin_unreachable(); }
+  };
+  iterator begin() const { __builtin_unreachable(); }
+  std::default_sentinel_t end() const { return {}; }
 };
 
 }  // namespace lv::json

@@ -45,6 +45,12 @@ void walk_object(value v, std::string_view document, int depth) {
     walk(value{m.text}, document, depth + 1);
   }
   require(v.member_at(n).text.empty());   // one past the end is empty
+  std::size_t i = 0;                      // one walk gives the same members
+  for (const lv::json::member m : v.members()) {
+    require(m.key == v.member_at(i).key && m.text == v.member_at(i).text);
+    ++i;
+  }
+  require(i == n && v.elements().begin() == v.elements().end());
 }
 
 void walk_array(value v, std::string_view document, int depth) {
@@ -56,6 +62,9 @@ void walk_array(value v, std::string_view document, int depth) {
     walk(element, document, depth + 1);
   }
   require(!v.at(n));
+  std::size_t i = 0;  // one walk gives the same elements
+  for (const value element : v.elements()) require(element.text() == v.at(i++).text());
+  require(i == n && v.members().begin() == v.members().end());
 }
 
 void walk(value v, std::string_view document, int depth) {
