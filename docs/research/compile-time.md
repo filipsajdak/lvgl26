@@ -72,6 +72,49 @@ A script has to start `cc1plus` itself (`g++ -###` prints the command), as the C
 
 Nothing found shows per-header or per-line compile cost in an editor for GCC-only code.
 
+## The report tool
+
+`tools/compile_report.py` prints one JSON row of compile cost per file.
+It builds item 1 of the list above.
+Standard library only; the tests are `tools/test_compile_report.py` (`ctest -R compile_report`).
+
+```sh
+python3 tools/compile_report.py build/host-v96 tests/smoke.cpp tests/CMakeFiles/font.dir/font.cpp.o --jobs 2 --table
+```
+
+- A file is a source path or a ninja object name from `compile_commands.json`.
+- The tool asks `g++ -###` for the `cc1plus` command and runs that, so the instruction count is the compiler's. The field `mode` is `driver` when no `cc1plus` line was found.
+- The times come from `-ftime-report` with `-fdiagnostics-add-output=sarif:file=...`, which writes no file next to the source.
+- `--table` sorts by `constexpr_s`. `--jobs N` runs N files at once. `--ops` adds `ops_between`, the range from bisecting `-fconstexpr-ops-limit`, and is slow.
+- Without `/usr/bin/time` (the CI image has none) the tool uses `wait4` resource usage for peak memory, which covers that child alone. `LVGL26_NO_TIME=1` forces this.
+- The exit status is 1 when a compile fails, and `error` holds the first error line.
+
+| Field | Meaning |
+|---|---|
+| `wall_s` | Seconds of the whole `cc1plus` run, including code generation. |
+| `instructions` | Instructions retired. macOS only, `null` on Linux and with `timer` `rusage`. The number to compare. |
+| `timer` | How memory was measured: `time-l`, `time-v` or `rusage`. |
+| `peak_rss_mb` | Peak resident memory. |
+| `constexpr_s` | The row "constant expression evaluation". |
+| `template_instantiation_s` | The row "template instantiation". |
+| `parsing_s` | The row "phase parsing". It is a phase: it contains the two rows above that happen during parsing. |
+| `analyzer_s` | The sum of the analyzer rows, `null` without `-fanalyzer`. |
+| `total_s` | The row "TOTAL". |
+
+The six slowest files of `host-v96` on macOS arm64, without the analyzer, `measured` 2026-11-17, two files at once:
+
+| File | wall s | constexpr s | peak MB | instructions |
+|---|---|---|---|---|
+| `fuzz/mcp_message.cpp` | 39.6 | 33.3 | 1275 | 403,500,602,381 |
+| `signal_type.cpp` | 34.0 | 29.4 | 1704 | 377,100,053,043 |
+| `examples/agent/mcp_host.cpp` | 31.2 | 26.1 | 1131 | 305,691,788,068 |
+| `font.cpp` | 27.8 | 24.7 | 1346 | 321,496,020,197 |
+| `state.cpp` | 24.6 | 17.3 | 992 | 241,889,696,075 |
+| `agent_kit.cpp` | 19.2 | 13.6 | 1251 | 195,750,183,033 |
+
+Constant evaluation is 70 to 88 percent of each file.
+The Linux format of `/usr/bin/time -v` is parsed from a sample written by hand, not captured on Linux (`recalled`).
+
 ## Levers that cut the cost
 
 | # | Lever | Expected win | Risk | Mark |

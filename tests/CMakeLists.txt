@@ -576,6 +576,8 @@ if(Python3_FOUND)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
+  # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
+  add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
