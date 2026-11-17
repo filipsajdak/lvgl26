@@ -60,7 +60,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
 - A look shared by all widgets of a kind is a theme (`lv::theme`, `include/lv/theme.hpp`), given to
   the display. A theme's styles are built in constant evaluation with `std::define_static_array`,
-  so they need no template argument and no heap. `include/lv/signal/*.json` is written by
+  so they need no template argument and no heap. A style for one part in one state is `lv::on(...)`
+  merged into `.style` (also in a theme): a constant `lv_style_t` the style keeps in its last member,
+  `layers`. Do not add a style member per part and state. `include/lv/signal/*.json` is written by
   `tools/signal_tokens.py` from `design/signal/tokens.design.json`: change the design file, then
   run the tool.
 - `lv/signal.hpp` draws no font and reads no typography token. Signal's typefaces, their tokens (`include/lv/signal/type.json`) and the themes with fonts are in `lv/signal_type.hpp`. Both headers build their themes from the one description in `lv/signal.hpp`. Measure a change to `lv/signal.hpp` against main in instructions: it must not cost more.

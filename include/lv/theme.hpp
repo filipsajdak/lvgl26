@@ -21,7 +21,9 @@
 // widget still overrides it with its own `.style`.
 //
 // A widget gets the styles of its own kind only: a slider does not get those of `bar`.
-
+//
+// A part in a state is a selector in `style`, as in a node:
+//   .slider = {.style = base | lv::on("knob", "pressed", {.bg_color = tok.color.active})}
 
 #include <lv/detail/theme_styles.hpp>
 #include <lv/props.hpp>
@@ -138,14 +140,24 @@ inline constexpr auto theme_members = std::define_static_array(
 template <class D = void>
 inline constexpr std::span<const std::meta::info> theme_classes = std::define_static_array(theme_widgets());
 
+// The layers that lv::on added to a style of a theme, after the style itself.
+consteval void add_theme_layers(std::vector<theme_entry>& out, const lv_obj_class_t* widget,
+                                lv_style_selector_t selector, style_layers layers) {
+  if (layers.count != 0 && selector != LV_PART_MAIN)
+    fail("lv: lv::on goes in .style, because it names its own part and state. Write "
+         ".style = base | lv::on(\"knob\", \"pressed\", {...}) instead of .style_knob = lv::on(...).");
+  for (const style_layer& l : layers.list()) out.push_back({widget, l.selector, l.style});
+}
+
 // The styles that `look` sets, for the widgets of `widget`.
 template <class D>
 consteval void add_look(std::vector<theme_entry>& out, const lv_obj_class_t* widget,
                         const typename look_of<D>::type& look) {
   template for (constexpr auto j : indices<look_members<D>.size()>) {
     const auto& s = look.[:look_members<D>[j]:];
-    if (is_set<style_t<D>, D>(s))
-      out.push_back({widget, selector_of<look_selectors<D>[j]>(), stored_style<style_t<D>, D>(s)});
+    constexpr lv_style_selector_t selector = selector_of<look_selectors<D>[j]>();
+    if (sets_a_value<style_t<D>, D>(s)) out.push_back({widget, selector, stored_style<style_t<D>, D>(s)});
+    add_theme_layers(out, widget, selector, s.layers);
   }
 }
 

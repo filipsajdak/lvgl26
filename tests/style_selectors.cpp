@@ -186,6 +186,35 @@ void costs_one_list_entry(lv::display& display) {
   check(layer > plain && layers > layer);
 }
 
+// ---- a theme with a part in a state ----------------------------------------------
+
+constexpr auto themed = lv::theme({
+    .slider = {.style = lv::style({.bg_color = lv::raw(grey)}) | lv::on("knob", "pressed", {.bg_color = lv::raw(red)})},
+});
+
+constexpr auto theme_ui = lv::box[lv::slider({.id = "theme"}),
+                                  lv::slider({.id = "own", .style = lv::on("knob", "pressed", {.bg_color = lv::raw(blue)})}),
+                                  lv::slider({.id = "slot", .style_knob = {.bg_color = lv::raw(green)}})];
+
+void theme_with_a_layer(lv::application& app) {
+  lv::display display{app, frame, themed};
+  auto root = lv::mount<theme_ui>(display.screen());
+  check(root.has_value());
+  if (!root) return;
+  lv_obj_t* from_theme = root->get<"theme">().raw();
+  lv_obj_t* own = root->get<"own">().raw();
+  lv_obj_t* slot = root->get<"slot">().raw();
+  check(same(bg(from_theme, LV_PART_MAIN), grey));
+  for (lv_obj_t* o : {from_theme, own, slot}) lv_obj_add_state(o, LV_STATE_PRESSED);
+  check(same(bg(from_theme, LV_PART_KNOB), red));
+  // The node has the last word for the same part and state.
+  check(same(bg(own, LV_PART_KNOB), blue));
+  // A knob style of the default state does not: LVGL takes the style whose state fits best.
+  check(same(bg(slot, LV_PART_KNOB), red));
+  lv_obj_remove_state(slot, LV_STATE_PRESSED);
+  check(same(bg(slot, LV_PART_KNOB), green));
+}
+
 // ---- at run time ------------------------------------------------------------------
 
 constexpr auto runtime_ui = lv::slider({.id = "slider"});
@@ -237,5 +266,6 @@ int main(int argc, char** argv) {
     costs_one_list_entry(display);
     set_at_run_time(display);
   }
+  theme_with_a_layer(app);
   return failures;
 }

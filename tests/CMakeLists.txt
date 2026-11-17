@@ -255,6 +255,7 @@ lvgl26_compile_fail(on_inside_on "an lv::on cannot hold another lv::on. Put them
 lvgl26_compile_fail(on_not_a_value "a theme or an lv::on cannot hold the style property 'enabled'")
 lvgl26_compile_fail(on_bound_font "a theme and an lv::on hold constants, and a font bound with lv::bind is drawn on the device")
 lvgl26_compile_fail(on_in_part_slot "lv::on goes in .style, because it names its own part and state")
+lvgl26_compile_fail(theme_on_in_part_slot "lv::on goes in .style, because it names its own part and state")
 lvgl26_compile_fail(font_needs_token "It takes a font from a typography token .*or lv::raw\\(font\\) for a font that no token names")
 lvgl26_compile_fail(font_not_a_font "this is not a TrueType font file. Embed a .ttf file")
 lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")

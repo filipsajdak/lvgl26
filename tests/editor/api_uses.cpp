@@ -139,6 +139,7 @@ constexpr lv::theme_styles look = lv::theme({
     .button = {.style = card, .style_pressed = {.bg_color = tok.color.accent}},
     .obj = {.style = {.pad_gap = tok.space.gap}},
     .screen = {.style = {.bg_color = tok.color.ink}},
+    .slider = {.style = knob},
     .toggle = {.style_indicator = {.bg_opa = tok.opacity.half}},
 });
 static_assert(!look.empty() && lv::theme_styles{}.empty());
