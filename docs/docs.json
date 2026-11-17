@@ -16,7 +16,8 @@
       "pages": [
         "from-qt.md",
         "from-slint.md",
-        "from-touchgfx.md"
+        "from-touchgfx.md",
+        "port-slint-printer.md"
       ]
     },
     {
