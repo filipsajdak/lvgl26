@@ -212,8 +212,8 @@
     "arclabel": [
     {"name": "angle_size", "kind": "property", "sets": "lv_arclabel_set_angle_size", "takes": [{"write": "an angle in whole degrees (90 * lv::deg)"}]},
     {"name": "angle_start", "kind": "property", "sets": "lv_arclabel_set_angle_start", "takes": [{"write": "an angle in whole degrees (90 * lv::deg)"}]},
-    {"name": "center_offset_x", "kind": "property", "sets": "lv_arclabel_set_center_offset_x", "takes": [{"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)"}]},
-    {"name": "center_offset_y", "kind": "property", "sets": "lv_arclabel_set_center_offset_y", "takes": [{"write": "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal length)"}]},
+    {"name": "center_offset_x", "kind": "property", "sets": "lv_arclabel_set_center_offset_x", "takes": [{"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length), not negative"}]},
+    {"name": "center_offset_y", "kind": "property", "sets": "lv_arclabel_set_center_offset_y", "takes": [{"write": "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal length), not negative"}]},
     {"name": "dir", "kind": "property", "sets": "lv_arclabel_set_dir", "takes": [{"write": "one of the enum's names, in quotes", "enum": "lv_arclabel_dir_t"}]},
     {"name": "end_overlap", "kind": "property", "sets": "lv_arclabel_set_end_overlap", "takes": [{"write": "true or false"}]},
     {"name": "offset", "kind": "property", "sets": "lv_arclabel_set_offset", "takes": [{"write": "a whole number (not bool, not floating point)"}]},
@@ -255,7 +255,7 @@
     "buttonmatrix": [
     {"name": "button_ctrl", "kind": "property", "sets": "lv_buttonmatrix_set_button_ctrl", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "one of the enum's names, in quotes", "enum": "lv_buttonmatrix_ctrl_t"}]},
     {"name": "button_ctrl_all", "kind": "property", "sets": "lv_buttonmatrix_set_button_ctrl_all", "takes": [{"write": "one of the enum's names, in quotes", "enum": "lv_buttonmatrix_ctrl_t"}]},
-    {"name": "button_width", "kind": "property", "sets": "lv_buttonmatrix_set_button_width", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)"}]},
+    {"name": "button_width", "kind": "property", "sets": "lv_buttonmatrix_set_button_width", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length), not negative"}]},
     {"name": "ctrl_map", "kind": "property", "sets": "lv_buttonmatrix_set_ctrl_map", "takes": [{"write": "const lv_buttonmatrix_ctrl_t*"}]},
     {"name": "map", "kind": "property", "sets": "lv_buttonmatrix_set_map", "takes": [{"write": "const char* const*"}]},
     {"name": "one_checked", "kind": "property", "sets": "lv_buttonmatrix_set_one_checked", "takes": [{"write": "true or false"}]},
@@ -359,7 +359,7 @@
     {"name": "visible_row_count", "kind": "property", "sets": "lv_roller_set_visible_row_count", "takes": [{"write": "a whole number (not bool, not floating point)"}]}
     ],
     "scale": [
-    {"name": "angle_range", "kind": "property", "sets": "lv_scale_set_angle_range", "takes": [{"write": "an angle in whole degrees (90 * lv::deg)"}]},
+    {"name": "angle_range", "kind": "property", "sets": "lv_scale_set_angle_range", "takes": [{"write": "an angle in whole degrees (90 * lv::deg), not negative"}]},
     {"name": "draw_ticks_on_top", "kind": "property", "sets": "lv_scale_set_draw_ticks_on_top", "takes": [{"write": "true or false"}]},
     {"name": "image_needle_value", "kind": "property", "sets": "lv_scale_set_image_needle_value", "takes": [{"write": "_lv_obj_t*"}, {"write": "a whole number (not bool, not floating point)"}]},
     {"name": "label_show", "kind": "property", "sets": "lv_scale_set_label_show", "takes": [{"write": "true or false"}]},
@@ -427,8 +427,8 @@
     ],
     "spinner": [
     {"name": "anim_duration", "kind": "property", "sets": "lv_spinner_set_anim_duration", "takes": [{"write": "a time (300 * lv::ms)"}]},
-    {"name": "anim_params", "kind": "property", "sets": "lv_spinner_set_anim_params", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "an angle in whole degrees (90 * lv::deg)"}]},
-    {"name": "arc_sweep", "kind": "property", "sets": "lv_spinner_set_arc_sweep", "takes": [{"write": "an angle in whole degrees (90 * lv::deg)"}]}
+    {"name": "anim_params", "kind": "property", "sets": "lv_spinner_set_anim_params", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "an angle in whole degrees (90 * lv::deg), not negative"}]},
+    {"name": "arc_sweep", "kind": "property", "sets": "lv_spinner_set_arc_sweep", "takes": [{"write": "an angle in whole degrees (90 * lv::deg), not negative"}]}
     ],
     "switch": [
     {"name": "orientation", "kind": "property", "sets": "lv_switch_set_orientation", "takes": [{"write": "one of the enum's names, in quotes", "enum": "lv_switch_orientation_t"}]}
@@ -607,7 +607,7 @@
     "lv_scrollbar_mode_t": ["off", "on", "active", "auto"],
     "lv_state_t": ["default", "alt", "checked", "focused", "focus_key", "edited", "hovered", "pressed", "scrolled", "disabled", "user_1", "user_2", "user_3", "user_4", "any"],
     "lv_blend_mode_t": ["normal", "additive", "subtractive", "multiply", "difference"],
-    "lv_image_align_t": ["lv_image_align_default", "lv_image_align_top_left", "lv_image_align_top_mid", "lv_image_align_top_right", "lv_image_align_bottom_left", "lv_image_align_bottom_mid", "lv_image_align_bottom_right", "lv_image_align_left_mid", "lv_image_align_right_mid", "lv_image_align_center", "_lv_image_align_auto_transform", "lv_image_align_stretch", "lv_image_align_tile", "lv_image_align_contain", "lv_image_align_contain_downscale", "lv_image_align_cover"],
+    "lv_image_align_t": ["default", "top_left", "top_mid", "top_right", "bottom_left", "bottom_mid", "bottom_right", "left_mid", "right_mid", "center", "_lv_image_align_auto_transform", "stretch", "tile", "contain", "contain_downscale", "cover"],
     "lv_arc_mode_t": ["normal", "symmetrical", "reverse"],
     "lv_arclabel_dir_t": ["clockwise", "counter_clockwise"],
     "lv_arclabel_overflow_t": ["visible", "ellipsis", "clip"],

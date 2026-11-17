@@ -57,6 +57,10 @@ lvgl26_test(task)
 lvgl26_test(static_text)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
+lvgl26_test(unsigned_values)
+add_test(NAME unsigned_values_violation_negative
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:unsigned_values> -DCASE=negative
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(application)
 lvgl26_test(theme)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
@@ -255,6 +259,11 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   endforeach()
 endif()
 
+# The treadmill panel of examples/ports/qt/treadmill: each scene, compared with a reference picture.
+add_executable(ports_treadmill ports_treadmill.cpp)
+target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
+add_test(NAME ports_treadmill COMMAND ports_treadmill ${CMAKE_CURRENT_SOURCE_DIR}/ref/treadmill_)
+
 lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
@@ -275,6 +284,8 @@ lvgl26_compile_fail(units_rgb_too_large "contract predicate is false in constant
 lvgl26_compile_fail(values_token_not_whole "contract predicate is false in constant expression")
 lvgl26_compile_fail(values_token_not_whole_negative "contract predicate is false in constant expression")
 lvgl26_compile_fail(props_out_of_range "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned "contract predicate is false in constant expression")
+lvgl26_compile_fail(props_negative_unsigned_folded "contract predicate is false in constant expression")
 # The same mistakes inside a larger expression. GCC 16.2 folds such a call without its
 # contracts, so each of these compiled before lv/detail/checked.hpp.
 lvgl26_compile_fail(units_negative_time_folded "contract predicate is false in constant expression")
@@ -419,6 +430,7 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "constraint")
 lvgl26_compile_fail(enumerator_unknown_name "align has no value 'centre'. Its values: default, top_left")
+lvgl26_compile_fail(enumerator_unknown_name_beside_text "roller_mode has no value .endless.. Its values: normal, infinite")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
 lvgl26_compile_fail(frame_without_size "lv::frame<Width, Height>: both must be greater than 0")
 lvgl26_compile_fail(band_without_screen "lv::band<Width, Height, Lines>: the screen must be larger than 0")

@@ -261,11 +261,13 @@ static_assert(widths.is_set() && widths.from() == lv::horizontal{80 * px} && wid
 constexpr lv::arg<lv::angle> turn{90 * deg};
 constexpr lv::strict<std::int32_t> whole{3};
 constexpr lv::strict<bool> truth{true};
+constexpr lv::nonnegative<lv::angle> sweep{270 * deg};
 constexpr lv::handler on_reset{&reset};
 constexpr lv::styled<lv::length> from_token{tok.space.gap};
 constexpr lv::styled<lv::length> not_from_token{lv::raw(3 * px)};
 constexpr lv::text_format in_kmh{"{} km/h"};
 static_assert(whole.raw() == 3 && truth.raw());
+static_assert(sweep.get() == 270 * deg);
 static_assert(std::same_as<decltype(lv::label()), lv::node<"label">>);
 static_assert(std::same_as<decltype(lv::view<"button">{}.next().clicked), lv::event_ref<LV_EVENT_CLICKED>>);  // C API
 static_assert(std::same_as<decltype(lv::mount<ui>(lv::obj{})), std::expected<lv::mounted<ui>, lv::mount_error>>);

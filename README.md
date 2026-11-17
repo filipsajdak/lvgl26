@@ -34,9 +34,13 @@ How it works:
   tenths are taken. LVGL says which is which only in its doc comments.
   lvgl26 reads them from the embedded headers at compile time (`include/lv/detail/angle_docs.hpp`).
   A test checks the result against the pixels LVGL draws.
+  A setter that takes its value unsigned, such as a spinner's `.arc_sweep = 270 * deg`, gets an `lv::nonnegative<lv::angle>`.
+  A negative constant there is a compile error, and a negative value at run time breaks a contract.
 - **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
   `.flex_align = {"center", "center", "start"}`.
   The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.
+  An internal enumerator that LVGL marks with an underscore keeps its whole name and does not shorten the others.
+  A name may stand beside values of other kinds: a roller takes `.options = {"Mon\nTue", "infinite"}`.
   A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
@@ -82,6 +86,7 @@ choices. `lv::config::raw_integer_state` allows it.
 
 A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
 Where LVGL has a bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a generic observer.
+A roller and a dropdown follow a state with `.selected = lv::bind(day)`, and write the user's choice back.
 
 A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
 The dependencies are part of the type, so both can be constant-initialized globals:
