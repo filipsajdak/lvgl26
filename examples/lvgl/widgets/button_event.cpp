@@ -4,6 +4,7 @@ namespace {
 
 using namespace widgets;
 
+//! [clicks]
 // How often the button was clicked. The label below it follows.
 // The C example writes the label's text in its event handler. One difference: built
 // a second time, the C example starts at "Clicks: 0" again while its count goes on;
@@ -20,6 +21,7 @@ constexpr auto ui = lv::group({.flex_flow = "column",
     lv::button({.on_clicked = &count_click})[
         lv::label({.align = "center", .text = "Click me"})],
     lv::label({.text = lv::bind(clicks, "Clicks: {}")})];
+//! [clicks]
 
 }  // namespace
 

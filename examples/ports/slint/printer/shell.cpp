@@ -83,6 +83,7 @@ constexpr make_page subpage_maker(subpage s) {
   return nullptr;
 }
 
+//! [follow]
 void show_page(page p) { main_pager.show(page_maker(p)); }
 
 void show_subpage(subpage s) {
@@ -97,6 +98,7 @@ void show_subpage(subpage s) {
 
 constinit lv::effect follow_page{&show_page, active_page};
 constinit lv::effect follow_subpage{&show_subpage, active_subpage};
+//! [follow]
 
 // The sub-page host stops catching taps once the page has slid out.
 lv::task<> hide_when_empty(lv::obj host) {
