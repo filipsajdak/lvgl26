@@ -4,7 +4,8 @@
 Runs the real cc1plus (found with `g++ -###`), because the driver's own instruction
 count is wrong for this. Times come from the SARIF time report of GCC 16
 (-ftime-report with -fdiagnostics-add-output=sarif:file=...), peak memory and
-instructions retired from /usr/bin/time. See docs/research/compile-time.md.
+instructions retired from /usr/bin/time (setuid-free fallback: wait4 resource usage, no instructions;
+LVGL26_NO_TIME=1 forces it). See docs/research/compile-time.md.
 """
 
 import argparse
@@ -26,6 +27,8 @@ OPS_CEILING = 40_000_000_000
 OPS_MESSAGE = "operation count"
 BYTES_PER_MB = 1024 * 1024
 KB_PER_MB = 1024
+TIME_BINARY = "/usr/bin/time"
+NO_TIME_VARIABLE = "LVGL26_NO_TIME"
 
 DROP_WITH_VALUE = ("-o", "-MF", "-MT", "-MQ")
 DROP_ALONE = ("-c", "-MD", "-MMD", "-MP")
@@ -77,10 +80,6 @@ def with_output_to_null(cc1):
     else:
         out += ["-o", os.devnull]
     return out
-
-
-def time_prefix(system):
-    return ["/usr/bin/time", "-l" if system == "Darwin" else "-v"]
 
 
 def rewrite(entry_tokens, driver_output):
@@ -161,12 +160,46 @@ def prepared(entry):
     return rewrite(tokens_of(entry), run_driver_dry(entry))
 
 
-def run_timed(command, directory, extra):
-    """Run once under /usr/bin/time. Returns (status, wall seconds, stderr)."""
-    with_time = time_prefix(os.uname().sysname) + command + extra
+def time_binary(system):
+    """The /usr/bin/time option (-l or -v) when the binary can be used, else None."""
+    if os.environ.get(NO_TIME_VARIABLE) or not os.access(TIME_BINARY, os.X_OK):
+        return None
+    return "-l" if system == "Darwin" else "-v"
+
+
+def rusage_peak_mb(maxrss, system):
+    """ru_maxrss is bytes on macOS and kilobytes on Linux."""
+    return round(maxrss / (BYTES_PER_MB if system == "Darwin" else KB_PER_MB), 1)
+
+
+def run_rusage(command, directory, system):
+    """No /usr/bin/time: wait4 gives the resource use of this child alone, even with --jobs."""
+    with tempfile.TemporaryFile("w+") as err:
+        start = time.perf_counter()
+        child = subprocess.Popen(command, cwd=directory, stdout=subprocess.DEVNULL, stderr=err)
+        _, status, usage = os.wait4(child.pid, 0)
+        wall = time.perf_counter() - start
+        child.returncode = os.waitstatus_to_exitcode(status)
+        err.seek(0)
+        text = err.read()
+    stats = {"timer": "rusage", "peak_rss_mb": rusage_peak_mb(usage.ru_maxrss, system), "instructions": None}
+    return child.returncode, wall, text, stats
+
+
+def run_time_binary(option, command, directory):
     start = time.perf_counter()
-    result = subprocess.run(with_time, capture_output=True, text=True, cwd=directory, check=False)
-    return result.returncode, time.perf_counter() - start, result.stderr
+    result = subprocess.run([TIME_BINARY, option] + command, capture_output=True, text=True, cwd=directory, check=False)
+    stats = {"timer": "time" + option, **parse_time(result.stderr)}
+    return result.returncode, time.perf_counter() - start, result.stderr, stats
+
+
+def run_timed(command, directory, extra):
+    """Run once. Returns (status, wall seconds, stderr, {timer, peak_rss_mb, instructions})."""
+    system = os.uname().sysname
+    option = time_binary(system)
+    if option is None:
+        return run_rusage(command + extra, directory, system)
+    return run_time_binary(option, command + extra, directory)
 
 
 def measure(entry, name):
@@ -175,9 +208,9 @@ def measure(entry, name):
     with tempfile.TemporaryDirectory() as tmp:
         sarif = os.path.join(tmp, "report.sarif")
         extra = ["-ftime-report", f"-fdiagnostics-add-output=sarif:file={sarif}"]
-        status, wall, stderr = run_timed(command, entry["directory"], extra)
+        status, wall, stderr, stats = run_timed(command, entry["directory"], extra)
         row = {"file": name, "mode": mode, "wall_s": round(wall, 3), "status": status}
-        row.update(parse_time(stderr))
+        row.update(stats)
         row["error"] = first_error(stderr) if status else None
         if os.path.exists(sarif):
             row.update(parse_report(pathlib.Path(sarif).read_text(), analyzer_on))

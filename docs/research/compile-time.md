@@ -86,12 +86,14 @@ python3 tools/compile_report.py build/host-v96 tests/smoke.cpp tests/CMakeFiles/
 - The tool asks `g++ -###` for the `cc1plus` command and runs that, so the instruction count is the compiler's. The field `mode` is `driver` when no `cc1plus` line was found.
 - The times come from `-ftime-report` with `-fdiagnostics-add-output=sarif:file=...`, which writes no file next to the source.
 - `--table` sorts by `constexpr_s`. `--jobs N` runs N files at once. `--ops` adds `ops_between`, the range from bisecting `-fconstexpr-ops-limit`, and is slow.
+- Without `/usr/bin/time` (the CI image has none) the tool uses `wait4` resource usage for peak memory, which covers that child alone. `LVGL26_NO_TIME=1` forces this.
 - The exit status is 1 when a compile fails, and `error` holds the first error line.
 
 | Field | Meaning |
 |---|---|
 | `wall_s` | Seconds of the whole `cc1plus` run, including code generation. |
-| `instructions` | Instructions retired. macOS only, `null` on Linux. The number to compare. |
+| `instructions` | Instructions retired. macOS only, `null` on Linux and with `timer` `rusage`. The number to compare. |
+| `timer` | How memory was measured: `time-l`, `time-v` or `rusage`. |
 | `peak_rss_mb` | Peak resident memory. |
 | `constexpr_s` | The row "constant expression evaluation". |
 | `template_instantiation_s` | The row "template instantiation". |

@@ -2,10 +2,12 @@
 """Unit tests of tools/compile_report.py: python3 tools/test_compile_report.py"""
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 TOOLS = pathlib.Path(__file__).resolve().parent
 ROOT = TOOLS.parent
@@ -94,9 +96,41 @@ class Rewrite(unittest.TestCase):
         mode, _ = report.rewrite([], text("driver_dry_run.txt"))
         self.assertEqual(mode, "cc1plus")
 
-    def test_time_prefix_per_system(self):
-        self.assertEqual(report.time_prefix("Darwin"), ["/usr/bin/time", "-l"])
-        self.assertEqual(report.time_prefix("Linux"), ["/usr/bin/time", "-v"])
+    def test_time_option_per_system(self):
+        with mock.patch.dict(os.environ, clear=False), mock.patch("os.access", return_value=True):
+            os.environ.pop("LVGL26_NO_TIME", None)
+            self.assertEqual(report.time_binary("Darwin"), "-l")
+            self.assertEqual(report.time_binary("Linux"), "-v")
+
+
+class Fallback(unittest.TestCase):
+    def test_a_missing_binary_means_no_time_option(self):
+        with mock.patch("os.access", return_value=False):
+            self.assertIsNone(report.time_binary("Linux"))
+
+    def test_the_environment_variable_forces_the_fallback(self):
+        with mock.patch("os.access", return_value=True), mock.patch.dict(os.environ, {"LVGL26_NO_TIME": "1"}):
+            self.assertIsNone(report.time_binary("Darwin"))
+
+    def test_ru_maxrss_is_bytes_on_macos_and_kilobytes_on_linux(self):
+        self.assertEqual(report.rusage_peak_mb(3 * 1024 * 1024, "Darwin"), 3.0)
+        self.assertEqual(report.rusage_peak_mb(3 * 1024, "Linux"), 3.0)
+
+    def test_run_timed_without_the_binary_uses_rusage(self):
+        with mock.patch("os.access", return_value=False):
+            status, wall, stderr, stats = report.run_timed([sys.executable, "-c", "print(1)"], "/", [])
+        self.assertEqual(status, 0)
+        self.assertGreater(wall, 0)
+        self.assertEqual(stats["timer"], "rusage")
+        self.assertGreater(stats["peak_rss_mb"], 0)
+        self.assertIsNone(stats["instructions"])
+
+    def test_the_status_and_stderr_of_a_failing_child_come_back(self):
+        with mock.patch("os.access", return_value=False):
+            status, _, stderr, _ = report.run_timed(
+                [sys.executable, "-c", "import sys; sys.stderr.write('x.cpp:1: error: boom'); sys.exit(3)"], "/", [])
+        self.assertEqual(status, 3)
+        self.assertEqual(report.first_error(stderr), "x.cpp:1: error: boom")
 
 
 class Selecting(unittest.TestCase):
@@ -129,14 +163,23 @@ class Table(unittest.TestCase):
 
 @unittest.skipUnless((BUILD / "compile_commands.json").exists(), "build/host-v96 is not configured")
 class OnTheRealBuild(unittest.TestCase):
-    def test_smoke_has_a_row_with_times(self):
+    def row(self, env):
         run = subprocess.run([sys.executable, str(TOOLS / "compile_report.py"), str(BUILD), str(ROOT / "tests" / "smoke.cpp")],
-                             capture_output=True, text=True, check=False)
+                             capture_output=True, text=True, check=False, env={**os.environ, **env})
         self.assertEqual(run.returncode, 0, run.stderr)
         row = json.loads(run.stdout)
         self.assertEqual(row["status"], 0)
         self.assertGreater(row["constexpr_s"], 0)
         self.assertGreater(row["peak_rss_mb"], 0)
+        return row
+
+    def test_smoke_has_a_row_with_times(self):
+        self.assertIn(self.row({})["timer"], ("time-l", "time-v", "rusage"))
+
+    def test_smoke_works_without_usr_bin_time(self):
+        row = self.row({"LVGL26_NO_TIME": "1"})
+        self.assertEqual(row["timer"], "rusage")
+        self.assertIsNone(row["instructions"])
 
 
 if __name__ == "__main__":
