@@ -13,6 +13,8 @@ prefix="$(mkdir -p "$1" && cd "$1" && pwd)"
 cpu="${2:-cortex-m4}"
 gcc_version="16.2.0"
 newlib_version="4.5.0.20241231"
+newlib_sha256="33f12605e0054965996c25c1382b3e463b0af91799001f5bb8c0630f2ec8c852"
+gcc_sha256="e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"  # gcc-16.2.0.tar.xz
 target_flags="-mcpu=${cpu} -mthumb -ffunction-sections -fdata-sections -Os"
 work="${prefix}/work"
 jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
@@ -30,6 +32,7 @@ fetch() {  # fetch <url> <file>
 # ---- newlib: the C library ---------------------------------------------------
 if [ ! -f "${prefix}/arm-none-eabi/lib/libc.a" ]; then
   fetch "https://sourceware.org/pub/newlib/newlib-${newlib_version}.tar.gz" newlib.tar.gz
+  echo "${newlib_sha256}  newlib.tar.gz" | sha256sum -c -
   rm -rf "newlib-${newlib_version}" build-newlib
   tar -xzf newlib.tar.gz
   mkdir build-newlib
@@ -47,6 +50,7 @@ fi
 # ---- libstdc++: the C++ standard library --------------------------------------
 if [ ! -f "${prefix}/arm-none-eabi/lib/libstdc++.a" ]; then
   fetch "https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.xz" gcc.tar.xz
+  echo "${gcc_sha256}  gcc.tar.xz" | sha256sum -c -
   rm -rf "gcc-${gcc_version}" build-libstdcxx
   # Only what libstdc++ needs of the GCC source: the whole tree is about 1 GB.
   tar -xJf gcc.tar.xz "gcc-${gcc_version}/libstdc++-v3" "gcc-${gcc_version}/libgcc" \

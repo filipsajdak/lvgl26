@@ -19,6 +19,10 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [fonts.md](fonts.md) | LVGL's font format, what its converter does, the TrueType a rasteriser needs, SDF and MSDF, and our spike that rasterises a TTF in the compiler. |
 | [image-formats.md](image-formats.md) | Web and embedded image formats: ratio, decoder size and RAM, what decodes line by line, and whether an own format is justified. |
 | [images.md](images.md) | What LVGL draws from read-only memory, its compression and decoders, what other frameworks choose at build time, and a rule for the compile-time path. |
+| [memory.md](memory.md) | Where lvgl26 duplicates or copies data that LVGL already holds, what each copy costs in bytes, and which copies can go without changing LVGL. |
+| [web-emulator.md](web-emulator.md) | Whether a small own emulator can run the firmware in a browser instead of QEMU, with a survey of small emulators and measured size and speed. |
+| [dev-container.md](dev-container.md) | Which base image and install route give a dev container with GCC 16 on both architectures. |
+| [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 
 ## How each claim is marked
 
