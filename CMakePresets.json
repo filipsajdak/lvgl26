@@ -49,6 +49,13 @@
       }
     },
     {
+      "name": "host-v96-no-theme",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_NO_DEFAULT_THEME": "ON"
+      }
+    },
+    {
       "name": "host-v96-analyze",
       "inherits": "host-v96",
       "cacheVariables": {
@@ -107,6 +114,10 @@
     {
       "name": "arm-m4",
       "configurePreset": "arm-m4"
+    },
+    {
+      "name": "host-v96-no-theme",
+      "configurePreset": "host-v96-no-theme"
     }
   ],
   "testPresets": [
@@ -155,6 +166,13 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-no-theme",
+      "configurePreset": "host-v96-no-theme",
       "output": {
         "outputOnFailure": true
       }
