@@ -16,8 +16,12 @@ class computed;
 
 namespace detail {
 
+struct not_a_dependency {};
+
 template <class D>
-struct value_of_dependency;
+struct value_of_dependency {
+  using type = not_a_dependency;
+};
 template <class T, class O>
 struct value_of_dependency<state<T, O>> {
   using type = T;
@@ -32,6 +36,12 @@ template <class D>
 using value_of = typename value_of_dependency<D>::type;
 
 }  // namespace detail
+
+/// An lv::state or an lv::computed: what a widget can follow and a computed can depend on.
+/// Where a part takes a state, as `const lv::dependency auto& count` or as the template
+/// argument `template <lv::dependency auto& Count>`.
+template <class D>
+concept dependency = !std::same_as<detail::value_of<D>, detail::not_a_dependency>;
 
 /// A value made from states and other computed values. Nothing is stored: get()
 /// calls the function. Bind it like a state. Write `constinit lv::computed`.

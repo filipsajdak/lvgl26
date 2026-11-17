@@ -129,7 +129,7 @@ constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::eac
 
 /// The widgets of one row, by the ids of its row template: lv::row_view<card>{row}.get<"title">().
 template <const auto& Template>
-  requires detail::tree_node<decltype(Template)>
+  requires tree_node<decltype(Template)>
 class row_view {
  public:
   constexpr explicit row_view(obj root) {}

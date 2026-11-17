@@ -108,9 +108,15 @@ struct dependency_value<computed<F, Deps...>> {
 template <class D>
 using value_of = typename dependency_value<D>::type;
 
-// An lv::state or an lv::computed.
+}  // namespace detail
+
+// An lv::state or an lv::computed: what a widget can follow and a computed can depend on.
+// Where a part takes a state, as `const lv::dependency auto& count` or as the template
+// argument `template <lv::dependency auto& Count>`.
 template <class D>
-concept dependency = !std::same_as<value_of<D>, not_a_dependency>;
+concept dependency = !std::same_as<detail::value_of<D>, detail::not_a_dependency>;
+
+namespace detail {
 
 // What class template argument deduction makes of a dependency that was passed as
 // a temporary: not a dependency, so that it is refused.
@@ -240,7 +246,7 @@ class dependencies {
 // A value made from states and other computeds by a function. See the top of this file.
 template <class F, class... Deps>
 class computed {
-  static constexpr bool dependencies_ok = (detail::dependency<Deps> && ...);
+  static constexpr bool dependencies_ok = (dependency<Deps> && ...);
   static_assert(dependencies_ok, detail::bad_dependency("lv::computed"));
   static_assert(!dependencies_ok || std::invocable<const F&, detail::value_of<Deps>...>,
                 detail::not_callable<Deps...>(
@@ -251,7 +257,7 @@ class computed {
       typename detail::result_of_call<const F&, detail::value_of<Deps>...>::type;
 
  private:
-  static_assert(detail::state_value<value_type>, detail::bad_result<value_type>());
+  static_assert(state_value<value_type>, detail::bad_result<value_type>());
   static_assert(!detail::integer<value_type> ||
                     cfg<typename detail::settings<F>::tag>.raw_integer_state,
                 "lv: the function of an lv::computed returns a plain integer, which does not "
@@ -342,7 +348,7 @@ constexpr formatted_binding<typename computed<F, Deps...>::value_type> bind(
 // The function is kept in the effect, so it may capture anything.
 template <class F, class... Deps>
 class effect {
-  static constexpr bool dependencies_ok = (detail::dependency<Deps> && ...);
+  static constexpr bool dependencies_ok = (dependency<Deps> && ...);
   static_assert(dependencies_ok, detail::bad_dependency("lv::effect"));
   static_assert(!dependencies_ok || std::invocable<F&, detail::value_of<Deps>...>,
                 detail::not_callable<Deps...>("lv::effect", ""));

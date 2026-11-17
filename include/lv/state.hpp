@@ -32,12 +32,16 @@
 
 namespace lv {
 
+// What a state can hold: a bool, an enum, an integer quantity, a named value (a struct of
+// one integer, bool or enum member), an lv_color_t or a pointer. Where a part takes a value
+// that it keeps in a state.
+template <class T>
+concept state_value = detail::plain_state_value<T> || detail::strong_value<T> || detail::integer_quantity<T> ||
+                      std::same_as<T, lv_color_t> || std::is_pointer_v<T>;
+
 namespace detail {
 
-// What a state can hold, and which kind of subject carries it.
-template <class T>
-concept state_value = plain_state_value<T> || strong_value<T> || integer_quantity<T> ||
-                      std::same_as<T, lv_color_t> || std::is_pointer_v<T>;
+// Which kind of subject carries a state's value.
 
 template <class T>
 constexpr lv_subject_type_t subject_type() {
@@ -106,7 +110,7 @@ class state {
   static_assert(!detail::unit_quantity<T> || detail::integer_quantity<T>,
                 "lv: a quantity in a state needs an integer number for now, for example "
                 "`0 * km / h` rather than `0.0 * km / h`.");
-  static_assert(detail::state_value<T>,
+  static_assert(state_value<T>,
                 "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one "
                 "integer, bool or enum member, a bool, an enum, an lv_color_t or a pointer "
                 "(for text: const char*).");

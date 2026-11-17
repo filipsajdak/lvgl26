@@ -454,6 +454,34 @@ constexpr lv::easing eases[] = {
     lv::ease::in_out_expo,  lv::ease::in_circ,     lv::ease::out_circ,  lv::ease::in_out_circ,  lv::ease::in_back,
     lv::ease::out_back,     lv::ease::in_out_back, lv::easing{line},    lv::easing{tok.motion.fall}};
 
+// ---- parts: the concepts that constrain their parameters --------------------------
+
+constexpr auto heading(const char* name, const lv::font_value auto& font) {
+  return lv::label({.style = {.text_font = font}, .text = name});
+}
+constexpr auto filled(lv::token_of<lv_color_t> auto fill, lv::style_value auto extra) {
+  return lv::box({.style = extra | lv::style({.bg_color = fill})});
+}
+constexpr auto framed(lv::tree_node auto content) {
+  return lv::group[content];
+}
+constexpr auto stepper(const char* name, const lv::dependency auto& count, lv::tree_handler auto fewer) {
+  return lv::row[lv::label({.text = name}), lv::button({.on_clicked = fewer}), lv::label({.text = lv::bind(count, "{}")})];
+}
+// Clang (21) cannot read `template <lv::dependency auto& Count>`; the requires clause means the same.
+template <auto& Count>
+  requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
+constexpr auto counting() {
+  return stepper("Count", Count, [] { Count.update([](lv::counter c) { return ++c; }); });
+}
+
+constexpr auto parts = framed(lv::column[heading("Parts", label_font), filled(tok.color.ink, card),
+                                         stepper("Clicks", clicks, &reset), counting<clicks>()]);
+static_assert(lv::tree_node<decltype(parts)> && lv::token_value<decltype(tok.color.ink)>);
+static_assert(lv::token_of<decltype(tok.color.ink), lv_color_t> && lv::style_value<decltype(card)>);  // C API
+static_assert(lv::font_value<decltype(label_font)> && lv::font_value<decltype(lv::raw(odd_font))> && lv::view_value<lv::obj>);
+static_assert(lv::dependency<decltype(over_limit)> && lv::event_handler<decltype(&reset)> && lv::tree_handler<decltype(&reset)> && lv::state_value<bool>);
+
 // ---- choosing by value ------------------------------------------------------------
 
 constexpr const char* name_of(mode m) {

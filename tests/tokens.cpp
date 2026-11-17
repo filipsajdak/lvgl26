@@ -69,7 +69,7 @@ static_assert(lv::detail::rounded(-1.5) == -2 && lv::detail::rounded(-2.4) == -2
 static_assert(lv::detail::rounded(0.6) == 1 && lv::detail::rounded(-0.4) == 0);
 consteval lv_color_t color_token(std::string_view text) {
   const auto v = *lv::json::value::parse(text);
-  return lv::detail::read_token(lv::detail::token_of<lv_color_t>{}, v, v);
+  return lv::detail::read_token(lv::detail::read_as<lv_color_t>{}, v, v);
 }
 static_assert(is_rgb(color_token(R"({"components": [1, 0.5, 0]})"), 255, 128, 0));
 static_assert(is_rgb(color_token(R"({"hex": "#102030"})"), 0x10, 0x20, 0x30));
@@ -80,7 +80,7 @@ static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 template <class T>
 consteval T read_as(std::string_view text) {
   const auto v = *lv::json::value::parse(text);
-  return lv::detail::read_token(lv::detail::token_of<T>{}, v, v);
+  return lv::detail::read_token(lv::detail::read_as<T>{}, v, v);
 }
 static_assert(read_as<lv::length>(R"("50%")") == lv::length{50 * lv::pct});
 static_assert(read_as<lv::length>(R"({"value": 25, "unit": "%"})") == lv::length{25 * lv::pct});
