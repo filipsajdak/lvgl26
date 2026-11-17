@@ -165,6 +165,11 @@ add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
+# The fonts are the bytes that one evaluation of the whole font made.
+add_executable(font_bytes font_bytes.cpp)
+target_compile_options(font_bytes PRIVATE --embed-dir=${lvgl_SOURCE_DIR})
+target_link_libraries(font_bytes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME font_bytes COMMAND font_bytes)
 
 add_executable(image image.cpp)
 target_link_libraries(image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
