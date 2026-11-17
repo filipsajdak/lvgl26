@@ -27,8 +27,9 @@
 //
 // Making a font costs compile time: about 3.5 seconds for 95 characters at 14 px and 7.5 at
 // 48 px, half a second for sixteen characters. Make each one once, in a constexpr
-// variable, in one file. Each glyph is drawn in a constant evaluation of its own, so no
-// size needs a raised -fconstexpr-ops-limit.
+// variable, in one file. Each glyph is drawn in a constant evaluation of its own, so a
+// font needs no raised -fconstexpr-ops-limit: 95 characters at 255 px need at most 28
+// million operations of GCC's 33.5 million.
 
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/ttf.hpp>
@@ -153,7 +154,7 @@ consteval drawn_glyph draw_glyph(font_source file, std::int32_t px, std::uint32_
 }
 
 // Glyph `Glyph` of `File` at `Px` pixels. Each is a constant evaluation of its own, and
-// GCC's -fconstexpr-ops-limit counts one evaluation: no font needs a raised limit.
+// GCC's -fconstexpr-ops-limit counts one evaluation, so the limit applies to one glyph.
 template <font_source File, std::int32_t Px, std::uint32_t Glyph>
 inline constexpr drawn_glyph glyph = draw_glyph(File, Px, Glyph);
 

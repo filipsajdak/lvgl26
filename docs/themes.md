@@ -76,7 +76,7 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
 
 ### What the typefaces cost
 
-Measured once on one machine, with `-Os` for the flash. The compile time comes on top of `lv/signal.hpp`.
+Measured once on one machine, with `-Os` for the flash. The 208 px rows were measured again once the compiler drew fonts glyph by glyph. The compile time comes on top of `lv/signal.hpp`.
 
 | Font | Characters | Compile time | In flash |
 |---|---|---|---|
@@ -93,7 +93,7 @@ Measured once on one machine, with `-Os` for the flash. The compile time comes o
 - This cost is why the fonts are not in `lv/signal.hpp`. Include `lv/signal_type.hpp` in one file, and make each larger font once.
 - `title` and `label` are capitals with wide spacing. The themes space the text of a button; for a style of your own, merge the token: `lv::style({.text_font = title}) | text.title`.
 - A numeral style with all 95 characters takes six times the flash of `numerals`. Use `type` for it only when the reading has letters.
-- `numeral-2xl` is 208 px. `type` makes it too, but 95 characters of that size take 480 KB of flash and up to 4 GB of memory in the compiler. Use `numerals` for it.
+- `numeral-2xl` is 208 px. `type` makes it too, but 95 characters of that size take 480 KB of flash and 5.4 GB of memory in the compiler. Use `numerals` for it.
 - The fonts have no glyph for LVGL's symbols. A widget that draws one, such as the arrow of a drop-down list, shows an empty box in its place.
 
 ## Make your own

@@ -109,7 +109,7 @@ Barlow Medium with its 95 characters, measured once on one machine:
 - The font file itself does not reach the program.
 - Kerning pairs add three bytes each. Barlow Medium at 32 px has 748 among these characters.
 - The characters cost more compile time than the size does. A font of sixteen characters at 16 px takes about half a second.
-- A large font costs memory in the compiler. Barlow Condensed with 95 characters at 208 px takes about 34 s and up to 4 GB of memory.
+- A large font costs memory in the compiler. Barlow Condensed with 95 characters at 208 px takes about 34 s and 5.4 GB.
 - Make the fonts in one file, so that only that file pays the compile time.
 
 ## Rules and limits
@@ -119,5 +119,5 @@ Barlow Medium with its 95 characters, measured once on one machine:
 - Kerning is read from the file's `kern` feature (GPOS). Kerning that differs by script is not read.
 - OpenType files with CFF outlines (`.otf`) are refused with a message.
 - A character the file lacks stops the build and names the character.
-- The compiler draws each glyph in a constant evaluation of its own. A font needs no raised `-fconstexpr-ops-limit` at any size, and lvgl26 sets none.
+- The compiler draws each glyph in a constant evaluation of its own, so a font needs no raised `-fconstexpr-ops-limit`, and lvgl26 sets none. The largest font measured, Barlow Medium with 95 characters at 255 px, needs at most 28 million operations of the 33.5 million GCC allows.
 - The pixels of a font take at most 1 MB, the most LVGL's format can address. A larger font stops the build and says how many bytes it needs.
