@@ -86,9 +86,13 @@ def clang_command(clang: str, source: pathlib.Path, flags: list[str], stubs: pat
 
 
 def snippet_sources(docs: pathlib.Path) -> list[pathlib.Path]:
-    """The C++ files that the pages under `docs` show a part of. A path is from the repository's root."""
+    """The sources that the pages under `docs` show a part of. A path is from the repository's root.
+
+    A header is not read alone: a source that includes it is, and the headers a page shows are read there.
+    """
     root = docs.resolve().parent
-    return [root / path for page in sorted(docs.glob("*.md")) for path in SNIPPET.findall(page.read_text())]
+    shown = (root / path for page in sorted(docs.glob("*.md")) for path in SNIPPET.findall(page.read_text()))
+    return [path for path in shown if path.suffix == ".cpp"]
 
 
 def files_of(options: argparse.Namespace) -> list[pathlib.Path]:
