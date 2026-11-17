@@ -131,6 +131,19 @@ tracks.update(1, [](track& t) { ++t.plays; });          // sets that row's label
 - A text field is shown from the row itself, without a copy.
 - The selected row is `checked`, so `.style_checked` styles it. [docs/lists.md](docs/lists.md) has the rest.
 
+A set that is fixed when the program is written is repeated by the compiler, not by a list at run time:
+
+```cpp
+constexpr auto tile = []<page Page> {
+  return lv::button({.on_clicked = [] { shown = Page; }})[lv::label({.text = lv::like<Page, labels>})];
+};
+constexpr auto home = lv::row[lv::for_each<page, lv::but<page::none>>(tile)];   // one tile for each enumerator
+// lv::for_each_field<job>(part): one line for each member with [[=lv::caption{"key"}]]
+// lv::for_each<levels>(part): one element for each record of a constant array
+```
+
+- The widgets are children of the tree, as if written by hand: no list, no memory from lvgl26. [docs/repetition.md](docs/repetition.md) has the rest.
+
 Sequences of UI steps are coroutines on LVGL's loop:
 
 ```cpp

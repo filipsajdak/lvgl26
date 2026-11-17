@@ -25,6 +25,7 @@
       "title": "Guides",
       "pages": [
         "lists.md",
+        "repetition.md",
         "themes.md",
         "fonts.md",
         "images.md",

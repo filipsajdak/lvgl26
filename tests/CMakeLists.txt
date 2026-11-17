@@ -528,6 +528,11 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
 endif()
 
+# The example of docs/repetition.md: it runs, and tests/for_each.cpp checks what it repeats.
+add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
+target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_repeat COMMAND example_repeat)
+
 # The example of docs/themes.md. Its pictures are the ones on the page.
 add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)
 target_compile_options(example_theme PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/theme)
