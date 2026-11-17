@@ -24,7 +24,7 @@ The original keeps all four in the home page and moves each off screen with its 
 Only the Print page animates that move, so the other three appear at once.
 
 The port has the same screens and the same behaviour.
-It is about 1350 lines of C++, with its screenshot tool and window, and a token file of 466 lines.
+It is about 1300 lines of C++, with its screenshot tool and window, and a token file of about 470 lines.
 The test `ports_printer` shows every page on each push and compares it with a reference picture.
 The two pictures above are written by the test `ports_printer_shot`, which runs the port's own screenshot tool.
 On LVGL v9.6.0, the tests `ports_printer_picture_home` and `ports_printer_picture_copy` fail when a picture here differs from what the port draws.
@@ -93,7 +93,7 @@ inline void close_subpage() { active_subpage = subpage::none; }
 ```
 
 A button changes a state by calling a function, as in `.on_clicked = &open_copy`.
-State that one page owns, such as the number of copies, lives in that page's file.
+State that one kind of page owns, such as the number of copies, lives in `job_options<Kind>`.
 It keeps its value while the page is away.
 
 ### One file for each page
@@ -123,7 +123,8 @@ A change to one page recompiles one file.
 ### The pager
 
 A pager is a place on the screen where one page is mounted.
-Showing another page deletes the one before it.
+Showing another page deletes the one before it, and only then builds the new one.
+Assigning the new page first would build it while the old one still exists, and the heap would hold both at its peak.
 
 <!-- snippet: examples/ports/slint/printer/pager.hpp pager -->
 ```cpp
@@ -165,7 +166,8 @@ if PrinterState.active-page == Page.settings: settings-page := SettingsPage { }
 ```
 
 In Slint, such an element exists only while its condition holds.
-In the port an `lv::effect` runs a function when a state changes, and the function asks a pager to show the page.
+In the port an `lv::effect` runs a function when a state changes.
+The function is an `lv::match` with an arm for every page, so a new page without an arm stops the build, and each arm asks a pager to show its page.
 
 <!-- snippet: examples/ports/slint/printer/shell.cpp follow -->
 ```cpp
@@ -262,7 +264,7 @@ export component SpinBox inherits Rectangle {
 ```
 
 The port's `spin_box` is a function that returns a piece of tree.
-The count is a state that the page's file owns, and the limits are two small functions.
+The count is a state in `job_options<Kind>`, and the limits are two small functions.
 
 <!-- snippet: examples/ports/slint/printer/parts.hpp spin_box -->
 ```cpp
@@ -434,13 +436,44 @@ The files add up to about 215 s of processor time.
 Plan for this: keep each page in its own file, build with several jobs, and give the build machine memory for the largest page.
 Several jobs at once multiply the memory.
 
+## What it costs
+
+The test `printer_cost` measures the running panel, and `tools/compile_report.py` measures the compile.
+The first column is the port before it used `lv::each`, `lv::match`, shared looks and flex layout.
+The second is the port as this page shows it.
+Both ran on LVGL v9.6.0 with GCC 16.2 on the same machine, with the same four jobs in the queue.
+
+| What | Before | After |
+|---|---|---|
+| Lines of C++ in the port, without the screenshot tool and the window | 1326 | 1256 |
+| Heap in use after the home page is shown | 48544 bytes | 47920 bytes |
+| Heap in use after the Print page is open too | 89128 bytes | 89232 bytes |
+| Widgets with the Print page open | 258 | 270 |
+| A second of printing: widgets deleted, widgets made | 196, 196 | 0, 0 |
+| A job is added: widgets deleted, widgets made | 196, 245 | 0, 52 |
+| A job is cancelled: widgets deleted, widgets made | 245, 196 | 52, 0 |
+| Compile of the ten port files: instructions | 2339 billion | 2277 billion |
+| Compile of the ten port files: constant evaluation | 135.6 s | 126.5 s |
+| Compile, the largest file: peak memory | 2.7 GB | 3.4 GB |
+
+What the table says:
+
+- The heap does not shrink.
+  The card of a job costs what it did, and the new cards have one more widget each.
+- What changes is the churn.
+  A change of a job touches the widgets of that job, so a second of printing no longer deletes and makes every card.
+- The widgets made are the allocations that a change causes.
+  LVGL's heap does not count its calls, so the test counts widgets, and each widget is several heap blocks.
+- The queue holds its jobs in a fixed array, and the text of a job is not copied.
+  It makes no allocation of its own.
+- The compile is a little cheaper in instructions.
+  The largest file, `print_page.cpp`, needs more memory, because its card now carries the bindings.
+
 ## Memory on the device
 
-The heap use of this port is not measured.
-The jobs of the queue sit in an `lv::list` of fixed capacity, so the queue itself never allocates.
+`app.heap()` tells you what a mounted page really takes: see [the decisions you must make](from-slint.md#decisions-you-must-make).
 On a Cortex-M4, LVGL's heap takes about 200 bytes for a label or a button, and 11064 bytes for a list of 51 widgets.
 These numbers are in `docs/research/memory.md`.
-`app.heap()` tells you what a mounted page really takes: see [the decisions you must make](from-slint.md#decisions-you-must-make).
 
 ## The choices that were made
 
@@ -449,7 +482,7 @@ These numbers are in `docs/research/memory.md`.
 | How many trees | One tree for each page, in its own file | One tree for the whole window | The compiler works on one page at a time |
 | When a page has widgets | Mounted when shown, deleted when it goes | All pages mounted and moved off screen, as the original does for its sub-pages | A page that is not shown has no widgets |
 | Reusable parts | C++ functions in `parts.hpp` | Waiting for components with their own state | Components are planned and not built |
-| Where state lives | At file scope in the page's file, or in `state.hpp` when pages share it | State inside a component made with the page | Components with state are planned. A page's state keeps its value while the page is away |
+| Where state lives | In `job_options<Kind>` for Copy, Scan and USB, in the page's file for one page, or in `state.hpp` when pages share it | State inside a component made with the page | Components with state are planned. A page's state keeps its value while the page is away |
 | The queue | An `lv::list` of jobs, shown by `lv::each` | Mount a card for each job again on a change | A change touches the widgets of its own job |
 | Fonts | Made in the file that uses them, with `lv::typeface` | One file that makes every size | A page pays compile time only for the sizes it shows, and a size is one font in memory |
 | Icons | PNG files decoded by the compiler, tinted by a token | SVG on the device, or one picture for each color | The device needs no decoder, and one picture serves every color |
