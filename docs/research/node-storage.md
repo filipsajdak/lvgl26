@@ -726,7 +726,7 @@ The number is the decision it answers.
 | 1 | A tree's storage lives inside a non-movable `mounted`. Caller memory goes through `lv::place` and `lv::mount_in`. Page functions use storage they declare. |
 | 2 | `mounted` carries its own failure: `if (!root)`, `root->`, `root.error()`. A global uses `page.mount(parent)`. |
 | 3 | A kind declares a nested `storage<Tree, Path...>` template, checked by a concept. |
-| 4 | Not decided: the owner asked for an allocation-free watch first. "The root watch without an allocation" is that research. |
+| 4 | Two handlers for each parent, shared by every tree mounted there (W2). `lv::display` puts them on its screens and layers at start, so a mount there allocates nothing. `watch::none` means no watch, under the rule that the parent outlives the tree. |
 | 5 | A widget deleted alone through the C API is under a documented rule, checked in a checked build with our own address lookup. |
 | 6 | The arm region is the largest arm, or the largest plus the second largest with a leave animation. |
 | 7 | A page function's size is declared by the page and checked in its own file. |
