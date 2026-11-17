@@ -6,6 +6,7 @@
 #include "check.hpp"
 
 #include <lv/lv.hpp>
+#include <pager.hpp>
 #include <queue.hpp>
 #include <scenes.hpp>
 #include <shell.hpp>
@@ -79,6 +80,31 @@ void a_second(lv::application& app) {
   }
 }
 
+// The heap in use at the moment the settings page is complete: the peak of a switch to it.
+std::size_t peak_of_switch = 0;
+
+lv::owned<lv::obj> settings_probed(lv::obj host) {
+  lv::owned<lv::obj> page = mount_settings(host);
+  peak_of_switch = used_bytes();
+  return page;
+}
+
+// Switches from the home page to the settings page in a host of its own, and tells the peak heap.
+// `delete_first` is how the pager does it; the other way is the plain assignment of the new page.
+// Either way one page is left in the host: the owner deletes the old page in both.
+void switch_home_to_settings(lv::obj screen, bool delete_first, std::size_t& peak, std::size_t& left) {
+  lv::owned<lv::obj> host{lv::obj{lv_obj_create(screen.raw())}};
+  lv::owned<lv::obj> slot = mount_home(host.get());
+  if (delete_first) {
+    replace_page(slot, host.get(), &settings_probed);
+  } else {
+    slot = settings_probed(host.get());
+  }
+  peak = peak_of_switch;
+  left = lv_obj_get_child_count(host.get().raw());
+  check(left == 1 && slot);
+}
+
 }  // namespace
 
 int main() {
@@ -115,6 +141,15 @@ int main() {
     }
   }
   check(queue.size() == jobs_before);
+
+  // Plain assignment builds the new page while the old one exists: the order is the whole difference.
+  std::size_t peak_first = 0, peak_plain = 0, left_first = 0, left_plain = 0;
+  switch_home_to_settings(screen, true, peak_first, left_first);
+  switch_home_to_settings(screen, false, peak_plain, left_plain);
+  std::printf("home to settings: peak heap %zu bytes deleting first, %zu bytes assigning (%zu more)\n", peak_first,
+              peak_plain, peak_plain - peak_first);
+  check(left_first == 1 && left_plain == 1);
+  check(peak_plain > peak_first);
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }
