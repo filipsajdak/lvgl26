@@ -5,6 +5,13 @@ on:
   schedule:
     - cron: '17 2 * * *'
   workflow_dispatch:
+    inputs:
+      since:
+        description: >-
+          Mutate the lines of include/lv changed since this git ref, instead of since the last
+          good nightly run. The base of the nightly run does not move.
+        required: false
+        type: string
 
 
 jobs:
@@ -116,6 +123,137 @@ jobs:
             cat arm-run.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Mutation testing of the lines of include/lv that changed since the last good run: one
+  # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
+  # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
+  mutation-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      any: ${{ steps.plan.outputs.any }}
+      since: ${{ steps.plan.outputs.since }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # the base commit and the tag are needed
+      - name: Choose the headers
+        id: plan
+        env:
+          SINCE_INPUT: ${{ inputs.since }}
+        run: |
+          since="${SINCE_INPUT}"
+          if [ -z "$since" ] && git rev-parse -q --verify refs/tags/nightly-mutation-base > /dev/null; then
+            since=nightly-mutation-base
+          fi
+          if [ -z "$since" ]; then
+            echo "No base yet: nothing is mutated tonight, and the base is set to this commit."
+            {
+              echo "any=false"
+              echo "since=${GITHUB_SHA}"
+              echo 'matrix={"include":[]}'
+            } >> "$GITHUB_OUTPUT"
+          else
+            python3 tools/mutation_plan.py --since "$since" --github-output "$GITHUB_OUTPUT"
+          fi
+
+  mutation:
+    needs: [image, mutation-plan]
+    if: needs.mutation-plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    # GitHub ends a job at six hours. The run stops judging mutants earlier, so that it
+    # can say how far it got.
+    timeout-minutes: 350
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.mutation-plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: mutation-${{ matrix.name }}
+      - name: Mutate the changed lines of ${{ matrix.header }}
+        shell: bash
+        env:
+          HEADER: ${{ matrix.header }}
+          TESTS: ${{ matrix.tests }}
+          TARGETS: ${{ matrix.targets }}
+          SINCE: ${{ needs.mutation-plan.outputs.since }}
+          # Two jobs at a time: a mutant is built and tested one after the other.
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
+          CTEST_PARALLEL_LEVEL: 2
+        run: |
+          set -o pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 tools/mutation.py "$HEADER" --tests "$TESTS" ${TARGETS:+--targets "$TARGETS"} \
+            --since "$SINCE" --time-budget 17400 --accepted tools/mutation_accepted.json \
+            --report mutation-report.json 2>&1 | tee mutation.log
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f mutation-report.json ]; then
+            python3 tools/mutation_summary.py mutation-report.json ${{ matrix.fallback && '--fallback' || '' }} >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Mutation: ${{ matrix.header }}: no report, see the log." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutation-${{ matrix.name }}
+          path: |
+            mutation-report.json
+            mutation.log
+
+  # The next night mutates what changed after this run. Only a run that judged every mutant
+  # of every header, with no survivor left to triage, moves the base. A run with an explicit
+  # `since` leaves it where it is.
+  mutation-base:
+    needs: [mutation-plan, mutation]
+    if: >-
+      ${{ always() && needs.mutation-plan.result == 'success'
+      && (needs.mutation.result == 'success' || needs.mutation.result == 'skipped')
+      && inputs.since == '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Move the base to this commit
+        run: |
+          git tag -f nightly-mutation-base "${GITHUB_SHA}"
+          git push --force origin refs/tags/nightly-mutation-base
+
+  mutation-report:
+    needs: [mutation]
+    if: ${{ always() && needs.mutation.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "Mutants survived the nightly run ($(date -u +%F))" \
+            --body "Mutation testing of the changed lines of include/lv found mutants that the tests do not kill, or ran out of time before it judged them all. The run: ${RUN_URL}
+
+          Each shard of the run has a summary with the survivors (file, line, the mutant) and an artifact, mutation-<header>, with mutation-report.json and the log.
+
+          Triage every survivor: write a test that kills it, or add it to tools/mutation_accepted.json with the reason it is equivalent (the program means the same) or arid (nothing observable depends on it). A shard that ran out of time says \"N of M mutants were judged; the rest were not reached\" in its summary. To continue, run the workflow again by hand (workflow_dispatch) with since=nightly-mutation-base, or raise --time-budget in the mutation job (the job limit is 350 minutes). The base tag nightly-mutation-base does not move until a night is clean, so nothing it did not reach is lost."
 
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:

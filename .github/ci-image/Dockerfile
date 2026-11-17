@@ -4,9 +4,9 @@
 FROM gcc:16@sha256:5c2f83335c97e233c80d2bc754bd5c46b2d9c32f236a765a4ac40a59f216c064
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends cmake ninja-build python3 python3-pip ccache git \
+ && apt-get install -y --no-install-recommends cmake ninja-build python3 python3-pip ccache git rsync \
  && rm -rf /var/lib/apt/lists/* \
- && pip3 install --no-cache-dir --break-system-packages lizard==1.26.1 \
+ && pip3 install --no-cache-dir --break-system-packages lizard==1.26.1 universalmutator==1.14.1 \
  && ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16 \
  && ln -sf "$(command -v g++)" /usr/local/bin/g++-16 \
  && ln -sf "$(command -v gcov)" /usr/local/bin/gcov-16
