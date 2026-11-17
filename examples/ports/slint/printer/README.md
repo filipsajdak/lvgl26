@@ -44,7 +44,7 @@ The compiler works on one page at a time, with the project's normal limit for co
 | `pager.hpp` | The page switch: `pager` replaces a page, `slide_pager` slides it in and out |
 | `home_page.cpp`, `settings_page.cpp`, `ink_page.cpp` | The three pages of the side bar |
 | `print_page.cpp`, `copy.cpp`, `scan.cpp`, `usb_page.cpp` | The four sub-pages |
-| `queue.cpp`, `queue_view.cpp` | The jobs, and the column of cards on the home page |
+| `queue.cpp`, `queue_column.hpp` | The jobs, and the column of cards that the home page nests |
 | `parts.hpp` | Components: icon button, spin box, choice, back header |
 | `fonts.hpp`, `icons.hpp`, `tokens.json` | Inter, the pictures, and the design tokens |
 
@@ -55,21 +55,20 @@ The compiler works on one page at a time, with the project's normal limit for co
 
 ## What a file costs to compile
 
-Measured once with GCC 16.2 on a loaded machine, at the project's normal limit for constant evaluation.
+Measured on 2026-11-17 with GCC 16.2 and nothing else compiling, at the project's normal limit for constant evaluation.
 The time is the processor time of the compiler. The memory is its peak.
 
 | File | Time | Memory |
 |---|---|---|
-| `copy.cpp` | 26 s | 1.2 GB |
-| `scan.cpp` | 23 s | 1.8 GB |
-| `print_page.cpp` | 30 s | 3.1 GB |
-| `usb_page.cpp` | 27 s | 0.9 GB |
-| `home_page.cpp` | 22 s | 0.8 GB |
-| `settings_page.cpp` | 22 s | 1.3 GB |
-| `ink_page.cpp` | 17 s | 1.7 GB |
-| `queue_view.cpp` | 29 s | 1.0 GB |
-| `shell.cpp` | 15 s | 0.6 GB |
-| `queue.cpp` | 4 s | 0.4 GB |
+| `copy.cpp` | 19 s | 2.6 GB |
+| `scan.cpp` | 19 s | 2.6 GB |
+| `print_page.cpp` | 25 s | 3.4 GB |
+| `usb_page.cpp` | 18 s | 2.6 GB |
+| `home_page.cpp` | 28 s | 2.8 GB |
+| `settings_page.cpp` | 19 s | 2.3 GB |
+| `ink_page.cpp` | 15 s | 1.7 GB |
+| `shell.cpp` | 11 s | 0.7 GB |
+| `queue.cpp` | 3 s | 0.4 GB |
 
 ## What differs from the original
 

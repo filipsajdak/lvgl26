@@ -78,7 +78,7 @@ Numbers for the memory row come from `docs/research/memory.md`.
 
 ## Not there yet
 
-- **A `ListView` over a long model.** `lv::each` builds a row for each row of an `lv::list`, up to its capacity. A list that recycles its rows while it scrolls is planned. The printer port still mounts its cards again; a test builds the same queue with `lv::each`.
+- **A `ListView` over a long model.** `lv::each` builds a row for each row of an `lv::list`, up to its capacity. A list that recycles its rows while it scrolls is planned. The printer port shows its queue with `lv::each`: a change of a job touches the widgets of that job only.
 - **Components with their own state and slots.** `@children` has no counterpart. They are planned.
 - **A style that follows a color state.** A theme cannot change at run time yet, so Slint's four printer themes are not ported.
 - **Gradients.** A gradient is vertical or horizontal. Diagonal and multi-stop gradients are missing.

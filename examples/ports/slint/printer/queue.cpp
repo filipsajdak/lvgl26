@@ -1,6 +1,6 @@
 #include "queue.hpp"
 
-#include <algorithm>
+#include <format>
 
 namespace printer {
 namespace {
@@ -9,44 +9,48 @@ using namespace lv::units;
 
 constexpr int percent_done = 100;
 
-std::vector<job>& model() {
-  static std::vector<job> jobs{
-      {.title = "210106-FinalPresentation.pdf", .owner = "info@example.com", .size = "143kb", .pages = 6,
-       .progress = 63, .printing = true},
-      {.title = "Adressliste.docx", .owner = "info@example.com", .size = "143kb", .pages = 6},
-      {.title = "Salaries.pdf", .owner = "info@example.com", .size = "143kb", .pages = 6},
-      {.title = "EW 2026 Slides", .owner = "info@example.com", .size = "2.5MB", .submitted = "11:41 10/03/26",
-       .pages = 300},
-  };
-  return jobs;
+constexpr job demo_jobs[] = {
+    {.id = {1}, .title = "210106-FinalPresentation.pdf", .owner = "info@example.com", .size = "143kb",
+     .pages{6}, .progress{63}, .left{37}, .printing = true, .status = "63% - PRINTING"},
+    {.id = {2}, .title = "Adressliste.docx", .owner = "info@example.com", .size = "143kb", .pages{6}},
+    {.id = {3}, .title = "Salaries.pdf", .owner = "info@example.com", .size = "143kb", .pages{6}},
+    {.id = {4}, .title = "EW 2026 Slides", .owner = "info@example.com", .size = "2.5MB",
+     .submitted = "11:41 10/03/26", .pages{300}},
+};
+
+int next_id = 5;
+
+// The job gains a percent: its text and its bar follow.
+void advance(job& j) {
+  ++j.progress.value;
+  --j.left.value;
+  j.printing = true;
+  *std::format_to_n(j.status, sizeof j.status - 1, "{}% - PRINTING", j.progress.value).out = '\0';
 }
 
-void changed() { queue_revision.update([](lv::counter n) { return lv::counter{n.value + 1}; }); }
-
-// One second of printing: the first job gains a percent.
+// One second of printing: the first job gains a percent, and leaves at a hundred.
 void print_a_second() {
-  auto& jobs = model();
-  if (jobs.empty()) return;
-  job& first = jobs.front();
-  first.progress += 1;
-  first.printing = true;
-  if (first.progress > percent_done) jobs.erase(jobs.begin());
-  changed();
+  if (queue.empty()) return;
+  if (queue[0].progress.value >= percent_done)
+    queue.erase(0);
+  else
+    queue.update(0, &advance);
 }
 
 }  // namespace
 
-const std::vector<job>& jobs() { return model(); }
+void load_demo_queue() { (void)queue.assign(demo_jobs); }
 
-void start_job(const char* title) {
-  model().push_back({.title = title});
-  changed();
+job_id start_job(const char* title) {
+  const job_id id{next_id};
+  if (!queue.push_back({.id = id, .title = title})) return {};
+  ++next_id;
+  return id;
 }
 
-void cancel_job(std::size_t index) {
-  if (index >= model().size()) return;
-  model().erase(model().begin() + static_cast<std::ptrdiff_t>(index));
-  changed();
+void cancel_job(job_id id) {
+  for (std::size_t i = 0; i < queue.size(); ++i)
+    if (queue[i].id.value == id.value) return queue.erase(i);
 }
 
 lv::task<> run_queue() {
@@ -54,11 +58,6 @@ lv::task<> run_queue() {
     co_await lv::sleep(1000 * ms);
     print_a_second();
   }
-}
-
-std::string status_line(const job& j) {
-  const char* word = j.printing ? "PRINTING" : "WAITING...";
-  return j.progress > 0 ? std::to_string(j.progress) + "% - " + word : word;
 }
 
 }  // namespace printer
