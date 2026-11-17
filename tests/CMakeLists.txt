@@ -230,6 +230,11 @@ add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png)
 
+# The treadmill panel of examples/ports/qt/treadmill: each scene, compared with a reference picture.
+add_executable(ports_treadmill ports_treadmill.cpp)
+target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
+add_test(NAME ports_treadmill COMMAND ports_treadmill ${CMAKE_CURRENT_SOURCE_DIR}/ref/treadmill_)
+
 lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
 lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
