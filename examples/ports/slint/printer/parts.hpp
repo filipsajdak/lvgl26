@@ -87,14 +87,16 @@ constexpr auto back_header(const char* title, const char* subtitle, const auto& 
 // A number with a button on each side: "Copies  [-] 1 [+]".
 template <class Count>
 constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), void (*more)(), const auto& font) {
-  return lv::group({.size = {item_width * px, control_height * px}})[
-      lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font}, .text = name}),
-      lv::group({.size = {control_height * px, control_height * px}, .x = 90 * px})[
-          icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer)],
-      lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
-                 .text = lv::bind(count, "{}"), .x = 146 * px}),
-      lv::group({.size = {control_height * px, control_height * px}, .x = 182 * px})[
-          icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)]];
+  return lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
+                    .size = {item_width * px, control_height * px}})[
+      lv::group({.size = {spin_name_width * px, control_height * px}})[
+          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
+                     .text = name})],
+      icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer),
+      lv::group({.size = {spin_value_width * px, control_height * px}, .style = {.pad_left = tok.space.card}})[
+          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
+                     .text = lv::bind(count, "{}")})],
+      icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)];
 }
 //! [spin_box]
 

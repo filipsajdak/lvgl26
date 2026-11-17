@@ -25,17 +25,15 @@ void go() {
 }
 
 constexpr int icon_size = 40;
-constexpr int icon_step = 64;
 
 // A side bar icon: a rounded square, lit while it is the current page's. Its picture is checked with it.
 // The picture follows the page itself: a state that is set before the children exist does not trickle.
 template <const auto& Icon, class Current>
-constexpr auto side_icon(const Current& current, void (*go_to)(), int row) {
-  return lv::group({.align = "top_mid", .checked = lv::bind(current), .on_clicked = go_to,
+constexpr auto side_icon(const Current& current, void (*go_to)()) {
+  return lv::group({.checked = lv::bind(current), .on_clicked = go_to,
                     .size = {icon_size * px, icon_size * px},
                     .style = {.radius = tok.sidebar.icon_radius},
-                    .style_checked = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid},
-                    .y = (margin + row * icon_step) * px})[
+                    .style_checked = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid}})[
       lv::image({.align = "center", .checked = lv::bind(current), .src = lv::image_file<Icon>,
                  .style = {.image_recolor = tok.sidebar.icon, .image_recolor_opa = tok.tint},
                  .style_checked = {.image_recolor = tok.sidebar.icon_active}})];
@@ -46,11 +44,12 @@ constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
                                          .clip_corner = true, .radius = tok.window.radius}})[
     lv::group({.id = "main", .size = {page_width * px, 100 * pct}, .x = sidebar_width * px}),
     lv::group({.hidden = true, .id = "sub", .size = {page_width * px, 100 * pct}, .x = sidebar_width * px}),
-    lv::group({.size = {sidebar_width * px, 100 * pct},
-               .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid}})[
-        side_icon<icons::home>(is_home, &go<page::home>, 0),
-        side_icon<icons::settings>(is_settings, &go<page::settings>, 1),
-        side_icon<icons::ink>(is_ink, &go<page::ink>, 2)]];
+    lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "column",
+               .size = {sidebar_width * px, 100 * pct},
+                .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid, .pad_gap = tok.space.edge,
+                          .pad_top = tok.space.edge}})[
+        side_icon<icons::home>(is_home, &go<page::home>), side_icon<icons::settings>(is_settings, &go<page::settings>),
+        side_icon<icons::ink>(is_ink, &go<page::ink>)]];
 
 // ---- the pages -------------------------------------------------------------------
 

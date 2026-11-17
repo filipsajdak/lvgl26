@@ -16,6 +16,8 @@ inline constexpr int item_width = (page_width - gap - 2 * margin) / 2;
 inline constexpr int tile_width = 162;  // the four actions of the home page
 inline constexpr int tile_height = 192;
 inline constexpr int control_height = 40;
+inline constexpr int spin_name_width = 90;   // the name of a spin box, up to its fewer button
+inline constexpr int spin_value_width = 52;  // the number between its two buttons, with a gap before it
 inline constexpr int choice_height = 78;  // a name, 4 px, and a box of 52 px
 
 }  // namespace printer

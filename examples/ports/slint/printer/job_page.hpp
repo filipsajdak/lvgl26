@@ -21,23 +21,19 @@ template <job_kind Kind, class Fonts>
 constexpr auto job_page(const char* title, const char* second_name, const char* second_options,
                         const char* start_name, const Fonts& fonts) {
   using options = job_options<Kind>;
-  constexpr int right = margin + item_width + gap;
-  constexpr int row_1 = header_height + margin;
-  constexpr int row_2 = row_1 + control_height + gap;
-  constexpr int row_3 = row_2 + choice_height + gap;
-  constexpr int row_4 = row_3 + choice_height + gap;
   return lv::group({.size = {100 * pct, 100 * pct},
                     .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
       back_header(title, "Choose Settings", fonts.title, fonts.body),
-      lv::group({.size = {item_width * px, control_height * px}, .x = margin * px, .y = row_1 * px})[
-          spin_box("Copies", options::count, &options::fewer, &options::more, fonts.body)],
-      lv::group({.x = right * px, .y = row_1 * px})[
-          color_button(options::color_label, item_width, control_height, &options::toggle_color, fonts.body)],
-      lv::group({.x = margin * px, .y = row_2 * px})[choice("Quality", "Best\nMedium\nDraft", fonts.label)],
-      lv::group({.x = right * px, .y = row_2 * px})[choice(second_name, second_options, fonts.label)],
-      lv::group({.x = margin * px, .y = row_3 * px})[choice("Paper Size", "Original\nA4", fonts.label)],
-      lv::group({.x = right * px, .y = row_3 * px})[choice("Layout", "Portrait\nLandscape", fonts.label)],
-      lv::group({.x = margin * px, .y = row_4 * px})[
+      lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
+                  .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}, .y = header_height * px})[
+          lv::group({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.card}})[
+              spin_box("Copies", options::count, &options::fewer, &options::more, fonts.body),
+              color_button(options::color_label, item_width, control_height, &options::toggle_color, fonts.body)],
+          lv::group({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.card}})[
+              choice("Quality", "Best\nMedium\nDraft", fonts.label),
+              choice(second_name, second_options, fonts.label)],
+          lv::group({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.card}})[
+              choice("Paper Size", "Original\nA4", fonts.label), choice("Layout", "Portrait\nLandscape", fonts.label)],
           wide_button(start_name, page_width - 2 * margin, 60, &options::start, tok.button.primary,
                       tok.button.primary, fonts.label)]];
 }
