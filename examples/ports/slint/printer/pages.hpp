@@ -18,7 +18,6 @@ lv::owned<lv::obj> mount_print(lv::obj parent);
 lv::owned<lv::obj> mount_scan(lv::obj parent);
 lv::owned<lv::obj> mount_copy(lv::obj parent);
 lv::owned<lv::obj> mount_usb(lv::obj parent);
-lv::owned<lv::obj> mount_queue_view(lv::obj parent);
 
 // Builds `Tree` under `parent` and hands its widgets over as one owner. Empty if LVGL has no memory.
 template <const auto& Tree>

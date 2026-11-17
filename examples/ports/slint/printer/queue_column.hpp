@@ -1,12 +1,14 @@
+#pragma once
+
 // The print queue as a column on the home page: a card for each job, which a tap opens.
+// It is a tree of its own, which the home page nests, so the cards live and die with the page.
 
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"
 #include "queue.hpp"
 
-namespace printer {
-namespace {
+namespace printer::queue_part {
 
 constexpr int column_width = page_width - 3 * margin - 2 * tile_width - gap;
 constexpr int card_width = column_width - 2 * margin;
@@ -53,7 +55,7 @@ constexpr auto card =
                 detail_line("Size", lv::bind(&job::size)), detail_line("Submitted", lv::bind(&job::submitted))]]];
 //! [card]
 
-constexpr auto ui = lv::group({.size = {column_width * px, 100 * pct},
+constexpr auto queue_column = lv::group({.size = {column_width * px, 100 * pct},
                                .style = {.bg_color = tok.queue.background, .bg_opa = tok.solid},
                                .x = (page_width - column_width) * px})[
     lv::group({.size = {1 * px, 100 * pct}, .style = {.bg_color = tok.queue.separator, .bg_opa = tok.solid}}),
@@ -63,8 +65,4 @@ constexpr auto ui = lv::group({.size = {column_width * px, 100 * pct},
                .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}, .y = list_top * px})[
         lv::each(queue, &job::id)[card]]];
 
-}  // namespace
-
-lv::owned<lv::obj> mount_queue_view(lv::obj parent) { return mount_page<ui>(parent); }
-
-}  // namespace printer
+}  // namespace printer::queue_part

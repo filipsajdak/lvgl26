@@ -3,6 +3,7 @@
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"
+#include "queue_column.hpp"
 
 namespace printer {
 namespace {
@@ -39,17 +40,11 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct}})[
                .x = margin * px,
                .y = (window_height - margin - tiles_height) * px})[
         tile<icons::print>("Print", tok.tile.print, &open_print), tile<icons::scan>("Scan", tok.tile.scan, &open_scan),
-        tile<icons::copy>("Copy", tok.tile.copy, &open_copy), tile<icons::usb>("USB", tok.tile.usb, &open_usb)]];
+        tile<icons::copy>("Copy", tok.tile.copy, &open_copy), tile<icons::usb>("USB", tok.tile.usb, &open_usb)],
+    queue_part::queue_column];
 
 }  // namespace
 
-lv::owned<lv::obj> mount_home(lv::obj parent) {
-  lv::owned<lv::obj> page = mount_page<ui>(parent);
-  if (page) {
-    lv::owned<lv::obj> column = mount_queue_view(page.get());
-    column.release();  // the queue lives and dies with the page
-  }
-  return page;
-}
+lv::owned<lv::obj> mount_home(lv::obj parent) { return mount_page<ui>(parent); }
 
 }  // namespace printer
