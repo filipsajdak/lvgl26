@@ -166,6 +166,7 @@ A feature pull request also:
 - Adds the feature to the feature list in `site/index.html` and in `README.md`.
 - Adds or updates an example, and the site media in `site/media/` when the feature is visual.
 - Records any new rule in `CLAUDE.md`.
+- Updates `docs/migration/coverage.json` when it changes what a port can use: a row of a toolkit, or a gap that closes. The migration table of the status page is written from it: run `python3 tools/migration_matrix.py`. The tests `migration_matrix` and `migration_tools` fail when the page is out of date.
 
 ## Documentation
 
