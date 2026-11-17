@@ -84,6 +84,7 @@ void add_card(lv::obj parent, const job& j) {
   cards.emplace_back(built->detach());
 }
 
+//! [rebuild]
 void rebuild(lv::counter) {
   cards.clear();
   if (!list) return;
@@ -96,6 +97,7 @@ void rebuild(lv::counter) {
 }
 
 constinit lv::effect follow{&rebuild, queue_revision};
+//! [rebuild]
 
 }  // namespace
 

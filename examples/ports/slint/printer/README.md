@@ -3,6 +3,7 @@
 A touch panel of a printer, ported from the printer demo of Slint.
 It has the same screens and behaviour as the original: the colors, the layout and the page transitions follow it.
 [NOTICE.md](NOTICE.md) says what is taken from the original and under which licence.
+The page [Port walkthrough: the Slint printer panel](../../../../docs/port-slint-printer.md) explains how it is organised and why.
 
 ![Four screens: home with the queue, Copy, Print, and the ink levels](screenshot.png)
 

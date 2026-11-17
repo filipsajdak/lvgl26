@@ -460,7 +460,7 @@ struct arg {
   // setter that takes a text, then an enumerator.
   constexpr arg(detail::value_or_name<Ts>... u)
     requires(sizeof...(Ts) > 1) && (std::is_enum_v<Ts> || ...)
-      : set(true), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(false), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
 
   template <class T>

@@ -42,6 +42,7 @@ constexpr auto back_header(const char* title, const char* subtitle, const auto& 
                  .y = (header_height - 2) * px})];
 }
 
+//! [spin_box]
 // A number with a button on each side: "Copies  [-] 1 [+]".
 template <class Count>
 constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), void (*more)(), const auto& font) {
@@ -54,6 +55,7 @@ constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), v
       lv::group({.size = {control_height * px, control_height * px}, .x = 182 * px})[
           icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)]];
 }
+//! [spin_box]
 
 // A choice from a list, with its name above it.
 constexpr auto choice(const char* name, const char* options, const auto& font, int width = item_width,

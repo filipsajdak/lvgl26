@@ -133,3 +133,6 @@ error: static assertion failed: lv: wrong value for this property. It takes a wi
 - [Themes](themes.md) shows Signal's other form, and how to make a theme of your own.
 - The [README](../README.md) tours the rest: styles and design tokens, derived values, coroutines, animation.
 - [examples](../examples/README.md) holds LVGL's own examples, rewritten with lvgl26.
+- [Coming from Qt Quick](from-qt.md), [Slint](from-slint.md) and [TouchGFX](from-touchgfx.md) give the steps of a port and the decisions you must make.
+- [Port walkthrough: the Slint printer panel](port-slint-printer.md) shows a whole application ported, with its pictures and code.
+- [Port LVGL's own examples](port-lvgl-examples.md) shows how a port is compared with the C original, pixel for pixel.

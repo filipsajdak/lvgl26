@@ -9,9 +9,12 @@ namespace printer {
 namespace {
 
 constinit lv::state copies{lv::counter{1}};
+//! [color]
 constinit lv::state<bool> in_color{true};
 constinit lv::computed color_label{&color_name, in_color};
+//! [color]
 
+//! [actions]
 void fewer() { copies.update(&one_fewer); }
 void more() { copies.update(&one_more); }
 void toggle_color() { in_color = !in_color.get(); }
@@ -19,7 +22,9 @@ void start() {
   start_job("Copy");
   close_subpage();
 }
+//! [actions]
 
+//! [page]
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
 constexpr auto ui = job_page("Copy", copies, color_label, {&fewer, &more, &toggle_color, &start}, "Size",
@@ -28,5 +33,6 @@ constexpr auto ui = job_page("Copy", copies, color_label, {&fewer, &more, &toggl
 }  // namespace
 
 lv::owned<lv::obj> mount_copy(lv::obj parent) { return mount_page<ui>(parent); }
+//! [page]
 
 }  // namespace printer

@@ -8,6 +8,7 @@
 
 namespace printer {
 
+//! [pager]
 class pager {
  public:
   void host(lv::obj where) { host_ = where; }
@@ -25,6 +26,7 @@ class pager {
   lv::obj host_;
   lv::owned<lv::obj> current_;
 };
+//! [pager]
 
 // How a page leaves: it slides to the right, and its widgets go when it is out of sight.
 inline lv::task<> slide_out(lv::owned<lv::obj> page) {

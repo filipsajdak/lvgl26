@@ -246,6 +246,19 @@ add_executable(ports_printer ports_printer.cpp)
 target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
 add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
 
+# The pictures of docs/port-slint-printer.md are the ones the port's screenshot tool writes.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
+add_test(NAME ports_printer_shot COMMAND printer_shot ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
+set_tests_properties(ports_printer_shot PROPERTIES FIXTURES_SETUP ports_printer_pictures)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  foreach(scene home copy)
+    add_test(NAME ports_printer_picture_${scene}
+             COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out/${scene}.png
+                     ${PROJECT_SOURCE_DIR}/docs/media/printer-${scene}.png)
+    set_tests_properties(ports_printer_picture_${scene} PROPERTIES FIXTURES_REQUIRED ports_printer_pictures)
+  endforeach()
+endif()
+
 # The treadmill panel of examples/ports/qt/treadmill: each scene, compared with a reference picture.
 add_executable(ports_treadmill ports_treadmill.cpp)
 target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
