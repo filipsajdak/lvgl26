@@ -236,3 +236,39 @@ LVGL's test runner was not run: it needs Python packages and libraries not insta
 - The template asks for `Fixes #xxxx`, a description, tests where applicable, and `scripts/code-format.py` with astyle 3.4.12.
 - Contributions fall under the Developer's Certificate of Origin; no sign-off line is required ("no further action is needed").
 - No rule about AI-assisted contributions was found in `docs/src/contributing` or `.github`.
+
+## Draft: a public getter for "the widget has been drawn"
+
+Dated 2026-11-18. A draft for the owner. Not filed.
+
+Marks follow [README.md](README.md). Every row is `source`, read on 2026-11-18 in v9.6.0 and in the v10 pin `53819fe`.
+
+| What | Where in v9.6.0 | Where in the v10 pin |
+|---|---|---|
+| The field: `uint16_t rendered : 1;`, "the widget is rendered at least once already" | `src/core/lv_obj_private.h:161` | `src/core/lv_obj_private.h:161` |
+| It is set when the widget is drawn | `src/core/lv_refr.c:116` | `src/core/lv_refr.c:112` |
+| Read by the observer of `lv_bar_bind_value` | `src/widgets/bar/lv_bar.c:822` | `src/widgets/bar/lv_bar.c:819` |
+| Read by the observer of `lv_slider_bind_value` | `src/widgets/slider/lv_slider.c:731` | same line |
+| Read by the observer of `lv_roller_bind_value` | `src/widgets/roller/lv_roller.c:1088` | same line |
+| Read to skip style transitions | `src/core/lv_obj.c:2026` | `src/core/lv_obj.c:1816` |
+
+The problem.
+A bound bar, slider or roller is set with `LV_ANIM_ON` once its widget has been drawn, and with `LV_ANIM_OFF` before.
+Code outside LVGL that sets such a value cannot tell which of the two LVGL would choose: the field is in a private header, and no function in `include/lvgl` returns it.
+lvgl26 follows a state without an LVGL observer, so it can make no allocation for the binding, but for these three widgets it keeps LVGL's bind function and its subject, because its own setter would have to guess the animation.
+
+The request.
+One function in `include/lvgl/core/lv_obj.h`, next to `lv_obj_is_visible`:
+
+```c
+/**
+ * Check whether the widget has been drawn at least once.
+ * @param obj   pointer to a widget
+ * @return      true: `obj` was part of a refresh that drew it; false: it was not
+ */
+bool lv_obj_is_rendered(const lv_obj_t * obj);
+```
+
+It returns `obj->rendered`.
+With it lvgl26 chooses `LV_ANIM_ON` or `LV_ANIM_OFF` itself, as the three observers do, and all of these properties follow a state through a watcher with no LVGL observer.
+`checked` is a separate case: `lv_obj_bind_checked` writes the widget state back to the subject, and lvgl26 finds the getter of a property by name (`lv_<widget>_get_<property>`), which `lv_obj_set_checked` has none of.

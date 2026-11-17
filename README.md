@@ -85,8 +85,10 @@ What a state can hold:
 `lv::state<int>` is rejected, because a plain integer does not say what it is; the error shows these
 choices. `lv::config::raw_integer_state` allows it.
 
-A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
-Where LVGL has a bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a generic observer.
+A state keeps its own list of watchers, so following it costs no LVGL subject and no observer.
+`speed.raw()` gives an `lv_subject_t`, made on first use, and C code can share it: a value C code writes reaches the widgets, and a value set from C++ reaches C observers.
+The watchers of lvgl26 are told first, then the C observers, whatever the order in which they were added.
+A property follows through a watcher of the state; the properties that LVGL animates once drawn (a bar, a slider, a roller) and `checked` keep LVGL's own bind function, and with it a subject and an observer: LVGL animates them after the first draw, and the public API does not say when that is.
 A roller and a dropdown follow a state with `.selected = lv::bind(day)`, and write the user's choice back.
 
 A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
@@ -103,7 +105,7 @@ log.start();                                           // runs now, and after ev
 ```
 
 `over_limit.get()` calls the function with the current values; nothing is stored.
-Binding a computed creates its `lv_subject_t` and one observer on each dependency.
+Binding a computed makes it watch each dependency, and keeps its last result to tell only a change; `raw()` creates its `lv_subject_t` on first use.
 The result follows the rules of a state, so a function that returns a plain `int` is rejected.
 See `include/lv/computed.hpp` for how changes travel and who owns what.
 
