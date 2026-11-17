@@ -84,6 +84,7 @@ choices. `lv::config::raw_integer_state` allows it.
 
 A state is an `lv_subject_t` underneath (`speed.raw()`), so C code can share it.
 Where LVGL has a bind function (`lv_arc_bind_value`), it is used; any other single-value property follows through a generic observer.
+A roller and a dropdown follow a state with `.selected = lv::bind(day)`, and write the user's choice back.
 
 A value made from states is an `lv::computed`, and an action that follows them an `lv::effect`.
 The dependencies are part of the type, so both can be constant-initialized globals:

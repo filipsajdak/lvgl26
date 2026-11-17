@@ -154,6 +154,58 @@ void widgets_follow(lv::obj screen) {
   check(root->get<"bar">().get<"value">() == 75);
 }
 
+// LVGL names the bind function of a roller and of a dropdown lv_<widget>_bind_value,
+// and their setter lv_<widget>_set_selected. A bind function that matches no setter
+// belongs to the only property the widget sets and gets as a plain integer.
+static_assert(lv::detail::binder_of(^^lv_roller_set_selected) == ^^lv_roller_bind_value);
+static_assert(lv::detail::binder_of(^^lv_dropdown_set_selected) == ^^lv_dropdown_bind_value);
+// No getter: the row count is not the roller's value.
+static_assert(lv::detail::binder_of(^^lv_roller_set_visible_row_count) == std::meta::info{});
+// Not an integer: a text, a bool and an enum.
+static_assert(lv::detail::binder_of(^^lv_roller_set_options) == std::meta::info{});
+static_assert(lv::detail::binder_of(^^lv_dropdown_set_selected_highlight) == std::meta::info{});
+static_assert(lv::detail::binder_of(^^lv_dropdown_set_dir) == std::meta::info{});
+// A name that matches still comes first.
+static_assert(lv::detail::binder_of(^^lv_arc_set_value) == ^^lv_arc_bind_value);
+static_assert(lv::detail::binder_of(^^lv_slider_set_value) == ^^lv_slider_bind_value);
+// obj's bind functions all match a setter or take more than a subject.
+static_assert(lv::detail::binder_of(^^lv_obj_set_checked) == ^^lv_obj_bind_checked);
+static_assert(lv::detail::binder_of(^^lv_obj_set_x) == std::meta::info{});
+// Several integer properties that set and get: none of them is the one a binder means.
+static_assert(lv::detail::only_integer_setter("lv_obj_") == std::meta::info{});
+static_assert(lv::detail::only_integer_setter("lv_roller_") == ^^lv_roller_set_selected);
+
+struct choice {
+  std::int32_t value;
+};
+constinit lv::state<choice> weekday{choice{1}};
+
+constexpr auto week = lv::roller({.id = "week", .options = {"Mon\nTue\nWed", "normal"},
+                                  .selected = lv::bind(weekday)});
+
+// A roller and a dropdown follow a state, and write the user's choice back to it.
+void choices_follow_a_state(lv::obj screen) {
+  auto root = lv::mount<week>(screen);
+  check(root.has_value());
+  auto roller = root->get<"week">();
+  check(lv_roller_get_selected(roller.raw()) == 1);
+  weekday = choice{2};
+  check(lv_roller_get_selected(roller.raw()) == 2);
+  lv_roller_set_selected(roller.raw(), 0, LV_ANIM_OFF);
+  lv_obj_send_event(roller.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(weekday.get().value == 0);
+
+  lv::state<choice> pick{choice{2}};
+  auto dropdown = screen.add<"dropdown">().set({.options = "A\nB\nC", .selected = lv::bind(pick)});
+  check(lv_dropdown_get_selected(dropdown.raw()) == 2);
+  pick = choice{1};
+  check(lv_dropdown_get_selected(dropdown.raw()) == 1);
+  lv_dropdown_set_selected(dropdown.raw(), 0);
+  lv_obj_send_event(dropdown.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(pick.get().value == 0);
+  lv_obj_delete(dropdown.raw());
+}
+
 // mp-units has a `deg` of its own, so lvgl26's is written lv::deg in this file.
 // An angle follows a state of its own kind: tenths of a degree for an image, whole
 // degrees for an arc. (A state of lv::angle on the image's rotation does not
@@ -247,6 +299,7 @@ int main() {
   observers();
   runtime_binding(screen);
   angles_follow_a_state(screen);
+  choices_follow_a_state(screen);
   binding_to_a_local_state(screen);
   survives_a_deleted_tree(screen);
 
@@ -256,6 +309,7 @@ int main() {
   hidden.reset();
   title.reset();
   flow.reset();
+  weekday.reset();
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
