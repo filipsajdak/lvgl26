@@ -590,7 +590,7 @@
     "lv_scrollbar_mode_t": ["off", "on", "active", "auto"],
     "lv_state_t": ["default", "alt", "checked", "focused", "focus_key", "edited", "hovered", "pressed", "scrolled", "disabled", "user_1", "user_2", "user_3", "user_4", "any"],
     "lv_blend_mode_t": ["normal", "additive", "subtractive", "multiply", "difference"],
-    "lv_image_align_t": ["lv_image_align_default", "lv_image_align_top_left", "lv_image_align_top_mid", "lv_image_align_top_right", "lv_image_align_bottom_left", "lv_image_align_bottom_mid", "lv_image_align_bottom_right", "lv_image_align_left_mid", "lv_image_align_right_mid", "lv_image_align_center", "_lv_image_align_auto_transform", "lv_image_align_stretch", "lv_image_align_tile", "lv_image_align_contain", "lv_image_align_contain_downscale", "lv_image_align_cover"],
+    "lv_image_align_t": ["default", "top_left", "top_mid", "top_right", "bottom_left", "bottom_mid", "bottom_right", "left_mid", "right_mid", "center", "_lv_image_align_auto_transform", "stretch", "tile", "contain", "contain_downscale", "cover"],
     "lv_arc_mode_t": ["normal", "symmetrical", "reverse"],
     "lv_arclabel_dir_t": ["clockwise", "counter_clockwise"],
     "lv_arclabel_overflow_t": ["visible", "ellipsis", "clip"],

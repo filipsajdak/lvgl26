@@ -23,6 +23,24 @@ static_assert(lv::detail::enumerator_named<lv_flex_align_t>("space_between") == 
 static_assert(lv::detail::shared_prefix(lv::detail::enum_names<lv_scrollbar_mode_t>) == "LV_SCROLLBAR_MODE_"sv.size());
 static_assert(lv::detail::enumerator_named<lv_scrollbar_mode_t>("on") == LV_SCROLLBAR_MODE_ON);
 static_assert(lv::detail::lowercase("Top_LEFT9") == "top_left9");
+// LVGL marks an internal enumerator with a leading underscore, as in
+// _LV_IMAGE_ALIGN_AUTO_TRANSFORM. The others are shortened all the same, and the
+// odd one keeps its whole name.
+static_assert(lv::detail::shared_prefix(lv::detail::enum_names<lv_image_align_t>) == "LV_IMAGE_ALIGN_"sv.size());
+static_assert(lv::detail::enumerator_named<lv_image_align_t>("top_left") == LV_IMAGE_ALIGN_TOP_LEFT);
+static_assert(lv::detail::enumerator_named<lv_image_align_t>("cover") == LV_IMAGE_ALIGN_COVER);
+static_assert(lv::detail::enumerator_named<lv_image_align_t>("_lv_image_align_auto_transform") ==
+              _LV_IMAGE_ALIGN_AUTO_TRANSFORM);
+static_assert(lv::detail::no_such_enumerator<lv_image_align_t>("middle").starts_with(
+    "lv: image_align has no value 'middle'. Its values: default, top_left, "));
+// The odd one may come first, and an enum may have no LV_ names at all.
+constexpr lv::detail::enum_name odd_first[] = {{"_LV_THING_MARK", 0}, {"LV_THING_ONE", 1}, {"LV_THING_TWO", 2}};
+static_assert(lv::detail::shared_prefix(odd_first) == "LV_THING_"sv.size());
+static_assert(lv::detail::short_name(odd_first[0].name, lv::detail::prefix_of(odd_first)) == "_lv_thing_mark");
+static_assert(lv::detail::short_name(odd_first[2].name, lv::detail::prefix_of(odd_first)) == "two");
+constexpr lv::detail::enum_name not_lvgl[] = {{"RED_ONE", 0}, {"RED_TWO", 1}};
+static_assert(lv::detail::shared_prefix(not_lvgl) == "RED_"sv.size());
+static_assert(lv::detail::short_name(not_lvgl[1].name, lv::detail::prefix_of(not_lvgl)) == "two");
 static_assert(lv::detail::no_such_enumerator<lv_flex_flow_t>("sideways").starts_with(
     "lv: flex_flow has no value 'sideways'. Its values: row, column, "));
 
@@ -31,7 +49,8 @@ constexpr auto look = lv::style({.bg_grad_dir = "ver", .text_align = "right"});
 constexpr auto ui = lv::column({.flex_align = {"center", "end", "space_between"},
                                 .size = {200 * px, 100 * px}})[
     lv::label({.align = "bottom_right", .id = "corner", .style = look, .text = "x"}),
-    lv::label({.id = "plain", .text = "y"})];
+    lv::label({.id = "plain", .text = "y"}),
+    lv::image({.id = "picture", .inner_align = "top_left"})];
 
 void names_reach_lvgl() {
   auto screen = lv::screen_active();
@@ -53,6 +72,11 @@ void names_reach_lvgl() {
   check(lv_obj_get_style_align(plain.raw(), LV_PART_MAIN) == LV_ALIGN_TOP_MID);
   plain.set({.align = LV_ALIGN_LEFT_MID});
   check(lv_obj_get_style_align(plain.raw(), LV_PART_MAIN) == LV_ALIGN_LEFT_MID);
+
+  auto picture = root->get<"picture">();
+  check(lv_image_get_inner_align(picture.raw()) == LV_IMAGE_ALIGN_TOP_LEFT);
+  picture.set({.inner_align = "cover"});
+  check(lv_image_get_inner_align(picture.raw()) == LV_IMAGE_ALIGN_COVER);
 }
 
 }  // namespace

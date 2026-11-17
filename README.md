@@ -37,6 +37,7 @@ How it works:
 - **An LVGL enumerator is a name in quotes.** `.align = "center"`, `.flex_flow = "row_wrap"`,
   `.flex_align = {"center", "center", "start"}`.
   The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.
+  An internal enumerator that LVGL marks with an underscore keeps its whole name and does not shorten the others.
   A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
