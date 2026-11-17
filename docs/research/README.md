@@ -16,6 +16,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [agent-docs.md](agent-docs.md) | How a library gives its documentation to AI coding agents: measurements, formats, what other projects ship. |
 | [components.md](components.md) | Components: reusable behaviour and its lifetime, dynamic content on small devices, slots, parameters and invariants, in other frameworks and for our trees. |
 | [lists.md](lists.md) | Lists whose rows change: a fixed-capacity model, keyed rows, bindings to a row's fields, the selected row, the heap and code a row costs, and the API of recycling and sorted views. |
+| [shown-theme-format.md](shown-theme-format.md) | Design of four planned features: a node that shows one of several trees for a state, a look that changes at run time, text from several values in a fixed buffer, and handler arguments injected by reflection. Sketches compiled with GCC 16.2, decisions for the owner. |
 | [lsp.md](lsp.md) | Editor support for code that only GCC compiles: clangd and reflection, stub headers, completion inside a string, GCC's diagnostics, what agents can use. |
 | [fonts.md](fonts.md) | LVGL's font format, what its converter does, the TrueType a rasteriser needs, SDF and MSDF, and our spike that rasterises a TTF in the compiler. |
 | [image-formats.md](image-formats.md) | Web and embedded image formats: ratio, decoder size and RAM, what decodes line by line, and whether an own format is justified. |
