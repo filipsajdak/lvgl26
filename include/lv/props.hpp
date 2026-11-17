@@ -283,11 +283,54 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
         code, reinterpret_cast<void*>(h.with_event));
 }
 
-// from_subject(subject, type): the value of a subject as the type a setter takes.
-// One overload per kind of type.
+// from_number(n, type): a whole number, as the type a setter takes. A state carries one
+// in its subject, a field of a row (lv/list.hpp) in its own value. One overload per kind
+// of type.
 template <class T>
 using as = std::type_identity<T>;
 
+inline strict<bool> from_number(std::int32_t n, as<strict<bool>>) { return n != 0; }
+
+template <class T>
+  requires std::is_enum_v<T>
+T from_number(std::int32_t n, as<T>) {
+  return static_cast<T>(n);
+}
+
+inline length from_number(std::int32_t n, as<length>) { return length::px(n); }
+
+template <class Axis>
+along<Axis> from_number(std::int32_t n, as<along<Axis>>) {
+  return length::px(n);
+}
+
+inline opa from_number(std::int32_t n, as<opa>) { return opa::from_raw(static_cast<lv_opa_t>(n)); }
+
+inline angle from_number(std::int32_t n, as<angle>) { return angle{n}; }
+
+inline decidegrees from_number(std::int32_t n, as<decidegrees>) { return decidegrees{n}; }
+
+inline duration from_number(std::int32_t n, as<duration>) {
+  return duration{static_cast<std::uint32_t>(n)};
+}
+
+// A number for a setter that takes a unit unsigned. A negative number breaks the contract
+// of nonnegative.
+template <class U>
+nonnegative<U> from_number(std::int32_t n, as<nonnegative<U>>) {
+  return from_number(n, as<U>{});
+}
+
+// Anything else: built from the integer if it can be, such as strict<int>.
+template <class T>
+T from_number(std::int32_t n, as<T>) {
+  if constexpr (std::constructible_from<T, std::int32_t>)
+    return T{n};
+  else
+    return T{};  // no state type converts to T, so no binding to it can exist
+}
+
+// from_subject(subject, type): the value of a subject as the type a setter takes.
 inline lv_color_t from_subject(lv_subject_t* s, as<lv_color_t>) { return lv_subject_get_color(s); }
 
 template <class T>
@@ -296,51 +339,9 @@ T from_subject(lv_subject_t* s, as<T>) {
   return static_cast<T>(const_cast<void*>(lv_subject_get_pointer(s)));
 }
 
-inline strict<bool> from_subject(lv_subject_t* s, as<strict<bool>>) {
-  return lv_subject_get_int(s) != 0;
-}
-
-template <class T>
-  requires std::is_enum_v<T>
-T from_subject(lv_subject_t* s, as<T>) {
-  return static_cast<T>(lv_subject_get_int(s));
-}
-
-inline length from_subject(lv_subject_t* s, as<length>) { return length::px(lv_subject_get_int(s)); }
-
-template <class Axis>
-along<Axis> from_subject(lv_subject_t* s, as<along<Axis>>) {
-  return length::px(lv_subject_get_int(s));
-}
-
-inline opa from_subject(lv_subject_t* s, as<opa>) {
-  return opa::from_raw(static_cast<lv_opa_t>(lv_subject_get_int(s)));
-}
-
-inline angle from_subject(lv_subject_t* s, as<angle>) { return angle{lv_subject_get_int(s)}; }
-
-inline decidegrees from_subject(lv_subject_t* s, as<decidegrees>) {
-  return decidegrees{lv_subject_get_int(s)};
-}
-
-inline duration from_subject(lv_subject_t* s, as<duration>) {
-  return duration{static_cast<std::uint32_t>(lv_subject_get_int(s))};
-}
-
-// A state of a unit, for a setter that takes it unsigned. A negative state breaks
-// the contract of nonnegative.
-template <class U>
-nonnegative<U> from_subject(lv_subject_t* s, as<nonnegative<U>>) {
-  return from_subject(s, as<U>{});
-}
-
-// Anything else: built from the integer if it can be, such as strict<int>.
 template <class T>
 T from_subject(lv_subject_t* s, as<T>) {
-  if constexpr (std::constructible_from<T, std::int32_t>)
-    return T{lv_subject_get_int(s)};
-  else
-    return T{};  // no state type converts to T, so no binding to it can exist
+  return from_number(lv_subject_get_int(s), as<T>{});
 }
 
 // Whether `f` is one of LVGL's bind functions of a property: it takes the widget and
