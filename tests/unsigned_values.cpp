@@ -63,6 +63,10 @@ void sweeps_from_a_document(lv::obj screen) {
   auto loaded = doc::load(R"({"type": "spinner", "id": "s", "props": {"arc_sweep": 120}})", screen);
   check(loaded.has_value());
   if (loaded) check(lv_spinner_get_arc_sweep(loaded->find("s").raw()) == 120);
+  // No angle is the lower bound, and it fits.
+  auto zero = doc::load(R"({"type": "spinner", "id": "z", "props": {"arc_sweep": 0}})", screen);
+  check(zero.has_value());
+  if (zero) check(lv_spinner_get_arc_sweep(zero->find("z").raw()) == 0);
   const auto refused = doc::load(R"({"type": "spinner", "props": {"arc_sweep": -10}})", screen);
   check(!refused.has_value());
   if (!refused) check(refused.error().error == lv::load_error::bad_value && refused.error().at == "-10");

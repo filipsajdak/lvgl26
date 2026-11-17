@@ -173,6 +173,9 @@ static_assert(lv::detail::binder_of(^^lv_obj_set_checked) == ^^lv_obj_bind_check
 static_assert(lv::detail::binder_of(^^lv_obj_set_x) == std::meta::info{});
 // Several integer properties that set and get: none of them is the one a binder means.
 static_assert(lv::detail::only_integer_setter("lv_obj_") == std::meta::info{});
+// lv_obj_bind_bool and the like match no setter, but take more than a subject.
+static_assert(lv::detail::unmatched_binder("lv_obj_") == std::meta::info{});
+static_assert(lv::detail::unmatched_binder("lv_roller_") == ^^lv_roller_bind_value);
 static_assert(lv::detail::only_integer_setter("lv_roller_") == ^^lv_roller_set_selected);
 
 struct choice {

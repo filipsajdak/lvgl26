@@ -38,6 +38,12 @@ constexpr lv::detail::enum_name odd_first[] = {{"_LV_THING_MARK", 0}, {"LV_THING
 static_assert(lv::detail::shared_prefix(odd_first) == "LV_THING_"sv.size());
 static_assert(lv::detail::short_name(odd_first[0].name, lv::detail::prefix_of(odd_first)) == "_lv_thing_mark");
 static_assert(lv::detail::short_name(odd_first[2].name, lv::detail::prefix_of(odd_first)) == "two");
+// Names that differ after the first underscore share only that much, whichever sorts first.
+constexpr lv::detail::enum_name apart[] = {{"LV_A_B_C", 0}, {"LV_A_C_D", 1}};
+static_assert(lv::detail::shared_prefix(apart) == "LV_A_"sv.size());
+// An enum whose names share only "LV_" has no name of its own in the message.
+enum two_families { LV_FOO_ONE, LV_BAR_TWO };
+static_assert(lv::detail::no_such_enumerator<two_families>("x").starts_with("lv:  has no value 'x'. Its values: foo_one, bar_two"));
 constexpr lv::detail::enum_name not_lvgl[] = {{"RED_ONE", 0}, {"RED_TWO", 1}};
 static_assert(lv::detail::shared_prefix(not_lvgl) == "RED_"sv.size());
 static_assert(lv::detail::short_name(not_lvgl[1].name, lv::detail::prefix_of(not_lvgl)) == "two");
