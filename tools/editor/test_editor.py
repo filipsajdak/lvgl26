@@ -192,6 +192,18 @@ class Check(unittest.TestCase):
         self.assertEqual(check.editor_flags(command),
                          ["-DA=1", "-I/inc", "-isystem", "/sys", "-std=gnu++26", "--embed-dir=/e"])
 
+    def test_a_file_may_ask_not_to_be_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            asks = pathlib.Path(folder) / "asks.cpp"
+            asks.write_text("// a window\n// editor-check: skip, it needs SDL\nint main() {}\n")
+            plain = pathlib.Path(folder) / "plain.cpp"
+            plain.write_text("int main() {}\n")
+            late = pathlib.Path(folder) / "late.cpp"
+            late.write_text("\n" * check.SKIP_LINES + "// editor-check: skip, too late\n")
+            self.assertEqual(check.skip_reason(asks), "it needs SDL")
+            self.assertIsNone(check.skip_reason(plain))
+            self.assertIsNone(check.skip_reason(late))
+
     def test_a_file_outside_the_build_borrows_a_command(self):
         commands = {pathlib.Path("/p/a.cpp"): ["g++", "-DA", "-c", "/p/a.cpp"]}
         self.assertEqual(check.flags_for(pathlib.Path("/q/b.cpp"), commands, pathlib.Path("/p/a.cpp")),

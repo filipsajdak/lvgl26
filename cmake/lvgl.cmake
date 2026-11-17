@@ -42,7 +42,7 @@ set(LVGL26_LVGL_HEAP_BYTES "" CACHE STRING
     "The size of LVGL's own heap in bytes; empty means 1 MB on a hosted build and LVGL's default on a cross build")
 set(LVGL26_HEAP "${LVGL26_LVGL_HEAP_BYTES}")
 if(NOT LVGL26_HEAP AND LVGL26_BUILD_TESTS)
-  set(LVGL26_HEAP 4194304)  # the tests draw screens of every size
+  set(LVGL26_HEAP 8388608)  # the tests draw screens of every size, the printer panel one of 772 x 504
 elseif(NOT LVGL26_HEAP AND NOT CMAKE_CROSSCOMPILING)
   set(LVGL26_HEAP 1048576)
 endif()
