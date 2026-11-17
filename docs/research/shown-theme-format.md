@@ -867,6 +867,13 @@ The number is the decision it answers.
 | 21 | A generic lambda stays refused: it has no parameter list to read. With the id in the type, an unnamed parameter is fine. |
 | 22 | Lambdas come first. A plain function takes the event and its own widget, until ids in the type are proven for functions. |
 | 23 | `lv::tree_handler` means that the library can build every parameter. The check of an id stays where the tree is known. |
+| 24 | An element names its look: `.look = "queue.card"`. The display gets all tokens once, and the compiler finds the group. |
+| 25 | The entries of a token group are matched to style properties by name. A nested group is a part or a state. |
+| 26 | A look that names no group is a compile error that lists the groups. An entry that fits no property is one too. |
+| 27 | A test reports a component group of the token file that no element uses. One file cannot see the whole program. |
+
+Decisions 24 to 27 answer a count: the printer port names a token about 140 times, mostly one style property at a time.
+They belong to the looks feature, and they share its constant styles per mode.
 
 The order of building is the page node, formatted text, injection, and then looks.
 The cost of a wider handler to `tests/large_tree.cpp` is measured before injection is built.
