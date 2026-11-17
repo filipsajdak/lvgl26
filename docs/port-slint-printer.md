@@ -408,7 +408,7 @@ The heap use of this port is not measured.
 The jobs of the queue sit in a `std::vector`, because the port runs on a host.
 On a Cortex-M4, LVGL's heap takes about 200 bytes for a label or a button, and 11064 bytes for a list of 51 widgets.
 These numbers are in `docs/research/memory.md`.
-`app.heap()` tells you what a mounted page really takes: see [Coming from Slint](from-slint.md).
+`app.heap()` tells you what a mounted page really takes: see [the decisions you must make](from-slint.md#decisions-you-must-make).
 
 ## The choices that were made
 
