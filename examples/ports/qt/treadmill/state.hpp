@@ -22,27 +22,27 @@ using seconds_t = mp_units::quantity<mp_units::si::second, int>;
 
 enum class look { light, dark, sporty };
 
-inline constinit lv::state<look> active_look{look::light};
+extern lv::state<look> active_look;
 
 // The readings.
-inline constinit lv::state<lv::counter> heart_rate{lv::counter{0}};
-inline constinit lv::state<lv::counter> elevation{lv::counter{0}};
-inline constinit lv::state<lv::counter> incline{lv::counter{0}};  // percent
-inline constinit lv::state<speed_t> speed{speed_t{}};
-inline constinit lv::state<seconds_t> elapsed{seconds_t{}};
-inline constinit lv::state<seconds_t> pace{seconds_t{}};  // for one mile
+extern lv::state<lv::counter> heart_rate;
+extern lv::state<lv::counter> elevation;
+extern lv::state<lv::counter> incline;  // percent
+extern lv::state<speed_t> speed;
+extern lv::state<seconds_t> elapsed;
+extern lv::state<seconds_t> pace;  // for one mile
 
 // What the machine is doing.
-inline constinit lv::state<bool> clock_running{false};  // the readings count
-inline constinit lv::state<bool> auto_mode{false};      // the switch is on "auto"
-inline constinit lv::state<bool> paused{false};
-inline constinit lv::state<bool> runner_moving{false};  // the dot goes round the track
-inline constinit lv::state<lv::counter> runner_frame{lv::counter{0}};
+extern lv::state<bool> clock_running;  // the readings count
+extern lv::state<bool> auto_mode;      // the switch is on "auto"
+extern lv::state<bool> paused;
+extern lv::state<bool> runner_moving;  // the dot goes round the track
+extern lv::state<lv::counter> runner_frame;
 
 // The readings as text, which the labels show.
-inline constinit lv::state<const char*> time_text{"00:00"};
-inline constinit lv::state<const char*> pace_text{"0:00"};
-inline constinit lv::state<const char*> speed_text{"0.0"};
+extern lv::state<const char*> time_text;
+extern lv::state<const char*> pace_text;
+extern lv::state<const char*> speed_text;
 
 // What the buttons do.
 void start();
@@ -60,7 +60,8 @@ void choose_look() {
 
 // The switch shows "manual" while auto mode is off.
 constexpr bool is_manual(bool automatic) { return !automatic; }
-inline constinit lv::computed manual_mode{&is_manual, auto_mode};
+using manual_mode_t = decltype(lv::computed{&is_manual, auto_mode});
+extern manual_mode_t manual_mode;  // defined in logic.cpp, so that its address is known
 
 // Where the dot is for a frame of the track's timeline.
 struct spot {

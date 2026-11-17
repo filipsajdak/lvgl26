@@ -11,6 +11,26 @@
 #include <span>
 
 namespace treadmill {
+
+// The states the pages bind to. They are defined here and declared in state.hpp: the address of an
+// inline variable is not a constant under a sanitizer, and a binding needs it as one.
+constinit lv::state<look> active_look{look::light};
+constinit lv::state<lv::counter> heart_rate{lv::counter{0}};
+constinit lv::state<lv::counter> elevation{lv::counter{0}};
+constinit lv::state<lv::counter> incline{lv::counter{0}};
+constinit lv::state<speed_t> speed{speed_t{}};
+constinit lv::state<seconds_t> elapsed{seconds_t{}};
+constinit lv::state<seconds_t> pace{seconds_t{}};
+constinit lv::state<bool> clock_running{false};
+constinit lv::state<bool> auto_mode{false};
+constinit lv::state<bool> paused{false};
+constinit lv::state<bool> runner_moving{false};
+constinit lv::state<lv::counter> runner_frame{lv::counter{0}};
+constinit lv::state<const char*> time_text{"00:00"};
+constinit lv::state<const char*> pace_text{"0:00"};
+constinit lv::state<const char*> speed_text{"0.0"};
+constinit manual_mode_t manual_mode{&is_manual, auto_mode};
+
 namespace {
 
 using namespace lv::units;
