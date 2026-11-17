@@ -252,6 +252,10 @@ add_test(NAME styles COMMAND styles A:${CMAKE_CURRENT_SOURCE_DIR}/ref/styled.png
 add_executable(ports_printer ports_printer.cpp)
 target_link_libraries(ports_printer PRIVATE printer_pages lvgl26_warnings)
 add_test(NAME ports_printer COMMAND ports_printer A:${CMAKE_CURRENT_SOURCE_DIR}/ref/printer_)
+# The print queue of that port, built with lv::each, against the way the port builds it.
+add_executable(lists_printer lists_printer.cpp)
+target_link_libraries(lists_printer PRIVATE printer_pages lvgl26_warnings)
+add_test(NAME lists_printer COMMAND lists_printer)
 
 # The pictures of docs/port-slint-printer.md are the ones the port's screenshot tool writes.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ports_printer_out)
