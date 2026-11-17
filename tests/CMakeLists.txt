@@ -228,6 +228,11 @@ add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
+# The fonts are the bytes that one evaluation of the whole font made.
+add_executable(font_bytes font_bytes.cpp)
+target_compile_options(font_bytes PRIVATE --embed-dir=${lvgl_SOURCE_DIR})
+target_link_libraries(font_bytes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME font_bytes COMMAND font_bytes)
 
 add_executable(image image.cpp)
 target_link_libraries(image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
@@ -346,6 +351,7 @@ lvgl26_compile_fail(font_no_glyph "the font file has no glyph for the character 
 lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
+lvgl26_compile_fail(font_bitmap_too_large "the pixels of this font take 1538941 bytes. LVGL's font format holds at most 1048575")
 lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
 lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
 lvgl26_compile_fail(signal_numerals_not_a_numeral "the typeface has no file for the family 'Barlow' at weight 500. Add it")
@@ -538,6 +544,11 @@ endif()
 # committed file must be what the program prints.
 add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
 target_link_libraries(lv_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# The document is one constant evaluation over every widget: 232 to 256 million steps with
+# LVGL v9.6, 208 to 232 million with v10, where GCC's default is 33554432. This program
+# alone gets a budget, at about twice its need, so that a change which makes it far more
+# expensive still stops the build.
+target_compile_options(lv_reference PRIVATE -fconstexpr-ops-limit=500000000)
 # Not for the analyzer: this file is one long constant evaluation over every widget, and
 # the analyzer on top of it needs more memory than a CI machine has. What runs is a loop
 # that prints. A source file's options come last, after -fanalyzer.

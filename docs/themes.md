@@ -76,7 +76,7 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
 
 ### What the typefaces cost
 
-Measured once on one machine, with `-Os` for the flash. The compile time comes on top of `lv/signal.hpp`.
+Measured once on one machine, with `-Os` for the flash. The 208 px rows were measured again once the compiler drew fonts glyph by glyph. The compile time comes on top of `lv/signal.hpp`.
 
 | Font | Characters | Compile time | In flash |
 |---|---|---|---|
@@ -85,14 +85,15 @@ Measured once on one machine, with `-Os` for the flash. The compile time comes o
 | `numerals` at `numeral-m`, 40 px | 16 | under 1 s | 4 KB |
 | `numerals` at `numeral-l`, 72 px | 16 | about 2 s | 11 KB |
 | `numerals` at `numeral-xl`, 104 px | 16 | about 3 s | 20 KB |
-| `numerals` at `numeral-2xl`, 208 px | 16 | about 12 s | 75 KB |
+| `numerals` at `numeral-2xl`, 208 px | 16 | about 6 s | 75 KB |
 | `type` at `numeral-l`, 72 px | 95 | about 11 s | 62 KB |
 | `type` at `numeral-xl`, 104 px | 95 | about 21 s | 123 KB |
+| `type` at `numeral-2xl`, 208 px | 95 | about 34 s | 480 KB |
 
 - This cost is why the fonts are not in `lv/signal.hpp`. Include `lv/signal_type.hpp` in one file, and make each larger font once.
 - `title` and `label` are capitals with wide spacing. The themes space the text of a button; for a style of your own, merge the token: `lv::style({.text_font = title}) | text.title`.
 - A numeral style with all 95 characters takes six times the flash of `numerals`. Use `type` for it only when the reading has letters.
-- `numeral-2xl` is 208 px, and `numerals` makes it. `type` does not: 95 characters of that size need more compile-time work than lvgl26 allows. The build stops at GCC's `-fconstexpr-ops-limit`.
+- `numeral-2xl` is 208 px. `type` makes it too, but 95 characters of that size take 480 KB of flash and 5.4 GB of memory in the compiler. Use `numerals` for it.
 - The fonts have no glyph for LVGL's symbols. A widget that draws one, such as the arrow of a drop-down list, shows an empty box in its place.
 
 ## Make your own

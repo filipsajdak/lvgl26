@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <meta>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -340,7 +341,7 @@ consteval std::vector<std::size_t> pair_subtables(const face& f) {
 // glyph is therefore read once for the font, and not once for every pair.
 struct pair_table {
   std::size_t at;
-  std::vector<std::uint32_t> second_class;  // format 2: the class of each glyph of the font
+  const std::uint32_t* second_class;  // format 2: the class of each glyph of the font, in static storage
 };
 
 // The class of each of `glyphs` as the second glyph of a pair. Only format 2 has classes.
@@ -354,7 +355,7 @@ consteval std::vector<std::uint32_t> second_classes(bytes d, std::size_t t, cons
 // The kerning subtables of the font, read for the glyphs of one font made from it.
 consteval std::vector<pair_table> pair_tables(const face& f, const std::vector<std::uint32_t>& glyphs) {
   std::vector<pair_table> out;
-  for (const std::size_t t : pair_subtables(f)) out.push_back({t, second_classes(f.d, t, glyphs)});
+  for (const std::size_t t : pair_subtables(f)) out.push_back({t, std::define_static_array(second_classes(f.d, t, glyphs)).data()});
   return out;
 }
 
@@ -386,7 +387,7 @@ consteval void add_answers(bytes d, const pair_table& table, std::uint32_t left,
 
 // How much closer or further apart `left` and each of `glyphs` stand than the advance
 // of `left` says, in font units.
-consteval std::vector<int> kerning_row(const face& f, const std::vector<pair_table>& tables, std::uint32_t left,
+consteval std::vector<int> kerning_row(const face& f, std::span<const pair_table> tables, std::uint32_t left,
                                        const std::vector<std::uint32_t>& glyphs) {
   std::vector<pair_answer> row(glyphs.size(), pair_answer{false, 0});
   for (const auto& table : tables) add_answers(f.d, table, left, glyphs, row);
