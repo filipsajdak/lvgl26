@@ -22,7 +22,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Where | What runs |
 |---|---|
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
-| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
 
 - The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
 - A check belongs in the pull request run if it takes a few minutes and a change can
@@ -143,9 +143,10 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 |---|---|---|
 | Complexity | `lizard`, through `tools/crap.py` | 8 for every function, also compile-time ones |
 | CRAP | `tools/crap.py build/host-v96-coverage` after the coverage preset | 8 for every function that runs at run time |
-| Mutation | `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main` | Every survivor gets a test, or a reason |
+| Mutation | The full run of the changed lines is nightly: one shard for each changed header (`tools/mutation_plan.py`, the tests of each in `tools/mutation_tests.json`). Locally `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main --sample 40` is enough for a quick look | Every survivor gets a test, or a reason in `tools/mutation_accepted.json` |
 | Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp`, `fuzz/mcp_message.cpp` and `fuzz/mcp_stream.cpp` (AFL++ with its GCC plugin: `fuzz/afl.sh`) | Every free input has a target; every crash becomes a corpus file |
 
+- Mutation is nightly: the run takes the lines of `include/lv` changed since the tag `nightly-mutation-base` (moved by the run after a clean night), and opens an issue with the survivors. Run it by hand with `since=<ref>` (workflow_dispatch) to cover an older change. An MR description says `Mutation: nightly, see run <url>`, or the line with counts when they are known.
 - A function over complexity 8 is split, not excused. A branch per type is one overload per type.
 - A `consteval` function has no run-time coverage: test it with `static_assert` and compile-fail tests.
 - Test code that only runs in constant evaluation does not count as coverage. Give run-time code a
