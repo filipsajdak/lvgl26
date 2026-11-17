@@ -519,6 +519,11 @@ if(NOT LVGL26_SANITIZE AND NOT LVGL26_ANALYZE AND NOT LVGL26_COVERAGE)
   endif()
 endif()
 
+# The example of docs/concepts.md: parts that constrain their parameters with the public concepts.
+add_executable(example_parts ${PROJECT_SOURCE_DIR}/examples/parts/main.cpp)
+target_link_libraries(example_parts PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_parts COMMAND example_parts)
+
 # The example of docs/lists.md. Its picture is the one on the page.
 add_executable(example_lists ${PROJECT_SOURCE_DIR}/examples/lists/main.cpp)
 target_compile_options(example_lists PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/lists)

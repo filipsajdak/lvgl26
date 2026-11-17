@@ -4,7 +4,7 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT
 
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
-Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
+Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists, concepts for reusable parts and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
 #include <lv/lv.hpp>
@@ -130,6 +130,21 @@ tracks.update(1, [](track& t) { ++t.plays; });          // sets that row's label
 - The key names a row: `assign()` keeps the widgets of every key it finds again.
 - A text field is shown from the row itself, without a copy.
 - The selected row is `checked`, so `.style_checked` styles it. [docs/lists.md](docs/lists.md) has the rest.
+
+A reusable part is a function that returns a piece of tree. Its parameters are constrained by the concepts of namespace `lv`, and a captureless lambda is a handler:
+
+```cpp
+constexpr auto spin_box(const char* name, const lv::dependency auto& count, lv::tree_handler auto fewer,
+                        lv::tree_handler auto more) {
+  return lv::row[lv::label({.text = name}), lv::button({.on_clicked = fewer}), lv::label({.text = lv::bind(count, "{}")}),
+                 lv::button({.on_clicked = more})];
+}
+
+constexpr auto ui = spin_box("Copies", copies, [] { --copies; }, [] { ++copies; });
+```
+
+- A wrong argument is refused at the call, with the name of the concept. [docs/concepts.md](docs/concepts.md) lists them all.
+- A lambda with a capture is refused where the tree takes it, and the message says what to do.
 
 Sequences of UI steps are coroutines on LVGL's loop:
 
