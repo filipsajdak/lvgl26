@@ -2,6 +2,8 @@
 
 #include "check.hpp"
 
+#include <cstdint>
+#include <meta>
 #include <type_traits>
 
 // This file turns the token rule off, to test styles on their own and the setting itself.
@@ -112,6 +114,29 @@ void merges_at_run_time(lv::obj screen) {
   check(same(box.get<"style_text_color">(LV_PART_MAIN), lv::rgb(0x202020)));
   lv_obj_delete(box.raw());
 }
+
+// Two nodes whose styles have the same values share one constant style, and a node with
+// other values has its own: one object for each distinct style, not for each node.
+constexpr auto three = lv::column()[
+    lv::label({.style = {.text_color = lv::rgb(0x102030)}}),
+    lv::label({.style = {.text_color = lv::rgb(0x102030)}}),
+    lv::label({.style = {.text_color = lv::rgb(0x203040)}})];
+
+consteval std::size_t style_member() {
+  for (std::size_t i = 0; i < lv::detail::members_of_kept<"label">.size(); ++i)
+    if (std::meta::identifier_of(lv::detail::members_of_kept<"label">[i]) == "style") return i;
+  return 0;
+}
+
+template <std::size_t Child>
+constexpr const lv_style_t* style_of_child = lv::detail::shared_const_style<lv::detail::style_at<three, style_member(), Child>>();
+
+static_assert(style_of_child<0> == style_of_child<1>);
+// Not a comparison of the two addresses: a sanitizer build does not take that as a constant.
+constexpr std::uint8_t first_red(const lv_style_t* s) {
+  return static_cast<const lv_style_const_prop_t*>(s->values_and_props)[0].value.color.red;
+}
+static_assert(first_red(style_of_child<0>) == 0x10 && first_red(style_of_child<2>) == 0x20);
 
 void renders(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
