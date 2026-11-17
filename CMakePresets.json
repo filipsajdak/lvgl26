@@ -31,14 +31,14 @@
       "name": "host-v96-asan",
       "inherits": "host-v96",
       "cacheVariables": {
-        "LVGL26_SANITIZE": "address,undefined"
+        "LVGL26_SANITIZE": "address,undefined,float-cast-overflow"
       }
     },
     {
       "name": "host-v10-asan",
       "inherits": "host-v10",
       "cacheVariables": {
-        "LVGL26_SANITIZE": "address,undefined"
+        "LVGL26_SANITIZE": "address,undefined,float-cast-overflow"
       }
     },
     {

@@ -445,6 +445,11 @@ std::size_t use_json(std::string_view text) {
   if (!document || !document->is(lv::json::kind::object)) return 0;
   const lv::json::member first = document->member_at(0);
   const lv::json::value list = (*document)["list"];
+  std::size_t walked = 0;
+  const lv::json::items<lv::json::member> members = document->members();
+  for (const lv::json::member m : members) walked += m.key.size();
+  for (const lv::json::value element : list.elements()) walked += element.text().size();
+  if (walked == 0) return 1;
   std::string out;
   auto sink = [&](std::string_view piece) { out += piece; };
   static_assert(lv::json::sink<decltype(sink)>);

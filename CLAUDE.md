@@ -11,7 +11,7 @@ cmake --preset host-v96 && cmake --build --preset host-v96 && ctest --preset hos
 | Preset | What it checks |
 |---|---|
 | `host-v96`, `host-v10` | LVGL v9.6.0 and the v10 pin, warnings as errors |
-| `host-v96-asan`, `host-v10-asan` | AddressSanitizer and UndefinedBehaviorSanitizer |
+| `host-v96-asan`, `host-v10-asan` | AddressSanitizer and UndefinedBehaviorSanitizer, with `float-cast-overflow`, which GCC leaves out of `undefined` |
 | `host-v96-tsan` | ThreadSanitizer (Linux only; GCC has no TSan on macOS) |
 | `host-v96-analyze` | GCC static analyzer (`-fanalyzer`) |
 | `host-v96-coverage` | Coverage; report with `gcovr --filter include/lv/ build/host-v96-coverage` |
@@ -125,7 +125,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Complexity | `lizard`, through `tools/crap.py` | 8 for every function, also compile-time ones |
 | CRAP | `tools/crap.py build/host-v96-coverage` after the coverage preset | 8 for every function that runs at run time |
 | Mutation | `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main` | Every survivor gets a test, or a reason |
-| Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp` and `fuzz/mcp_message.cpp` (AFL++ with its GCC plugin: `fuzz/afl.sh`) | Every free input has a target; every crash becomes a corpus file |
+| Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp`, `fuzz/mcp_message.cpp` and `fuzz/mcp_stream.cpp` (AFL++ with its GCC plugin: `fuzz/afl.sh`) | Every free input has a target; every crash becomes a corpus file |
 
 - A function over complexity 8 is split, not excused. A branch per type is one overload per type.
 - A `consteval` function has no run-time coverage: test it with `static_assert` and compile-fail tests.
@@ -190,6 +190,7 @@ clangd cannot parse the headers, so editors read stubs: the public API as plain 
 - Every function of a template in a stub has a body, `{ __builtin_unreachable(); }` when nothing else fits. Clang warns about a function without one when its arguments have no linkage. The stub tests run with `-Werror`.
 - The stubs are read by Clang only, and may use what our own code may not (`__builtin_unreachable`, an include guard in `tools/editor/fallback/contracts`).
 - A new member kind or value text in the reference data needs a rule in `tools/editor/reference_stubs.py`: `editor_tools` fails when a value becomes `stub::anything`.
+- A file under `examples/` that needs a build setting the editor check lacks, such as the SDL driver, says `// editor-check: skip, <reason>` in its first ten lines. The check prints it as skipped.
 
 ## Research
 

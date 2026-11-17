@@ -375,7 +375,7 @@ std::expected<mounted<Tree>, mount_error> mount(obj parent)
   detail::build_state st{m.ids_.data()};
   lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
   m.root_ = owned<obj>{obj{root}};  // also deletes a half-built tree on failure
-  if (!st.ok) return std::unexpected(mount_error::out_of_memory);
+  if (!st.ok || !m.root_) return std::unexpected(mount_error::out_of_memory);
   return m;
 }
 

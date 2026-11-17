@@ -13,6 +13,16 @@ static_assert(v.member_at(2).key == "s" && value{v.member_at(2).text}.string() =
 static_assert(!v["nope"] && !v["color"]["primary"]["x"]);
 static_assert(!value::parse("{ \"a\": }") && !value::parse("[1, 2") && !value::parse("{} x") && !value::parse(""));
 static_assert(value::parse("[]")->size() == 0 && value::parse(" 12 ")->number() == 12);
+// members() and elements() walk an object or an array once, in document order.
+constexpr std::size_t walked(auto range) {
+  std::size_t n = 0;
+  for (auto it = range.begin(); it != range.end(); it++) ++n;
+  return n;
+}
+static_assert(walked(v.members()) == 3 && walked(v["color"]["n"].elements()) == 4);
+static_assert((*v.members().begin()).key == "color" && (*v["color"]["n"].elements().begin()).number() == 1);
+static_assert(walked(v.elements()) == 0 && walked(v["color"]["n"].members()) == 0);  // the other kind has none
+static_assert(walked(value::parse("{}")->members()) == 0 && walked(value::parse("[]")->elements()) == 0);
 // The same reader at run time, so that the code the program really executes is
 // tested (and counted by the coverage report), not only its constant evaluation.
 #include "check.hpp"
@@ -90,6 +100,25 @@ int main() {
   for (const char* good : {"[]", "{}", " 12 ", "null", "false", "\"a\\\"b\"", "[[[]]]"})
     check(value::parse(std::string(good)).has_value());
 
+
+  // members() and elements() at run time: the same items as member_at() and at().
+  if (parsed) {
+    std::size_t i = 0;
+    for (const lv::json::member m : parsed->members()) {
+      check(m.key == parsed->member_at(i).key && m.text == parsed->member_at(i).text);
+      ++i;
+    }
+    check(i == parsed->size());
+    const auto n = (*parsed)["color"]["n"];
+    i = 0;
+    for (const value e : n.elements()) check(e.text() == n.at(i++).text());
+    check(i == n.size());
+    check(parsed->elements().begin() == parsed->elements().end() && n.members().begin() == n.members().end());
+    auto first = n.elements().begin();
+    const auto before = first++;
+    check((*before).number() == 1 && (*first).number() == -25.0 && !(before == first) && !(first == before));
+    check(before == n.elements().begin());
+  }
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }

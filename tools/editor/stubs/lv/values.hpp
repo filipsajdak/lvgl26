@@ -234,8 +234,10 @@ struct id_name {
   char text[capacity]{};
 
   constexpr id_name() = default;
-  constexpr id_name(const char* name) {
-    for (std::size_t i = 0; i + 1 < capacity && name[i] != '\0'; ++i) text[i] = name[i];
+  constexpr id_name(const char* name) : id_name(std::string_view{name}) {}
+  /// A name that a function passes on: `.id = id` where `id` is a std::string_view.
+  constexpr id_name(std::string_view name) {
+    for (std::size_t i = 0; i + 1 < capacity && i < name.size(); ++i) text[i] = name[i];
   }
   constexpr std::string_view sv() const { return std::string_view{text}; }
 };
