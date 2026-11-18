@@ -446,5 +446,9 @@ Decided 2026-11-18, in an interview over the list above.
 | 7 | A colour in any space of the standard is converted to sRGB by the compiler. Alpha sets the matching opacity property. A colour outside sRGB is a compile error. |
 | 8 | Modes are one file each for now. A bundled resolver document comes later. |
 | 11 | The reader implements the standard in full first: `$extends`, `$root`, `$ref`, colour spaces and alpha. Until a key is implemented it is not dropped in silence in new code. |
+| 9 | The source of Signal's tokens becomes a file in the standard format. `tools/signal_tokens.py` still runs, and splits it into the per-mode files that the library embeds. |
+| 10 | CI runs the official schemas over every token file. |
+| 12 | We follow the stable text, 2025.10. |
 
-Decisions 9, 10 and 12 are open.
+Decision 9 has a condition from the owner: the standard file is obtained from Claude Design.
+The current file, `design/signal/tokens.design.json`, comes from there, in that tool's list format.
