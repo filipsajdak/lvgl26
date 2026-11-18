@@ -173,8 +173,11 @@ class mounted {
   mounted(const mounted&) = delete;
   mounted& operator=(const mounted&) = delete;
 
-  /// Builds the widgets of `Tree` under `parent`, for an lv::mounted made empty.
+  /// Builds the widgets of `Tree` under `parent`, in this object's memory, whenever it is not
+  /// mounted: never mounted, after unmount(), after a failure, after the parent deleted them.
   std::expected<void, mount_error> mount(obj parent) { __builtin_unreachable(); }
+  /// Deletes the widgets: the object is not mounted, as when it was made. For a window that closes.
+  void unmount() {}
 
   /// Whether the widgets were built.
   explicit operator bool() const noexcept { __builtin_unreachable(); }

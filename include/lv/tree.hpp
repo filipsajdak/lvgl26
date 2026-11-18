@@ -644,6 +644,7 @@ enum class mount_error {
 //
 //   constinit lv::mounted<ui> page;               // a global, mounted later
 //   if (!page.mount(display.screen())) ...
+//   page.unmount();                               // the window closes; mount again later
 //
 // sizeof and alignof are constants: lv::mount_in builds one in memory of the caller's.
 template <const auto& Tree>
@@ -657,13 +658,17 @@ class mounted {
 
   static constexpr bool keeps_storage = detail::any_storage<std::remove_cvref_t<decltype(Tree)>>;
 
-  // LVGL deletes the root, from here or from outside: the storage ends while every
-  // widget of the tree still exists.
-  static void root_deleted(lv_event_t* e) {
-    auto* self = static_cast<mounted*>(lv_event_get_user_data(e));
-    self->storage_.end();
-    self->root_ = nullptr;
+  // The one way a mounted tree ends: the storage ends while every widget of the tree still
+  // exists, and the object is not mounted again, ready for mount(parent) in the same memory.
+  void end() noexcept {
+    storage_.end();
+    root_ = nullptr;
+    built_ = false;
+    error_ = mount_error::not_mounted;
   }
+
+  // LVGL deletes the root: from unmount(), from the destructor, or from outside.
+  static void root_deleted(lv_event_t* e) { static_cast<mounted*>(lv_event_get_user_data(e))->end(); }
 
   std::expected<void, mount_error> build(obj parent) {
     detail::build_state st{ids_.data(), true, storage_.start()};
@@ -698,7 +703,9 @@ class mounted {
     if (root_ != nullptr) lv_obj_delete(root_);  // root_deleted ends the storage
   }
 
-  // Builds the widgets of `Tree` under `parent`, for an lv::mounted made empty.
+  // Builds the widgets of `Tree` under `parent`, in this object's own memory: when it was
+  // never mounted, after unmount(), after a failed mount, or after the parent deleted the
+  // widgets. lvgl26 allocates nothing for it.
   std::expected<void, mount_error> mount(obj parent)
     pre(parent.raw() != nullptr)
     pre(!built_)
@@ -706,12 +713,19 @@ class mounted {
     return build(parent);
   }
 
-  // Whether the widgets were built. They stay built when the parent deletes them later:
-  // root() is then empty.
+  // Deletes the widgets and ends the storage: the object is not mounted, as when it was
+  // made. For the end of a root's life, such as a window that closes.
+  void unmount()
+    pre(built_)
+  {
+    lv_obj_delete(root_);  // root_deleted ends it
+  }
+
+  // Whether the widgets are mounted: built, and not deleted since.
   explicit operator bool() const noexcept { return built_; }
   bool has_value() const noexcept { return built_; }
 
-  // Why the widgets were not built.
+  // Why the widgets are not mounted: not_mounted, or the failure of the last mount.
   mount_error error() const
     pre(!built_)
   {
@@ -740,7 +754,7 @@ class mounted {
     return *this;
   }
 
-  // The root widget, or an empty view if its parent already deleted it.
+  // The root widget, or an empty view when the tree is not mounted.
   obj root() const { return obj{root_}; }
 
   // Gives the widgets to their parent: they now live until the parent is deleted,
@@ -748,8 +762,9 @@ class mounted {
   obj detach()
     requires(!keeps_storage)
   {
-    lv_obj_t* root = std::exchange(root_, nullptr);
+    lv_obj_t* root = root_;
     if (root != nullptr) lv_obj_remove_event_cb_with_user_data(root, &root_deleted, this);
+    end();
     return obj{root};
   }
   obj detach() = delete(
@@ -760,7 +775,7 @@ class mounted {
   template <detail::fixed Name>
   auto get() const {
     // A check in the body, not pre(): GCC 16.2 crashes on pre() with a deduced return type.
-    contract_assert(root_ != nullptr && "the mounted tree was deleted by its parent");
+    contract_assert(root_ != nullptr && "the tree is not mounted");
     using view_type = typename[:detail::id_view<Tree>(Name.sv()):];
     return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
   }
@@ -782,8 +797,8 @@ mounted<Tree> mount(obj parent)
   return mounted<Tree>{parent};
 }
 
-// The same, built in `memory` of the caller's: a region laid out at start, a buffer of
-// a screen. The caller ends it with std::destroy_at, which deletes the widgets.
+// The same, built in `memory` that is not a variable of its own, such as a slice of one
+// region reserved at start. The caller ends it with std::destroy_at, which deletes the widgets.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 mounted<Tree>& mount_in(std::span<std::byte> memory, obj parent)

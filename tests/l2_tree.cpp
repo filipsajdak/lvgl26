@@ -90,7 +90,7 @@ void owns_its_widgets(lv::obj screen) {
     auto box = screen.add<"obj">();
     auto root = lv::mount<ui>(box);
     lv_obj_delete(box.raw());
-    check(!root->root());
+    check(!root && !root.root());  // not mounted any more
   }
   check(lv_obj_get_child_count(screen.raw()) == before);
 }

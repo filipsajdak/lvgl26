@@ -380,6 +380,8 @@ int use_application() {
   if (page.error() != lv::mount_error::not_mounted) return 8;
   if (!page.mount(plain.screen())) return 9;
   static_cast<void>((*page).root());
+  page.unmount();
+  if (!page.mount(plain.screen())) return 10;
   alignas(lv::mounted<ui>) std::array<std::byte, lv::storage_size<ui>> memory;
   lv::mounted<ui>& in_memory = lv::mount_in<ui>(memory, plain.screen());
   std::destroy_at(&in_memory);

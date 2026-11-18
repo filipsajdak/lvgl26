@@ -41,6 +41,12 @@ lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
+# unmount() of a tree that is not mounted, and mount() of one that is, end the program.
+foreach(case unmount_not_mounted mount_twice unmount_after_parent)
+  add_test(NAME mounted_storage_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:mounted_storage> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 lvgl26_test(state)
 lvgl26_test(units)
 lvgl26_test(values)

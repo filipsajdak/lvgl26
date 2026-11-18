@@ -8,6 +8,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -204,20 +205,27 @@ void opens_a_scope(lv::obj screen) {
   check(alive == 0);
 }
 
+// Whether `m` is not mounted, as an lv::mounted made empty is.
+template <class M>
+bool not_mounted(const M& m) {
+  return !m && !m.has_value() && !m.root() && m.error() == lv::mount_error::not_mounted;
+}
+
 // The parent deletes the tree first, or C code deletes its root: the storage ends with
-// the root, while the widgets still exist, and the lv::mounted deletes nothing twice.
+// the root, while the widgets still exist, the lv::mounted is not mounted any more, and
+// it deletes nothing twice.
 void ends_with_the_root(lv::obj screen) {
   {
     auto box = screen.add<"obj">();
     auto root = lv::mount<ui>(box);
     check(alive == 3);
     lv_obj_delete(box.raw());
-    check(alive == 0 && !root.root() && static_cast<bool>(root));
+    check(alive == 0 && not_mounted(root));
   }
   {
     auto root = lv::mount<ui>(screen);
     lv_obj_delete(root.root().raw());  // C API
-    check(alive == 0 && !root.root());
+    check(alive == 0 && not_mounted(root));
   }
   check(alive == 0);
 }
@@ -226,10 +234,58 @@ void ends_with_the_root(lv::obj screen) {
 constinit lv::mounted<ui> page;
 
 void a_global_page(lv::obj screen) {
-  check(!page && !page.has_value() && page.error() == lv::mount_error::not_mounted);
+  check(not_mounted(page));
   built_at.clear();
   const auto mounted = page.mount(screen);
   check(mounted.has_value() && page.has_value() && static_cast<bool>(page) && alive == 3 && built_inside(page));
+}
+
+// The heap of LVGL, in bytes and blocks.
+struct heap_use {
+  std::size_t bytes;
+  std::size_t blocks;
+  bool operator==(const heap_use&) const = default;
+};
+
+heap_use heap_now() { return {heap_used(), heap_blocks()}; }
+
+// Unmounts `m` and mounts it again: whether the heap was `before` in between and `first`
+// after, as after the first mount.
+bool one_cycle(lv::mounted<ui>& m, lv::obj screen, heap_use before, heap_use first) {
+  m.unmount();
+  const bool ended = not_mounted(m) && alive == 0 && heap_now() == before;
+  built_at.clear();
+  const bool again = m.mount(screen).has_value() && built_inside(m) && heap_now() == first;
+  return ended && again;
+}
+
+// unmount() ends the page; mount(parent) builds it again in the same memory, and the heap
+// is what it was after the first mount, every time.
+void unmount_and_mount_again(lv::obj screen) {
+  constexpr int cycles = 100;
+  static constinit lv::mounted<ui> cycled;
+  const heap_use before = heap_now();
+  check(cycled.mount(screen).has_value());
+  const heap_use first = heap_now();
+  bool stable = true;
+  for (int i = 0; i < cycles; ++i) stable = one_cycle(cycled, screen, before, first) && stable;
+  check(stable && alive == 3);
+  std::printf("mount: %zu bytes in %zu blocks; the same after %d cycles of unmount and mount\n",
+              first.bytes - before.bytes, first.blocks - before.blocks, cycles);
+  cycled.unmount();
+}
+
+// The parent deletes the page: it can be mounted again, under another parent.
+void mount_after_the_parent_went(lv::obj screen) {
+  static constinit lv::mounted<ui> orphan;
+  auto box = screen.add<"obj">();
+  check(orphan.mount(box).has_value());
+  lv_obj_delete(box.raw());
+  check(not_mounted(orphan) && alive == 0);
+  built_at.clear();
+  check(orphan.mount(screen).has_value() && built_inside(orphan) && alive == 3);
+  orphan.unmount();
+  check(not_mounted(orphan) && alive == 0);
 }
 
 // In memory of the caller's, with placement new behind a name.
@@ -315,11 +371,14 @@ std::vector<void*> take_heap_but(std::size_t budget) {
   }
 }
 
-// Mounts once; a failure must leave no storage and no widget. Whether it succeeded.
-bool mount_once(lv::obj screen, std::size_t children) {
-  auto root = lv::mount<ui>(screen);
-  if (root) return true;
-  check(root.error() == lv::mount_error::out_of_memory && alive == 0 &&
+// Mounts `page` once, again after each failure; a failure must leave no storage and no
+// widget. Whether it succeeded: then it is unmounted at once.
+bool mount_once(lv::mounted<ui>& again, lv::obj screen, std::size_t children) {
+  if (again.mount(screen)) {
+    again.unmount();
+    return true;
+  }
+  check(!again && again.error() == lv::mount_error::out_of_memory && alive == 0 &&
         lv_obj_get_child_count(screen.raw()) == children);
   return false;
 }
@@ -332,11 +391,12 @@ void out_of_memory_leaves_nothing(lv::obj screen) {
   const std::size_t start = heap_used();
   const std::size_t start_blocks = heap_blocks();
   lv_log_register_print_cb([](lv_log_level_t, const char*) {});  // a thousand expected failures
+  static constinit lv::mounted<ui> page_again;  // one object, mounted again after each failure
   int failed = 0;
   bool mounted = false;
   for (int round = 0; round < most_rounds && !mounted; ++round) {
     const std::vector<void*> taken = take_heap_but(static_cast<std::size_t>(round) * heap_step);
-    mounted = mount_once(screen, children);
+    mounted = mount_once(page_again, screen, children);
     failed += mounted ? 0 : 1;
     for (void* p : taken) lv_free(p);
     // Counted in blocks: the allocator may keep a few bytes of a split block for a while.
@@ -347,13 +407,49 @@ void out_of_memory_leaves_nothing(lv::obj screen) {
   std::printf("out of memory at %d points\n", failed);
 }
 
+// A call that breaks a contract ends the program with a contract violation. Each case is
+// run as a test of its own, which expects that.
+struct violation {
+  const char* name;
+  int (*run)(lv::obj screen);
+};
+
+constinit lv::mounted<ui> misused;
+
+constexpr violation violations[] = {
+    {"unmount_not_mounted", [](lv::obj) { return misused.unmount(), 0; }},
+    {"mount_twice",
+     [](lv::obj screen) {
+       static_cast<void>(misused.mount(screen));
+       return misused.mount(screen).has_value() ? 1 : 0;
+     }},
+    {"unmount_after_parent",
+     [](lv::obj screen) {
+       auto box = screen.add<"obj">();
+       static_cast<void>(misused.mount(box));
+       lv_obj_delete(box.raw());
+       return misused.unmount(), 0;
+     }},
+};
+
+int violates(const char* which, lv::obj screen) {
+  for (const violation& v : violations)
+    if (std::strcmp(which, v.name) == 0) return v.run(screen);
+  return 0;
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
   lv_init();
   lv_display_t* display = lv_test_display_create(320, 240);
   lv_display_set_theme(display, nullptr);
   auto screen = lv::screen_active();
+
+  if (argc == 2) {
+    std::printf("no contract violation: %d\n", violates(argv[1], screen));
+    return 0;
+  }
 
   mounts_in_place(screen);
   opens_a_scope(screen);
@@ -361,6 +457,8 @@ int main() {
   in_caller_memory(screen);
   kept_where_built(screen);
   a_tree_without_storage(screen);
+  unmount_and_mount_again(screen);
+  mount_after_the_parent_went(screen);
   out_of_memory_leaves_nothing(screen);
   a_global_page(screen);  // last: the global outlives LVGL
 
