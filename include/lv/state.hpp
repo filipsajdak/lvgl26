@@ -230,6 +230,9 @@ struct source_functions {
   static subject_value read(const void* source) {
     return to_subject_value(static_cast<const S*>(source)->current_value());
   }
+  static std::int32_t number(const void* source) {
+    return to_subject_value(static_cast<const S*>(source)->current_value()).number;
+  }
   static void write(const void* source, std::int32_t number) {
     const_cast<S*>(static_cast<const S*>(source))->set(value_of_number<typename S::value_type>(number));
   }
@@ -248,6 +251,7 @@ const source_ops& source_ops_of() {
   static constexpr source_ops ops{.subject = &fn::subject,
                                   .watchers = &fn::watchers,
                                   .read = &fn::read,
+                                  .number = &fn::number,
                                   .write = fn::write_function()};
   return ops;
 }

@@ -28,6 +28,8 @@ struct source_ops {
   watch_list& (*watchers)(const void* source);
   // The current value.
   subject_value (*read)(const void* source);
+  // The current value as a number: what most properties take, and cheaper to call.
+  std::int32_t (*number)(const void* source);
   // Sets the value from a number a widget gave back. Null for what only follows.
   void (*write)(const void* source, std::int32_t number);
 };

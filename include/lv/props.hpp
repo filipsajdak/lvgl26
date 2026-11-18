@@ -333,20 +333,6 @@ T from_number(std::int32_t n, as<T>) {
     return T{};  // no state type converts to T, so no binding to it can exist
 }
 
-// from_value(value, type): the value of a state as the type a setter takes.
-inline lv_color_t from_value(const subject_value& v, as<lv_color_t>) { return v.color; }
-
-template <class T>
-  requires std::is_pointer_v<T>
-T from_value(const subject_value& v, as<T>) {
-  return static_cast<T>(const_cast<void*>(v.pointer));
-}
-
-template <class T>
-T from_value(const subject_value& v, as<T>) {
-  return from_number(v.number, as<T>{});
-}
-
 // Whether `f` is one of LVGL's bind functions of a property: it takes the widget and
 // a subject, and optionally a format.
 consteval bool is_binder_shape(std::meta::info f) {
@@ -484,6 +470,21 @@ struct bound_node : watch_node {
   source_ops_fn ops = nullptr;
 };
 
+// from_source(node, type): the value of the state that a node follows, as the type a setter
+// takes. A number is the usual case and costs one call that returns in a register.
+inline lv_color_t from_source(const bound_node& n, as<lv_color_t>) { return n.ops().read(n.source).color; }
+
+template <class T>
+  requires std::is_pointer_v<T>
+T from_source(const bound_node& n, as<T>) {
+  return static_cast<T>(const_cast<void*>(n.ops().read(n.source).pointer));
+}
+
+template <class T>
+T from_source(const bound_node& n, as<T>) {
+  return from_number(n.ops().number(n.source), as<T>{});
+}
+
 // A bound text that is formatted by LVGL's printf into room behind the node, so that the
 // label shows the buffer and a change allocates nothing.
 struct text_node : bound_node {
@@ -504,7 +505,7 @@ inline void drop_node(lv_event_t* e) {
 template <fixed W, std::size_t I, class V>
 void show_value(watch_node& n) {
   auto& b = static_cast<bound_node&>(n);
-  [:targets<W>[I]:](b.widget, lower(from_value(b.ops().read(b.source), as<V>{})));
+  [:targets<W>[I]:](b.widget, lower(from_source(b, as<V>{})));
 }
 
 template <fixed W, std::meta::info Target, bool Constant, class... V>
@@ -514,7 +515,7 @@ void set_property(lv_obj_t* o, V... v);
 template <fixed W, std::size_t I>
 void show_text(watch_node& n) {
   auto& t = static_cast<text_node&>(n);
-  lv_snprintf(t.text(), t.room, t.format, t.ops().read(t.source).number);
+  lv_snprintf(t.text(), t.room, t.format, t.ops().number(t.source));
   set_property<W, targets<W>[I], true>(t.widget, static_cast<const char*>(t.text()));
 }
 
@@ -548,44 +549,53 @@ Node* make_node(lv_obj_t* o, const void* source, source_ops_fn ops, void (*chang
   return n;
 }
 
-// The node of a bound text, if the binding has a format: a number shown through it.
-template <fixed W, std::size_t I, class A>
-bound_node* make_text_node(lv_obj_t* o, const A& a, source_ops_fn ops) {
-  const std::size_t room = std::strlen(a.bound_format) + widest_number + 1;
-  auto* t = make_node<text_node>(o, a.bound, ops, &show_text<W, I>, room);
-  if (t == nullptr) return nullptr;
-  t->format = a.bound_format;
-  t->room = room;
-  return t;
+// What does not depend on the property, so that one copy of it serves every property:
+// makes the node of a binding, puts it in the state's list and shows the value at once.
+// `show` is the function of the property that sets its value. Null if LVGL has no memory.
+[[gnu::noinline]] inline bound_node* watch(lv_obj_t* o, const void* source, source_ops_fn ops,
+                                           void (*show)(watch_node&)) {
+  bound_node* node = make_node<bound_node>(o, source, ops, show);
+  if (node == nullptr) return nullptr;
+  ops().watchers(source).append(*node);
+  show(*node);
+  return node;
+}
+
+// The same for a text that is shown through a format.
+[[gnu::noinline]] inline bound_node* watch_text(lv_obj_t* o, const void* source, source_ops_fn ops,
+                                                void (*show)(watch_node&), const char* format) {
+  const std::size_t room = std::strlen(format) + widest_number + 1;
+  auto* node = make_node<text_node>(o, source, ops, show, room);
+  if (node == nullptr) return nullptr;
+  node->format = format;
+  node->room = room;
+  ops().watchers(source).append(*node);
+  show(*node);
+  return node;
 }
 
 // Adds the handler that writes a widget's value back to the state it follows.
-template <fixed W, std::size_t I>
-void write_back_to(lv_obj_t* o, bound_node& node) {
-  constexpr auto setter = targets<W>[I];
-  if constexpr (binder<setter> != std::meta::info{} && number_getter<setter> != std::meta::info{}) {
-    constexpr auto getter = number_getter<setter>;
-    if (node.ops().write != nullptr) lv_obj_add_event_cb(o, &write_back<getter>, LV_EVENT_VALUE_CHANGED, &node);
-  }
+[[gnu::noinline]] inline void write_back_with(lv_obj_t* o, bound_node& node, lv_event_cb_t handler) {
+  if (node.ops().write != nullptr) lv_obj_add_event_cb(o, handler, LV_EVENT_VALUE_CHANGED, &node);
 }
 
 // Makes member number I of props<W> follow the state it is bound to, through a watcher.
 template <fixed W, std::size_t I, class A>
 void watch_member(lv_obj_t* o, const A& a) {
+  constexpr auto setter = targets<W>[I];
   using value_type = std::tuple_element_t<0, typename A::types>;
-  const source_ops_fn ops = a.bound_ops;
   bound_node* node = nullptr;
   if constexpr (std::same_as<value_type, const char*>) {
-    if (a.bound_format != nullptr) {
-      node = make_text_node<W, I>(o, a, ops);
-      if (node == nullptr) return;
-    }
+    if (a.bound_format != nullptr) node = watch_text(o, a.bound, a.bound_ops, &show_text<W, I>, a.bound_format);
   }
-  if (node == nullptr) node = make_node<bound_node>(o, a.bound, ops, &show_value<W, I, value_type>);
-  if (node == nullptr) return;
-  ops().watchers(a.bound).append(*node);
-  node->changed(*node);
-  write_back_to<W, I>(o, *node);
+  if constexpr (std::same_as<value_type, const char*>) {
+    if (a.bound_format == nullptr) node = watch(o, a.bound, a.bound_ops, &show_value<W, I, value_type>);
+  } else {
+    node = watch(o, a.bound, a.bound_ops, &show_value<W, I, value_type>);
+  }
+  if constexpr (binder<setter> != std::meta::info{} && number_getter<setter> != std::meta::info{}) {
+    if (node != nullptr) write_back_with(o, *node, &write_back<number_getter<setter>>);
+  }
 }
 
 // Makes member number I of props<W> follow the state it is bound to: through LVGL's bind
