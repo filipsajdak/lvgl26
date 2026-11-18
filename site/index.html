@@ -177,7 +177,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <h3>67 of 96 examples, for 17 widgets</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
-          <div><dt>Ported</dt><dd>67 of the 96 examples of the 17 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
+          <div><dt>Ported</dt><dd>69 of the 102 examples of the 18 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
         </dl>
         <ul class="links">
@@ -440,6 +440,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Lists</strong> of keyed rows: a change touches its own row only, and a state follows the selected row</li>
         <li><strong>Named looks</strong>: <code>.style = lv::look&lt;"tile"&gt;</code> builds a constant style from a group of the design tokens, by name, with the entries checked</li>
         <li><strong>Repetition</strong> by reflection: one tile for each enumerator, one line for each captioned member, one element for each record, written by the compiler</li>
+        <li><strong>Option lists</strong> for a dropdown and a roller: <code>.options = {"100%", "75%", "50%"}</code> or <code>lv::options_of&lt;quality&gt;</code>, joined by the compiler, with a state of the enum that follows the choice</li>
         <li><strong>Concepts for parts</strong>: <code>lv::tree_handler</code>, <code>lv::dependency</code>, <code>lv::font_value</code> and more constrain a part's parameters, and a captureless lambda is a handler</li>
         <li><strong>Coroutine tasks</strong> on LVGL's loop: events, timers, <code>lv::first</code></li>
         <li><strong>Animations</strong> a task can await with <code>lv::animate</code>, with easing curves</li>
@@ -448,7 +449,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Runtime JSON screens</strong> and patches by id</li>
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
-        <li><strong>Example ports</strong>: 71 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
+        <li><strong>Example ports</strong>: 73 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
         <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>
       </ul>
       <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>

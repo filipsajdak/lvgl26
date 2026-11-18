@@ -79,7 +79,7 @@ inline constexpr std::size_t text_capacity = 128;
 template <class T>
 struct json_value {
   T value{};
-  char text[std::is_pointer_v<T> ? text_capacity : 1]{};
+  char text[(std::is_pointer_v<T> || std::same_as<T, option_list>) ? text_capacity : 1]{};
 };
 
 constexpr char lower_char(char c) { return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c; }
@@ -165,6 +165,7 @@ constexpr bool read_color(json::value v, lv_color_t& out) {
 // Whether a property value of type T can be read from a document.
 template <class T>
 inline constexpr bool readable = std::is_enum_v<T> || std::same_as<T, const char*> ||
+                                 std::same_as<T, option_list> ||
                                  std::same_as<T, length> || std::same_as<T, horizontal> ||
                                  std::same_as<T, vertical> || std::same_as<T, angle> ||
                                  std::same_as<T, decidegrees> || std::same_as<T, duration> || std::same_as<T, opa> ||
@@ -186,6 +187,16 @@ inline bool read(json::value v, json_value<const char*>& out) {
   for (std::size_t i = 0; i < s.size(); ++i) out.text[i] = s[i];
   out.text[s.size()] = '\0';
   return out.value = out.text, true;
+}
+
+// A list of options as one text, copied the same way. LVGL copies it again (a document is
+// not a constexpr tree), so the list is not marked as kept.
+inline bool read(json::value v, json_value<option_list>& out) {
+  if (!v.is(json::kind::string) || v.string().size() >= text_capacity) return false;
+  const auto s = v.string();
+  for (std::size_t i = 0; i < s.size(); ++i) out.text[i] = s[i];
+  out.text[s.size()] = '\0';
+  return out.value = option_list{static_cast<const char*>(out.text)}, true;
 }
 
 // An enumerator, by name.
@@ -340,12 +351,6 @@ consteval std::uint64_t most_for(std::meta::info setter) {
   return std::numeric_limits<std::uint64_t>::max();
 }
 
-// Whether T is a whole number of a document, strict<I>.
-template <class T>
-inline constexpr bool is_strict = false;
-template <class I>
-inline constexpr bool is_strict<strict<I>> = true;
-
 // The C type of value argument I of a setter: its parameter after the widget.
 template <std::meta::info Setter, std::size_t I>
 using parameter_t = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[I + 1]):];
@@ -405,7 +410,8 @@ inline constexpr bool arg_is_readable<arg<Ts...>> = all_readable<Ts...>;
 consteval bool copies_text(std::meta::info setter) {
   return is_one_of(std::meta::identifier_of(setter),
                    {"lv_label_set_text", "lv_checkbox_set_text", "lv_textarea_set_text",
-                    "lv_textarea_set_placeholder_text", "lv_dropdown_set_options"});
+                    "lv_textarea_set_placeholder_text", "lv_dropdown_set_options",
+                    "lv_roller_set_options"});
 }
 
 consteval bool takes_text(std::meta::info setter) {

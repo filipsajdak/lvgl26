@@ -7,8 +7,8 @@ with all the quality presets.
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original (`tests/examples_get_started.cpp`) |
 | LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 45 | 52 | Same pixels as the C original, also after clicks, drags and time (`tests/examples_widgets_*.cpp`) |
-| LVGL `widgets`: buttonmatrix, dropdown, spinbox, textarea, image, scale, keyboard | 22 | 44 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
-| LVGL other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll`, others | 0 | 199 | Same pixels as the C original |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 24 | 50 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
+| LVGL other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll`, others | 0 | 193 | Same pixels as the C original |
 | Qt for MCUs demos and examples | 0 | 35 | Screenshots; written from the documented behaviour only |
 | Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 1 | about 60 | Screenshots; [treadmill](ports/qt/treadmill/README.md) is the Qt Design Studio port (`tests/ports_treadmill.cpp`) |
 
@@ -21,8 +21,7 @@ with all the quality presets.
 | `slider_styling`, `switch_styling`, `checkbox_styling` | A style for one part in one state (the knob while pressed) |
 | `obj_draggable` | The input device (`lv_indev_get_vect`), which the framework does not wrap |
 | `obj_transform` | `LV_DRAW_TRANSFORM_USE_MATRIX`, which the test build does not enable |
-| `roller_*` (6 of 6) | Can be ported now: a name beside a string works. Not done yet |
-| `roller_bind_value` | Can be ported now: a state follows a roller. Not done yet |
+| `roller_event`, `roller_fade_mask`, `roller_styling`, `roller_visible_rows` | Can be ported now. Not done yet |
 | `spinner_basic` | Can be ported now: `.arc_sweep = 270 * deg` compiles. Not done yet |
 | `table_*` (8 of 8) | More than one cell: `.cell_value` takes a row, a column and a text, and a props struct names it once |
 | `buttonmatrix_button_ctrl`, `_button_width`, `_one_checked`, `_popover`, `_recolor`, `keyboard_custom_map` | An array of control flags, written with LVGL's C enumerators |
@@ -42,12 +41,6 @@ Not tried yet, and expected to need functions that are neither set nor get funct
 ## Findings
 
 Each finding is a gap in lvgl26 that stopped a port. The port is left out and no workaround is used.
-
-A quoted name works only when every value of a property is an enumerator. The roller mixes a string and one:
-
-```cpp
-lv::roller({.options = {"Mon\nTue\nWed", "normal"}})  // refused: it takes const char*, then lv_roller_mode_t
-```
 
 An angle for a spinner does not compile with `-Werror=sign-conversion` (the setter takes `uint32_t`):
 

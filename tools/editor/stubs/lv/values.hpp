@@ -6,6 +6,7 @@
 #include <lv/config.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/event.hpp>
+#include <lv/options.hpp>
 #include <lv/token_types.hpp>
 #include <lv/units.hpp>
 
@@ -13,6 +14,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -223,6 +225,16 @@ struct arg {
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...)))
   constexpr arg(U&&...) {}
+
+  /// A list of options: .options = {"100%", "75%", "50%"}.
+  template <std::size_t... N>
+    requires(sizeof...(N) >= 2) && std::same_as<std::tuple<Ts...>, std::tuple<option_list>>
+  consteval arg([[maybe_unused]] const char (&... items)[N]) {}
+
+  /// A list of options beside other values: .options = {{"Mon", "Tue"}, "infinite"}.
+  constexpr arg(Ts...)
+    requires(sizeof...(Ts) > 1) && (std::same_as<Ts, option_list> || ...)
+  {}
 
   /// Follows a state: .value = lv::bind(speed).
   template <class T>

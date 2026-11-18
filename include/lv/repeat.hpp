@@ -37,6 +37,7 @@
 // A part returns a widget. It sets no .id: the widgets of a repetition are not reached by
 // id, and a repeated id would be used twice. For rows that change at run time use lv::each.
 
+#include <lv/but.hpp>
 #include <lv/list.hpp>
 #include <lv/tree.hpp>
 
@@ -51,10 +52,6 @@
 #include <vector>
 
 namespace lv {
-
-// The enumerators that lv::for_each leaves out: lv::for_each<subpage, lv::but<subpage::none>>.
-template <auto... Values>
-struct but {};
 
 // The text a member shows for itself, as an annotation: [[=lv::caption{"queue.owner"}]].
 // It is a key of the strings, and a string literal: an annotation holds a structural type,

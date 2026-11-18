@@ -437,6 +437,28 @@ template <const auto& Tree, std::size_t... Path>
 inline constexpr std::span<const std::size_t> set_members =
     std::define_static_array(set_members_of(descend<Path...>(Tree)));
 
+// A state of an enum follows member Member of the node of `Tree` at Path, the choice of its
+// options. The options are the node's own, and must come from the same enum.
+template <const auto& Tree, std::size_t Member, std::size_t... Path>
+void follow_enum_choice(lv_obj_t* w) {
+  constexpr const auto& N = descend<Path...>(Tree);
+  constexpr auto W = std::remove_cvref_t<decltype(N)>::kind;
+  if constexpr (option_member<W> >= members_of_kept<W>.size() || binder<targets<W>[Member]> == std::meta::info{}) {
+    static_assert(false,
+                  "lv: a state of an enum follows only the choice of a dropdown or a roller: "
+                  ".selected = lv::bind(state), beside .options = lv::options_of<the same enum>.");
+  } else {
+    constexpr const auto& given = N.p.[:members_of_kept<W>[option_member<W>]:];
+    constexpr const auto& chosen = N.p.[:members_of_kept<W>[Member]:];
+    constexpr bool checked = (check_enum_choice(given.set, given.v.v0, chosen.bound_format), true);
+    static_assert(checked);
+    // Its own storage: the address of the tree's would keep the whole tree in the program.
+    static constexpr option_list options = given.v.v0;
+    static constexpr enum_link link{chosen.bound, chosen.bound_ops, &options};
+    bind_choice<W, Member>(w, link);
+  }
+}
+
 // Applies the properties of one node of `Tree` to its widget `w`.
 // A node is named by the root and an index path, never by a reference to the node
 // itself: see the note above const_count in style.hpp.
@@ -457,6 +479,8 @@ void apply_node(lv_obj_t* w) {
                       "lv: lv::bind(&T::field) follows a field of a row, and this node is not "
                       "in a row. Use it in the row template of lv::each: "
                       "lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].");
+      } else if constexpr (a.follows == follows_choice) {
+        follow_enum_choice<Tree, i, Path...>(w);
       } else {
         static_assert(a.follows == follows_nothing || bindable<W, i>(),
                       "lv: this property cannot follow a state. LVGL has no bind function "

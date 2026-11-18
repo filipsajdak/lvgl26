@@ -8,8 +8,10 @@
 #include <lv/detail/api.hpp>
 #include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/detail/option_docs.hpp>
 #include <lv/detail/source.hpp>
 #include <lv/event.hpp>
+#include <lv/options.hpp>
 #include <lv/units.hpp>
 
 #include <array>
@@ -166,6 +168,9 @@ consteval std::string how_to_write(std::meta::info t) {
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
   if (is_made_from(t, ^^nonnegative))
     return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+  if (t == ^^option_list)
+    return "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line "
+           "break between the options";
   if (t == ^^handler)
     return "a function or a lambda that captures nothing: `&function`, `[] { ... }` or "
            "`[](lv::event e) { ... }`. A handler in a constexpr tree is a plain function pointer, "
@@ -334,10 +339,43 @@ inline constexpr bool is_binding<formatted_binding<T>> = true;
 template <>
 inline constexpr bool is_binding<font_binding> = true;
 
-// What a property of a node follows: nothing, a state, or a field of a row of lv::each.
+// Whether a pointer constant is null. Compared by reflection: under a sanitizer GCC 16.2
+// does not compare the address of a function or of a static object with null in a
+// constant expression.
+template <class P>
+consteval bool is_null(P p) {
+  return std::meta::reflect_constant(p) == std::meta::reflect_constant(P{});
+}
+
+// Whether T is a whole number of a property, strict<I>.
+template <class T>
+inline constexpr bool is_strict = false;
+template <class I>
+inline constexpr bool is_strict<strict<I>> = true;
+
+// What a binding to a state of the enum T tells the property: the name of the enum, or null
+// for any other type. A dropdown or a roller whose options are made from an enum follows
+// such a state (see lv/options.hpp); the tag lets the compiler check that the state and
+// the options are of the same enum.
+template <class T>
+inline constexpr const char* enum_tag = [] -> const char* {
+  if constexpr (std::is_enum_v<T>)
+    return std::define_static_string(type_text<T>());
+  else
+    return nullptr;
+}();
+
+// What a property of a node follows: nothing, a state, a field of a row of lv::each, or the
+// choice of options with a state of an enum (see lv/options.hpp).
 // A number, because under a sanitizer GCC cannot tell at compile time that an address is
 // not null, nor that two functions differ.
-enum follow : unsigned char { follows_nothing, follows_state, follows_row_field };
+enum follow : unsigned char { follows_nothing, follows_state, follows_row_field, follows_choice };
+
+// What a binding to a state of type T makes of a property whose first value is First: a state
+// of an enum that a whole number follows is the choice of options. A tag in the type, so that
+// the tree tells it with one comparison and not with a template for each property.
+template <class T, class First>
+inline constexpr follow follows_of_binding = std::is_enum_v<T> && is_strict<First> ? follows_choice : follows_state;
 
 // A property bound to a field of a row: lv::bind(&track::title), see lv/list.hpp. It holds
 // what a state's binding holds, and tells lv::arg that it follows a row.
@@ -395,14 +433,6 @@ constexpr text_span lower(std::string_view text) { return {text.data(), text.siz
 // strict<> or of a style value; T itself for anything else.
 template <class T>
 using lowered = std::remove_cvref_t<decltype(lower(std::declval<const T&>()))>;
-
-// A number in decimal digits.
-consteval std::string decimal(std::size_t n) {
-  std::string digits;
-  do digits.insert(digits.begin(), static_cast<char>('0' + n % 10));
-  while ((n /= 10) > 0);
-  return digits;
-}
 
 // Members of the given types, called <prefix>0, <prefix>1, ...: what
 // std::meta::define_aggregate needs to make a struct of them.
@@ -513,6 +543,11 @@ struct arg {
       : set(true), follows(detail::follows_nothing), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_ops(nullptr), bound_format(nullptr) {}
 
+  // A list of options: `.options = {"100%", "75%", "50%"}`, joined by the compiler.
+  template <std::size_t... N>
+    requires(sizeof...(N) >= 2) && std::same_as<types, std::tuple<option_list>>
+  consteval arg(const char (&... item)[N]) : arg(option_list{item...}) {}
+
   // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
   // setter that takes a text, then an enumerator.
   constexpr arg(detail::value_or_name<Ts>... u)
@@ -522,11 +557,14 @@ struct arg {
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_ops(b.ops),
-        bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
+      : set(true), follows(detail::follows_of_binding<T, std::tuple_element_t<0, types>>), v{}, bound(b.source),
+        bound_ops(b.ops), bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
     using first = std::tuple_element_t<0, types>;
+    // A state of an enum follows the whole number of a property too: the choice of a
+    // dropdown or a roller whose options come from lv::options_of (checked where it is used).
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
-                      std::convertible_to<typename detail::state_payload<T>::type, first>,
+                      std::convertible_to<typename detail::state_payload<T>::type, first> ||
+                      (std::is_enum_v<T> && detail::is_strict<first>),
                   "lv: this property cannot be bound to a state of that type. The state's "
                   "type, or the number inside its quantity or named type, must be what the "
                   "property takes.");
@@ -541,6 +579,9 @@ struct arg {
   // A field of a row of lv::each: checked as a state's binding, and marked.
   template <class T>
   constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.ops}) {
+    static_assert(detail::follows_of_binding<T, std::tuple_element_t<0, types>> != detail::follows_choice,
+                  "lv: a field of a row that holds an enum cannot follow a whole number. The choice of "
+                  "options follows a state of the enum: .selected = lv::bind(state).");
     follows = detail::follows_row_field;
   }
 
@@ -658,6 +699,11 @@ consteval std::meta::info unit_of(std::string_view prop, std::string_view parame
   if (is_one_of(parameter, {"x", "w", "width"})) return ^^horizontal;
   if (is_one_of(parameter, {"y", "h", "height"})) return ^^vertical;
   return {};
+}
+
+// The name of a parameter, or an empty name when it has none.
+consteval std::string_view parameter_name(std::meta::info param) {
+  return std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
 }
 
 // The unit type for a parameter of the C type `t`. A unit whose plain value is signed

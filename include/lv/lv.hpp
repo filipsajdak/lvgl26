@@ -10,6 +10,7 @@
 #include <lv/list.hpp>
 #include <lv/look.hpp>
 #include <lv/match.hpp>
+#include <lv/options.hpp>
 #include <lv/owned.hpp>
 #include <lv/repeat.hpp>
 #include <lv/runtime.hpp>

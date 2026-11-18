@@ -47,10 +47,10 @@ The tests are `tests/examples_get_started.cpp` and `tests/examples_widgets_*.cpp
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original |
 | LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 45 | 52 | Same pixels, also after clicks, drags and time |
-| LVGL `widgets`: buttonmatrix, dropdown, spinbox, textarea, image, scale, keyboard | 22 | 44 | Same pixels, also after a choice, a key or a click |
-| Other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 0 | 199 | Not started |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 24 | 50 | Same pixels, also after a choice, a key or a click |
+| Other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 0 | 193 | Not started |
 
-That is 71 of 299 examples.
+That is 73 of 299 examples.
 [examples/README.md](../examples/README.md) holds the current table, and the list of what is not ported.
 
 ## A skipped example is a finding
@@ -59,9 +59,8 @@ Each skipped example is a gap in lvgl26 that stopped a port.
 The port is left out, and no workaround is used.
 The table "Not ported yet" in [examples/README.md](../examples/README.md) says what each one needs.
 
-Three findings show the kind of gap:
+Two findings show the kind of gap:
 
-- A quoted name works only when every value of a property is an enumerator. The roller mixes a text and an enumerator in one property, so it is refused.
 - An angle for a spinner does not compile with `-Werror=sign-conversion`, because the setter takes an unsigned number.
 - A table has one `cell_value` in its properties, so the original's several calls that set a cell have no form.
 
