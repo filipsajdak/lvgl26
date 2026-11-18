@@ -49,6 +49,15 @@ class Plan(unittest.TestCase):
         root = repository()
         self.assertEqual(plan.changed_headers("HEAD~1", root), ["include/lv/a.hpp", "include/lv/detail/b.hpp"])
 
+    def test_a_header_whose_name_could_be_read_as_a_command_ends_the_plan(self):
+        root = repository()
+        (root / "include/lv/x$(id).hpp").write_text("1\n")
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "odd name")
+        with self.assertRaises(SystemExit) as stopped:
+            plan.changed_headers("HEAD~1", root)
+        self.assertIn("x$(id).hpp", str(stopped.exception))
+
     def test_nothing_changed_is_no_work(self):
         root = repository()
         result = plan.plan("HEAD", CONFIG, root)
