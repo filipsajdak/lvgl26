@@ -692,6 +692,13 @@ if(Python3_FOUND)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
+  # Every component group of the looks example's token file is named by an lv::look in its source:
+  # a group that nothing uses (a typo, a look that went unused) fails the test and is listed.
+  add_test(NAME look_groups_example
+           COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/look_groups.py
+                   ${PROJECT_SOURCE_DIR}/examples/looks/tokens.json ${PROJECT_SOURCE_DIR}/examples/looks/screen.hpp
+                   --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE})
+  add_test(NAME look_groups_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_look_groups.py)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
