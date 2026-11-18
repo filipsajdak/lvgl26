@@ -101,9 +101,11 @@ constexpr auto pad_order_ui = lv::box({.id = "order", .style = lv::look<"pad-ord
 constexpr auto pad_narrow_ui = lv::box({.id = "narrow", .style = lv::look<"pad-narrow">});
 constexpr auto pad_narrow_after_ui = lv::box({.id = "after", .style = lv::look<"pad-narrow-after">});
 constexpr auto main_then_wide_ui = lv::box({.id = "main_then_wide", .style = lv::look<"main-wide wide">});
-// lv::on keeps a rule of its own for two shorthands: the first in alphabetical order (pad_all) wins.
-constexpr auto on_shorthands_ui = lv::box({.checked = true, .id = "on_shorthands",
-                                          .style = lv::on("checked", {.pad_all = tok.flat.pad_all, .pad_hor = tok.tile.radius})});
+// lv::on and a theme follow the rule of a look: a long form beats a shorthand, and a narrower
+// shorthand (pad_hor) beats a wider one (pad_all).
+constexpr auto shorthands_style = lv::style({.pad_all = tok.flat.pad_all, .pad_hor = tok.tile.radius, .pad_right = tok.tile.width});
+constexpr auto on_shorthands_ui = lv::box({.checked = true, .id = "on_shorthands", .style = lv::on("checked", shorthands_style)});
+constexpr auto shorthand_theme = lv::theme({.obj = {.style = shorthands_style}});
 constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
 constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
 
@@ -310,11 +312,19 @@ void a_later_look_beats_a_main_group() {
   check(lv_obj_get_width(built->root().raw()) == 100);
 }
 
-void on_lets_the_first_shorthand_win() {
+void check_one_rule(lv_obj_t* o) {
+  check(lv_obj_get_style_pad_top(o, LV_PART_MAIN) == 7 && lv_obj_get_style_pad_bottom(o, LV_PART_MAIN) == 7);
+  check(lv_obj_get_style_pad_left(o, LV_PART_MAIN) == 24);
+  check(lv_obj_get_style_pad_right(o, LV_PART_MAIN) == 162);
+}
+
+void on_and_a_theme_follow_the_one_rule() {
   auto built = lv::mount<on_shorthands_ui>(lv::screen_active());
   check(built.has_value());
   if (!built) return;
-  check(lv_obj_get_style_pad_left(built->root().raw(), LV_PART_MAIN) == 7);
+  check_one_rule(built->root().raw());
+  lv::display display{*the_app, small_frame, shorthand_theme};
+  check_one_rule(lv_obj_create(display.screen().raw()));
 }
 
 void a_label_inherits_the_text_of_its_parents_look() {
@@ -501,7 +511,7 @@ int main() {
   a_look_costs_no_heap_beyond_the_style_list();
   a_rows_look_flow_keeps_the_flex_layout();
   a_later_look_beats_a_main_group();
-  on_lets_the_first_shorthand_win();
+  on_and_a_theme_follow_the_one_rule();
   a_main_group_counts_as_the_look();
   a_state_layer_beats_the_groups_default();
   a_groups_own_side_beats_its_default();  // after it: its widgets move the heap's free blocks

@@ -48,7 +48,7 @@ consteval bool every_shorthand_is_known() {
   template for (constexpr auto i : lv::detail::indices<lv::detail::style_members<D>.size()>) {
     if constexpr (lv::detail::style_ids<D>[i] == std::meta::info{})
       if (lv::detail::style_name<D>(i) != "enabled" &&  // not a value: see tests/fail/theme_not_a_value.cpp
-          lv::detail::long_forms<D>(lv::detail::style_name<D>(i)).empty())
+          !lv::detail::is_shorthand<D>(i))
         return false;
   }
   return true;

@@ -439,46 +439,113 @@ consteval std::string_view style_name(std::size_t i) {
   return std::meta::identifier_of(style_setters<D>[i]).substr(style_prefix.size());
 }
 
-// The style id of the property called `name`.
+// The index in lv::style of the member called `name`, or npos: a shorthand of the table
+// that this LVGL does not have.
+// The members are in alphabetical order, so a name is found by halving: identifier_of of every
+// member for each name of the table cost signal.cpp about 2 G instructions.
 template <class D>
-consteval lv_style_prop_t style_prop_named(std::string_view name) {
-  for (std::size_t i = 0; i < style_ids<D>.size(); ++i)
-    if (style_ids<D>[i] != std::meta::info{} && style_name<D>(i) == name)
-      return static_cast<lv_style_prop_t>(std::meta::extract<_lv_style_id_t>(style_ids<D>[i]));
-  fail("lv: LVGL has no style property '" + str(name) + "'.");
+consteval std::size_t member_index(std::string_view name) {
+  std::size_t low = 0, high = style_members<D>.size();
+  while (low < high) {
+    const std::size_t middle = low + (high - low) / 2;
+    const auto found = std::meta::identifier_of(style_members<D>[middle]);
+    if (found == name) return middle;
+    (found < name ? low = middle + 1 : high = middle);
+  }
+  return std::string_view::npos;
 }
 
-// The style ids that the shorthand `name` sets. A member of lv::style that is neither
-// a value nor a shorthand (`enabled`, which turns another style on and off) is refused.
+// A shorthand of lv::style as indices of its members: the shorthand and the long forms it sets.
+struct shorthand_step {
+  std::size_t member;
+  std::size_t count;
+  std::array<std::size_t, 4> longs;
+};
+
 template <class D>
-consteval std::vector<lv_style_prop_t> long_forms(std::string_view name) {
-  std::vector<lv_style_prop_t> out;
+consteval shorthand_step step_of(const shorthand& s) {
+  shorthand_step step{member_index<D>(s.name), 0, {}};
+  for (auto target : s.sets)
+    if (!target.empty()) step.longs[step.count++] = member_index<D>(target);
+  return step;
+}
+
+// The shorthands of this LVGL, wider first (pad_all sets four properties, pad_hor two), each width
+// in the order of the table. Spelled out in this order, a narrower shorthand overwrites a wider one.
+template <class D>
+consteval std::vector<shorthand_step> shorthand_steps() {
+  std::vector<shorthand_step> out;
   for (const auto& s : shorthands) {
-    if (s.name != name) continue;
-    for (auto target : s.sets)
-      if (!target.empty()) out.push_back(style_prop_named<D>(target));
-    return out;
+    const shorthand_step step = step_of<D>(s);
+    if (step.member == std::string_view::npos) continue;
+    std::size_t at = 0;
+    while (at < out.size() && out[at].count >= step.count) ++at;
+    out.insert(out.begin() + static_cast<std::ptrdiff_t>(at), step);
   }
-  fail("lv: a theme or an lv::on cannot hold the style property '" + str(name) +
-       "': LVGL keeps no value for it in a style. Leave it out, or set it in the node's own style.");
+  return out;
 }
 
-consteval bool holds(const std::vector<lv_style_const_prop_t>& props, lv_style_prop_t prop) {
-  for (const auto& p : props)
-    if (p.prop == prop) return true;
-  return false;
+template <class D = void>
+inline constexpr auto shorthand_plan = std::define_static_array(shorthand_steps<D>());
+
+template <class D>
+consteval std::vector<bool> shorthand_flags() {
+  std::vector<bool> out(style_members<D>.size(), false);
+  for (const auto& step : shorthand_plan<D>) out[step.member] = true;
+  return out;
 }
 
-// Adds what a shorthand stands for. A long form that the style sets itself wins.
-consteval void add_long_forms(std::vector<lv_style_const_prop_t>& props, const std::vector<lv_style_prop_t>& ids,
-                              std::span<const lv_style_value_t> values) {
-  for (std::size_t k = 0; k < ids.size(); ++k) {
-    if (holds(props, ids[k])) continue;
-    lv_style_const_prop_t p{};
-    p.prop = ids[k];
-    p.value = values[k < values.size() ? k : 0];  // `size` has a value for each; the others have one
-    props.push_back(p);
+// For each member of lv::style, whether it is a shorthand that a style can spell out.
+template <class D = void>
+inline constexpr auto shorthand_members = std::define_static_array(shorthand_flags<D>());
+
+template <class D>
+consteval bool is_shorthand(std::size_t i) {
+  return shorthand_members<D>[i];
+}
+
+// The value of long form `k` of a shorthand: `size` has one for each, the others one for all.
+template <class L, class Values>
+consteval L long_form_value(const Values& values, std::size_t k) {
+  const auto& [... x] = values;
+  L out{};
+  out.set = true;
+  out.follows = follows_nothing;
+  const std::size_t from = k < sizeof...(x) ? k : 0;
+  template for (constexpr std::size_t j : indices<sizeof...(x)>)
+    if (j == from) out.v.v0 = x...[j];
+  return out;
+}
+
+template <class D, shorthand_step Step, class S>
+consteval void spell_out(S& out, const S& s) {
+  constexpr auto shorthand_member = style_members<D>[Step.member];
+  if (!s.[:shorthand_member:].set || s.[:shorthand_member:].bound != nullptr) return;
+  template for (constexpr std::size_t k : indices<Step.count>) {
+    constexpr auto long_member = style_members<D>[Step.longs[k]];
+    using L = typename[:std::meta::type_of(long_member):];
+    if (!s.[:long_member:].set) out.[:long_member:] = long_form_value<L>(s.[:shorthand_member:].v, k);
   }
+  out.[:shorthand_member:] = {};
+}
+
+// Whether `s` sets a shorthand: only then is it copied to be spelled out, since copying a style
+// is most of what spelling it out costs the compiler.
+template <class D, class S>
+consteval bool sets_shorthand(const S& s) {
+  bool any = false;
+  template for (constexpr shorthand_step step : shorthand_plan<D>) any = any || s.[:style_members<D>[step.member]:].set;
+  return any;
+}
+
+// `s` with each shorthand spelled out as its long forms: the one rule for overlapping ones. A long
+// form that `s` sets itself wins, and a narrower shorthand (pad_hor) wins over a wider one (pad_all),
+// whatever order they are written in. A shorthand that follows a state is left as it is.
+template <class D, class S>
+consteval S with_long_forms(const S& s) {
+  S out = s;
+  template for (constexpr shorthand_step step : shorthand_plan<D>) spell_out<D, step>(out, s);
+  return out;
 }
 
 // The properties of `s` that have a style id.
@@ -501,31 +568,47 @@ consteval std::vector<lv_style_const_prop_t> plain_props(const S& s) {
   return props;
 }
 
-// Adds the properties of `s` that have no style id, as the ones they stand for.
+// A constant style holds values by style id only. What is left without one once the shorthands
+// are spelled out (`enabled`, which turns another style on and off) is refused.
+template <class D>
+consteval std::vector<std::size_t> members_without_id() {
+  std::vector<std::size_t> out;
+  for (std::size_t i = 0; i < style_ids<D>.size(); ++i)
+    if (style_ids<D>[i] == std::meta::info{} && !is_shorthand<D>(i)) out.push_back(i);
+  return out;
+}
+
+// The few members that are neither a value with a style id nor a shorthand (`enabled`).
+template <class D = void>
+inline constexpr auto unheld_members = std::define_static_array(members_without_id<D>());
+
 template <class S, class D>
-consteval void add_shorthands(std::vector<lv_style_const_prop_t>& props, const S& s) {
-  template for (constexpr auto i : indices<style_members<D>.size()>) {
-    if constexpr (style_ids<D>[i] == std::meta::info{}) {
-      if (s.[:style_members<D>[i]:].set) {
-        const auto& [... x] = s.[:style_members<D>[i]:].v;
-        const std::array values{lvgl_style_value(lower(x))...};
-        add_long_forms(props, long_forms<D>(style_name<D>(i)), values);
-      }
-    }
+consteval void refuse_what_has_no_id(const S& s) {
+  template for (constexpr std::size_t i : unheld_members<D>) {
+    if (s.[:style_members<D>[i]:].set)
+      fail("lv: a theme or an lv::on cannot hold the style property '" + str(style_name<D>(i)) +
+           "': LVGL keeps no value for it in a style. Leave it out, or set it in the node's own style.");
   }
 }
 
-// `s` as a constant lv_style_t with static storage: what LV_STYLE_CONST_INIT makes.
-// Equal values give one object.
+// `s`, whose shorthands are spelled out, as a constant lv_style_t with static storage: what
+// LV_STYLE_CONST_INIT makes. Equal values give one object.
 template <class S, class D>
-consteval const lv_style_t* stored_style(const S& s) {
+consteval const lv_style_t* stored_spelled_style(const S& s) {
+  refuse_what_has_no_id<S, D>(s);
   auto props = plain_props<S, D>(s);
-  add_shorthands<S, D>(props, s);
   lv_style_const_prop_t end{};
   end.prop = LV_STYLE_PROP_INV;
   props.push_back(end);
   const std::vector<lv_style_t> one{const_style(std::define_static_array(props).data())};
   return std::define_static_array(one).data();
+}
+
+// `s` as a constant lv_style_t.
+template <class S, class D>
+consteval const lv_style_t* stored_style(const S& s) {
+  if (sets_shorthand<D>(s)) return stored_spelled_style<S, D>(with_long_forms<D>(s));
+  return stored_spelled_style<S, D>(s);
 }
 
 // ---- parts and states by name, for lv::on ------------------------------------
