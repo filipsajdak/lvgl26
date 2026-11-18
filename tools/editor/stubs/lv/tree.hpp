@@ -159,7 +159,8 @@ enum class mount_error {
   not_mounted,    // an lv::mounted made empty, whose mount(parent) has not run
 };
 
-/// The widgets built from a tree. Owns them: they are deleted with this object. It is neither copied nor moved, and
+/// The widgets built from a tree, and the run-time storage of its nodes. Owns the
+/// widgets: they are deleted with this object. It is neither copied nor moved, and
 /// carries its own failure: `if (!root) return root.error();`.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
@@ -188,6 +189,7 @@ class mounted {
   obj root() const { __builtin_unreachable(); }
 
   /// Gives the widgets to their parent: they now live until the parent is deleted.
+  /// Only for a tree that keeps no run-time storage.
   obj detach() { __builtin_unreachable(); }
 
   /// A typed view of the node with this id: get<"speedo">() is an lv::view<"arc">.
