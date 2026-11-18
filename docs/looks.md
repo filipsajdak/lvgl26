@@ -337,7 +337,7 @@ A look may carry fixed sizes, padding, gaps, alignment and flex settings: LVGL k
 When a node and a look both say something, these rules decide:
 
 - The node's own properties beat a look. LVGL's local styles beat an added style, and `.size`, `.flex_flow` and `.style_checked` are local. `lv::group({.size = {30 * px, 20 * px}, .style = lv::look<"tile">})` is 30 by 20.
-- What a factory sets by default gives way to a look that says it. `lv::group` fills its parent, unless `.size` or its look sets a width or a height: a look with a `width` leaves the height to fill. `lv::row` and `lv::column` are flex containers, unless `.flex_flow` or the look sets the flow.
+- What a factory sets by default gives way to a look that says it. `lv::group` fills its parent, unless `.size` or its look sets a width or a height: a look with a `width` leaves the height to fill. `lv::row` and `lv::column` are flex containers, unless `.flex_flow` or the look sets the flow. A look that sets the flow keeps the flex layout, unless the look or the node sets a `layout` of its own.
 - A shorthand in a look does not beat a layer of the same look: both are constant styles, added in order.
 
 Text style reaches a label by LVGL's own inheritance, from the look of its parent. The tile's `text_color` and `text_font` reach its label, so the label needs no look of its own. `text_color`, `text_opa`, `text_font`, `text_align`, letter and line spacing and `text_decor` are inherited; `image_recolor` is not, so an icon in a button needs a look of its own. A label that differs from its parent has a look of its own: `lv::look<"status">`.

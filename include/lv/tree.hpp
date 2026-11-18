@@ -181,6 +181,10 @@ template <class Kept>
 constexpr bool style_sets_flex_flow(const Kept& p) {
   return p.style.has && p.style.value.flex_flow.set;
 }
+template <class Kept>
+constexpr bool style_sets_layout(const Kept& p) {
+  return p.style.has && p.style.value.layout.set;
+}
 
 // These run in the compiler only, so they have no run-time coverage: each stays at complexity 2,
 // the most that CRAP 8 allows without any.
@@ -195,6 +199,19 @@ constexpr bool node_sets_height(const Kept& p) {
 template <class Kept>
 constexpr bool flow_is_free(const Kept& p) {
   return !p.flex_flow.set && !style_sets_flex_flow(p);
+}
+// LVGL's setter of the flow sets the flex layout too; a style's flow sets the flow only.
+template <class Kept>
+constexpr bool flow_comes_from_style(const Kept& p) {
+  return !p.flex_flow.set && style_sets_flex_flow(p);
+}
+template <class Kept>
+constexpr bool layout_is_free(const Kept& p) {
+  return !p.layout.set && !style_sets_layout(p);
+}
+template <class Kept>
+constexpr bool needs_flex_layout(const Kept& p) {
+  return flow_comes_from_style(p) && layout_is_free(p);
 }
 template <class Kept>
 constexpr bool width_is_free(const Kept& p) {
@@ -238,10 +255,22 @@ constexpr void fill_free_sides(Kept& p) {
   fill_height(p);
 }
 
+// A row or a column is a flex container: the factory's flow, or the look's flow with a flex layout
+// unless the node or the look sets a layout.
+template <class Kept>
+constexpr void default_flow(Kept& p, lv_flex_flow_t flow) {
+  if (flow_is_free(p)) p.flex_flow = flow;
+}
+template <class Kept>
+constexpr void default_layout(Kept& p) {
+  if (needs_flex_layout(p)) p.layout = static_cast<std::uint32_t>(LV_LAYOUT_FLEX);
+}
+
 template <class D>
 constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
   auto n = make_node<"obj", D>(p);
-  if (flow_is_free(n.p)) n.p.flex_flow = flow;
+  default_flow(n.p, flow);
+  default_layout(n.p);
   return n;
 }
 

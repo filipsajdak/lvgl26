@@ -370,5 +370,20 @@
    "$type": "dimension",
    "$value": "50px"
   }
+ },
+ "flow-only": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "flex_flow": "column"
+   }
+  }
+ },
+ "flow-no-layout": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "flex_flow": "column",
+    "layout": "none"
+   }
+  }
  }
 }

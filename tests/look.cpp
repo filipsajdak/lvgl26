@@ -111,6 +111,8 @@ constexpr auto own_height_ui = lv::group({.height = 20 * px, .id = "own_height",
 constexpr auto width_only_ui = lv::group({.id = "width_only", .width = 30 * px});
 constexpr auto flow_ui = lv::row({.id = "flow", .style = lv::look<"tile">});
 constexpr auto row_ui = lv::row({.id = "row"});
+constexpr auto flow_only_ui = lv::row({.id = "flow_only", .style = lv::look<"flow-only">});
+constexpr auto flow_no_layout_ui = lv::column({.id = "flow_no_layout", .style = lv::look<"flow-no-layout">});
 
 // The look named for an enumerator, in a part that lv::for_each repeats.
 enum class subpage { none, print, scan };
@@ -362,6 +364,20 @@ void a_rows_flow_gives_way_to_a_look() {
   check(lv_obj_get_style_flex_flow(plain_row->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_ROW);
 }
 
+std::int32_t layout_of(lv_obj_t* o) { return lv_obj_get_style_prop(o, LV_PART_MAIN, LV_STYLE_LAYOUT).num; }
+
+// A look that sets the flow only still gets a flex layout, as the factory's flow would have: LVGL's
+// setter of the flow sets the layout too, a style's flow does not. A look's own layout is kept.
+void a_rows_look_flow_keeps_the_flex_layout() {
+  const auto flow_only = lv::mount<flow_only_ui>(lv::screen_active());
+  const auto no_layout = lv::mount<flow_no_layout_ui>(lv::screen_active());
+  check(flow_only.has_value() && no_layout.has_value());
+  if (!flow_only || !no_layout) return;
+  check(lv_obj_get_style_flex_flow(flow_only->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+  check(layout_of(flow_only->root().raw()) == LV_LAYOUT_FLEX);
+  check(layout_of(no_layout->root().raw()) == LV_LAYOUT_NONE);
+}
+
 void a_variant_for_each_enumerator() {
   auto built = lv::mount<tiles_ui>(lv::screen_active());
   check(built.has_value());
@@ -432,6 +448,7 @@ int main() {
   a_variant_for_each_enumerator();
   a_part_takes_the_design();
   a_look_costs_no_heap_beyond_the_style_list();
+  a_rows_look_flow_keeps_the_flex_layout();
   a_groups_own_side_beats_its_default();  // after it: its widgets move the heap's free blocks
   a_theme_takes_a_look();
   return failures;
