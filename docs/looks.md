@@ -52,6 +52,7 @@ The token file holds one group for each look. Its entries are named for the styl
 <!-- snippet: examples/looks/tokens.json -->
 ```json
 {
+ "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
  "$description": "The design of the looks example: values first, then one group for each look. A group's entries are named for the style properties they set.",
  "font": {
   "text": {

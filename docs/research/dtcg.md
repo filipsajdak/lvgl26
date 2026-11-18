@@ -452,3 +452,24 @@ Decided 2026-11-18, in an interview over the list above.
 
 Decision 9 has a condition from the owner: the standard file is obtained from Claude Design.
 The current file, `design/signal/tokens.design.json`, comes from there, in that tool's list format.
+
+## Slice 1: the schema gate, what was found
+
+Written 2026-11-19 while building `tools/check_tokens.py`.
+
+- **Licence.** The schema files carry no notice.
+  The [LICENSE.md](https://github.com/design-tokens/community-group/blob/main/LICENSE.md) of the repository puts its reports under the W3C Software and Document License and contributions to test suites and other software under the W3C 3-clause BSD License.
+  The schemas are in `schemas/src/2025.10/` of that repository, and the site serves them bundled.
+  Neither licence is named for them, but both allow a copy with the notice kept, so `tools/dtcg/` holds them with the LICENSE.md. `source` (commit 882ebd6, fetched 2026-11-19)
+- **Self-contained.** The served `format.json` and `resolver.json` embed every file they refer to under its own `$id`.
+  Python's `jsonschema` 4.26 with a registry whose fetch raises validates a file without a request. `measured`
+- **Root.** The format schema accepts a group at the root only.
+  A token at the root fails with a message about its `$value` key. `measured`
+- **Untyped tokens.** The schema accepts a token that has no `$type` at all, although section 5.2.2 calls it invalid.
+  The tool reports it itself, unless the value is a reference. `measured`
+- **Messages.** An error is a `oneOf` that holds the errors of every alternative, and the shallow `best_match` picks a wrong alternative (`'$ref' is a required property`).
+  The tool takes the deepest leaf of each place, which names the member at fault (`text.label.$value.fontSize`). `measured`
+- **`$schema`.** The format schema allows `$schema` at the root and calls it "not part of the official DTCG specification".
+  The reader skips every `$` member of a group, as it does the root `$description` of `day.json`. `source`
+- **Today.** 14 files hold 499 violations, nearly all a string where the standard wants an object: `"#rrggbb"`, `"8px"`, `"16px"` in composites, `"0ms"`.
+  The exception is `somethingNew` as a `$type` in the two `tests/data/tokens*.json` files, which the schema's `$type` enumeration rejects. `measured` with `python3 tools/check_tokens.py --update`

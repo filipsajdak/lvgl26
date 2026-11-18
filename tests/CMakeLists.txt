@@ -751,6 +751,14 @@ if(Python3_FOUND)
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
+  # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
+  execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema" RESULT_VARIABLE lvgl26_jsonschema_missing OUTPUT_QUIET ERROR_QUIET)
+  if(lvgl26_jsonschema_missing)
+    message(STATUS "tests: tokens_check and tokens_tools are skipped: the Python package jsonschema is missing")
+  else()
+    add_test(NAME tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_tokens.py)
+    add_test(NAME tokens_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_tokens.py)
+  endif()
 endif()
 
 # The fuzz target for runtime documents is also an ordinary program. Building it
