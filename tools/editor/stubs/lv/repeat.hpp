@@ -7,6 +7,7 @@
 //
 // The editor does not run the part: GCC does, and checks every element.
 
+#include <lv/but.hpp>
 #include <lv/tree.hpp>
 
 #include <cstddef>
@@ -26,10 +27,6 @@ inline constexpr bool a_part_captures_nothing__name_what_it_needs_as_a_template_
 /// What lv::for_each takes as its part: a generic lambda that captures nothing.
 template <class F>
 concept repeat_part = detail::a_part_captures_nothing__name_what_it_needs_as_a_template_argument<F>;
-
-/// The enumerators that lv::for_each leaves out: lv::for_each<subpage, lv::but<subpage::none>>.
-template <auto... Values>
-struct but {};
 
 /// The text a member shows for itself, as an annotation: [[=lv::caption{"queue.owner"}]].
 template <std::size_t N>

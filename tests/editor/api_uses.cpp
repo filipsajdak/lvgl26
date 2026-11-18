@@ -225,6 +225,15 @@ void use_state() {
   other_reading.reset();
 }
 
+// ---- option lists -----------------------------------------------------------------
+
+enum class quality { best, medium, draft };
+static_assert(std::same_as<decltype(lv::options_of<quality>), const lv::option_list>);
+static_assert(std::same_as<decltype(lv::options_of<quality, lv::but<quality::draft>>), const lv::option_list>);
+static_assert(std::is_empty_v<lv::but<quality::draft>>);
+static_assert(std::convertible_to<const char*, lv::option_list>);
+static_assert(requires { lv::option_text<quality>::of(quality::best); });
+
 // ---- the tree ---------------------------------------------------------------------
 
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "start"}, .size = {320 * px, 240 * px}})[
@@ -240,7 +249,9 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "start"}, .si
     lv::image({.src = kept_dot}),
     lv::textarea({.id = "note", .one_line = true}),
     lv::dropdown({.id = "choice", .options = "a\nb"}),
-    lv::roller({.id = "wheel"}),
+    lv::dropdown({.id = "sizes", .options = {"100%", "75%", "50%"}}),
+    lv::dropdown({.id = "grade", .options = lv::options_of<quality, lv::but<quality::draft>>}),
+    lv::roller({.id = "wheel", .options = {{"Mon", "Tue", "Wed"}, "infinite"}}),
     lv::spinner({.id = "busy"}),
     lv::widget<"spinbox">({.id = "count", .range = {0, 9}}),
     lv::row[lv::box({.hidden = lv::bind(over_limit), .id = "card", .style = loud})],

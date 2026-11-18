@@ -466,29 +466,40 @@ void bind_member(lv_obj_t* o, const A& a) {
   }
 }
 
-// lv_<widget>_set_text_static for lv_<widget>_set_text, or a null reflection. The static
-// one keeps the pointer and copies nothing.
+// lv_<widget>_set_text_static for lv_<widget>_set_text, lv_<widget>_set_options_static for
+// lv_<widget>_set_options, or a null reflection. The static one keeps the pointer and
+// copies nothing.
 consteval std::meta::info static_text_of(std::meta::info setter) {
   if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
   const auto name = std::meta::identifier_of(setter);
-  if (!name.ends_with("_set_text")) return {};
+  if (!name.ends_with("_set_text") && !name.ends_with("_set_options")) return {};
   const auto f = find(str(name) + "_static");
-  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
+  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != std::meta::parameters_of(setter).size())
+    return {};
   return f;
 }
+
+// Whether a value is a text that lives for the whole program: a list of options that the
+// compiler joined.
+template <class T>
+constexpr bool lives_on(const T&) {
+  return false;
+}
+
+constexpr bool lives_on(const option_list& list) { return list.kept; }
 
 // Calls the setter `Target`, or its static twin when the value is a constant text.
 template <fixed W, std::meta::info Target, bool Constant, class... V>
 void set_property(lv_obj_t* o, V... v) {
   constexpr auto kept_text = static_text_of(Target);
-  if constexpr (Constant && kept_text != std::meta::info{}) {
+  if constexpr (kept_text != std::meta::info{}) {
     // LVGL shows static text uncut when the label cuts with dots, so that one is copied.
-    bool cut = false;
-    if constexpr (W.sv() == "label") cut = lv_label_get_long_mode(o) == LV_LABEL_LONG_MODE_DOTS;
-    if (cut)
-      [:Target:](o, v...);
-    else
+    bool keep = Constant || (lives_on(v) || ...);
+    if constexpr (W.sv() == "label") keep = keep && lv_label_get_long_mode(o) != LV_LABEL_LONG_MODE_DOTS;
+    if (keep)
       [:kept_text:](o, v...);
+    else
+      [:Target:](o, v...);
   } else {
     [:Target:](o, v...);
   }

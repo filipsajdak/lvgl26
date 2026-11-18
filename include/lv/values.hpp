@@ -8,7 +8,9 @@
 #include <lv/detail/api.hpp>
 #include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/detail/option_docs.hpp>
 #include <lv/event.hpp>
+#include <lv/options.hpp>
 #include <lv/units.hpp>
 
 #include <array>
@@ -165,6 +167,9 @@ consteval std::string how_to_write(std::meta::info t) {
   if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
   if (is_made_from(t, ^^nonnegative))
     return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+  if (t == ^^option_list)
+    return "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line "
+           "break between the options";
   if (t == ^^handler)
     return "a function or a lambda that captures nothing: `&function`, `[] { ... }` or "
            "`[](lv::event e) { ... }`. A handler in a constexpr tree is a plain function pointer, "
@@ -447,6 +452,16 @@ template <class... Ts, class... Us>
 inline constexpr bool names_an_enumerator<std::tuple<Ts...>, std::tuple<Us...>> =
     (quoted_name_for<Us, Ts> || ...);
 
+// Whether the values Us given to a property that takes only a list of options are the
+// items of that list: two or more texts in quotes.
+template <class Ts, class Us>
+inline constexpr bool items_of_option_list = false;
+template <class... Us>
+  requires(sizeof...(Us) >= 2)
+inline constexpr bool items_of_option_list<std::tuple<option_list>, std::tuple<Us...>> =
+    (std::is_array_v<std::remove_cvref_t<Us>> && ...) &&
+    (std::same_as<std::remove_extent_t<std::remove_cvref_t<Us>>, char> && ...);
+
 // One value for a parameter that takes the enum E: an enumerator, or its name in quotes.
 // The name is read where it is written, so the values beside it may be made at run time.
 template <class E>
@@ -504,7 +519,8 @@ struct arg {
     requires(sizeof...(U) > 0) &&
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
-            (!detail::names_an_enumerator<types, std::tuple<U...>>)
+            (!detail::names_an_enumerator<types, std::tuple<U...>>) &&
+            (!detail::items_of_option_list<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
       : set(true), follows(detail::follows_nothing), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
@@ -516,6 +532,11 @@ struct arg {
   consteval arg(const char (&... name)[N])
       : set(true), follows(detail::follows_nothing), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
         bound_subject(nullptr), bound_format(nullptr) {}
+
+  // A list of options: `.options = {"100%", "75%", "50%"}`, joined by the compiler.
+  template <std::size_t... N>
+    requires(sizeof...(N) >= 2) && std::same_as<types, std::tuple<option_list>>
+  consteval arg(const char (&... item)[N]) : arg(option_list{item...}) {}
 
   // A name beside values of other kinds: `.options = {"Mon\nTue", "infinite"}` for a
   // setter that takes a text, then an enumerator.
@@ -672,6 +693,21 @@ consteval std::meta::info unit_for_parameter(std::meta::info unit, std::meta::in
   return std::meta::is_signed_type(plain) ? std::meta::substitute(^^nonnegative, {unit}) : unit;
 }
 
+// The name of a parameter, or an empty name when it has none.
+consteval std::string_view parameter_name(std::meta::info param) {
+  return std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
+}
+
+// The unit type of a number by its names, or a null reflection when they say nothing.
+template <class D = void>
+consteval std::meta::info unit_value_type(std::meta::info setter, std::string_view prop,
+                                          std::string_view name, std::meta::info t) {
+  if (!std::meta::is_arithmetic_type(t) || t == ^^bool) return {};
+  const auto unit = unit_of(prop, name);
+  if (unit == std::meta::info{}) return {};
+  return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
+}
+
 // The C++ type that the parameter `param` of `setter` gets in the props struct.
 // The unit is inferred from the names LVGL uses, because C only says int32_t. Whether
 // an angle is in degrees or in tenths of a degree is not in the names either: that is
@@ -683,13 +719,11 @@ consteval std::meta::info value_type(std::meta::info setter, std::string_view pr
                                      std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
-  const std::string_view name =
-      std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
+  const std::string_view name = parameter_name(param);
 
-  if (std::meta::is_arithmetic_type(t) && t != ^^bool)
-    if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
-      return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
+  if (const auto unit = unit_value_type<D>(setter, prop, name, t); unit != std::meta::info{}) return unit;
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
+  if (t == (^^const char*) && takes_option_list<D>(setter, name)) return ^^option_list;
   return raw;
 }
 
