@@ -582,6 +582,29 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   endforeach()
 endif()
 
+# The example of docs/looks.md. Its picture is the one on the page.
+add_executable(example_looks ${PROJECT_SOURCE_DIR}/examples/looks/main.cpp)
+target_compile_options(example_looks PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks
+                       --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_looks PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out)
+add_test(NAME example_looks COMMAND example_looks WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out)
+set_tests_properties(example_looks PROPERTIES FIXTURES_SETUP example_looks_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_looks_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files
+                   ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out/looks.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/looks.png)
+  set_tests_properties(example_looks_picture PROPERTIES FIXTURES_REQUIRED example_looks_picture)
+endif()
+
+# The same screen with looks and with every value written out: the same pixels.
+add_executable(looks_example looks_example.cpp)
+target_compile_options(looks_example PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks
+                       --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(looks_example PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME looks_example COMMAND looks_example)
+
 # The second example of docs/themes.md: Signal with its typefaces.
 add_executable(example_signal_type ${PROJECT_SOURCE_DIR}/examples/signal_type/main.cpp)
 target_link_libraries(example_signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -669,6 +692,9 @@ if(Python3_FOUND)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
+  # The word counts that docs/looks.md states are those of the code it shows.
+  add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
+                                    --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
