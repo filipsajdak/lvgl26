@@ -53,6 +53,10 @@ How it works:
   carries its own failure: `if (!root) return root.error();`. It lives in a variable, in a `constinit`
   global with `page.mount(parent)` and `page.unmount()`, for a window that opens and closes in the
   same memory. See [Where a tree lives](docs/mounting.md).
+- **One slot for one of several trees.** `lv::one_of<saving, failed>` holds one tree at a time in the
+  memory of the largest, as `std::variant` does. `slot.mount<failed>(parent)` ends the tree that is there
+  first, and `slot.visit(...)` calls the function whose parameter names the tree that is mounted:
+  `lv::mounted<failed>&`, `auto&` for the others, `lv::not_mounted` for the empty slot.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
