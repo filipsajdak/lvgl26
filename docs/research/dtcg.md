@@ -430,3 +430,21 @@ It is the only check that matches what other tools read.
     Options: the stable 2025.10 only; the draft where it differs.
     Recommendation: the stable text, with the draft's differences behind settings, and a monthly re-read.
     Cost: when the draft changes the pointer form, we read both.
+
+## What the owner decided
+
+Decided 2026-11-18, in an interview over the list above.
+
+| # | Decision |
+|---|---|
+| 1 | A percentage rides in `$extensions`, under our reverse-domain key. The `$value` stays a `px` value that a design tool can show. |
+| 2 | An LVGL enumerator of a look is in `$extensions` under the same key. `"$type": "string"` goes. |
+| 3 | All token files move to the object forms of 2025.10 now, with a rewrite tool. |
+| 4 | The old string forms are read only with `lv::config::tokens_legacy_values`, for one release. |
+| 5 | A variant is a sibling group. It may use `$extends`, and the tree may also stack two groups: `lv::look<"tile tile-print">`. |
+| 6 | The key in `$extensions` is a reverse domain. |
+| 7 | A colour in any space of the standard is converted to sRGB by the compiler. Alpha sets the matching opacity property. A colour outside sRGB is a compile error. |
+| 8 | Modes are one file each for now. A bundled resolver document comes later. |
+| 11 | The reader implements the standard in full first: `$extends`, `$root`, `$ref`, colour spaces and alpha. Until a key is implemented it is not dropped in silence in new code. |
+
+Decisions 9, 10 and 12 are open.
