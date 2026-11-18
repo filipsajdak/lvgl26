@@ -4,14 +4,10 @@
     python3 tools/look_groups.py tokens.json src/ [more files or folders] [--ignore tile.usb]
 
 A component group is a group of the token file whose entries are named for style properties
-(`radius`, `bg_color`, ...): the groups that lv::look turns into a style. A project that wants
-no guessing lists them in the file itself:
-
-    "$extensions": {"lvgl26": {"components": ["tile", "status"]}}
-
-and then every group under those names is a component group. Groups of primitive and semantic
-tokens (`color`, `space`, `text`) have no entry named for a style property, and are never
-reported. A group named like an LVGL state or part (`checked`, `knob`) is a layer of the group
+(`radius`, `bg_color`, ...): the groups that lv::look turns into a style. The token file holds
+nothing of ours: it is a plain Design Tokens file that design tools open. Groups of primitive and
+semantic tokens (`color`, `space`, `text`) have no entry named for a style property, and are
+never reported. A group named like an LVGL state or part (`checked`, `knob`) is a layer of the group
 above it, which lv::look takes along, so it is reported only through its parent.
 
 A source uses a group when it names it in lv::look<"a.b">, in a list such as lv::look<"a a.b">,
@@ -68,23 +64,13 @@ def has_style_entry(group: dict, styles: set[str]) -> bool:
     return any(key in styles and not is_group(value) for key, value in group.items() if not key.startswith("$"))
 
 
-def marked(tokens: dict) -> list[str] | None:
-    """The top-level groups the file names as components, or None when it names none."""
-    names = tokens.get("$extensions", {}).get("lvgl26", {}).get("components")
-    return list(names) if names is not None else None
-
-
 def component_groups(tokens: dict, styles: set[str], layers: set[str]) -> list[str]:
     """The paths of the component groups, not counting the layers of another group."""
-    only = marked(tokens)
     found = []
     for path, group in groups_of(tokens):
         if path.split(".")[-1] in layers:
             continue
-        if only is not None:
-            if path.split(".")[0] in only:
-                found.append(path)
-        elif has_style_entry(group, styles):
+        if has_style_entry(group, styles):
             found.append(path)
     return found
 

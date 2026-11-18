@@ -168,7 +168,7 @@ lv::button({.style = lv::look<"tile tile.print">})
 
 ## Size and layout
 
-A look may carry fixed sizes, padding, gaps, alignment and flex settings: LVGL keeps all of them as style properties. Positions that depend on other sizes, and percentages, stay in the tree: a token file cannot compute.
+A look may carry fixed sizes, padding, gaps, alignment and flex settings: LVGL keeps all of them as style properties. Positions that depend on other sizes stay in the tree: a token file cannot compute. For percentages, see the research note `docs/research/less-boilerplate.md`.
 
 When a node and a look both say something, these rules decide:
 
@@ -198,11 +198,12 @@ Nothing, where none is named. A file that includes `<lv/lv.hpp>` compiles in the
 | A look of five plain entries | about 0.6 G |
 | One more layer, such as `pressed` | about 0.25 G |
 | One more enumerator entry, such as `flex_flow` | about 0.2 G |
-| One more typography entry (`text_font`) | about 6.6 G, against 3.0 G for `type(tok.x.text_font)` written in the tree: the compiler draws the font again for each look |
-| 1, 10 and 50 looks of nine entries, one layer and a font, each in one box | 152.0 G, 211.2 G and 471.7 G |
+| One more look that asks for a font already drawn | about 0.45 G: the font is drawn once for each file of the typeface and size, however many looks ask |
+| One more look with a font of its own size | the drawing itself, about 45 G, and about 7 G more than the same font written in the tree |
+| 1, 10 and 50 looks of nine entries, one layer and a font, each in one box | 153.0 G, 155.8 G and 169.6 G |
 | The same boxes with the styles written out | 146.8 G, 173.1 G and 289.9 G |
 
-At run time a look is the constant `lv_style_t` and the property array that a written-out style makes. A box with two looks takes the same LVGL heap as a plain box, and a look with three layers takes 40 bytes more: LVGL's list of the styles of the widget. Built with optimization, no object of `lv::look` is left in the program. A project that wants fewer instructions names a typography token in fewer looks, and lets the label inherit the text of its parent.
+At run time a look is the constant `lv_style_t` and the property array that a written-out style makes. A box with two looks takes the same LVGL heap as a plain box, and a look with three layers takes 40 bytes more: LVGL's list of the styles of the widget. Built with optimization, no object of `lv::look` is left in the program. The cost of a font is its drawing: a project that names few sizes pays for few.
 
 ## Mistakes
 
@@ -229,7 +230,7 @@ A token file grows, and a group that no element names is dead weight. `tools/loo
 python3 tools/look_groups.py tokens.json src/
 ```
 
-A component group is a group with an entry named for a style property. Groups of values (`color`, `space`, `text`) have none, and are never listed. A group named like a state or a part belongs to its parent. `lv::look_of<"tile", E>` uses every group directly under `tile`, since the compiler picks one by the name of an enumerator. A token file may list its components itself with `"$extensions": {"lvgl26": {"components": ["tile", "status"]}}`. A group that another program uses is passed with `--ignore`. The test `look_groups_example` runs it on this example, and a misspelled `status.cheked` is listed, because no look reaches it.
+A component group is a group with an entry named for a style property. Groups of values (`color`, `space`, `text`) have none, and are never listed. A group named like a state or a part belongs to its parent. `lv::look_of<"tile", E>` uses every group directly under `tile`, since the compiler picks one by the name of an enumerator. A group that another program uses is passed with `--ignore`. The test `look_groups_example` runs it on this example, and a misspelled `status.cheked` is listed, because no look reaches it.
 
 ## The same screen, written out
 

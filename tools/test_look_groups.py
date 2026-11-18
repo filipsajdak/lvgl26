@@ -54,10 +54,6 @@ class ComponentGroups(unittest.TestCase):
         self.assertNotIn("status.checked", found)
         self.assertNotIn("gauge.knob", found)
 
-    def test_a_marked_file_lists_its_components(self):
-        tokens = {**TOKENS, "$extensions": {"lvgl26": {"components": ["gauge"]}}}
-        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), ["gauge"])
-
 
 class Uses(unittest.TestCase):
     def test_a_look_names_its_group(self):

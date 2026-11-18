@@ -803,9 +803,31 @@ What the build showed, beyond the sketches:
 A look costs about twice what the same style costs written out, and nearly all of the difference is the font: `lv::typeface` draws the font at each call, and a look makes the call once for each look that names a typography token.
 A font made once for each size and weight, and shared by the looks, would cut it. `reasoned`
 
+### Why a font cost twice in a look, and the fix (2026-11-18)
+
+Pieces, by stubbing one at a time in a copy of the headers (instructions, `fw_*` files of 1 and 10 boxes with one typography entry):
+
+| Piece | Cost for each look | Mark |
+|---|---|---|
+| Path lookup, entry-to-property match, merge, with the font stubbed to null | 0.36 G | `measured` |
+| `typeface::operator()` called inside the look | 6.5 G; the same call written in the tree 1.5 to 3.0 G | `measured` |
+| The same call with `-fconstexpr-cache-depth=40` | 2.7 G for each look, and the tree is cheaper too | `measured` |
+
+Cause: GCC caches the result of a constant call only down to `-fconstexpr-cache-depth` levels of nesting, 8 by default. A call in the tree is shallow and a repeated font is a cache hit. A look reaches the font through the walk, the group, the layer and the entry, 12 to 14 levels, so every look drew its font again. The call was not run twice (counted with `__builtin_constexpr_diag`).
+Fix: `drawn_font<D, font_key{file, px}>` in `look.hpp` is a variable template, so the compiler draws each file and size once for the program, whatever the nesting. The walk now passes each group and token as a template argument (a reference to a sub-object of the registered tokens), which makes the file and size constants. `lv::typeface` gets `file_of` and `draw`, and `operator()` is made of them.
+
+| Boxes, each with a look of nine entries, a layer and a font | Before | After | Written out |
+|---|---|---|---|
+| 1 | 152.0 G | 153.0 G | 146.8 G |
+| 10 | 211.2 G | 155.8 G | 173.1 G |
+| 50 | 471.7 G | 169.6 G | 289.9 G |
+| 10 looks, 10 different font sizes | 608.2 G | 610.8 G | 540.5 G |
+
+A look that asks for a font nobody drew yet still costs about 7 G more than the tree, 13 percent of the drawing; the cause is not found. `reasoned`: an instantiation of the walk for each token.
+
 ### Decisions the build made that the owner may want to turn
 
 - A nested group that is neither a part nor a state is a look of its own at the top of a look, because variants (decision 3) are such groups: `tile.print` is nested in `tile`. Decision 25 says "a nested group is a part or a state", and decision 26 asks for an error for a group that is neither. Inside a layer (`checked`, `knob`) such a group is an error, because nothing can reach it there. A typo such as `"cheked"` at the top is caught by `tools/look_groups.py`, which lists it as a group that no look names.
-- A percentage in a look is read (`"width": "50%"`): the token reader already reads `%`, and refusing it needs a check of its own. Decision 5 says percentages stay in the tree; `docs/looks.md` says so and does not promise more.
+- A percentage in a look is read (`"width": "50%"`), as the token reader already reads `%`. Neither refused nor documented: a separate task checks whether the DTCG draft takes percentages.
 - `size` is refused in a look: a token holds one value and `size` takes two. The look says `width` and `height`.
 - `lv::look_of<"tile", Page>` is the look of one path. A variant is `lv::look<"tile"> | lv::look_of<"tile", Page>`; a call that merges both would be `lv::looks<"tile", Page>` of the sketches.
