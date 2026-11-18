@@ -562,11 +562,11 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
     </div>
 
     <ul class="facts">
-      <li><b>91</b><span>compile-fail tests, each with the message the user must see</span><small>tests/CMakeLists.txt</small></li>
+      <li><b>251</b><span>compile-fail tests, each with the message the user must see</span><small>tests/CMakeLists.txt</small></li>
       <li><b>2</b><span>LVGL versions on every change: v9.6.0 and the v10 pin</span><small>CMakePresets.json</small></li>
-      <li><b>7</b><span>build presets: warnings as errors, sanitizers, analyzer, coverage</span><small>CMakePresets.json</small></li>
+      <li><b>9</b><span>build presets: warnings as errors, sanitizers, analyzer, coverage, a microcontroller</span><small>CMakePresets.json</small></li>
       <li><b>8</b><span>the limit for complexity and for CRAP, for every function</span><small>tools/crap.py</small></li>
-      <li><b>3</b><span>fuzz targets, one for each input that comes from outside</span><small>fuzz/</small></li>
+      <li><b>4</b><span>fuzz targets, one for each input that comes from outside</span><small>fuzz/</small></li>
     </ul>
 
     <div class="table mt">
@@ -580,7 +580,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
           <tr><th scope="row">Pixel tests</th><td>Screens are rendered headless and compared with reference pictures. The ported LVGL examples are compared with the C originals.</td><td class="path">tests/ref/, tests/examples_*.cpp, tests/ports_*.cpp</td></tr>
           <tr><th scope="row">Complexity and CRAP</th><td>A function over complexity 8 is split, not excused. CI fails above the limit.</td><td class="path">tools/crap.py, .github/workflows/ci.yml</td></tr>
           <tr><th scope="row">Mutation testing</th><td>Changed lines are mutated. Every surviving mutant gets a test, or a reason.</td><td class="path">tools/mutation.py</td></tr>
-          <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents and MCP messages each have a target. The 13 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
+          <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents and MCP messages each have a target. The 34 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
         </tbody>
       </table>
     </div>
