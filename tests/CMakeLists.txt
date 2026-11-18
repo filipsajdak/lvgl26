@@ -69,6 +69,9 @@ lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
 lvgl26_test(options)
+# LVGL says which setters take options separated by line breaks in its doc comments; the names
+# that lvgl26 goes by must agree with them.
+lvgl26_test(options_docs)
 # A state of an enum given to set() at run time breaks its contract.
 add_test(NAME options_violation_enum_state_in_set
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
@@ -843,5 +846,3 @@ lvgl26_compile_fail(options_plain_list ".selected follows a state of sheet, and 
 lvgl26_compile_fail(options_enum_state_elsewhere "a state of an enum follows only the choice of a dropdown or a roller")
 lvgl26_compile_fail(options_roller_without_mode "It takes a list of options .* then lv_roller_mode_t")
 lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
-lvgl26_compile_fail(options_header_not_read "'lv_dial_set_options' takes options, and only LVGL's doc comment says whether they are a list separated by line breaks.*options_header_not_read.cpp. Add that header to option_headers")
-lvgl26_compile_fail(options_mark_not_found "no doc comment in LVGL's headers says .*separated options. any more")

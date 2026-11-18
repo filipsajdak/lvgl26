@@ -13,8 +13,8 @@
 // pointer (lv_dropdown_set_options_static) and copies nothing. A roller always copies
 // the text into its label: LVGL has no static setter for it.
 //
-// Which properties take such a list is not written down here: lv/detail/option_docs.hpp
-// reads it from LVGL's doc comments.
+// Which properties take such a list is found by the name of the setter, and tests/options_docs.cpp
+// checks the names against LVGL's doc comments (lv/detail/option_docs.hpp).
 //
 // A state of the enum follows `.selected` in both directions when the options come from
 // lv::options_of<E>: the user's choice sets the enumerator, and the state shows in the
@@ -59,21 +59,21 @@ struct list_parts {
 // The text in quotes, a line break written as \n.
 consteval std::string quoted(std::string_view text) {
   std::string out = "\"";
-  for (const char c : text) out += c == '\n' ? std::string{"\\n"} : std::string(1, c);
-  return out + "\"";
+  for (const char c : text) out.append(c == '\n' ? std::string_view{"\\n"} : std::string_view{&c, 1});
+  return out.append("\"");
 }
 
 // Stops the compilation when option number `number` (counted from 1) cannot be one.
 consteval void check_option(std::string_view option, std::size_t number) {
   if (option.empty())
-    fail("lv: option " + decimal(number) +
-         " of the list is empty. LVGL takes the options as one text separated by line "
-         "breaks, and an empty one would show as a blank row.");
+    fail(join({"lv: option ", decimal(number),
+               " of the list is empty. LVGL takes the options as one text separated by line "
+               "breaks, and an empty one would show as a blank row."}));
   for (const char c : option)
     if (c == '\n')
-      fail("lv: option " + decimal(number) + " of the list, " + quoted(option) +
-           ", holds a line break. The list is the separator: write each option as an item, "
-           ".options = {\"100%\", \"75%\", \"50%\"}, not \"100%\\n75%\\n50%\".");
+      fail(join({"lv: option ", decimal(number), " of the list, ", quoted(option),
+                 ", holds a line break. The list is the separator: write each option as an item, "
+                 ".options = {\"100%\", \"75%\", \"50%\"}, not \"100%\\n75%\\n50%\"."}));
 }
 
 // The options as the one text LVGL takes, in static storage.
@@ -154,49 +154,13 @@ consteval std::string type_text() {
   return str(std::meta::display_string_of(std::meta::dealias(^^E)));
 }
 
-template <class E, auto V>
-consteval bool is_enumerator_of() {
-  for (const auto e : std::meta::enumerators_of(^^E))
-    if (std::meta::extract<E>(e) == V) return true;
-  return false;
-}
-
-// The enumerators of E that are not in Left, in the order they are declared.
-template <class E, auto... Left>
-consteval std::vector<E> enumerators_without() {
-  std::vector<E> kept;
-  for (const auto e : std::meta::enumerators_of(^^E)) {
-    const E value = std::meta::extract<E>(e);
-    if (!((value == Left) || ...)) kept.push_back(value);
-  }
-  return kept;
-}
-
-// The value of an enumerator as a state keeps it: 32 bits.
-template <class E>
-consteval std::int32_t value_in_32_bits(E value) {
-  const auto number = static_cast<std::int64_t>(value);
-  if (number != static_cast<std::int32_t>(number))
-    fail("lv: an enumerator of " + type_text<E>() + " does not fit in 32 bits, which is what a state keeps.");
-  return static_cast<std::int32_t>(number);
-}
-
-// The list of options of these enumerators.
-template <class E>
-consteval option_list options_of_enumerators(const std::vector<E>& listed) {
-  if (listed.empty())
-    fail("lv: lv::options_of<" + type_text<E>() +
-         "> has no option left. Every enumerator is left out by lv::but, or the enum has none.");
-  std::string joined;
-  std::vector<std::int32_t> values;
-  for (const E value : listed) {
-    const std::string_view text{option_text<E>::of(value)};
-    check_option(text, values.size() + 1);
-    joined += values.empty() ? "" : "\n";
-    joined += text;
-    values.push_back(value_in_32_bits(value));
-  }
-  return option_list{list_parts{std::define_static_string(joined), std::define_static_string(type_text<E>()),
+// The list of options that were collected, each text followed by a line break.
+consteval option_list options_listed(const std::string& type, std::string& joined, const std::vector<std::int32_t>& values) {
+  if (values.empty())
+    fail(join({"lv: lv::options_of<", type,
+               "> has no option left. Every enumerator is left out by lv::but, or the enum has none."}));
+  joined.pop_back();
+  return option_list{list_parts{std::define_static_string(joined), std::define_static_string(type),
                                 std::define_static_array(values).data(),
                                 static_cast<std::uint32_t>(values.size()), true}};
 }
@@ -209,10 +173,20 @@ consteval option_list options_without(but<Left...>) {
   static_assert((std::same_as<decltype(Left), E> && ...),
                 "lv: lv::but in lv::options_of names enumerators of the enum given to "
                 "lv::options_of: lv::options_of<quality, lv::but<quality::draft>>.");
+  static_assert(sizeof(E) <= sizeof(std::int32_t),
+                "lv: an enum that lv::options_of lists is at most 32 bits wide, which is what a state keeps.");
   if constexpr (std::is_enum_v<E> && (std::same_as<decltype(Left), E> && ...)) {
-    static_assert((is_enumerator_of<E, Left>() && ...),
-                  "lv: lv::but in lv::options_of names a value that is no enumerator of the enum.");
-    return options_of_enumerators<E>(enumerators_without<E, Left...>());
+    std::string joined;
+    std::vector<std::int32_t> values;
+    for (const auto e : std::meta::enumerators_of(^^E)) {
+      const E value = std::meta::extract<E>(e);
+      if (((value == Left) || ...)) continue;
+      const std::string_view text{option_text<E>::of(value)};
+      check_option(text, values.size() + 1);
+      joined.append(text).append("\n");
+      values.push_back(static_cast<std::int32_t>(value));
+    }
+    return options_listed(type_text<E>(), joined, values);
   } else {
     return {};
   }

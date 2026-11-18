@@ -84,7 +84,7 @@ static_assert(std::string_view{lv::options_of<first_place::mode>.enum_name} !=
 
 // Which setters take a list is read from LVGL's doc comments, not written here.
 static_assert(lv::detail::takes_option_list(^^lv_dropdown_set_options, "options"));
-static_assert(lv::detail::takes_option_list(^^lv_dropdown_set_options_static, "options"));
+static_assert(!lv::detail::takes_option_list(^^lv_dropdown_set_options_static, "options"));  // the text a list is passed as
 static_assert(lv::detail::takes_option_list(^^lv_roller_set_options, "options"));
 static_assert(!lv::detail::takes_option_list(^^lv_dropdown_set_text, "txt"));
 static_assert(!lv::detail::takes_option_list(^^lv_label_set_text, "text"));

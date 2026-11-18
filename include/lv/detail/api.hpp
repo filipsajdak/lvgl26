@@ -66,6 +66,14 @@ consteval std::string decimal(std::size_t n) {
   return digits;
 }
 
+// The parts one after the other, as one text. An operator+ chain costs the compiler an overload
+// resolution among the many operator+ of std::string at each +; a message is built here.
+consteval std::string join(std::initializer_list<std::string_view> parts) {
+  std::string out;
+  for (const std::string_view part : parts) out.append(part);
+  return out;
+}
+
 // The function called `name`, or a null reflection.
 consteval std::meta::info find(std::string_view name) {
   for (auto f : api)

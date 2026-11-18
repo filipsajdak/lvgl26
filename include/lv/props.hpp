@@ -130,8 +130,15 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   const auto prop = std::meta::identifier_of(f).substr(prefix_size);
   const auto params = std::meta::parameters_of(f);
   std::vector<std::meta::info> types;
-  for (std::size_t i = 1; i < params.size(); ++i)
-    types.push_back(value_type<D>(f, prop, params[i]));
+  // A setter called options may take a list: one comparison for each setter of every widget,
+  // which every file pays.
+  const bool may_list = prop == "options";
+  for (std::size_t i = 1; i < params.size(); ++i) {
+    auto type = value_type<D>(f, prop, params[i]);
+    if (may_list && type == (^^const char*) && takes_option_list(f, parameter_name(params[i])))
+      type = ^^option_list;
+    types.push_back(type);
+  }
   return {prop, std::meta::substitute(^^arg, types), f};
 }
 
@@ -452,6 +459,8 @@ void bind_member(lv_obj_t* o, const A& a) {
   lv_subject_t* subject = a.bound_subject(a.bound);
   if (subject == nullptr) return;  // LVGL had no memory for the subject
 
+  contract_assert(a.follows != follows_choice &&
+                  "a state of an enum follows the choice of options in a constexpr tree only");
   constexpr auto native = binder<setter>;
   if constexpr (native != std::meta::info{} && std::meta::parameters_of(native).size() == 3) {
     [:native:](o, subject, a.bound_format);
@@ -466,53 +475,60 @@ void bind_member(lv_obj_t* o, const A& a) {
   }
 }
 
-// lv_<widget>_set_text_static for lv_<widget>_set_text, lv_<widget>_set_options_static for
-// lv_<widget>_set_options, or a null reflection. The static one keeps the pointer and
-// copies nothing.
+// lv_<widget>_set_text_static for lv_<widget>_set_text, or a null reflection. The static
+// one keeps the pointer and copies nothing.
 consteval std::meta::info static_text_of(std::meta::info setter) {
   if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
   const auto name = std::meta::identifier_of(setter);
-  if (!name.ends_with("_set_text") && !name.ends_with("_set_options")) return {};
+  if (!name.ends_with("_set_text")) return {};
   const auto f = find(str(name) + "_static");
-  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != std::meta::parameters_of(setter).size())
-    return {};
+  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
   return f;
 }
-
-// Whether a value is a text that lives for the whole program: a list of options that the
-// compiler joined.
-template <class T>
-constexpr bool lives_on(const T&) {
-  return false;
-}
-
-constexpr bool lives_on(const option_list& list) { return list.kept; }
 
 // Calls the setter `Target`, or its static twin when the value is a constant text.
 template <fixed W, std::meta::info Target, bool Constant, class... V>
 void set_property(lv_obj_t* o, V... v) {
   constexpr auto kept_text = static_text_of(Target);
-  if constexpr (kept_text != std::meta::info{}) {
+  if constexpr (Constant && kept_text != std::meta::info{}) {
     // LVGL shows static text uncut when the label cuts with dots, so that one is copied.
-    bool keep = Constant || (lives_on(v) || ...);
-    if constexpr (W.sv() == "label") keep = keep && lv_label_get_long_mode(o) != LV_LABEL_LONG_MODE_DOTS;
-    if (keep)
-      [:kept_text:](o, v...);
-    else
+    bool cut = false;
+    if constexpr (W.sv() == "label") cut = lv_label_get_long_mode(o) == LV_LABEL_LONG_MODE_DOTS;
+    if (cut)
       [:Target:](o, v...);
+    else
+      [:kept_text:](o, v...);
   } else {
     [:Target:](o, v...);
   }
 }
 
-// ---- an enum state that follows the choice of options ---------------------------------
+// lv_<widget>_set_options_static for lv_<widget>_set_options, or a null reflection.
+consteval std::meta::info static_options_of(std::meta::info setter) {
+  if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
+  const auto name = std::meta::identifier_of(setter);
+  if (!name.ends_with("_set_options")) return {};
+  const auto f = find(str(name) + "_static");
+  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
+  return f;
+}
 
-// Whether a property of type A takes a whole number: for a dropdown and a roller, the place
-// of the chosen option.
-template <class A>
-inline constexpr bool takes_index = false;
-template <class I, class... Rest>
-inline constexpr bool takes_index<arg<strict<I>, Rest...>> = true;
+// The list of options of a property that takes only that: the dropdown keeps the pointer of a
+// list that the compiler joined, or of any list in a constexpr tree, and copies nothing.
+template <fixed W, std::meta::info Target, bool Constant>
+void set_property(lv_obj_t* o, const option_list& list) {
+  constexpr auto kept = static_options_of(Target);
+  if constexpr (kept != std::meta::info{}) {
+    if (Constant || list.kept)
+      [:kept:](o, list.text);
+    else
+      [:Target:](o, list.text);
+  } else {
+    [:Target:](o, list.text);
+  }
+}
+
+// ---- an enum state that follows the choice of options ---------------------------------
 
 consteval bool same_text(const char* a, const char* b) {
   while (*a != '\0' && *a == *b) ++a, ++b;
@@ -523,13 +539,13 @@ consteval bool same_text(const char* a, const char* b) {
 // that goes with the list `options`, which `is_set`.
 consteval void check_enum_choice(bool is_set, const option_list& options, const char* state_enum) {
   if (!is_set || is_null(options.enum_name))
-    fail("lv: .selected follows a state of " + str(state_enum) +
-         ", and the options of this widget do not come from that enum. Give the widget "
-         ".options = lv::options_of<" + str(state_enum) + ">, or bind a state that holds the index.");
+    fail(join({"lv: .selected follows a state of ", state_enum,
+               ", and the options of this widget do not come from that enum. Give the widget "
+               ".options = lv::options_of<", state_enum, ">, or bind a state that holds the index."}));
   if (!same_text(options.enum_name, state_enum))
-    fail("lv: .selected follows a state of " + str(state_enum) + ", and the options come from " +
-         str(options.enum_name) + ". A state follows the choice of the options of its own enum: "
-         "use .options = lv::options_of<" + str(state_enum) + ">.");
+    fail(join({"lv: .selected follows a state of ", state_enum, ", and the options come from ", options.enum_name,
+               ". A state follows the choice of the options of its own enum: use .options = lv::options_of<",
+               state_enum, ">."}));
 }
 
 // What the observer and the event of an enum state need, in read-only memory.
@@ -606,9 +622,6 @@ void apply_member(lv_obj_t* o, const A& a) {
     add_handler(o, [:target:], x...);
   } else {
     if (a.bound != nullptr) {
-      if constexpr (takes_index<A>)
-        contract_assert(a.bound_format == nullptr &&
-                        "a state of an enum follows the choice of options in a constexpr tree only");
       bind_member<W, I>(o, a);
       return;
     }

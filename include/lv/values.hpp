@@ -364,10 +364,17 @@ inline constexpr const char* enum_tag = [] -> const char* {
     return nullptr;
 }();
 
-// What a property of a node follows: nothing, a state, or a field of a row of lv::each.
+// What a property of a node follows: nothing, a state, a field of a row of lv::each, or the
+// choice of options with a state of an enum (see lv/options.hpp).
 // A number, because under a sanitizer GCC cannot tell at compile time that an address is
 // not null, nor that two functions differ.
-enum follow : unsigned char { follows_nothing, follows_state, follows_row_field };
+enum follow : unsigned char { follows_nothing, follows_state, follows_row_field, follows_choice };
+
+// What a binding to a state of type T makes of a property whose first value is First: a state
+// of an enum that a whole number follows is the choice of options. A tag in the type, so that
+// the tree tells it with one comparison and not with a template for each property.
+template <class T, class First>
+inline constexpr follow follows_of_binding = std::is_enum_v<T> && is_strict<First> ? follows_choice : follows_state;
 
 // A property bound to a field of a row: lv::bind(&track::title), see lv/list.hpp. It holds
 // what a state's binding holds, and tells lv::arg that it follows a row.
@@ -464,16 +471,6 @@ template <class... Ts, class... Us>
 inline constexpr bool names_an_enumerator<std::tuple<Ts...>, std::tuple<Us...>> =
     (quoted_name_for<Us, Ts> || ...);
 
-// Whether the values Us given to a property that takes only a list of options are the
-// items of that list: two or more texts in quotes.
-template <class Ts, class Us>
-inline constexpr bool items_of_option_list = false;
-template <class... Us>
-  requires(sizeof...(Us) >= 2)
-inline constexpr bool items_of_option_list<std::tuple<option_list>, std::tuple<Us...>> =
-    (std::is_array_v<std::remove_cvref_t<Us>> && ...) &&
-    (std::same_as<std::remove_extent_t<std::remove_cvref_t<Us>>, char> && ...);
-
 // One value for a parameter that takes the enum E: an enumerator, or its name in quotes.
 // The name is read where it is written, so the values beside it may be made at run time.
 template <class E>
@@ -531,8 +528,7 @@ struct arg {
     requires(sizeof...(U) > 0) &&
             (!(sizeof...(U) == 1 && ((std::same_as<std::remove_cvref_t<U>, arg> ||
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
-            (!detail::names_an_enumerator<types, std::tuple<U...>>) &&
-            (!detail::items_of_option_list<types, std::tuple<U...>>)
+            (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
       : set(true), follows(detail::follows_nothing), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
         bound_format(nullptr) {}
@@ -559,8 +555,8 @@ struct arg {
 
   template <class T>
   constexpr arg(binding<T> b)
-      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(b.subject),
-        bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
+      : set(true), follows(detail::follows_of_binding<T, std::tuple_element_t<0, types>>), v{}, bound(b.source),
+        bound_subject(b.subject), bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
     using first = std::tuple_element_t<0, types>;
     // A state of an enum follows the whole number of a property too: the choice of a
     // dropdown or a roller whose options come from lv::options_of (checked where it is used).
@@ -704,27 +700,17 @@ consteval std::meta::info unit_of(std::string_view prop, std::string_view parame
   return {};
 }
 
+// The name of a parameter, or an empty name when it has none.
+consteval std::string_view parameter_name(std::meta::info param) {
+  return std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
+}
+
 // The unit type for a parameter of the C type `t`. A unit whose plain value is signed
 // becomes nonnegative<unit> for an unsigned parameter, which LVGL then receives unsigned.
 consteval std::meta::info unit_for_parameter(std::meta::info unit, std::meta::info t) {
   if (!std::meta::is_unsigned_type(t)) return unit;  // most are signed: no lookup then
   const auto plain = std::meta::dealias(std::meta::substitute(^^lowered, {unit}));
   return std::meta::is_signed_type(plain) ? std::meta::substitute(^^nonnegative, {unit}) : unit;
-}
-
-// The name of a parameter, or an empty name when it has none.
-consteval std::string_view parameter_name(std::meta::info param) {
-  return std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
-}
-
-// The unit type of a number by its names, or a null reflection when they say nothing.
-template <class D = void>
-consteval std::meta::info unit_value_type(std::meta::info setter, std::string_view prop,
-                                          std::string_view name, std::meta::info t) {
-  if (!std::meta::is_arithmetic_type(t) || t == ^^bool) return {};
-  const auto unit = unit_of(prop, name);
-  if (unit == std::meta::info{}) return {};
-  return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
 }
 
 // The C++ type that the parameter `param` of `setter` gets in the props struct.
@@ -738,11 +724,13 @@ consteval std::meta::info value_type(std::meta::info setter, std::string_view pr
                                      std::meta::info param) {
   const auto raw = std::meta::type_of(param);
   const auto t = std::meta::remove_cv(std::meta::dealias(raw));
-  const std::string_view name = parameter_name(param);
+  const std::string_view name =
+      std::meta::has_identifier(param) ? std::meta::identifier_of(param) : std::string_view{};
 
-  if (const auto unit = unit_value_type<D>(setter, prop, name, t); unit != std::meta::info{}) return unit;
+  if (std::meta::is_arithmetic_type(t) && t != ^^bool)
+    if (const auto unit = unit_of(prop, name); unit != std::meta::info{})
+      return unit_for_parameter(unit == ^^angle ? angle_type_of<D>(setter) : unit, t);
   if (std::meta::is_integral_type(t)) return std::meta::substitute(^^strict, {t});
-  if (t == (^^const char*) && takes_option_list<D>(setter, name)) return ^^option_list;
   return raw;
 }
 

@@ -415,8 +415,7 @@ void apply_node(lv_obj_t* w) {
                       "lv: lv::bind(&T::field) follows a field of a row, and this node is not "
                       "in a row. Use it in the row template of lv::each: "
                       "lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].");
-      } else if constexpr (a.follows == follows_state && takes_index<std::remove_cvref_t<decltype(a)>> &&
-                           !is_null(a.bound_format)) {
+      } else if constexpr (a.follows == follows_choice) {
         follow_enum_choice<Tree, i, Path...>(w);
       } else {
         static_assert(a.follows == follows_nothing || bindable<W, i>(),
