@@ -51,6 +51,13 @@ struct gradient_stop {
   double position = 0;  // 0 to 1
 };
 
+/// "color" written #rrggbbaa: the color and its alpha, 0 to 255. A look turns the alpha into the
+/// opacity beside the color (bg_color with bg_opa). The editor reads such a token as a plain color.
+struct rgba_color {
+  lv_color_t color{};
+  std::uint8_t alpha = 255;
+};
+
 /// "gradient": up to eight stops.
 struct gradient_token {
   std::array<gradient_stop, 8> stops{};

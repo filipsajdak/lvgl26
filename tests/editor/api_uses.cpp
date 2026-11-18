@@ -102,6 +102,8 @@ constexpr lv::typography_token no_type{};
 constexpr lv::transition_token no_transition{};
 constexpr lv::gradient_token no_gradient{};
 constexpr lv::gradient_stop no_stop{};
+constexpr lv::rgba_color no_alpha{};
+static_assert(no_alpha.alpha == 255);
 static_assert(line.x2 == 1 && no_shadow.blur == lv::length{} && no_border.width == lv::length{});
 static_assert(no_type.font_weight == 400 && no_transition.delay == lv::duration{} && no_gradient.count == 0);
 static_assert(no_stop.position == 0);
@@ -579,5 +581,32 @@ constexpr auto details_of() {
 }
 constexpr lv::caption<6> owner_caption{"owner"};
 static_assert(owner_caption.sv() == "owner");
+
+}  // namespace api_uses
+
+// ---- looks --------------------------------------------------------------------------
+
+// The project names its tokens and typeface once, before the first look.
+template <>
+inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<lv::override>{
+    .tokens = api_uses::tok, .type = lv::typeface({{"Barlow", 500, api_uses::barlow_ttf}})};
+// A design without fonts, and a second design for a part library.
+struct plain_design {};
+template <>
+inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
+
+namespace api_uses {
+
+constexpr auto printed = lv::button({.style = lv::look<"tile"> | lv::look<"tile-print">});
+constexpr auto listed = lv::look<"tile tile-print tile-ink-level">;
+constexpr auto with_layer = lv::look<"tile"> | lv::on("checked", {.bg_opa = tok.opacity.half});
+static_assert(lv::style_value<decltype(listed)> && lv::style_value<decltype(with_layer)>);
+constexpr auto per_page = []<subpage Page> {
+  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Page>});
+};
+constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per_page)];
+template <class Design = lv::override>
+constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
+constexpr auto chips = lv::row[chip<>, chip<plain_design>];
 
 }  // namespace api_uses

@@ -133,6 +133,16 @@ tracks.update(1, [](track& t) { ++t.plays; });          // sets that row's label
 - A text field is shown from the row itself, without a copy.
 - The selected row is `checked`, so `.style_checked` styles it. [docs/lists.md](docs/lists.md) has the rest.
 
+An element names its look, and the token file says how it looks. A look is a group of the design tokens, used as a style:
+
+```cpp
+lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Page>})   // the groups "tile" and "tile-print"
+lv::label({.checked = true, .style = lv::look<"status">})             // "checked" in the group is a layer
+```
+
+- The compiler matches each entry of the group to the style property of its name, checks its type, and builds a constant style in flash: no heap from lvgl26, nothing paid in a file that names no look.
+- A misspelled path, an entry that fits no property and a wrong type are compile errors that list what is valid. `tools/look_groups.py` lists the groups that no look names. [docs/looks.md](docs/looks.md) has the rest.
+
 A set that is fixed when the program is written is repeated by the compiler, not by a list at run time:
 
 ```cpp

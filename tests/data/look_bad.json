@@ -1,0 +1,141 @@
+{
+ "$description": "Groups that lv::look must refuse, one mistake each. tests/fail/look_*.cpp names them.",
+ "color": {
+  "$type": "color",
+  "red": {
+   "$value": "#ff0000"
+  }
+ },
+ "typo": {
+  "colour": {
+   "$type": "color",
+   "$value": "#ff0000"
+  }
+ },
+ "wrongtype": {
+  "radius": {
+   "$type": "color",
+   "$value": "#ff0000"
+  }
+ },
+ "sizeone": {
+  "size": {
+   "$type": "dimension",
+   "$value": "20px"
+  }
+ },
+ "font_for_color": {
+  "text_color": {
+   "$type": "typography",
+   "$value": {
+    "fontFamily": "Barlow",
+    "fontSize": "12px",
+    "fontWeight": 500,
+    "letterSpacing": "0px",
+    "lineHeight": 1
+   }
+  }
+ },
+ "layered": {
+  "bg_opa": {
+   "$type": "number",
+   "$value": 1
+  },
+  "cheked": {
+   "bg_color": {
+    "$type": "color",
+    "$value": "#00ff00"
+   }
+  }
+ },
+ "fine": {
+  "radius": {
+   "$type": "dimension",
+   "$value": "4px"
+  }
+ },
+ "stringtoken": {
+  "flex_flow": {
+   "$type": "string",
+   "$value": "row"
+  }
+ },
+ "badenum": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "text_align": "centre"
+   }
+  }
+ },
+ "extunknown": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "colour": "red"
+   }
+  }
+ },
+ "extpad": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "pad_all": "50%"
+   }
+  }
+ },
+ "exttext": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "radius": "big"
+   }
+  }
+ },
+ "extpercent": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "width": "5x%"
+   }
+  }
+ },
+ "percentvalue": {
+  "width": {
+   "$type": "dimension",
+   "$value": "50%"
+  }
+ },
+ "extends": {
+  "$extends": "{fine}",
+  "radius": {
+   "$type": "dimension",
+   "$value": "3px"
+  }
+ },
+ "alpharadius": {
+  "radius": {
+   "$type": "color",
+   "$value": "#ff000080"
+  }
+ },
+ "layeredin": {
+  "checked": {
+   "extra": {
+    "bg_color": {
+     "$type": "color",
+     "$value": "#0000ff"
+    }
+   }
+  }
+ },
+ "queue": {
+  "card": {
+   "radius": {
+    "$type": "dimension",
+    "$value": "4px"
+   }
+  },
+  "details": {
+   "radius": {
+    "$type": "dimension",
+    "$value": "2px"
+   }
+  }
+ }
+}

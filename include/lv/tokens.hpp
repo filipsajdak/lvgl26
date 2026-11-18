@@ -93,6 +93,22 @@ consteval std::meta::info token_cpp_type(token_type t) {
   fail("lv: design tokens: " + str(what));
 }
 
+// The key of the vendor data in "$extensions": reverse domain name, as the Design Tokens Format
+// recommends (5.2.3). The one place it is written.
+inline constexpr std::string_view vendor_key = "io.github.filipsajdak.lvgl26";
+
+// What a group holds under "$extensions" for lvgl26: an LVGL value by name, such as
+// "flex_flow": "row", or a size in percent, "width": "50%". One string token for each key.
+// (A group struct has it as the member `lvgl26_vendor`, only when the file has the data.)
+inline constexpr std::string_view vendor_member = "lvgl26_vendor";
+
+// "$extends" is part of the standard and not read yet: a group that has it gets this member, and
+// a look of the group is an error that says so.
+struct unsupported_extends {
+  std::string_view target;
+};
+inline constexpr std::string_view extends_member = "lvgl26_extends";
+
 // The document without the trailing NUL that the #embed idiom adds.
 template <const auto& Doc>
 consteval std::string_view token_text() {
@@ -157,6 +173,19 @@ consteval bool token_member_used(json::value root, json::member m, token_type in
   return token_cpp_type(resolve_token(root, child, inherited).type) != std::meta::info{};
 }
 
+// A color written #rrggbbaa.
+consteval bool has_alpha_digits(json::value v) {
+  return v.is(json::kind::string) && v.string().starts_with("#") && v.string().size() == 9;
+}
+
+// The member type of a token: token<value type>, and token<rgba_color> for a color with alpha.
+consteval std::meta::info token_member_type(json::value root, json::value child, token_type inherited) {
+  const auto resolved = resolve_token(root, child, inherited);
+  if (resolved.type == token_type::color && has_alpha_digits(resolved.value))
+    return std::meta::substitute(^^token, {^^rgba_color});
+  return token_cpp_type(resolved.type);
+}
+
 // The value that starts at `offset` in `doc`. The offset comes from a value of the
 // same document.
 consteval json::value value_at(std::string_view doc, std::size_t offset)
@@ -177,8 +206,35 @@ consteval std::string token_member_name(std::string_view key) {
 template <const auto& Doc, std::size_t Offset, token_type Inherited>
 struct token_group;
 
+// The struct of the vendor data of a group: a string token for each key.
+template <const auto& Doc, std::size_t Offset>
+struct vendor_group;
+
+template <const auto& Doc, std::size_t Offset>
+using vendor_group_t = typename vendor_group<Doc, Offset>::type;
+
+// The vendor object of a group, or a null value.
+consteval json::value vendor_object(json::value group) {
+  const auto extensions = group["$extensions"];
+  if (!extensions.is(json::kind::object)) return {};
+  return extensions[vendor_key];
+}
+
 template <const auto& Doc, std::size_t Offset, token_type Inherited>
 using token_group_t = typename token_group<Doc, Offset, Inherited>::type;
+
+// The members that follow the tokens of a group: its vendor data, and "$extends" for a group that has it.
+template <const auto& Doc>
+consteval void add_group_extras(std::vector<std::meta::info>& specs, json::value group) {
+  if (const auto mine = vendor_object(group); mine.is(json::kind::object)) {
+    const auto at = static_cast<std::size_t>(mine.text().data() - token_text<Doc>().data());
+    specs.push_back(std::meta::data_member_spec(
+        std::meta::dealias(std::meta::substitute(
+            ^^vendor_group_t, {std::meta::reflect_object(Doc), std::meta::reflect_constant(at)})),
+        {.name = vendor_member}));
+  }
+  if (group["$extends"]) specs.push_back(std::meta::data_member_spec(^^unsupported_extends, {.name = extends_member}));
+}
 
 // The members of the struct for the group that starts at `offset` in the document.
 template <const auto& Doc>
@@ -197,7 +253,7 @@ consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_typ
     const json::value child{m.text};
     std::meta::info type;
     if (child["$value"]) {
-      type = token_cpp_type(resolve_token(root, child, inherited).type);
+      type = token_member_type(root, child, inherited);
     } else {
       const auto child_offset = static_cast<std::size_t>(m.text.data() - doc.data());
       type = std::meta::dealias(std::meta::substitute(
@@ -211,8 +267,29 @@ consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_typ
     specs.push_back(std::meta::data_member_spec(type, {.name = name}));
     names.push_back(std::move(name));
   }
+  add_group_extras<Doc>(specs, group);
   return specs;
 }
+
+template <const auto& Doc>
+consteval std::vector<std::meta::info> vendor_specs(std::size_t offset) {
+  const auto object = value_at(token_text<Doc>(), offset);
+  std::vector<std::meta::info> specs;
+  for (std::size_t i = 0; i < object.size(); ++i) {
+    const auto m = object.member_at(i);
+    if (!json::value{m.text}.is(json::kind::string))
+      token_fail("the value of '" + str(m.key) + "' in $extensions '" + str(vendor_key) +
+                 "' is not a string. Write an LVGL value by its name (\"flex_flow\": \"row\") or a size in percent (\"width\": \"50%\")");
+    specs.push_back(std::meta::data_member_spec(^^token<std::string_view>, {.name = token_member_name(m.key)}));
+  }
+  return specs;
+}
+
+template <const auto& Doc, std::size_t Offset>
+struct vendor_group {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, vendor_specs<Doc>(Offset)); }
+};
 
 template <const auto& Doc, std::size_t Offset, token_type Inherited>
 struct token_group {
@@ -281,6 +358,12 @@ consteval lv_color_t read_token(read_as<lv_color_t>, json::value, json::value v)
   c.green = static_cast<std::uint8_t>(rounded(parts.at(1).number() * 255));
   c.blue = static_cast<std::uint8_t>(rounded(parts.at(2).number() * 255));
   return c;
+}
+
+consteval rgba_color read_token(read_as<rgba_color>, json::value, json::value v) {
+  const auto s = v.string();
+  const auto rgb = color_from_hex(s.substr(0, 7));
+  return {rgb, static_cast<std::uint8_t>(hex_digit(s[7]) * 16 + hex_digit(s[8]))};
 }
 
 consteval length read_token(read_as<length>, json::value, json::value v) {
@@ -385,8 +468,25 @@ struct token_payload<token<T>> {
   using type = T;
 };
 
+// The strings of a vendor object, for the struct made by vendor_specs.
+template <class G>
+consteval G fill_vendor(json::value object) {
+  G out{};
+  std::size_t i = 0;
+  template for (constexpr auto m : std::define_static_array(std::meta::nonstatic_data_members_of(
+                    ^^G, std::meta::access_context::unchecked()))) {
+    out.[:m:] = {json::value{object.member_at(i++).text}.string(), from_design_tokens{}};
+  }
+  return out;
+}
+
+consteval bool is_named(std::meta::info member, std::string_view name) {
+  return std::meta::identifier_of(member) == name;
+}
+
 // Fills the generated struct G from its group. Struct members and used JSON
-// members are in the same order, so they are walked together.
+// members are in the same order, so they are walked together; the members that
+// hold vendor data and "$extends" come last and have no JSON member of their own.
 template <class G, const auto& Doc>
 consteval G fill_tokens(json::value group, token_type inherited) {
   const auto root = token_root<Doc>();
@@ -396,17 +496,22 @@ consteval G fill_tokens(json::value group, token_type inherited) {
   [[maybe_unused]] std::size_t i = 0;  // unused when the group has no members
   template for (constexpr auto m : std::define_static_array(std::meta::nonstatic_data_members_of(
                     ^^G, std::meta::access_context::unchecked()))) {
-    while (!token_member_used(root, group.member_at(i), inherited)) ++i;
-    const json::value child{group.member_at(i).text};
-    ++i;
-
     using M = typename[:std::meta::type_of(m):];
-    if constexpr (is_token_leaf<M>)
-      out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root,
-                               resolve_token(root, child, inherited).value),
-                    from_design_tokens{}};
-    else
-      out.[:m:] = fill_tokens<M, Doc>(child, inherited);
+    if constexpr (is_named(m, vendor_member)) {
+      out.[:m:] = fill_vendor<M>(vendor_object(group));
+    } else if constexpr (is_named(m, extends_member)) {
+      out.[:m:] = {group["$extends"].is(json::kind::string) ? group["$extends"].string() : std::string_view{}};
+    } else {
+      while (!token_member_used(root, group.member_at(i), inherited)) ++i;
+      const json::value child{group.member_at(i).text};
+      ++i;
+      if constexpr (is_token_leaf<M>)
+        out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root,
+                                 resolve_token(root, child, inherited).value),
+                      from_design_tokens{}};
+      else
+        out.[:m:] = fill_tokens<M, Doc>(child, inherited);
+    }
   }
   return out;
 }

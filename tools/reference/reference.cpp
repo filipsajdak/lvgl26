@@ -144,6 +144,9 @@ consteval std::span<const char* const> document() {
     first = false;
   }
   add("\n  },\n  \"style\": [\n" + style_json(enums) + "\n  ],\n  \"enums\": {\n");
+  // No property takes a part, and tools that read looks need the names: a group named like a part
+  // is a layer (tools/look_groups.py).
+  enums.push_back(^^lv_part_t);
   for (std::size_t i = 0; i < enums.size(); ++i)
     add((i ? ",\n" : "") + ("    " + quoted(type_name(enums[i])) + ": " + enumerator_names(enums[i])));
   add("\n  }\n}\n");

@@ -40,6 +40,12 @@ lvgl26_test(json)
 lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
+lvgl26_test(look)
+target_link_libraries(look PRIVATE lvgl26_test_data)
+# Two files of one program name looks, with the registration in a header they share.
+add_executable(look_link look_link_main.cpp look_link_cards.cpp)
+target_link_libraries(look_link PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME look_link COMMAND look_link)
 lvgl26_test(state)
 lvgl26_test(units)
 lvgl26_test(values)
@@ -605,6 +611,29 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   endforeach()
 endif()
 
+# The example of docs/looks.md. Its picture is the one on the page.
+add_executable(example_looks ${PROJECT_SOURCE_DIR}/examples/looks/main.cpp)
+target_compile_options(example_looks PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks
+                       --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_looks PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out)
+add_test(NAME example_looks COMMAND example_looks WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out)
+set_tests_properties(example_looks PROPERTIES FIXTURES_SETUP example_looks_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_looks_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files
+                   ${CMAKE_CURRENT_BINARY_DIR}/example_looks_out/looks.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/looks.png)
+  set_tests_properties(example_looks_picture PROPERTIES FIXTURES_REQUIRED example_looks_picture)
+endif()
+
+# The same screen with looks and with every value written out: the same pixels.
+add_executable(looks_example looks_example.cpp)
+target_compile_options(looks_example PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks
+                       --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(looks_example PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME looks_example COMMAND looks_example)
+
 # The second example of docs/themes.md: Signal with its typefaces.
 add_executable(example_signal_type ${PROJECT_SOURCE_DIR}/examples/signal_type/main.cpp)
 target_link_libraries(example_signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -692,6 +721,16 @@ if(Python3_FOUND)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
+  # Every component group of the looks example's token file is named by an lv::look in its source:
+  # a group that nothing uses (a typo, a look that went unused) fails the test and is listed.
+  add_test(NAME look_groups_example
+           COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/look_groups.py
+                   ${PROJECT_SOURCE_DIR}/examples/looks/tokens.json ${PROJECT_SOURCE_DIR}/examples/looks/screen.hpp
+                   --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE})
+  add_test(NAME look_groups_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_look_groups.py)
+  # The word counts that docs/looks.md states are those of the code it shows.
+  add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
+                                    --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
@@ -756,7 +795,7 @@ set_source_files_properties(editor/api_uses.cpp ${PROJECT_SOURCE_DIR}/tools/edit
 # Files that only Clang reads, with the stubs. They are never built: a target gives
 # each one a line in compile_commands.json, which tools/editor/check.py takes its flags from.
 add_library(editor_clang_only OBJECT EXCLUDE_FROM_ALL
-            editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp
+            editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp editor/wrong_look.cpp
             editor/tokens_by_bytes.cpp ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp PROPERTIES GENERATED TRUE)
 target_compile_options(editor_clang_only PRIVATE --embed-dir=${CMAKE_CURRENT_BINARY_DIR}/editor)
@@ -815,12 +854,12 @@ if(Python3_FOUND)
     add_test(NAME editor_tokens_by_bytes
              COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/tokens_by_bytes.cpp)
     # Mistakes are marked on the line they are written on.
-    foreach(case wrong_enumerator unknown_member wrong_widget)
+    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look)
       add_test(NAME editor_${case}
                COMMAND ${LVGL26_EDITOR_CHECK} --verify ${CMAKE_CURRENT_SOURCE_DIR}/editor/${case}.cpp)
     endforeach()
     set_tests_properties(editor_examples editor_api_uses editor_names_declared editor_tokens_by_bytes
-                         editor_wrong_enumerator editor_unknown_member editor_wrong_widget
+                         editor_wrong_enumerator editor_unknown_member editor_wrong_widget editor_wrong_look
                          PROPERTIES FIXTURES_REQUIRED editor_stubs)
     set_property(TEST editor_names_declared APPEND PROPERTY FIXTURES_REQUIRED editor_names)
   endif()
@@ -858,3 +897,28 @@ lvgl26_compile_fail(options_enum_state_elsewhere "a state of an enum follows onl
 lvgl26_compile_fail(options_roller_without_mode "It takes a list of options .* then lv_roller_mode_t")
 lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
 lvgl26_compile_fail(options_row_enum "a field of a row that holds an enum cannot follow a whole number")
+
+# lv::look: every mistake in a look is a compile error that says what is valid.
+lvgl26_compile_fail(look_unknown_group "the look 'queue.crad' has no group 'crad' in 'queue'. The groups there: card, details. Did you mean 'card'\\?")
+lvgl26_compile_fail(look_unknown_root "the look 'tile-pritn' has no group 'tile-pritn' in the token file. The groups there: .*Did you mean 'tile_print'\\?")
+lvgl26_compile_fail(look_entry_no_property "the look entry 'colour' of 'typo' fits no style property. Nearest style properties: ")
+lvgl26_compile_fail(look_wrong_type "the look entry 'radius' of 'wrongtype' is a color, but the style property 'radius' takes a dimension")
+lvgl26_compile_fail(look_bad_enumerator "text_align has no value 'centre'. Its values: ")
+lvgl26_compile_fail(look_size_one_value "'size' of 'sizeone' sets several properties from several values, and a token holds one. Write each of them: width and height")
+lvgl26_compile_fail(look_font_for_color "the look entry 'text_color' of 'font_for_color' is a typography, but the style property 'text_color' takes a color")
+lvgl26_compile_fail(look_group_not_layer "in the look 'layered' the group 'cheked' is neither a part nor a state. Did you mean 'checked'\\? A group nested in a look is a layer: a part \\(main, .*\\) or a state \\(default, .*\\). A variant of a look is a sibling group, 'a-cheked' beside 'a'")
+lvgl26_compile_fail(look_group_in_layer "in the look 'layeredin' the group 'extra' is neither a part nor a state")
+lvgl26_compile_fail(look_names_a_token "the look 'tile.radius' names a token, not a group")
+lvgl26_compile_fail(look_empty "lv::look<\"  \"> names no look. Write the path of a group of the token file")
+lvgl26_compile_fail(look_empty_name "has an empty name between its dots")
+lvgl26_compile_fail(look_no_design "no design is registered for lv::look. Name the token file once")
+lvgl26_compile_fail(look_design_too_late "conflicting declaration .*lv::design<lv::override>")
+lvgl26_compile_fail(look_string_token "the look entry 'flex_flow' of 'stringtoken' is a string token, and a string is no standard value for the style property 'flex_flow'.*goes in \"\\$extensions\": {\"io.github.filipsajdak.lvgl26\"")
+lvgl26_compile_fail(look_percent_value "the look entry 'width' of 'percentvalue' is a percentage, and Design Tokens Format 2025.10 has no percentage. Write a size in pixels as the .value")
+lvgl26_compile_fail(look_extends "the group of the look 'extends' has \"\\$extends\", which Design Tokens Format 2025.10 has and lvgl26 does not read yet")
+lvgl26_compile_fail(look_ext_unknown_property "the .extensions entry 'colour' of 'extunknown' fits no style property. Nearest style properties: ")
+lvgl26_compile_fail(look_ext_percent_property "the .extensions entry 'pad_all' of 'extpad' is a percentage, and LVGL takes one for width, height, min_width")
+lvgl26_compile_fail(look_ext_text "the .extensions entry 'radius' of 'exttext' is the text 'big', and the style property 'radius' takes a dimension")
+lvgl26_compile_fail(look_ext_percent_digits "is '5x%', and a percentage is written as whole digits and %")
+lvgl26_compile_fail(look_alpha_wrong_kind "the look entry 'radius' of 'alpharadius' is a color with an alpha, but the style property 'radius' takes a dimension")
+lvgl26_compile_fail(look_ext_not_string "the value of 'width' in .extensions 'io.github.filipsajdak.lvgl26' is not a string")
