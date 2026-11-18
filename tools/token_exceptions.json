@@ -1,0 +1,109 @@
+{
+  "excluded": {
+    "fuzz/corpus/": "inputs of the fuzzers",
+    "tests/data/bad_": "invalid on purpose: the compile-fail tests read them"
+  },
+  "known": {
+    "examples/fonts/tokens.json": {
+      "typography $value.fontSize: type": 3,
+      "typography $value.letterSpacing: type": 3
+    },
+    "examples/lists/tokens.json": {
+      "color $value: type": 6,
+      "dimension $value: type": 4
+    },
+    "examples/lvgl/get_started/tokens.json": {
+      "border $value.color: type": 1,
+      "border $value.width: type": 1,
+      "color $value: type": 9,
+      "dimension $value: type": 2
+    },
+    "examples/lvgl/widgets/tokens.json": {
+      "border $value.color: type": 8,
+      "border $value.width: type": 8,
+      "color $value: type": 53,
+      "dimension $value: type": 68,
+      "shadow $value.blur: type": 5,
+      "shadow $value.color: type": 5,
+      "shadow $value.offsetX: type": 5,
+      "shadow $value.offsetY: type": 5,
+      "shadow $value.spread: type": 5
+    },
+    "examples/ports/qt/treadmill/tokens.json": {
+      "color $value: type": 41,
+      "dimension $value: type": 12,
+      "typography $value.fontSize: type": 8,
+      "typography $value.letterSpacing: type": 8
+    },
+    "examples/ports/slint/printer/tokens.json": {
+      "color $value: type": 53,
+      "dimension $value: type": 20,
+      "duration $value: type": 3,
+      "typography $value.fontSize: type": 8,
+      "typography $value.letterSpacing: type": 8
+    },
+    "examples/theme/tokens.json": {
+      "color $value: type": 5,
+      "dimension $value: type": 7
+    },
+    "include/lv/signal/dark.json": {
+      "color $value: type": 15,
+      "dimension $value: type": 14
+    },
+    "include/lv/signal/day.json": {
+      "color $value: type": 15,
+      "dimension $value: type": 14
+    },
+    "include/lv/signal/type.json": {
+      "typography $value.fontSize: type": 8,
+      "typography $value.letterSpacing: type": 8
+    },
+    "spikes/tokens.json": {
+      "color $value: type": 2,
+      "dimension $value: type": 1
+    },
+    "tests/data/tokens.json": {
+      "border $value.width: type": 1,
+      "color $value: type": 5,
+      "dimension $value: type": 5,
+      "duration $value: type": 1,
+      "shadow $value.blur: type": 1,
+      "shadow $value.offsetX: type": 1,
+      "shadow $value.offsetY: type": 1,
+      "shadow $value.spread: type": 1,
+      "somethingNew $type: enum": 1,
+      "transition $value.delay: type": 1,
+      "typography $value.fontSize: type": 2,
+      "typography $value.letterSpacing: type": 2
+    },
+    "tests/data/tokens_light.json": {
+      "border $value.width: type": 1,
+      "color $value: type": 5,
+      "dimension $value: type": 5,
+      "duration $value: type": 1,
+      "shadow $value.blur: type": 1,
+      "shadow $value.offsetX: type": 1,
+      "shadow $value.offsetY: type": 1,
+      "shadow $value.spread: type": 1,
+      "somethingNew $type: enum": 1,
+      "transition $value.delay: type": 1,
+      "typography $value.fontSize: type": 2,
+      "typography $value.letterSpacing: type": 2
+    },
+    "tests/editor/tokens.json": {
+      "border $value.width: type": 1,
+      "color $value: type": 1,
+      "dimension $value: type": 2,
+      "duration $value: type": 1,
+      "shadow $value.blur: type": 1,
+      "shadow $value.color: type": 1,
+      "shadow $value.offsetX: type": 1,
+      "shadow $value.offsetY: type": 1,
+      "shadow $value.spread: type": 1,
+      "transition $value.delay: type": 1,
+      "transition $value.duration: type": 1,
+      "typography $value.fontSize: type": 1,
+      "typography $value.letterSpacing: type": 1
+    }
+  }
+}
