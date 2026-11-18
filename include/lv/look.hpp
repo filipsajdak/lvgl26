@@ -51,6 +51,7 @@
 
 #include <algorithm>
 #include <meta>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -542,16 +543,27 @@ consteval void put_entry(look_style_of<D>& s, std::string_view where) {
 
 // ---- parts and states as layers ----------------------------------------------
 
+// The part or state of E whose name, read as the token reader reads a key, is `member`: the
+// group "default" is the member default_, "focus-key" is focus_key. `any` is not a layer.
+template <class E>
+consteval std::optional<lv_style_selector_t> layer_named(std::string_view member) {
+  for (const enum_name& e : enum_names<E>) {
+    const std::string name = short_enum_name<E>(e);
+    if (name != "any" && token_member_name(name) == member) return static_cast<lv_style_selector_t>(e.value);
+  }
+  return std::nullopt;
+}
+
 // The enums are parameters only so that nothing is scanned until a name is read, as in lv::on.
 template <class Part = lv_part_t, class State = lv_state_t>
-consteval bool names_part_or_state(std::string_view name) {
-  return selector_named<Part>(name) || selector_named<State>(name);
+consteval bool names_part_or_state(std::string_view member) {
+  return layer_named<Part>(member) || layer_named<State>(member);
 }
 
 template <class Part = lv_part_t, class State = lv_state_t>
-consteval lv_style_selector_t selector_of_name(std::string_view name) {
-  if (const auto part = selector_named<Part>(name)) return *part;
-  return *selector_named<State>(name);
+consteval lv_style_selector_t selector_of_name(std::string_view member) {
+  if (const auto part = layer_named<Part>(member)) return *part;
+  return *layer_named<State>(member);
 }
 
 [[noreturn]] consteval void fail_extends(std::string_view where) {

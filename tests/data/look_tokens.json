@@ -322,5 +322,17 @@
     }
    }
   }
+ },
+ "lit": {
+  "radius": {
+   "$type": "dimension",
+   "$value": "4px"
+  },
+  "default": {
+   "radius": {
+    "$type": "dimension",
+    "$value": "9px"
+   }
+  }
  }
 }

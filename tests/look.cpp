@@ -67,6 +67,9 @@ static_assert(lv::look<"alpha">.bg_opa.set && lv::look<"alpha">.bg_color.set);
 static_assert(!lv::look<"alpha">.text_opa.set, "an opaque color sets no opacity");
 static_assert(lv::look<"alpha-explicit">.bg_opa.set);
 
+// A group named for the default state is a layer too: the token reader names its member default_.
+static_assert(lv::look<"lit">.layers.count == 1 && lv::look<"lit">.layers.list()[0].selector == LV_STATE_DEFAULT);
+
 // Spaces between looks, any number.
 static_assert(lv::look<"tile tile-print">.bg_color.set && lv::look<"tile-print"  " tile">.radius.set);
 
@@ -92,6 +95,7 @@ constexpr auto tile_alone_ui = lv::box({.id = "alone", .style = lv::look<"tile">
 constexpr auto pct_ui = lv::box({.id = "pct", .style = lv::look<"pct">});
 constexpr auto alpha_ui = lv::box({.id = "alpha", .style = lv::look<"alpha">});
 constexpr auto alpha_explicit_ui = lv::box({.id = "explicit", .style = lv::look<"alpha-explicit">});
+constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
 constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
 
 // Defaults of a factory give way to a look that says it.
@@ -208,6 +212,13 @@ void a_state_group_is_a_layer() {
   check(rgb(lv_obj_get_style_text_color(s, LV_PART_MAIN)) == 0x155dfc);
   lv_obj_remove_state(s, LV_STATE_CHECKED);
   check(rgb(lv_obj_get_style_text_color(s, LV_PART_MAIN)) == 0x62748e);
+}
+
+void a_default_state_group_is_a_layer() {
+  auto built = lv::mount<lit_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  check(lv_obj_get_style_radius(built->get<"lit">().raw(), LV_PART_MAIN) == 9);
 }
 
 void a_later_look_wins_in_a_layer_too() {
@@ -372,6 +383,7 @@ int main() {
   a_color_with_alpha_sets_its_opacity();
   the_extensions_of_a_layer_are_its_own();
   a_state_group_is_a_layer();
+  a_default_state_group_is_a_layer();
   a_later_look_wins_in_a_layer_too();
   parts_and_states_make_layers();
   composite_tokens_are_merged();

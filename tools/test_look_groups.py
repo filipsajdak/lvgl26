@@ -140,6 +140,7 @@ class Reference(unittest.TestCase):
         self.assertIn("radius", styles)
         self.assertTrue({"checked", "pressed", "knob", "indicator"} <= layers)
         self.assertNotIn("any", layers)
+        self.assertIn("default", layers)  # the compiler takes a layer for the default state
 
     def test_a_reference_without_parts_is_refused(self):
         with tempfile.TemporaryDirectory() as folder:

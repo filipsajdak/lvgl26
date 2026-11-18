@@ -53,7 +53,7 @@ def reference_names(path: pathlib.Path) -> tuple[set[str], set[str]]:
     layers = {name for enum in LAYER_ENUMS for name in data["enums"].get(enum, [])}
     if not layers:
         raise Error(f"{path} lists no parts or states: write it again with the lv_reference program")
-    return styles, layers - {"any", "default"}
+    return styles, layers - {"any"}
 
 
 def is_group(value) -> bool:
