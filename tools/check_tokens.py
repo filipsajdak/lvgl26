@@ -178,7 +178,9 @@ def has_value_key(node):
 
 
 def tracked_json(root):
-    out = subprocess.run(["git", "-C", str(root), "ls-files", "*.json"], check=True, capture_output=True, text=True)
+    # safe.directory: a CI container runs as another user than the one that owns the checkout.
+    command = ["git", "-c", f"safe.directory={root}", "-C", str(root), "ls-files", "*.json"]
+    out = subprocess.run(command, check=True, capture_output=True, text=True)
     return out.stdout.split()
 
 
