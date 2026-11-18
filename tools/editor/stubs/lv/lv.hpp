@@ -12,6 +12,7 @@
 #include <lv/font.hpp>
 #include <lv/image.hpp>
 #include <lv/list.hpp>
+#include <lv/look.hpp>
 #include <lv/match.hpp>
 #include <lv/options.hpp>
 #include <lv/owned.hpp>

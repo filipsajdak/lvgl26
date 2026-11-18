@@ -170,10 +170,111 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
+// The node's own style (an lv::look, say) sets the width, the height or the flex flow. What a
+// factory sets by default gives way to it: a local style beats an added one in LVGL, so a
+// default written as a property would beat the look that says what the element is.
+template <class Kept>
+constexpr bool style_sets_width(const Kept& p) {
+  return p.style.has && p.style.value.width.set;
+}
+template <class Kept>
+constexpr bool style_sets_height(const Kept& p) {
+  return p.style.has && p.style.value.height.set;
+}
+template <class Kept>
+constexpr bool style_sets_flex_flow(const Kept& p) {
+  return p.style.has && p.style.value.flex_flow.set;
+}
+template <class Kept>
+constexpr bool style_sets_layout(const Kept& p) {
+  return p.style.has && p.style.value.layout.set;
+}
+
+// These run in the compiler only, so they have no run-time coverage: each stays at complexity 2,
+// the most that CRAP 8 allows without any.
+template <class Kept>
+constexpr bool node_sets_width(const Kept& p) {
+  return p.size.set || p.width.set;
+}
+template <class Kept>
+constexpr bool node_sets_height(const Kept& p) {
+  return p.size.set || p.height.set;
+}
+template <class Kept>
+constexpr bool flow_is_free(const Kept& p) {
+  return !p.flex_flow.set && !style_sets_flex_flow(p);
+}
+// LVGL's setter of the flow sets the flex layout too; a style's flow sets the flow only.
+template <class Kept>
+constexpr bool flow_comes_from_style(const Kept& p) {
+  return !p.flex_flow.set && style_sets_flex_flow(p);
+}
+template <class Kept>
+constexpr bool layout_is_free(const Kept& p) {
+  return !p.layout.set && !style_sets_layout(p);
+}
+template <class Kept>
+constexpr bool needs_flex_layout(const Kept& p) {
+  return flow_comes_from_style(p) && layout_is_free(p);
+}
+template <class Kept>
+constexpr bool width_is_free(const Kept& p) {
+  return !node_sets_width(p) && !style_sets_width(p);
+}
+template <class Kept>
+constexpr bool height_is_free(const Kept& p) {
+  return !node_sets_height(p) && !style_sets_height(p);
+}
+template <class Kept>
+constexpr bool both_sides_are_free(const Kept& p) {
+  return width_is_free(p) && height_is_free(p);
+}
+template <class Kept>
+constexpr bool only_width_is_free(const Kept& p) {
+  return width_is_free(p) && !height_is_free(p);
+}
+template <class Kept>
+constexpr bool only_height_is_free(const Kept& p) {
+  return height_is_free(p) && !width_is_free(p);
+}
+
+// A group fills its parent. The node's own .width or .height, or a look, that sets one side leaves
+// the other to fill; one that sets both, or a .size, leaves none.
+template <class Kept>
+constexpr void fill_both_sides(Kept& p) {
+  if (both_sides_are_free(p)) p.size = {percent{100}, percent{100}};
+}
+template <class Kept>
+constexpr void fill_width(Kept& p) {
+  if (only_width_is_free(p)) p.width = percent{100};
+}
+template <class Kept>
+constexpr void fill_height(Kept& p) {
+  if (only_height_is_free(p)) p.height = percent{100};
+}
+template <class Kept>
+constexpr void fill_free_sides(Kept& p) {
+  fill_both_sides(p);
+  fill_width(p);
+  fill_height(p);
+}
+
+// A row or a column is a flex container: the factory's flow, or the look's flow with a flex layout
+// unless the node or the look sets a layout.
+template <class Kept>
+constexpr void default_flow(Kept& p, lv_flex_flow_t flow) {
+  if (flow_is_free(p)) p.flex_flow = flow;
+}
+template <class Kept>
+constexpr void default_layout(Kept& p) {
+  if (needs_flex_layout(p)) p.layout = static_cast<std::uint32_t>(LV_LAYOUT_FLEX);
+}
+
 template <class D>
 constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
   auto n = make_node<"obj", D>(p);
-  if (!n.p.flex_flow.set) n.p.flex_flow = flow;
+  default_flow(n.p, flow);
+  default_layout(n.p);
   return n;
 }
 
@@ -197,13 +298,13 @@ struct factory {
 };
 
 // lv::group: a box with none of the theme's styles (no background, border, padding
-// or scrollbars) that fills its parent, unless .size says otherwise. It groups
+// or scrollbars) that fills its parent, unless .size or its look says otherwise. It groups
 // widgets without drawing anything itself.
 struct group_factory {
   template <class D = void>
   constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
     auto n = make_node<"obj", D>(p);
-    if (!n.p.size.set) n.p.size = {percent{100}, percent{100}};
+    fill_free_sides(n.p);
     n.bare = true;
     return n;
   }

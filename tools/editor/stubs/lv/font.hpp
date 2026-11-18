@@ -48,6 +48,8 @@ struct face_file {
 /// type(tok.text.title) is then the font that the typography token asks for.
 class typeface {
  public:
+  /// A design without fonts: its looks hold no typography token.
+  consteval typeface() {}
   consteval typeface(std::initializer_list<face_file>) {}
 
   /// The font of a typography token: its family, weight and size.

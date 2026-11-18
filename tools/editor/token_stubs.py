@@ -48,6 +48,9 @@ KEYWORDS = {
     "while",
 }
 LONGEST_ALIAS_CHAIN = 8
+# The bytes a C++ string literal holds as they are: printable ASCII, space to tilde.
+PRINTABLE_FIRST = ord(" ")
+PRINTABLE_LAST = ord("~")
 LONGEST_VALUE_IN_A_COMMENT = 100
 
 
@@ -151,6 +154,38 @@ def group_struct(root: dict, group: dict, name: str, inherited: str | None, inde
     return lines
 
 
+def group_paths(group: dict, prefix: str = "") -> list[str]:
+    """The dotted path of every group below `group`, as lv::look writes it, in file order.
+
+    The compiler also takes a path made of C++ member names ("ink_tubes" for "ink-tubes"), so
+    a group whose name changes has both.
+    """
+    paths = []
+    for key, child in children_of(group):
+        if "$value" in child:
+            continue
+        for spelling in dict.fromkeys([key, member_name(key)]):
+            here = f"{prefix}{spelling}"
+            paths.append(here)
+            paths += group_paths(child, here + ".")
+    return paths
+
+
+def cpp_string_literal(text: str) -> str:
+    """`text` as a C++ string literal: a quote or a backslash is escaped, any other byte outside
+    printable ASCII is written in octal, so a group name of the token file cannot end the literal."""
+    out = []
+    for byte in text.encode():
+        char = chr(byte)
+        if char in '"\\':
+            out.append("\\" + char)
+        elif PRINTABLE_FIRST <= byte <= PRINTABLE_LAST:
+            out.append(char)
+        else:
+            out.append(f"\\{byte:03o}")
+    return '"' + "".join(out) + '"'
+
+
 def struct_name(key: int) -> str:
     return f"tokens_{key:016x}"
 
@@ -161,6 +196,9 @@ def file_struct(data: bytes, said: str) -> str:
     root = json.loads(data.rstrip(b"\0"))
     lines = [f"/// The design tokens of {said}."] + group_struct(root, root, struct_name(key), None, "")
     lines.append(f"template <>\nstruct token_file<{key}ULL> {{\n  using type = {struct_name(key)};\n}};")
+    groups = " ".join(group_paths(root))
+    lines.append(f'/// The groups of this file that lv::look can name.\n'
+                 f'template <>\ninline constexpr const char* look_groups<{struct_name(key)}> = {cpp_string_literal(groups)};')
     return "\n".join(lines)
 
 

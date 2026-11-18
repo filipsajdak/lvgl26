@@ -1,0 +1,9 @@
+{
+ "extnotstring": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "width": 50
+   }
+  }
+ }
+}

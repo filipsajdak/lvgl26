@@ -11,6 +11,14 @@
 
 namespace lv {
 
+// "color" written #rrggbbaa: a color with its alpha, 0 to 255. A look turns the alpha into the
+// opacity property that goes with the color (bg_color: bg_opa). Any other use of the token is
+// refused, because a style color has no alpha.
+struct rgba_color {
+  lv_color_t color{};
+  std::uint8_t alpha = 255;
+};
+
 // "cubicBezier": the two control points of an easing curve.
 struct bezier {
   double x1 = 0, y1 = 0, x2 = 1, y2 = 1;

@@ -46,6 +46,12 @@ struct anything {
 /// name the file: lvgl26_editor_support(TOKENS file.json).
 struct unknown_token_file {};
 
+/// The groups of a token file that lv::look can name, as one text of dotted paths with a space
+/// between them: tools/editor/generate.py writes one for each token struct. Empty for a struct it
+/// has not seen: nothing is checked then.
+template <class Tokens>
+inline constexpr const char* look_groups = "";
+
 /// token_file<key>::type is the struct of the token file with that key.
 template <std::uint64_t Key>
 struct token_file {

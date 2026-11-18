@@ -1,0 +1,414 @@
+{
+ "$description": "Test tokens for lv::look: component groups named by the style properties they set.",
+ "font": {
+  "text": {
+   "$type": "fontFamily",
+   "$value": "Barlow"
+  }
+ },
+ "text": {
+  "$type": "typography",
+  "label": {
+   "$value": {
+    "fontFamily": "{font.text}",
+    "fontSize": "18px",
+    "fontWeight": 500,
+    "lineHeight": 1.2,
+    "letterSpacing": "0px"
+   }
+  },
+  "small": {
+   "$value": {
+    "fontFamily": "{font.text}",
+    "fontSize": "12px",
+    "fontWeight": 500,
+    "lineHeight": 1.2,
+    "letterSpacing": "1px"
+   }
+  }
+ },
+ "color": {
+  "$type": "color",
+  "white": {
+   "$value": "#ffffff"
+  },
+  "blue": {
+   "$value": "#155dfc"
+  },
+  "gray": {
+   "$value": "#62748e"
+  },
+  "red": {
+   "$value": "#ff2056"
+  },
+  "ink": {
+   "$value": "#1d293d"
+  }
+ },
+ "elevation": {
+  "card": {
+   "$type": "shadow",
+   "$value": {
+    "color": "#000000",
+    "offsetX": "0px",
+    "offsetY": "4px",
+    "blur": "12px",
+    "spread": "2px"
+   }
+  }
+ },
+ "line": {
+  "card": {
+   "$type": "border",
+   "$value": {
+    "color": "{color.ink}",
+    "width": "3px",
+    "style": "solid"
+   }
+  }
+ },
+ "motion": {
+  "quick": {
+   "$type": "transition",
+   "$value": {
+    "duration": "150ms",
+    "delay": "0ms",
+    "timingFunction": [
+     0.4,
+     0,
+     0.2,
+     1
+    ]
+   }
+  }
+ },
+ "tile": {
+  "bg_opa": {
+   "$type": "number",
+   "$value": 1
+  },
+  "radius": {
+   "$type": "dimension",
+   "$value": "24px"
+  },
+  "width": {
+   "$type": "dimension",
+   "$value": "162px"
+  },
+  "height": {
+   "$type": "dimension",
+   "$value": "192px"
+  },
+  "pad_row": {
+   "$type": "dimension",
+   "$value": "10px"
+  },
+  "text_color": {
+   "$value": "{color.white}"
+  },
+  "text_font": {
+   "$value": "{text.label}"
+  },
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "layout": "flex",
+    "flex_flow": "column",
+    "flex_main_place": "center",
+    "flex_cross_place": "center",
+    "text_align": "center",
+    "bg_grad_dir": "ver"
+   }
+  }
+ },
+ "status": {
+  "text_color": {
+   "$value": "{color.gray}"
+  },
+  "checked": {
+   "text_color": {
+    "$value": "{color.blue}"
+   }
+  }
+ },
+ "padded": {
+  "pad_all": {
+   "$type": "dimension",
+   "$value": "7px"
+  },
+  "pad_gap": {
+   "$type": "dimension",
+   "$value": "5px"
+  },
+  "checked": {
+   "pad_top": {
+    "$type": "dimension",
+    "$value": "3px"
+   }
+  }
+ },
+ "wide": {
+  "width": {
+   "$type": "dimension",
+   "$value": "100px"
+  }
+ },
+ "plain": {
+  "text_color": {
+   "$value": "{color.red}"
+  },
+  "text_font": {
+   "$value": "{text.small}"
+  }
+ },
+ "card": {
+  "bg_color": {
+   "$value": "{color.white}"
+  },
+  "bg_opa": {
+   "$type": "number",
+   "$value": 1
+  },
+  "radius": {
+   "$type": "dimension",
+   "$value": "12px"
+  },
+  "width": {
+   "$type": "dimension",
+   "$value": "140px"
+  },
+  "elevation": {
+   "$value": "{elevation.card}"
+  },
+  "outline": {
+   "$value": "{line.card}"
+  },
+  "transition": {
+   "$value": "{motion.quick}"
+  },
+  "typography": {
+   "$value": "{text.small}"
+  }
+ },
+ "gauge": {
+  "bg_color": {
+   "$value": "{color.gray}"
+  },
+  "indicator": {
+   "bg_color": {
+    "$value": "{color.blue}"
+   }
+  },
+  "knob": {
+   "bg_color": {
+    "$value": "{color.white}"
+   },
+   "pressed": {
+    "bg_color": {
+     "$value": "{color.red}"
+    }
+   }
+  }
+ },
+ "twin": {
+  "text_font": {
+   "$value": "{text.label}"
+  }
+ },
+ "flat": {
+  "pad_all": {
+   "$type": "dimension",
+   "$value": "7px"
+  },
+  "anim_duration": {
+   "$type": "duration",
+   "$value": "200ms"
+  }
+ },
+ "tile-inner": {
+  "width": {
+   "$type": "dimension",
+   "$value": "64px"
+  },
+  "height": {
+   "$type": "dimension",
+   "$value": "64px"
+  },
+  "radius": {
+   "$type": "dimension",
+   "$value": "16px"
+  },
+  "bg_color": {
+   "$value": "{color.white}"
+  },
+  "bg_opa": {
+   "$type": "number",
+   "$value": 0.2
+  }
+ },
+ "tile-print": {
+  "bg_color": {
+   "$type": "color",
+   "$value": "#2b7fff"
+  },
+  "bg_grad_color": {
+   "$type": "color",
+   "$value": "#155dfc"
+  }
+ },
+ "tile-scan": {
+  "bg_color": {
+   "$type": "color",
+   "$value": "#00bc7d"
+  },
+  "bg_grad_color": {
+   "$type": "color",
+   "$value": "#009966"
+  }
+ },
+ "status-loud": {
+  "checked": {
+   "text_color": {
+    "$value": "{color.red}"
+   }
+  }
+ },
+ "pct": {
+  "width": {
+   "$type": "dimension",
+   "$value": "100px"
+  },
+  "height": {
+   "$type": "dimension",
+   "$value": "20px"
+  },
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "width": "50%",
+    "height": "25%"
+   }
+  }
+ },
+ "alpha": {
+  "bg_color": {
+   "$type": "color",
+   "$value": "#2b7fff80"
+  },
+  "text_color": {
+   "$type": "color",
+   "$value": "#ffffffff"
+  }
+ },
+ "alpha-explicit": {
+  "bg_color": {
+   "$type": "color",
+   "$value": "#2b7fff80"
+  },
+  "bg_opa": {
+   "$type": "number",
+   "$value": 1
+  }
+ },
+ "flex-ext": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "flex_flow": "row",
+    "layout": "flex"
+   }
+  },
+  "checked": {
+   "$extensions": {
+    "io.github.filipsajdak.lvgl26": {
+     "text_align": "right"
+    }
+   }
+  }
+ },
+ "lit": {
+  "radius": {
+   "$type": "dimension",
+   "$value": "4px"
+  },
+  "default": {
+   "radius": {
+    "$type": "dimension",
+    "$value": "9px"
+   }
+  }
+ },
+ "pad-order": {
+  "pad_top": {
+   "$type": "dimension",
+   "$value": "3px"
+  },
+  "pad_all": {
+   "$type": "dimension",
+   "$value": "7px"
+  }
+ },
+ "pad-narrow": {
+  "pad_hor": {
+   "$type": "dimension",
+   "$value": "2px"
+  },
+  "pad_all": {
+   "$type": "dimension",
+   "$value": "7px"
+  }
+ },
+ "pad-narrow-after": {
+  "pad_all": {
+   "$type": "dimension",
+   "$value": "7px"
+  },
+  "pad_hor": {
+   "$type": "dimension",
+   "$value": "2px"
+  }
+ },
+ "tall": {
+  "height": {
+   "$type": "dimension",
+   "$value": "50px"
+  }
+ },
+ "flow-only": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "flex_flow": "column"
+   }
+  }
+ },
+ "flow-no-layout": {
+  "$extensions": {
+   "io.github.filipsajdak.lvgl26": {
+    "flex_flow": "column",
+    "layout": "none"
+   }
+  }
+ },
+ "main-wide": {
+  "main": {
+   "width": {
+    "$type": "dimension",
+    "$value": "40px"
+   }
+  }
+ },
+ "main-flow": {
+  "main": {
+   "$extensions": {
+    "io.github.filipsajdak.lvgl26": {
+     "flex_flow": "column"
+    }
+   }
+  }
+ },
+ "checked-wide": {
+  "checked": {
+   "width": {
+    "$type": "dimension",
+    "$value": "40px"
+   }
+  }
+ }
+}
