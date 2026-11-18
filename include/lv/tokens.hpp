@@ -223,6 +223,19 @@ consteval json::value vendor_object(json::value group) {
 template <const auto& Doc, std::size_t Offset, token_type Inherited>
 using token_group_t = typename token_group<Doc, Offset, Inherited>::type;
 
+// The members that follow the tokens of a group: its vendor data, and "$extends" for a group that has it.
+template <const auto& Doc>
+consteval void add_group_extras(std::vector<std::meta::info>& specs, json::value group) {
+  if (const auto mine = vendor_object(group); mine.is(json::kind::object)) {
+    const auto at = static_cast<std::size_t>(mine.text().data() - token_text<Doc>().data());
+    specs.push_back(std::meta::data_member_spec(
+        std::meta::dealias(std::meta::substitute(
+            ^^vendor_group_t, {std::meta::reflect_object(Doc), std::meta::reflect_constant(at)})),
+        {.name = vendor_member}));
+  }
+  if (group["$extends"]) specs.push_back(std::meta::data_member_spec(^^unsupported_extends, {.name = extends_member}));
+}
+
 // The members of the struct for the group that starts at `offset` in the document.
 template <const auto& Doc>
 consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_type inherited) {
@@ -254,14 +267,7 @@ consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_typ
     specs.push_back(std::meta::data_member_spec(type, {.name = name}));
     names.push_back(std::move(name));
   }
-  if (const auto mine = vendor_object(group); mine.is(json::kind::object)) {
-    const auto at = static_cast<std::size_t>(mine.text().data() - doc.data());
-    specs.push_back(std::meta::data_member_spec(
-        std::meta::dealias(std::meta::substitute(
-            ^^vendor_group_t, {std::meta::reflect_object(Doc), std::meta::reflect_constant(at)})),
-        {.name = vendor_member}));
-  }
-  if (group["$extends"]) specs.push_back(std::meta::data_member_spec(^^unsupported_extends, {.name = extends_member}));
+  add_group_extras<Doc>(specs, group);
   return specs;
 }
 
