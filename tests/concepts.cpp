@@ -103,6 +103,36 @@ static_assert(lv::style_value<std::remove_cvref_t<const decltype(card)&>>);
 static_assert(!lv::style_value<int>);
 static_assert(!lv::style_value<lv_color_t>);
 
+// What lv::style_value guards in the functions that take a style: a value that is not one
+// matches none of them, so the call is refused at its line and not inside the body.
+// (Each probe is a concept: a requires expression outside a template is not a test of overloads.)
+using style_t = std::remove_cvref_t<decltype(card)>;
+using lv::detail::not_a_dependency;  // any type of lv::detail that is not a style
+template <class S>
+concept takes_is_set = requires(const S& s) { lv::detail::is_set(s); };
+template <class S>
+concept takes_sets_a_value = requires(const S& s) { lv::detail::sets_a_value(s); };
+template <class S>
+concept takes_apply_style_local = requires(lv_obj_t* o, const S& s) {
+  lv::detail::apply_style_local(o, s, LV_PART_MAIN);
+};
+template <class S>
+concept takes_set_style_members = requires(const S& s) { lv::detail::set_style_members(s); };
+template <class S>
+concept merges_styles = requires(S a, S b) { a | b; };
+template <class S, class T>
+concept merges_token = requires(S s, lv::token<T> t) { s | t; };
+static_assert(takes_is_set<style_t> && !takes_is_set<int>);
+static_assert(takes_sets_a_value<style_t> && !takes_sets_a_value<int>);
+static_assert(takes_apply_style_local<style_t> && !takes_apply_style_local<int>);
+static_assert(takes_set_style_members<style_t> && !takes_set_style_members<int>);
+// The merge operators: a style takes a style or a composite token, and nothing else does.
+static_assert(merges_styles<style_t> && !merges_styles<not_a_dependency>);
+static_assert(merges_token<style_t, lv::shadow_token> && !merges_token<int, lv::shadow_token>);
+static_assert(merges_token<style_t, lv::border_token> && !merges_token<int, lv::border_token>);
+static_assert(merges_token<style_t, lv::typography_token> && !merges_token<int, lv::typography_token>);
+static_assert(merges_token<style_t, lv::transition_token> && !merges_token<int, lv::transition_token>);
+
 // lv::token_value and lv::token_of.
 static_assert(lv::token_value<lv::token<lv_color_t>>);
 static_assert(lv::token_value<const lv::token<lv::length>&>);

@@ -33,6 +33,7 @@ build/_tools/venv/bin/pip install universalmutator).
 """
 import argparse
 import json
+import os
 import pathlib
 import random
 import re
@@ -45,6 +46,8 @@ VENV_MUTATE = pathlib.Path("build/_tools/venv/bin/mutate")
 # The CI image has universalmutator on the path; a local checkout has it in a venv.
 MUTATE = str(VENV_MUTATE.resolve()) if VENV_MUTATE.exists() else (shutil.which("mutate") or str(VENV_MUTATE.resolve()))
 TREE = pathlib.Path("build/mutation/tree")
+# The lines of output a failed baseline shows: the errors are at the end of a build or a test run.
+BASELINE_TAIL_LINES = 60
 # A compile error with one of these is a test doing its job, not a broken mutant.
 CAUGHT_AT_COMPILE_TIME = re.compile(
     r"static assertion failed|non-constant condition for static assertion|"
@@ -139,8 +142,14 @@ def logic_only(mutants, original):
     return kept
 
 
+# The compile-fail tests match the words of GCC's messages, written with plain quotes. Python
+# started in the C locale switches its own to C.UTF-8 and hands that on, and GCC then writes
+# the quotes as curly ones: a regex with 'name' finds nothing. Plain ctest keeps the locale.
+CHILD_ENV = {**os.environ, "LC_ALL": "C"}
+
+
 def run(command, cwd=TREE):
-    r = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=cwd)
+    r = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=cwd, env=CHILD_ENV)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -156,16 +165,30 @@ def make_copy(preset, cmake_args):
 
 def judge(preset, tests, targets, limit):
     """Builds and runs the chosen tests against the header as it is now."""
+    return judge_with_output(preset, tests, targets, limit)[0]
+
+
+def judge_with_output(preset, tests, targets, limit):
+    """The verdict of judge, and the output of the step that decided it."""
     code, output = run(f"cmake --build --preset {preset}" + (f" --target {targets}" if targets else ""))
     if code != 0:
         # The first error says what is wrong; later ones often only follow from it.
         first = next((line for line in output.splitlines() if "error:" in line), "")
         caught = CAUGHT_AT_COMPILE_TIME.search(output) and not NOT_CPP.search(first)
-        return "killed" if caught else "invalid"
+        return ("killed" if caught else "invalid"), output
     # A mutant can turn a loop into an endless one. The limit ends such a test, and
     # a test that is ended has failed: the mutant is killed.
-    code, _ = run(f"ctest --preset {preset} -R '{tests}' --timeout {limit}")
-    return "survived" if code == 0 else "killed"
+    code, output = run(f"ctest --preset {preset} -R '{tests}' --timeout {limit}")
+    return ("survived" if code == 0 else "killed"), output
+
+
+def baseline_failure(verdict, output):
+    """What to say when the tests do not pass on the unchanged header: the verdict
+    (a build that fails is 'invalid', a test that fails is 'killed') and the end of the
+    output that decided it, because a shard of the nightly run has nothing else to show."""
+    tail = "\n".join(output.strip().splitlines()[-BASELINE_TAIL_LINES:])
+    return ("The tests do not pass on the unchanged header; fix that first.\n"
+            f"The build or the tests said ({verdict}):\n{tail}")
 
 
 def describe(header_text, mutant):
@@ -296,8 +319,9 @@ def main():
     # makes the build system compile the real header for the baseline.
     header.write_text(original)
 
-    if judge(args.preset, args.tests, args.targets, args.test_timeout) != "survived":
-        sys.exit("The tests do not pass on the unchanged header; fix that first.")
+    verdict, output = judge_with_output(args.preset, args.tests, args.targets, args.test_timeout)
+    if verdict != "survived":
+        sys.exit(baseline_failure(verdict, output))
 
     mutants = choose_mutants(args, lines, original)
     counts, survivors, triaged = judge_all(args, original, mutants, accepted_for(args.accepted, args.header))

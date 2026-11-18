@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "header": "include/lv/runtime.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. The tool inserts `continue;` before the `}` that closes the body of the `template for` counting the style members in make_style_slots (describe shows it as `}` -> `continue;`, the first line that differs). A `continue;` as the last statement of a loop body changes nothing; runtime_ui and json pass with it. A triage matches the text of the mutant, not its line, so it also covers another `continue;` inserted before a `}` in this header."
+  }
+]
