@@ -48,6 +48,9 @@ KEYWORDS = {
     "while",
 }
 LONGEST_ALIAS_CHAIN = 8
+# The bytes a C++ string literal holds as they are: printable ASCII, space to tilde.
+PRINTABLE_FIRST = ord(" ")
+PRINTABLE_LAST = ord("~")
 LONGEST_VALUE_IN_A_COMMENT = 100
 
 
@@ -168,6 +171,21 @@ def group_paths(group: dict, prefix: str = "") -> list[str]:
     return paths
 
 
+def cpp_string_literal(text: str) -> str:
+    """`text` as a C++ string literal: a quote or a backslash is escaped, any other byte outside
+    printable ASCII is written in octal, so a group name of the token file cannot end the literal."""
+    out = []
+    for byte in text.encode():
+        char = chr(byte)
+        if char in '"\\':
+            out.append("\\" + char)
+        elif PRINTABLE_FIRST <= byte <= PRINTABLE_LAST:
+            out.append(char)
+        else:
+            out.append(f"\\{byte:03o}")
+    return '"' + "".join(out) + '"'
+
+
 def struct_name(key: int) -> str:
     return f"tokens_{key:016x}"
 
@@ -180,7 +198,7 @@ def file_struct(data: bytes, said: str) -> str:
     lines.append(f"template <>\nstruct token_file<{key}ULL> {{\n  using type = {struct_name(key)};\n}};")
     groups = " ".join(group_paths(root))
     lines.append(f'/// The groups of this file that lv::look can name.\n'
-                 f'template <>\ninline constexpr const char* look_groups<{struct_name(key)}> = "{groups}";')
+                 f'template <>\ninline constexpr const char* look_groups<{struct_name(key)}> = {cpp_string_literal(groups)};')
     return "\n".join(lines)
 
 

@@ -144,6 +144,21 @@ class Tokens(unittest.TestCase):
         self.assertNotIn("$description", paths)
         self.assertIn('look_groups<tokens_', token_stubs.file_struct(json.dumps(root).encode(), "a test"))
 
+    def test_a_group_name_cannot_end_the_string_of_groups(self):
+        root = {'say "hi"': {"radius": {"$type": "dimension", "$value": "1px"}},
+                "back\\slash": {"radius": {"$type": "dimension", "$value": "1px"}},
+                "caf\u00e9": {"radius": {"$type": "dimension", "$value": "1px"}}}
+        text = token_stubs.file_struct(json.dumps(root).encode(), "a test")
+        line = next(l for l in text.splitlines() if "look_groups<" in l)
+        self.assertIn('say \\"hi\\"', line)
+        self.assertIn("back\\\\slash", line)
+        self.assertIn("caf\\303\\251", line)
+        self.assertTrue(line.endswith('";'))
+
+    def test_a_string_literal_keeps_printable_ascii(self):
+        self.assertEqual(token_stubs.cpp_string_literal("tile tile.ink-level"), '"tile tile.ink-level"')
+        self.assertEqual(token_stubs.cpp_string_literal("a\nb"), '"a\\012b"')
+
     def test_alias_in_a_circle_ends(self):
         root = {"a": {"$value": "{b}"}, "b": {"$value": "{a}"}}
         self.assertIsNone(token_stubs.token_type(root, root["a"], None))
