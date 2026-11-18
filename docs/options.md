@@ -15,7 +15,7 @@ The compiler makes the one text LVGL takes and keeps it in read-only memory. A d
 
 An item must not be empty and must not hold a line break. Both are compile errors that name the item. A single text, `.options = "Cut\nCopy\nPaste"`, works as before. LVGL copies it, except that a dropdown of a constexpr tree keeps the pointer, as it does for a list.
 
-Which properties take a list is not written in lvgl26. It is read from LVGL's doc comments, as the units of angles are.
+Which properties take a list is found by the name of the setter: one that ends in `_set_options` and takes a text called `options`. LVGL says in its doc comments that these take options separated by line breaks, and a test reads the comments and fails when the names and the comments disagree.
 
 ## A list and a mode
 

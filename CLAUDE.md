@@ -112,8 +112,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   reading against the pixels.
 - A list of options for a dropdown or a roller is written `.options = {"a", "b"}` or
   `lv::options_of<E>`, not as a text with line breaks: examples and docs use the list. Which setters take a
-  list is read from LVGL's doc comments (`include/lv/detail/option_docs.hpp`), never listed by hand; a widget
-  whose header is not embedded there is a compile error. A state of an enum follows `.selected` through
+  list is found by name (`include/lv/detail/option_docs.hpp`), never listed by hand, and `tests/options_docs.cpp`
+  checks the names against LVGL's doc comments: the library does not read the headers, because an `#embed`
+  and a search in every file cost 0.2% of the compile time of `tests/large_tree.cpp`. A state of an enum follows `.selected` through
   `lv::options_of<E>` in a constexpr tree only (the observer's data is in read-only memory); at run time
   `set()` refuses it with a contract. `lv::but` lives in `include/lv/but.hpp`, one definition for every
   user of it.
@@ -138,6 +139,9 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   all zeros. A constructor to run there is paid for every unset member of every node.
 - `tests/large_tree.cpp` is compiled under a fixed `-fconstexpr-ops-limit`. It stops compiling
   when a node becomes expensive for the compiler again. Raise the limit only with a measurement.
+- A header that every file includes pays for what it declares: measure `tests/large_tree.cpp` with
+  `tools/compile_report.py`, at least five runs alternating with main, and compare the minimum and the median.
+  A `constexpr` variable or a search that is evaluated where it is written is paid by every file.
 - Measure before claiming: compile time with `/usr/bin/time`, heap with `lv_mem_monitor`,
   pixels with `lv_test_screenshot_compare`.
 - Compare compile times in instructions, not in seconds: on a busy machine the same compile takes
