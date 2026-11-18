@@ -13,6 +13,7 @@ says so: "fallback"). With
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -21,13 +22,22 @@ ROOT = TOOLS.parent
 CONFIG = TOOLS / "mutation_tests.json"
 HEADER_DIR = "include/lv"
 HEADER_SUFFIX = ".hpp"
+# The name of a header goes into the matrix of a workflow. It holds letters, digits and
+# the signs of a path only, so that no part of it can be read as a command.
+HEADER_NAME = re.compile(r"include/lv/[A-Za-z0-9_/.-]+\.hpp")
 
 
 def changed_headers(since, root=ROOT):
-    """The headers under include/lv that differ from `since` and still exist."""
+    """The headers under include/lv that differ from `since` and still exist.
+
+    A header with a name outside HEADER_NAME ends the plan: it is not skipped silently.
+    """
     out = subprocess.run(["git", "diff", "--name-only", since, "HEAD", "--", HEADER_DIR],
                          capture_output=True, text=True, check=True, cwd=root).stdout
     names = sorted(n for n in out.splitlines() if n.endswith(HEADER_SUFFIX))
+    for name in names:
+        if not HEADER_NAME.fullmatch(name):
+            raise SystemExit(f"mutation_plan: a header has a name the plan does not accept: {name!r}")
     return [n for n in names if (pathlib.Path(root) / n).exists()]
 
 

@@ -202,11 +202,15 @@ jobs:
             --report mutation-report.json 2>&1 | tee mutation.log
       - name: Summary
         if: always()
+        env:
+          # A value of the matrix reaches the script as a variable, never as text of the script.
+          HEADER: ${{ matrix.header }}
+          FALLBACK: ${{ matrix.fallback && '--fallback' || '' }}
         run: |
           if [ -f mutation-report.json ]; then
-            python3 tools/mutation_summary.py mutation-report.json ${{ matrix.fallback && '--fallback' || '' }} >> "$GITHUB_STEP_SUMMARY"
+            python3 tools/mutation_summary.py mutation-report.json ${FALLBACK:+"$FALLBACK"} >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### Mutation: ${{ matrix.header }}: no report, see the log." >> "$GITHUB_STEP_SUMMARY"
+            echo "### Mutation: ${HEADER}: no report, see the log." >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
