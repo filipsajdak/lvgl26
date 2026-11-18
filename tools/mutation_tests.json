@@ -13,7 +13,7 @@
       "targets": "concepts handlers l1_views l2_tree"
     },
     "include/lv/computed.hpp": {
-      "tests": "^concepts$|^computed$|fail_computed|fail_part_dependency",
+      "tests": "^concepts$|^computed$|fail_computed|fail_effect|fail_part_dependency",
       "targets": "concepts computed"
     },
     "include/lv/tree.hpp": {
