@@ -286,7 +286,7 @@ The token file is a plain Design Tokens file (Format 2025.10): a design tool ope
 
 A color with an alpha sets the opacity property of its color (`bg_color` with `bg_opa`, `text_color` with `text_opa`, `image_recolor` with `image_recolor_opa`). Only a color that carries an alpha does it: an opaque color sets no opacity, and an `bg_opa` entry in the same group wins. Colors written as objects (`colorSpace`, `components`, `alpha`) are not read for alpha yet.
 
-A shorthand such as `pad_all`, `pad_gap` or `margin_hor` is kept as the properties it stands for, so that the style is a constant and a state can override one of them. `size` takes two values, and a token holds one: write `width` and `height`.
+A shorthand such as `pad_all`, `pad_gap` or `margin_hor` is kept as the properties it stands for, so that the style is a constant and a state can override one of them. A JSON object has no order, so the order of the entries does not matter: an entry the group names itself (`pad_top`) beats a shorthand that covers it, and a narrower shorthand (`pad_hor`) beats a wider one (`pad_all`). `size` takes two values, and a token holds one: write `width` and `height`.
 
 ### What the standard has no type for
 

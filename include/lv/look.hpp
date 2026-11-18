@@ -617,10 +617,31 @@ consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t select
   }
 }
 
+// How many properties an entry stands for: 4 for pad_all, 2 for pad_hor, 0 for any other member.
+consteval std::size_t breadth(std::meta::info member) {
+  return long_names(std::meta::identifier_of(member)).size();
+}
+
+// The members of a group in the order a look puts them: wider shorthands first, then narrower ones,
+// then everything else, each in file order. A JSON object has no order, so an entry the group
+// names itself beats a shorthand that covers it, and pad_hor beats pad_all, however they are written.
+consteval std::vector<std::meta::info> shorthands_first(std::span<const std::meta::info> members) {
+  std::vector<std::meta::info> out;
+  for (auto m : members) {
+    auto at = out.begin();
+    while (at != out.end() && breadth(*at) >= breadth(m)) ++at;
+    out.insert(at, m);
+  }
+  return out;
+}
+
+template <class Group>
+inline constexpr auto entry_order = std::define_static_array(shorthands_first(group_members<Group>));
+
 template <class D, const auto& G>
 consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
                           std::string_view where) {
-  template for (constexpr auto m : group_members<std::remove_cvref_t<decltype(G)>>) {
+  template for (constexpr auto m : entry_order<std::remove_cvref_t<decltype(G)>>) {
     if constexpr (is_extends_member(m))
       fail_extends(where);
     else if constexpr (is_vendor_member(m))

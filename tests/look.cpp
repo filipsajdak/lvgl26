@@ -95,6 +95,9 @@ constexpr auto tile_alone_ui = lv::box({.id = "alone", .style = lv::look<"tile">
 constexpr auto pct_ui = lv::box({.id = "pct", .style = lv::look<"pct">});
 constexpr auto alpha_ui = lv::box({.id = "alpha", .style = lv::look<"alpha">});
 constexpr auto alpha_explicit_ui = lv::box({.id = "explicit", .style = lv::look<"alpha-explicit">});
+constexpr auto pad_order_ui = lv::box({.id = "order", .style = lv::look<"pad-order">});
+constexpr auto pad_narrow_ui = lv::box({.id = "narrow", .style = lv::look<"pad-narrow">});
+constexpr auto pad_narrow_after_ui = lv::box({.id = "after", .style = lv::look<"pad-narrow-after">});
 constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
 constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
 
@@ -268,6 +271,22 @@ void a_shorthand_does_not_beat_a_layer() {
   check(lv_obj_get_style_pad_top(p, LV_PART_MAIN) == 7);
 }
 
+// A JSON object has no order: an entry the group names itself beats a shorthand that covers it,
+// and a narrower shorthand (pad_hor) beats a wider one (pad_all), written in either order.
+void a_long_form_beats_a_shorthand_in_any_order() {
+  auto order = lv::mount<pad_order_ui>(lv::screen_active());
+  auto narrow = lv::mount<pad_narrow_ui>(lv::screen_active());
+  auto after = lv::mount<pad_narrow_after_ui>(lv::screen_active());
+  check(order.has_value() && narrow.has_value() && after.has_value());
+  if (!order || !narrow || !after) return;
+  lv_obj_t* o = order->root().raw();
+  check(lv_obj_get_style_pad_top(o, LV_PART_MAIN) == 3 && lv_obj_get_style_pad_bottom(o, LV_PART_MAIN) == 7);
+  for (lv_obj_t* n : {narrow->root().raw(), after->root().raw()}) {
+    check(lv_obj_get_style_pad_left(n, LV_PART_MAIN) == 2 && lv_obj_get_style_pad_right(n, LV_PART_MAIN) == 2);
+    check(lv_obj_get_style_pad_top(n, LV_PART_MAIN) == 7 && lv_obj_get_style_pad_bottom(n, LV_PART_MAIN) == 7);
+  }
+}
+
 void a_label_inherits_the_text_of_its_parents_look() {
   auto built = lv::mount<inherit_ui>(lv::screen_active());
   check(built.has_value());
@@ -388,6 +407,7 @@ int main() {
   parts_and_states_make_layers();
   composite_tokens_are_merged();
   a_shorthand_does_not_beat_a_layer();
+  a_long_form_beats_a_shorthand_in_any_order();
   a_label_inherits_the_text_of_its_parents_look();
   a_look_merges_with_on_and_style();
   a_groups_default_gives_way_to_a_look();
