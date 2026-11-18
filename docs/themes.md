@@ -216,6 +216,7 @@ The option is off by default.
 - A theme is applied after LVGL's own theme. It only says what differs. Without LVGL's theme (see above) it is the whole look.
 - A node still has the last word: its `.style` wins over the theme for the same part and state.
 - A style for a state wins over one for the default state, wherever it comes from. A theme's `lv::on("knob", "pressed", ...)` beats a node's `.style_knob` while the knob is pressed. This is how LVGL picks a style.
+- A shorthand (`pad_all`, `pad_hor`, `margin_ver`, `size`) is held as the properties it stands for. One rule decides when a style says a property twice, in a theme, in `lv::on`, in a node's `.style` and in a look alike: a long form (`pad_left`) beats a shorthand that covers it, and a narrower shorthand (`pad_hor`) beats a wider one (`pad_all`), in whatever order they are written.
 - A widget gets the styles of its own kind only. A slider does not get those of `bar`.
 - A member styles one part or one state. A part in a state is a selector in `style`: see above.
 - A display takes its theme when it is made. It cannot change it later.
