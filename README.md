@@ -51,8 +51,8 @@ How it works:
 - **A mounted tree stays where it is built.** `lv::mounted` owns the widgets and holds what the tree's
   nodes keep at run time, sized by the compiler: lvgl26 allocates nothing for it. It is never moved, and
   carries its own failure: `if (!root) return root.error();`. It lives in a variable, in a `constinit`
-  global with `page.mount(parent)`, or in memory set aside with `lv::mount_in`. See
-  [Where a tree lives](docs/mounting.md).
+  global with `page.mount(parent)` and `page.unmount()`, for a window that opens and closes in the
+  same memory. See [Where a tree lives](docs/mounting.md).
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
