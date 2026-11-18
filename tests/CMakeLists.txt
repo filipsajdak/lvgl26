@@ -41,6 +41,14 @@ lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
+lvgl26_test(one_of)
+# A wrong call on a slot ends the program: unmount() of an empty slot, get<T>() of a tree
+# that is not mounted, error() of a slot that holds one.
+foreach(case unmount_empty get_other error_of_mounted)
+  add_test(NAME one_of_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # unmount() of a tree that is not mounted, and mount() of one that is, end the program.
 foreach(case unmount_not_mounted mount_twice unmount_after_parent)
   add_test(NAME mounted_storage_violation_${case}
@@ -349,6 +357,11 @@ lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
 lvgl26_compile_fail(each_row_storage "a row of lv::each cannot hold a node that keeps run-time storage")
 lvgl26_compile_fail(mounted_detach_storage "keeps run-time storage inside its lv::mounted, so its widgets cannot")
 lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent, and this tree keeps run-time")
+lvgl26_compile_fail(one_of_unknown_tree "other is not a tree of this lv::one_of. Its trees: home, settings.")
+lvgl26_compile_fail(visit_no_arm_for_tree "no arm of visit takes the tree settings")
+lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*The slot's trees: home, settings.")
+lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
+lvgl26_compile_fail(visit_different_results "the arms of visit return different types: int and double")
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
 lvgl26_compile_fail(each_plain_key "a key names one row")
