@@ -438,6 +438,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Typed state and bindings</strong> over <code>lv_subject_t</code>, with mp-units measures</li>
         <li><strong>Derived state and effects</strong> with <code>lv::computed</code> and <code>lv::effect</code></li>
         <li><strong>Lists</strong> of keyed rows: a change touches its own row only, and a state follows the selected row</li>
+        <li><strong>Named looks</strong>: <code>.style = lv::look&lt;"tile"&gt;</code> builds a constant style from a group of the design tokens, by name, with the entries checked</li>
         <li><strong>Repetition</strong> by reflection: one tile for each enumerator, one line for each captioned member, one element for each record, written by the compiler</li>
         <li><strong>Concepts for parts</strong>: <code>lv::tree_handler</code>, <code>lv::dependency</code>, <code>lv::font_value</code> and more constrain a part's parameters, and a captureless lambda is a handler</li>
         <li><strong>Coroutine tasks</strong> on LVGL's loop: events, timers, <code>lv::first</code></li>

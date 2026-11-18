@@ -765,3 +765,47 @@ Decided 2026-11-18, in an interview over the list above.
 | 11 | Texts come from our own strings file, one file for each language, checked by the compiler. |
 | 12 | A sub-tree is a tree constant in a header for now. `lv::part` comes later. |
 | 13 | The levers that remove words come forward: repetition, option lists and `lv::look` as a style value are built beside the storage work. Then `.look`, strings and captions. |
+
+## Built: lv::look (2026-11-18)
+
+Lever 1, the first slice: `lv::look<"path">` as a style value, with the registration `lv::design<lv::override>`. `docs/looks.md` is the page, `include/lv/look.hpp` the header, `tests/look.cpp` and `tests/fail/look_*.cpp` the tests. `.look` as a node member is not built, as decision 1 says: the first measure of its cost to `tests/large_tree.cpp` is still to be taken.
+
+What the build showed, beyond the sketches:
+
+| Finding | Mark |
+|---|---|
+| `alt` is an LVGL state (`lv_state_t` in `docs/reference/lvgl-v9.6.0.json`), so a variant group named `alt` is read as a layer. The parts and states are the names a nested group may not use for a look of its own | `measured` |
+| A non-template consteval function that calls `std::meta::members_of(^^::, ...)` with constant arguments runs the scan where the header is read, in every file: 0.8 G instructions, more than the whole feature. Taking the scope as a parameter moved it to the one call that needs it | `measured` |
+| A property that LVGL types as a number and that names an enum (`layout`) needs the enum by name, `lv_layout_t`; found once for each property, not once for each look (10 looks with two such entries: 76.1 G, then 71.3 G) | `measured` |
+| `std::string_view` is no element for `std::define_static_array` (`reflect_constant_array` wants a structural type); a loop over a list of names uses an index and a constant range | `measured` |
+| A column of flex items with one track sits at the left of its container, however `flex_cross_place` is set: the track needs `flex_track_place: "center"` | `measured` |
+| A shorthand (`pad_all`, `pad_gap`) has no style id, so a constant style cannot hold it and a node would set it as a local style, which beats a layer. A look stores the long forms | `source`, `style.hpp`; `measured` in `look.cpp` |
+| `lv::group` set a size of 100 percent as a node property, which beat the look's width. It now leaves a side to the look that sets it, and `lv::row` and `lv::column` leave the flow | `measured` |
+| A look adds no heap beyond LVGL's own list of styles: a box with two looks takes the heap of a plain box; a look of three layers took 40 bytes more | `measured` |
+| `lv::look` is found in a theme (`.obj = {.style = lv::look<"padded">}`) and its constants are shared like those of a style | `measured` |
+| The editor stub of a token file lists its groups, so Clang marks a look that names none (`editor_wrong_look`); it cannot read the path of `lv::look_of`, whose last name comes from an enumerator | `measured` |
+
+### What it cost (instructions of `cc1plus`, `tools/compile_report.py`, GCC 16.2, `host-v96`)
+
+| What | Instructions | Mark |
+|---|---|---|
+| A file that only includes `<lv/lv.hpp>`, with and without `look.hpp` | 36.69 G and 36.60 to 36.73 G (main, two runs): the noise is 0.15 G | `measured` |
+| `tests/large_tree.cpp` | 106.39 G, main 106.61 G; the limit of 6,500,000 operations holds | `measured` |
+| `tests/smoke.cpp` | 18.81 G, main 18.90 G | `measured` |
+| A look of five plain entries, in a file of 10 | about 0.6 G | `measured` |
+| One more layer; a shorthand; two enumerator entries | 0.25 G; 0.08 G; 0.38 G | `measured` |
+| One typography entry | 6.6 G, against 3.0 G for the same font written in the tree | `measured` |
+| 1, 10, 50 boxes, each with a look of nine entries, a layer and a font | 152.0 G, 211.2 G, 471.7 G | `measured` |
+| The same boxes with the style written out | 146.8 G, 173.1 G, 289.9 G | `measured` |
+| Heap: a box with two looks, a box with a look of three layers, a plain box | 296, 336, 296 bytes | `measured`, `lv_mem_monitor` |
+| Objects of `lv::look<...>` left in a program built with `-O2` | none | `measured`, `nm` |
+
+A look costs about twice what the same style costs written out, and nearly all of the difference is the font: `lv::typeface` draws the font at each call, and a look makes the call once for each look that names a typography token.
+A font made once for each size and weight, and shared by the looks, would cut it. `reasoned`
+
+### Decisions the build made that the owner may want to turn
+
+- A nested group that is neither a part nor a state is a look of its own at the top of a look, because variants (decision 3) are such groups: `tile.print` is nested in `tile`. Decision 25 says "a nested group is a part or a state", and decision 26 asks for an error for a group that is neither. Inside a layer (`checked`, `knob`) such a group is an error, because nothing can reach it there. A typo such as `"cheked"` at the top is caught by `tools/look_groups.py`, which lists it as a group that no look names.
+- A percentage in a look is read (`"width": "50%"`): the token reader already reads `%`, and refusing it needs a check of its own. Decision 5 says percentages stay in the tree; `docs/looks.md` says so and does not promise more.
+- `size` is refused in a look: a token holds one value and `size` takes two. The look says `width` and `height`.
+- `lv::look_of<"tile", Page>` is the look of one path. A variant is `lv::look<"tile"> | lv::look_of<"tile", Page>`; a call that merges both would be `lv::looks<"tile", Page>` of the sketches.

@@ -94,6 +94,7 @@
       <li><strong>Fonts drawn on the device</strong> <span><code>lv::scaled_font</code> owns a font that LVGL's TinyTTF draws from an embedded <code>.ttf</code>. A style binds to it, and every bound widget follows <code>resize</code>. It is behind the CMake option <code>LVGL26_TTF</code>.</span> <small>lv/scaled_font.hpp, tests/scaled_font.cpp, examples/scaled_font</small></li>
       <li><strong>Fonts from TrueType files</strong> <span>The compiler reads an embedded <code>.ttf</code> and makes a constant font: glyphs at 4 bits per pixel and kerning in read-only memory, no heap, no converter. <code>lv::typeface</code> gives a typography token its font; a font without a token needs <code>lv::raw</code>.</span> <small>lv/font.hpp, tests/font.cpp, examples/fonts</small></li>
       <li><strong>Design tokens</strong> <span>W3C DTCG JSON read at compile time through <code>#embed</code>: colors, dimensions, durations, numbers, font family and weight, easing curves, shadow, border, typography, transition and gradient. Aliases are resolved.</span> <small>tokens.hpp, token_types.hpp; tokens.cpp, ref/tokens_dark.png, ref/tokens_light.png</small></li>
+      <li><strong>Named looks</strong> <span><code>.style = lv::look&lt;"queue.card"&gt;</code> turns a group of the project's design tokens into a constant style: each entry is matched to the style property of the same name and checked against its type (colors, dimensions, opacities, fonts drawn by the compiler, LVGL values by name, shadow, border and transition tokens). A nested group named like a state or part is a layer, and <code>lv::look&lt;"tile tile.print"&gt;</code> merges looks, a later one winning. <code>lv::look_of&lt;"tile", E&gt;</code> names a look for an enumerator. A project names its token file once, as <code>lv::cfg</code>; a part takes the design as a template parameter. A misspelled path, an entry that fits no property and a value of the wrong type are compile errors that say what is valid, and the editor marks an unknown path. <code>tools/look_groups.py</code> lists the groups that no look names. See <a href="docs/looks.html">Looks</a>.</span> <small>look.hpp, tree.hpp; look.cpp, looks_example.cpp, fail/look_*.cpp, editor/wrong_look.cpp, examples/looks</small></li>
       <li><strong>Themes</strong> <span><code>lv::theme({...})</code> gives every widget of a kind its styles, for its parts and states, and a display takes it as its last argument. The styles are constants in read-only memory. <code>lv::signal::dark</code> and <code>lv::signal::day</code> are built in. <code>LVGL26_NO_DEFAULT_THEME</code> drops LVGL's own theme and its 2.5 KB of heap.</span> <small>lv/theme.hpp, lv/signal.hpp, tests/theme.cpp, tests/signal.cpp, tests/no_default_theme.cpp, examples/theme</small></li>
       <li><strong>Signal's typefaces</strong> <span><code>lv/signal_type.hpp</code> makes Signal's fonts from its typography tokens. <code>lv::signal::dark_with_type</code> and <code>lv::signal::day_with_type</code> set all text in Barlow and the text of a button in Barlow Condensed. <code>lv::signal::numerals</code> makes a font with the sixteen characters of a reading. <code>lv/signal.hpp</code> alone draws no font, so it compiles as fast as before.</span> <small>lv/signal_type.hpp, tests/signal_type.cpp, ref/signal_type_dark.png, ref/signal_type_day.png, fail/signal_numerals_not_a_numeral.cpp, examples/signal_type</small></li>
       <li><strong>State and bindings</strong> <span><code>lv::state</code> holds a measure (an mp-units quantity with an integer number), an <code>lv::counter</code>, a one-member struct, a bool, an enum, a color or a pointer. <code>lv::bind</code> ties a property to it. A state is an <code>lv_subject_t</code> underneath.</span> <small>state.hpp; state.cpp, state_plain.cpp</small></li>
@@ -136,8 +137,8 @@
         <tbody>
           <tr><th scope="row">LVGL versions</th><td class="num">2</td><td>v9.6.0 and a pinned commit of the v10 development line. One reference picture serves both, because they render the same pixels.</td></tr>
           <tr><th scope="row">Build presets</th><td class="num">7</td><td><span class="path">host-v96, host-v10, host-v96-asan, host-v10-asan, host-v96-tsan, host-v96-analyze, host-v96-coverage</span>. All with warnings as errors.</td></tr>
-          <tr><th scope="row">Compile-fail tests</th><td class="num">182</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
-          <tr><th scope="row">Test programs</th><td class="num">46</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
+          <tr><th scope="row">Compile-fail tests</th><td class="num">196</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
+          <tr><th scope="row">Test programs</th><td class="num">48</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
           <tr><th scope="row">Reference pictures</th><td class="num">9</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png, font.png, image.png, encoded_image.png, signal_type_dark.png, signal_type_day.png</span></td></tr>
           <tr><th scope="row">Fuzz targets</th><td class="num">3</td><td>The JSON reader (libFuzzer, one minute on every push), runtime documents and MCP messages (AFL++).</td></tr>
           <tr><th scope="row">Corpus inputs replayed</th><td class="num">13</td><td>7 for JSON, 2 for documents, 4 for MCP messages. They run as tests under every preset, sanitizers included.</td></tr>
@@ -219,7 +220,7 @@
     </ul>
 
     <h3 id="migration-qt">Qt Quick</h3>
-    <p class="note">14 of 30 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
+    <p class="note">15 of 31 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -243,6 +244,7 @@
           <tr><th scope="row">Switch the look at run time</th><td><span class="pill plan">Planned</span></td><td>A look change mounts the tree again</td><td><a href="#gap-runtime-theming">A style that follows a state</a></td></tr>
           <tr><th scope="row">Gradients, LinearGradient</th><td><span class="pill plan">Planned</span></td><td>Vertical or horizontal, two colors</td><td><a href="#gap-gradients">More gradients</a></td></tr>
           <tr><th scope="row">Colors and sizes in one design file</th><td><span class="pill ok">Works</span></td><td>A W3C Design Tokens file, read at compile time</td><td></td></tr>
+          <tr><th scope="row">A named look for a component</th><td><span class="pill ok">Works</span></td><td><code>lv::look&lt;"tile"&gt;</code>: a group of the token file as a constant style, with states and parts as layers</td><td></td></tr>
           <tr><th scope="row">Component, a reusable item with properties</th><td><span class="pill plan">Planned</span></td><td>A C++ function that returns a piece of tree</td><td><a href="#gap-components">Components</a></td></tr>
           <tr><th scope="row">Repeater, ListView, GridView over a model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(model, &amp;row::id)[delegate] over an <code>lv::list</code> of fixed capacity; a ListView that recycles rows is planned</td><td></td></tr>
           <tr><th scope="row">Repeater with a constant model</th><td><span class="pill ok">Works</span></td><td><code>lv::for_each</code>&lt;E&gt;(part), <code>lv::for_each_field</code>&lt;T&gt;(part) or <code>lv::for_each</code>&lt;items&gt;(part): the compiler writes the delegates</td><td></td></tr>
@@ -259,7 +261,7 @@
     </div>
 
     <h3 id="migration-slint">Slint</h3>
-    <p class="note">14 of 26 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
+    <p class="note">15 of 27 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -279,6 +281,7 @@
           <tr><th scope="row">SVG images, Path</th><td><span class="pill plan">Planned</span></td><td>Not built</td><td><a href="#gap-svg-animated">SVG, Lottie and animated pictures</a></td></tr>
           <tr><th scope="row">A font</th><td><span class="pill ok">Works</span></td><td><code>lv::typeface</code>, made by the compiler</td><td></td></tr>
           <tr><th scope="row">Palette and a theme</th><td><span class="pill ok">Works</span></td><td><code>lv::theme</code> and design tokens</td><td></td></tr>
+          <tr><th scope="row">Design values for one component</th><td><span class="pill ok">Works</span></td><td><code>lv::look&lt;"tile"&gt;</code>: a group of the token file as a constant style</td><td></td></tr>
           <tr><th scope="row">Switch the theme at run time</th><td><span class="pill plan">Planned</span></td><td>Slint's printer themes are not ported</td><td><a href="#gap-runtime-theming">A style that follows a state</a></td></tr>
           <tr><th scope="row">Gradients</th><td><span class="pill plan">Planned</span></td><td>Vertical or horizontal, two colors</td><td><a href="#gap-gradients">More gradients</a></td></tr>
           <tr><th scope="row">for item in model</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code>(tracks, &amp;track::id)[row template] over an <code>lv::list</code> of fixed capacity</td><td></td></tr>
