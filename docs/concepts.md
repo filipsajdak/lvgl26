@@ -16,6 +16,7 @@ A part is a function that returns a piece of tree: a spin box, a card, a heading
 | `lv::font_value` | What `.text_font` takes: a font from `lv::typeface`, `lv::raw(font)`, or `lv::bind(scaled)` | `const lv::font_value auto& font` |
 | `lv::token_value` | A design token of any kind: `tok.color.surface`, `tok.space.md` | `lv::token_value auto value` |
 | `lv::token_of<T>` | A design token that holds a `T` | `lv::token_of<lv_color_t> auto fill` |
+| `lv::repeat_part` | A generic lambda that captures nothing: what `lv::for_each` calls in the compiler | `lv::for_each<E>(part)`; see [Repetition](repetition.md) |
 
 No concept has an article. A concept that names a kind of value ends in `_value`, as `state_value` does: `view_value`, `style_value`, `font_value`, `token_value`. `lv::token_of<T>` is a token that holds a `T`. The others name what a value is used for.
 

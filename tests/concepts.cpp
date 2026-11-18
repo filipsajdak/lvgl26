@@ -37,6 +37,14 @@ static_assert(!lv::event_handler<const char*>);
 static_assert(!lv::event_handler<void (*)(int)>);
 static_assert(!lv::event_handler<decltype([](int, int) {})>);
 
+// lv::repeat_part: the part of lv::for_each runs in the compiler, so it captures nothing.
+constexpr auto generic_part = []<int> { return 0; };
+static_assert(lv::repeat_part<decltype(generic_part)>);
+static_assert(lv::repeat_part<decltype(no_captures)>);
+static_assert(!lv::repeat_part<decltype(one_pointer)>);
+static_assert(!lv::repeat_part<void (*)()>);
+static_assert(!lv::repeat_part<int>);
+
 // lv::tree_handler: what a constexpr tree can hold, so no capture at all.
 static_assert(lv::tree_handler<void (*)()>);
 static_assert(lv::tree_handler<void (*)(lv::event)>);

@@ -22,18 +22,28 @@ Usage:
   --cmake-args passes extra arguments to the configure step of the copy, for
   example -DFETCHCONTENT_SOURCE_DIR_LVGL=... to avoid downloading LVGL again.
 
+The nightly run (.github/workflows/nightly.yml) mutates the lines changed since its last
+successful run, one header at a time (tools/mutation_plan.py), with
+  --time-budget SECONDS   stop after this long and say how many mutants were judged
+  --report FILE           write the counts and the survivors as JSON
+  --accepted FILE         survivors that are triaged (tools/mutation_accepted.json)
+
 Needs: build/_tools/venv with universalmutator (python3 -m venv build/_tools/venv &&
 build/_tools/venv/bin/pip install universalmutator).
 """
 import argparse
+import json
 import pathlib
 import random
 import re
 import shutil
 import subprocess
 import sys
+import time
 
-MUTATE = str(pathlib.Path("build/_tools/venv/bin/mutate").resolve())
+VENV_MUTATE = pathlib.Path("build/_tools/venv/bin/mutate")
+# The CI image has universalmutator on the path; a local checkout has it in a venv.
+MUTATE = str(VENV_MUTATE.resolve()) if VENV_MUTATE.exists() else (shutil.which("mutate") or str(VENV_MUTATE.resolve()))
 TREE = pathlib.Path("build/mutation/tree")
 # A compile error with one of these is a test doing its job, not a broken mutant.
 CAUGHT_AT_COMPILE_TIME = re.compile(
@@ -167,7 +177,7 @@ def describe(header_text, mutant):
     return "(a line was removed or added)"
 
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("header")
     parser.add_argument("--tests", required=True, help="ctest -R expression of the tests to run")
@@ -184,15 +194,101 @@ def main():
     parser.add_argument("--test-timeout", type=int, default=60,
                         help="seconds a test may run against a mutant before it counts as failed")
     parser.add_argument("--cmake-args", default="", help="extra arguments for configuring the copy")
-    args = parser.parse_args()
+    parser.add_argument("--time-budget", type=int, help="seconds after which the run stops and "
+                        "reports how many mutants it judged")
+    parser.add_argument("--report", help="write the result as JSON to this file")
+    parser.add_argument("--accepted", help="JSON file of triaged survivors (see accepted_for)")
+    return parser.parse_args(argv)
 
-    header = TREE / args.header
-    lines = None
-    if args.since:
-        lines = changed_lines(args.header, args.since)
+
+def selected_lines(args):
+    """The lines to mutate: those changed since --since, narrowed by --lines; None is all."""
+    lines = changed_lines(args.header, args.since) if args.since else None
     if args.lines:
         wanted = parse_ranges(args.lines)
         lines = wanted if lines is None else lines & wanted
+    return lines
+
+
+def mutant_text(description):
+    """A mutant without its line number, so that a triage survives an edit above it."""
+    return description.split(": ", 1)[1] if description.startswith("line ") else description
+
+
+def accepted_for(path, header):
+    """{mutant text: reason} of the triaged survivors of `header`, from a JSON file of
+    [{"header": ..., "mutant": "before  ->  after", "reason": ...}]."""
+    if not path or not pathlib.Path(path).exists():
+        return {}
+    rows = json.loads(pathlib.Path(path).read_text())
+    return {row["mutant"]: row["reason"] for row in rows if row["header"] == header}
+
+
+def judge_all(args, original, mutants, accepted):
+    """Judges the mutants one by one, until the time budget is spent.
+    Returns the counts, the survivors that need a triage, and the accepted ones."""
+    header = TREE / args.header
+    deadline = time.monotonic() + args.time_budget if args.time_budget else None
+    counts = {"killed": 0, "survived": 0, "invalid": 0}
+    survivors, triaged = [], []
+    try:
+        for index, mutant in enumerate(mutants, start=1):
+            if deadline is not None and time.monotonic() > deadline:
+                break
+            header.write_text(mutant.read_text())
+            verdict = judge(args.preset, args.tests, args.targets, args.test_timeout)
+            what = describe(original, mutant)
+            counts[verdict] += 1
+            if verdict == "survived":
+                (triaged if mutant_text(what) in accepted else survivors).append(what)
+            print(f"[{index}/{len(mutants)}] {verdict:8} {what}", flush=True)
+    finally:
+        header.write_text(original)  # always put the real header back
+    return counts, survivors, triaged
+
+
+def result_row(args, counts, survivors, triaged, judged, total):
+    return {"header": args.header, "since": args.since, "mutants": total, "judged": judged,
+            "complete": judged == total, "killed": counts["killed"],
+            "survived": counts["survived"] - len(triaged), "accepted": len(triaged),
+            "invalid": counts["invalid"], "survivors": survivors}
+
+
+def choose_mutants(args, lines, original):
+    """The mutants to judge: all of the chosen lines, the logic ones, or a sample."""
+    mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / (TREE / args.header).stem)
+    if args.logic:
+        mutants = logic_only(mutants, original)
+    total = len(mutants)
+    if args.sample and args.sample < total:
+        mutants = sorted(random.Random(args.seed).sample(mutants, args.sample))
+    print(f"{len(mutants)} of {total} mutants of {args.header}", flush=True)
+    return mutants
+
+
+def print_result(args, row):
+    """The result line, the survivors, and the JSON report if one was asked for."""
+    if args.report:
+        pathlib.Path(args.report).write_text(json.dumps(row, indent=2) + "\n")
+    scope = "all mutants" if row["complete"] else f"{row['judged']} of {row['mutants']} mutants"
+    print(f"\nMutation: universalmutator, {args.header}, {scope}: {row['killed']} killed, "
+          f"{row['survived']} survived, {row['accepted']} accepted, {row['invalid']} invalid (not counted)")
+    for s in row["survivors"]:
+        print("  survived:", s)
+
+
+def exit_code(row):
+    """1 for a survivor that needs a triage, 2 when the time budget left mutants unjudged
+    (the nightly run must not move its base past lines it did not cover), else 0."""
+    if row["survivors"]:
+        return 1
+    return 0 if row["complete"] else 2
+
+
+def main():
+    args = parse_args()
+    header = TREE / args.header
+    lines = selected_lines(args)
     make_copy(args.preset, args.cmake_args)
     original = header.read_text()
     # The copy keeps the working tree's file times, so after an earlier run the header
@@ -203,32 +299,11 @@ def main():
     if judge(args.preset, args.tests, args.targets, args.test_timeout) != "survived":
         sys.exit("The tests do not pass on the unchanged header; fix that first.")
 
-    mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / header.stem)
-    if args.logic:
-        mutants = logic_only(mutants, original)
-    total = len(mutants)
-    if args.sample and args.sample < total:
-        mutants = sorted(random.Random(args.seed).sample(mutants, args.sample))
-    print(f"{len(mutants)} of {total} mutants of {args.header}", flush=True)
-    counts = {"killed": 0, "survived": 0, "invalid": 0}
-    survivors = []
-    try:
-        for index, mutant in enumerate(mutants, start=1):
-            header.write_text(mutant.read_text())
-            verdict = judge(args.preset, args.tests, args.targets, args.test_timeout)
-            counts[verdict] += 1
-            if verdict == "survived":
-                survivors.append(describe(original, mutant))
-            print(f"[{index}/{len(mutants)}] {verdict:8} {describe(original, mutant)}", flush=True)
-    finally:
-        header.write_text(original)  # always put the real header back
-
-    scope = f"a sample of {len(mutants)} of {total} mutants" if len(mutants) < total else "all mutants"
-    print(f"\nMutation: universalmutator, {args.header}, {scope}: {counts['killed']} killed, "
-          f"{counts['survived']} survived, {counts['invalid']} invalid (not counted)")
-    for s in survivors:
-        print("  survived:", s)
-    return 1 if survivors else 0
+    mutants = choose_mutants(args, lines, original)
+    counts, survivors, triaged = judge_all(args, original, mutants, accepted_for(args.accepted, args.header))
+    row = result_row(args, counts, survivors, triaged, sum(counts.values()), len(mutants))
+    print_result(args, row)
+    return exit_code(row)
 
 
 if __name__ == "__main__":

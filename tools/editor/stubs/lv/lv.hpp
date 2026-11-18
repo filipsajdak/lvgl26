@@ -14,6 +14,7 @@
 #include <lv/list.hpp>
 #include <lv/match.hpp>
 #include <lv/owned.hpp>
+#include <lv/repeat.hpp>
 #include <lv/runtime.hpp>
 #include <lv/scaled_font.hpp>
 #include <lv/state.hpp>

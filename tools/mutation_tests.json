@@ -1,0 +1,52 @@
+{
+  "default": {
+    "tests": ".",
+    "targets": null
+  },
+  "headers": {
+    "include/lv/values.hpp": {
+      "tests": "^concepts$|^handlers$|^computed$|^values$|^state$|^l2_tree$|fail_part_|fail_handler_|fail_bind|fail_computed",
+      "targets": "concepts handlers computed values state l2_tree"
+    },
+    "include/lv/view.hpp": {
+      "tests": "^concepts$|^handlers$|^l1_views$|^l2_tree$|fail_part_|fail_handler_",
+      "targets": "concepts handlers l1_views l2_tree"
+    },
+    "include/lv/computed.hpp": {
+      "tests": "^concepts$|^computed$|fail_computed|fail_part_dependency",
+      "targets": "concepts computed"
+    },
+    "include/lv/tree.hpp": {
+      "tests": "^concepts$|^handlers$|^l2_tree$|fail_part_tree_node|fail_unknown_id|fail_duplicate_id",
+      "targets": "concepts handlers l2_tree"
+    },
+    "include/lv/style.hpp": {
+      "tests": "^concepts$|^styles$|^style_selectors$|fail_part_style|fail_style",
+      "targets": "concepts styles style_selectors"
+    },
+    "include/lv/state.hpp": {
+      "tests": "^concepts$|^state$|^state_plain$|fail_bind|fail_state",
+      "targets": "concepts state state_plain"
+    },
+    "include/lv/list.hpp": {
+      "tests": "^lists$|^lists_selection$|fail_each|fail_list|fail_row",
+      "targets": "lists lists_selection"
+    },
+    "include/lv/owned.hpp": {
+      "tests": "^l1_views$|^l2_tree$",
+      "targets": "l1_views l2_tree"
+    },
+    "include/lv/props.hpp": {
+      "tests": "^l1_views$|^l2_tree$|^smoke$|^values$",
+      "targets": "l1_views l2_tree smoke values"
+    },
+    "include/lv/runtime.hpp": {
+      "tests": "^runtime_ui$|^json$",
+      "targets": "runtime_ui json"
+    },
+    "include/lv/tokens.hpp": {
+      "tests": "^tokens$|fail_token",
+      "targets": "tokens"
+    }
+  }
+}

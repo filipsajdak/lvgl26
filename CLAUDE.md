@@ -22,7 +22,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Where | What runs |
 |---|---|
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
-| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`). A failure opens an issue |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
 
 - The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
 - A check belongs in the pull request run if it takes a few minutes and a change can
@@ -125,6 +125,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - GCC 16.2 runs a call whose arguments are all constants twice when it is written inside a
   function template: once when the template is instantiated, once when the function runs. Hand
   the result of a scan in as an argument (see `scan_base` in `include/lv/props.hpp`).
+- Repetition (`lv::for_each`, `lv::for_each_field`, `include/lv/repeat.hpp`) is expanded by the compiler into the children of the parent: a `detail::repeated` value is flattened by `splice` in `include/lv/tree.hpp`, so the tree is the one written by hand. A part sets no `.id`. A caption is a string literal, since an annotation holds a structural type and GCC 16.2 refuses `std::string_view` there. A record with a text literal is taken by reference (`[]<const auto& R>`), because a literal is no template argument. Clang reads no annotation, so `tests/editor/api_uses.cpp` repeats the members of a row type in a template that is never instantiated.
 - A node of a tree keeps `detail::kept<W>`, not `props<W>`. A props struct has thousands of
   members, and the compiler walks every one each time it copies a node.
 - `lv::arg` and what it holds have no default member initializer, so that an unset property is
@@ -144,9 +145,10 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 |---|---|---|
 | Complexity | `lizard`, through `tools/crap.py` | 8 for every function, also compile-time ones |
 | CRAP | `tools/crap.py build/host-v96-coverage` after the coverage preset | 8 for every function that runs at run time |
-| Mutation | `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main` | Every survivor gets a test, or a reason |
+| Mutation | The full run of the changed lines is nightly: one shard for each changed header (`tools/mutation_plan.py`, the tests of each in `tools/mutation_tests.json`). Locally `tools/mutation.py <header> --tests '<ctest -R>' --since origin/main --sample 40` is enough for a quick look | Every survivor gets a test, or a reason in `tools/mutation_accepted.json` |
 | Fuzzing | `fuzz/json_reader.cpp` (libFuzzer, Clang); `fuzz/runtime_document.cpp`, `fuzz/mcp_message.cpp` and `fuzz/mcp_stream.cpp` (AFL++ with its GCC plugin: `fuzz/afl.sh`) | Every free input has a target; every crash becomes a corpus file |
 
+- Mutation is nightly: the run takes the lines of `include/lv` changed since the tag `nightly-mutation-base` (moved by the run after a clean night), and opens an issue with the survivors. Run it by hand with `since=<ref>` (workflow_dispatch) to cover an older change. An MR description says `Mutation: nightly, see run <url>`, or the line with counts when they are known.
 - A function over complexity 8 is split, not excused. A branch per type is one overload per type.
 - A `consteval` function has no run-time coverage: test it with `static_assert` and compile-fail tests.
 - Test code that only runs in constant evaluation does not count as coverage. Give run-time code a
@@ -178,7 +180,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   `constexpr` variable, before any other use of the same arguments. A `static_assert` does not
   evaluate the precondition.
 
-- A part (a function that returns a piece of tree) constrains its parameters with the public concepts of `docs/concepts.md`: `lv::tree_handler` (a handler in a constexpr tree), `lv::event_handler` (run time), `lv::dependency`, `lv::tree_node`, `lv::view_value`, `lv::style_value`, `lv::font_value`, `lv::token_value`. Never `void (*)()` for a handler, and never a bare `template <class Count>` for a state. A new concept is public (`lv::`, not `lv::detail::`), has `static_assert`s in `tests/concepts.cpp`, a compile-fail test in `tests/fail/part_*.cpp`, and its stub in `tools/editor/stubs/lv/`.
+- A part (a function that returns a piece of tree) constrains its parameters with the public concepts of `docs/concepts.md`: `lv::tree_handler` (a handler in a constexpr tree), `lv::event_handler` (run time), `lv::dependency`, `lv::tree_node`, `lv::view_value`, `lv::style_value`, `lv::font_value`, `lv::token_value`, and `lv::repeat_part` for the part of `lv::for_each`. Never `void (*)()` for a handler, and never a bare `template <class Count>` for a state. A new concept is public (`lv::`, not `lv::detail::`), has `static_assert`s in `tests/concepts.cpp`, a compile-fail test in `tests/fail/part_*.cpp`, and its stub in `tools/editor/stubs/lv/`.
 - Clang 21 does not read `template <lv::dependency auto& Count>`: write `template <auto& Count> requires lv::dependency<std::remove_cvref_t<decltype(Count)>>` in code that the editor stubs or `tests/editor/api_uses.cpp` read.
 - A handler in a constexpr tree is a function pointer: a function or a lambda without captures. A part that needs state names it as a template argument.
 
