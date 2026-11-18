@@ -385,5 +385,22 @@
     "layout": "none"
    }
   }
+ },
+ "main-wide": {
+  "main": {
+   "width": {
+    "$type": "dimension",
+    "$value": "40px"
+   }
+  }
+ },
+ "main-flow": {
+  "main": {
+   "$extensions": {
+    "io.github.filipsajdak.lvgl26": {
+     "flex_flow": "column"
+    }
+   }
+  }
  }
 }

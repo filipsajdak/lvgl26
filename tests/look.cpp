@@ -67,8 +67,10 @@ static_assert(lv::look<"alpha">.bg_opa.set && lv::look<"alpha">.bg_color.set);
 static_assert(!lv::look<"alpha">.text_opa.set, "an opaque color sets no opacity");
 static_assert(lv::look<"alpha-explicit">.bg_opa.set);
 
-// A group named for the default state is a layer too: the token reader names its member default_.
-static_assert(lv::look<"lit">.layers.count == 1 && lv::look<"lit">.layers.list()[0].selector == LV_STATE_DEFAULT);
+// A group named for the default state (the token reader names its member default_) adds no selector:
+// its entries are the look's own, and beat the entries beside it.
+static_assert(lv::look<"lit">.layers.count == 0 && lv::look<"lit">.radius.set);
+static_assert(lv::look<"main-wide">.layers.count == 0 && lv::look<"main-wide">.width.set);
 
 // Spaces between looks, any number.
 static_assert(lv::look<"tile tile-print">.bg_color.set && lv::look<"tile-print"  " tile">.radius.set);
@@ -111,6 +113,8 @@ constexpr auto own_height_ui = lv::group({.height = 20 * px, .id = "own_height",
 constexpr auto width_only_ui = lv::group({.id = "width_only", .width = 30 * px});
 constexpr auto flow_ui = lv::row({.id = "flow", .style = lv::look<"tile">});
 constexpr auto row_ui = lv::row({.id = "row"});
+constexpr auto main_wide_ui = lv::group({.id = "main_wide", .style = lv::look<"main-wide">});
+constexpr auto main_flow_ui = lv::row({.id = "main_flow", .style = lv::look<"main-flow">});
 constexpr auto flow_only_ui = lv::row({.id = "flow_only", .style = lv::look<"flow-only">});
 constexpr auto flow_no_layout_ui = lv::column({.id = "flow_no_layout", .style = lv::look<"flow-no-layout">});
 
@@ -364,6 +368,19 @@ void a_rows_flow_gives_way_to_a_look() {
   check(lv_obj_get_style_flex_flow(plain_row->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_ROW);
 }
 
+// A group named main or default adds no selector: it is the look itself, so a factory's default
+// gives way to what it sets, as to the look's own entries.
+void a_main_group_counts_as_the_look() {
+  const auto wide = lv::mount<main_wide_ui>(lv::screen_active());
+  const auto flow = lv::mount<main_flow_ui>(lv::screen_active());
+  check(wide.has_value() && flow.has_value());
+  if (!wide || !flow) return;
+  lv_obj_update_layout(lv_screen_active());
+  check(lv_obj_get_width(wide->root().raw()) == 40);
+  check(lv_obj_get_height(wide->root().raw()) == lv_obj_get_height(lv_screen_active()));
+  check(lv_obj_get_style_flex_flow(flow->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+}
+
 std::int32_t layout_of(lv_obj_t* o) { return lv_obj_get_style_prop(o, LV_PART_MAIN, LV_STYLE_LAYOUT).num; }
 
 // A look that sets the flow only still gets a flex layout, as the factory's flow would have: LVGL's
@@ -449,6 +466,7 @@ int main() {
   a_part_takes_the_design();
   a_look_costs_no_heap_beyond_the_style_list();
   a_rows_look_flow_keeps_the_flex_layout();
+  a_main_group_counts_as_the_look();
   a_groups_own_side_beats_its_default();  // after it: its widgets move the heap's free blocks
   a_theme_takes_a_look();
   return failures;

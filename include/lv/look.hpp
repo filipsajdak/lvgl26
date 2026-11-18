@@ -602,11 +602,13 @@ consteval std::vector<std::string> layer_names() {
 }
 
 template <class D, std::meta::info M, const auto& G>
-consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t selector,
+consteval void nest(look_style_of<D>& here, std::vector<style_layer>& layers, lv_style_selector_t selector,
                     std::string_view where) {
   constexpr std::string_view name = std::meta::identifier_of(M);
   if constexpr (!names_part_or_state<>(name)) {
     fail_not_a_layer(name, where);
+  } else if constexpr (selector_of_name<>(name) == 0) {
+    fill_level<D, G.[:M:]>(here, layers, selector, where);  // main or default: this level itself
   } else {
     const lv_style_selector_t combined = selector | selector_of_name<>(name);
     look_style_of<D> own{};
@@ -617,26 +619,37 @@ consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t select
   }
 }
 
-// How many properties an entry stands for: 4 for pad_all, 2 for pad_hor, 0 for any other member.
-consteval std::size_t breadth(std::meta::info member) {
-  return long_names(std::meta::identifier_of(member)).size();
+// A group named main or default: a layer that adds nothing to the selector, so it is the level it is in.
+template <class Part = lv_part_t, class State = lv_state_t>
+consteval bool adds_no_selector(std::meta::info member) {
+  const std::string_view name = std::meta::identifier_of(member);
+  return is_group_member(member) && names_part_or_state<Part, State>(name) && selector_of_name<Part, State>(name) == 0;
 }
 
-// The members of a group in the order a look puts them: wider shorthands first, then narrower ones,
-// then everything else, each in file order. A JSON object has no order, so an entry the group
-// names itself beats a shorthand that covers it, and pad_hor beats pad_all, however they are written.
-consteval std::vector<std::meta::info> shorthands_first(std::span<const std::meta::info> members) {
+// Where an entry goes in the order of a look, the highest first: wider shorthands (pad_all stands
+// for 4 properties, pad_hor for 2), then any other member, then a main or default group.
+template <class Part = lv_part_t, class State = lv_state_t>
+consteval std::size_t order_rank(std::meta::info member) {
+  if (adds_no_selector<Part, State>(member)) return 0;
+  return 1 + long_names(std::meta::identifier_of(member)).size();
+}
+
+// The members of a group in the order a look puts them, each rank in file order. A JSON object has
+// no order, so an entry the group names itself beats a shorthand that covers it, pad_hor beats
+// pad_all, and a main or default group beats the entries beside it, however they are written.
+template <class Group>
+consteval std::vector<std::meta::info> ordered_members() {
   std::vector<std::meta::info> out;
-  for (auto m : members) {
+  for (auto m : group_members<Group>) {
     auto at = out.begin();
-    while (at != out.end() && breadth(*at) >= breadth(m)) ++at;
+    while (at != out.end() && order_rank(*at) >= order_rank(m)) ++at;
     out.insert(at, m);
   }
   return out;
 }
 
 template <class Group>
-inline constexpr auto entry_order = std::define_static_array(shorthands_first(group_members<Group>));
+inline constexpr auto entry_order = std::define_static_array(ordered_members<Group>());
 
 template <class D, const auto& G>
 consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
@@ -647,7 +660,7 @@ consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layer
     else if constexpr (is_vendor_member(m))
       put_vendor_entries<D, G.[:m:]>(own, where);
     else if constexpr (is_group_member(m))
-      nest<D, m, G>(layers, selector, where);
+      nest<D, m, G>(own, layers, selector, where);
     else
       put_entry<D, m, G.[:m:]>(own, where);
   }

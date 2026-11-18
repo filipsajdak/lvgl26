@@ -306,7 +306,7 @@ The `$value` of `width` is what a design tool shows, and what a tree without lvg
 
 ## Parts and states are layers
 
-A group nested in a look is a layer, and nothing else: its name is an LVGL state (`checked`, `pressed`, `focused`, `disabled`) or part (`knob`, `indicator`, `items`, `selected`). It is the same constant style that `lv::on("knob", "pressed", {...})` makes. A state inside a part is both: `knob.pressed` is the pressed state of the knob. A layer may have its own `$extensions`.
+A group nested in a look is a layer, and nothing else: its name is an LVGL state (`checked`, `pressed`, `focused`, `disabled`) or part (`knob`, `indicator`, `items`, `selected`). It is the same constant style that `lv::on("knob", "pressed", {...})` makes. A state inside a part is both: `knob.pressed` is the pressed state of the knob. A layer may have its own `$extensions`. A group named `main` or `default` adds no part and no state: its entries are those of the group it is in, and win over the entries beside it.
 
 ```json
 "gauge": {
