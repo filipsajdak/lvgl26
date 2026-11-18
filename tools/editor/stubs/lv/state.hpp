@@ -62,7 +62,8 @@ class state {
     requires std::invocable<F&, T> && std::convertible_to<std::invoke_result_t<F&, T>, T>
   void update(F) {}
 
-  /// The LVGL subject, created on first use: C code can share it.
+  /// The LVGL subject, created on first use: C code can share it, and a value either side
+  /// writes reaches the other.
   lv_subject_t* raw() const { __builtin_unreachable(); }
 
   /// Calls `f(value)` now and after every change. Returns LVGL's observer.
@@ -70,7 +71,7 @@ class state {
     requires std::invocable<F&, T>
   lv_observer_t* observe(F) const { return nullptr; }
 
-  /// Deletes the subject. Widgets bound to it stop following.
+  /// Stops everything that follows the state and deletes its subject.
   void reset() {}
 };
 
