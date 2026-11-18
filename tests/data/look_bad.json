@@ -1,0 +1,15 @@
+{
+  "$description": "Groups that lv::look must refuse, one mistake each. tests/fail/look_*.cpp names them.",
+  "color": {"$type": "color", "red": {"$value": "#ff0000"}},
+  "typo": {"colour": {"$type": "color", "$value": "#ff0000"}},
+  "wrongtype": {"radius": {"$type": "color", "$value": "#ff0000"}},
+  "wrongstring": {"radius": {"$type": "string", "$value": "big"}},
+  "badenum": {"text_align": {"$type": "string", "$value": "centre"}},
+  "sizeone": {"size": {"$type": "dimension", "$value": "20px"}},
+  "font_for_color": {"text_color": {"$type": "typography", "$value": {"fontFamily": "Barlow", "fontSize": "12px", "fontWeight": 500, "letterSpacing": "0px", "lineHeight": 1}}},
+  "layered": {
+    "bg_opa": {"$type": "number", "$value": 1},
+    "checked": {"bg_color": {"$type": "color", "$value": "#00ff00"}, "extra": {"bg_color": {"$type": "color", "$value": "#0000ff"}}}
+  },
+  "fine": {"radius": {"$type": "dimension", "$value": "4px"}, "inner": {"radius": {"$type": "dimension", "$value": "2px"}}}
+}
