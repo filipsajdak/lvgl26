@@ -390,11 +390,11 @@ consteval const lv_style_t* shared_const_style() {
 }
 
 // Adds a constant style to a widget. What LVGL can keep in a const style goes to
-// read-only memory; the few shorthands without a style id (pad_all, size, ...) and a
-// font that follows an lv::scaled_font are set as local styles. The layers that
-// lv::on made follow, each with its own selector.
+// read-only memory; a shorthand that follows a state and a font that follows an
+// lv::scaled_font are set as local styles. The layers that lv::on made follow, each
+// with its own selector.
 template <class Where, lv_style_selector_t Selector, class D = void>
-void add_const_style(lv_obj_t* o) {
+void add_style_of(lv_obj_t* o) {
   if constexpr (const_count<Where, D> > 0) {
     constexpr const lv_style_t* st = shared_const_style<Where, D>();
     lv_obj_add_style(o, st, Selector);
@@ -609,6 +609,25 @@ template <class S, class D>
 consteval const lv_style_t* stored_style(const S& s) {
   if (sets_shorthand<D>(s)) return stored_spelled_style<S, D>(with_long_forms<D>(s));
   return stored_spelled_style<S, D>(s);
+}
+
+// The style of Where with its shorthands spelled out, worked out once.
+template <class Where, class D>
+inline constexpr auto spelled_style = with_long_forms<D>(Where::get());
+
+template <class Where, class D>
+struct spelled_out {
+  static constexpr const auto& get() { return spelled_style<Where, D>; }
+};
+
+// A node's own style follows the one rule for shorthands, as a theme, lv::on and a look do: its
+// shorthands are spelled out into long forms, which go to the constant style with the others.
+template <class Where, lv_style_selector_t Selector, class D = void>
+void add_const_style(lv_obj_t* o) {
+  if constexpr (sets_shorthand<D>(Where::get()))
+    add_style_of<spelled_out<Where, D>, Selector, D>(o);
+  else
+    add_style_of<Where, Selector, D>(o);
 }
 
 // ---- parts and states by name, for lv::on ------------------------------------

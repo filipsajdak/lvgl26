@@ -68,7 +68,7 @@ void applies(lv::obj screen) {
   check(same(c.get<"style_bg_color">(LV_PART_MAIN), lv::rgb(0x1b2430)));
   check(c.get<"style_radius">(LV_PART_MAIN) == 8);
   check(c.get<"style_border_width">(LV_PART_MAIN) == 0);
-  check(c.get<"style_pad_top">(LV_PART_MAIN) == 12);  // from pad_all, a local style
+  check(c.get<"style_pad_top">(LV_PART_MAIN) == 12);  // from pad_all, spelled out into the constant style
   check(c.get<"style_bg_opa">(LV_PART_MAIN) == LV_OPA_COVER);
 
   check(same(root->get<"title">().get<"style_text_color">(LV_PART_MAIN), lv::rgb(0xe6edf3)));
@@ -87,7 +87,7 @@ void const_styles_use_no_heap_for_values(lv::obj screen) {
       {.style = {.bg_color = lv::rgb(0x112233), .bg_opa = 100 * pct, .border_color = lv::rgb(0x445566),
                  .border_width = 2 * px, .outline_width = 1 * px, .radius = 4 * px,
                  .shadow_width = 3 * px, .text_color = lv::rgb(0x778899)}});
-  static constexpr auto local = lv::box({.style = {.pad_all = 4 * px}});
+  static constexpr auto shorthand = lv::box({.style = {.pad_all = 4 * px}});
 
   auto cost = [&](auto mount) {
     const auto before = free_bytes();
@@ -96,11 +96,12 @@ void const_styles_use_no_heap_for_values(lv::obj screen) {
   };
   const auto bare_cost = cost([&] { return lv::mount<bare>(screen); });
   const auto styled_cost = cost([&] { return lv::mount<styled>(screen); });
-  const auto local_cost = cost([&] { return lv::mount<local>(screen); });
+  const auto shorthand_cost = cost([&] { return lv::mount<shorthand>(screen); });
 
-  // Eight const properties cost one small style entry; four local ones cost more.
+  // Eight const properties cost one small style entry. A shorthand is spelled out into its four
+  // long forms, which are const too: no local style.
   check(styled_cost - bare_cost <= 32);
-  check(local_cost > styled_cost);
+  check(shorthand_cost - bare_cost <= 32);
 }
 
 // Styles merged at run time, not folded by the compiler.
