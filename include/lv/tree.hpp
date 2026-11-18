@@ -166,10 +166,26 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
+// The node's own style (an lv::look, say) sets the width, the height or the flex flow. What a
+// factory sets by default gives way to it: a local style beats an added one in LVGL, so a
+// default written as a property would beat the look that says what the element is.
+template <class Kept>
+constexpr bool style_sets_width(const Kept& p) {
+  return p.style.has && p.style.value.width.set;
+}
+template <class Kept>
+constexpr bool style_sets_height(const Kept& p) {
+  return p.style.has && p.style.value.height.set;
+}
+template <class Kept>
+constexpr bool style_sets_flex_flow(const Kept& p) {
+  return p.style.has && p.style.value.flex_flow.set;
+}
+
 template <class D>
 constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
   auto n = make_node<"obj", D>(p);
-  if (!n.p.flex_flow.set) n.p.flex_flow = flow;
+  if (!n.p.flex_flow.set && !style_sets_flex_flow(n.p)) n.p.flex_flow = flow;
   return n;
 }
 
@@ -193,13 +209,19 @@ struct factory {
 };
 
 // lv::group: a box with none of the theme's styles (no background, border, padding
-// or scrollbars) that fills its parent, unless .size says otherwise. It groups
+// or scrollbars) that fills its parent, unless .size or its look says otherwise. It groups
 // widgets without drawing anything itself.
 struct group_factory {
   template <class D = void>
   constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
     auto n = make_node<"obj", D>(p);
-    if (!n.p.size.set) n.p.size = {percent{100}, percent{100}};
+    if (!n.p.size.set) {
+      // A look that sets one side leaves the other to fill the parent; one that sets both, none.
+      const bool width = detail::style_sets_width(n.p), height = detail::style_sets_height(n.p);
+      if (!width && !height) n.p.size = {percent{100}, percent{100}};
+      else if (!width) n.p.width = percent{100};
+      else if (!height) n.p.height = percent{100};
+    }
     n.bare = true;
     return n;
   }
