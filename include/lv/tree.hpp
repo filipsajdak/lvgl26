@@ -182,10 +182,58 @@ constexpr bool style_sets_flex_flow(const Kept& p) {
   return p.style.has && p.style.value.flex_flow.set;
 }
 
+// These run in the compiler only, so they have no run-time coverage: each stays at complexity 2,
+// the most that CRAP 8 allows without any.
+template <class Kept>
+constexpr bool flow_is_free(const Kept& p) {
+  return !p.flex_flow.set && !style_sets_flex_flow(p);
+}
+template <class Kept>
+constexpr bool width_is_free(const Kept& p) {
+  return !p.size.set && !style_sets_width(p);
+}
+template <class Kept>
+constexpr bool height_is_free(const Kept& p) {
+  return !p.size.set && !style_sets_height(p);
+}
+template <class Kept>
+constexpr bool both_sides_are_free(const Kept& p) {
+  return width_is_free(p) && height_is_free(p);
+}
+template <class Kept>
+constexpr bool only_width_is_free(const Kept& p) {
+  return width_is_free(p) && !height_is_free(p);
+}
+template <class Kept>
+constexpr bool only_height_is_free(const Kept& p) {
+  return height_is_free(p) && !width_is_free(p);
+}
+
+// A group fills its parent. A look that sets one side leaves the other to fill; one that sets
+// both, or a .size, leaves none.
+template <class Kept>
+constexpr void fill_both_sides(Kept& p) {
+  if (both_sides_are_free(p)) p.size = {percent{100}, percent{100}};
+}
+template <class Kept>
+constexpr void fill_width(Kept& p) {
+  if (only_width_is_free(p)) p.width = percent{100};
+}
+template <class Kept>
+constexpr void fill_height(Kept& p) {
+  if (only_height_is_free(p)) p.height = percent{100};
+}
+template <class Kept>
+constexpr void fill_free_sides(Kept& p) {
+  fill_both_sides(p);
+  fill_width(p);
+  fill_height(p);
+}
+
 template <class D>
 constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
   auto n = make_node<"obj", D>(p);
-  if (!n.p.flex_flow.set && !style_sets_flex_flow(n.p)) n.p.flex_flow = flow;
+  if (flow_is_free(n.p)) n.p.flex_flow = flow;
   return n;
 }
 
@@ -215,13 +263,7 @@ struct group_factory {
   template <class D = void>
   constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
     auto n = make_node<"obj", D>(p);
-    if (!n.p.size.set) {
-      // A look that sets one side leaves the other to fill the parent; one that sets both, none.
-      const bool width = detail::style_sets_width(n.p), height = detail::style_sets_height(n.p);
-      if (!width && !height) n.p.size = {percent{100}, percent{100}};
-      else if (!width) n.p.width = percent{100};
-      else if (!height) n.p.height = percent{100};
-    }
+    fill_free_sides(n.p);
     n.bare = true;
     return n;
   }
