@@ -593,6 +593,11 @@ add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
 target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_repeat COMMAND example_repeat)
 
+# The example of docs/mounting.md: a tree in a variable, in a global, in memory set aside.
+add_executable(example_mounting ${PROJECT_SOURCE_DIR}/examples/mounting/main.cpp)
+target_link_libraries(example_mounting PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_mounting COMMAND example_mounting)
+
 # The example of docs/themes.md. Its pictures are the ones on the page.
 add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)
 target_compile_options(example_theme PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/theme)
