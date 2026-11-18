@@ -734,3 +734,24 @@ The number is the decision it answers.
 | 9 | A bound style value keeps its `lv_style_t` in the node's storage, changed in place. |
 | 10 | `lv::state` gets its own watcher list, as the first slice. |
 | 11 | The LVGL bug is drafted as an upstream report for the owner to file: `docs/research/lvgl-upstream.md`. |
+
+### The mount cycle and the one-of slot
+
+Decided 2026-11-18, while the first storage slice was in review.
+
+| # | Decision |
+|---|---|
+| 12 | `lv::mounted` has `has_value()`, as `std::expected` has. |
+| 13 | A page that was never mounted reports `mount_error::not_mounted`. |
+| 14 | A global page has the full cycle: `page.unmount()`, and `page.mount(parent)` whenever it is not mounted, in the same memory. Mounting a page that is still mounted is a contract violation. |
+| 15 | `unmount()` is for the lifetime of a root, such as a window that closes. Pages inside a tree are switched with `lv::shown`. No example builds a pager by hand. |
+| 16 | A static page is shown as `constinit lv::mounted<dialog> asked;`. `lv::mount_in` stays as the door for a region of memory. |
+| 17 | `lv::one_of<home, settings, dialog>` is one slot for one of several trees, under the rules of `std::variant`: size and alignment are the largest, and one tree is alive at a time. |
+| 18 | `slot.mount<settings>(parent)` ends the tree that is there first, as `emplace` does. A failed mount leaves the slot empty with its error. A tree that is not in the list is a compile error. |
+| 19 | The one-of region is built once. `lv::shown` and `lv::one_of` both use it, and so does `lv::one_of<>` in the memory layout. |
+| 20 | `slot.visit(arms...)` takes any number of functions, with no `lv::overloaded`. The parameter type of an arm is its pattern: `lv::mounted<home>&`, or `auto&` for every other tree. |
+| 21 | An arm for the empty slot, `lv::not_mounted`, is optional. Without it, arms that return nothing are skipped on an empty slot, and arms that return `R` give `std::optional<R>`. With it the result is `R`. |
+| 22 | A tree of the slot that no arm accepts is a compile error. So is an arm that can never be called, with a message that lists the slot's trees. |
+
+An arm that names the widgets it needs, such as `lv::view<"label", "title">`, belongs to the handler injection slice.
+The owner chose functions over a `then()` chain here: `lv::is` and `lv::otherwise` stay with `lv::shown`, where an arm is a tree.
