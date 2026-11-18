@@ -90,7 +90,7 @@ constexpr auto slider_ui = lv::box[lv::slider({.id = "slider", .style = styled_k
 
 void slider_knob_pressed(lv::display& display) {
   auto root = lv::mount<slider_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   lv_obj_t* slider = root->get<"slider">().raw();
   check(same(bg(slider, LV_PART_MAIN), grey));
@@ -107,7 +107,7 @@ constexpr auto check_ui = lv::box[lv::toggle({.id = "switch", .style = indicator
 
 void indicator_when_checked(lv::display& display) {
   auto root = lv::mount<check_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   for (lv_obj_t* o : {root->get<"switch">().raw(), root->get<"box">().raw()}) {
     check(!same(bg(o, LV_PART_INDICATOR), green));
@@ -124,7 +124,7 @@ constexpr auto items_ui = lv::box[
 
 void items_and_cursor(lv::display& display) {
   auto root = lv::mount<items_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   lv_obj_t* matrix = root->get<"matrix">().raw();
   check(!same(bg(matrix, LV_PART_ITEMS), blue));
@@ -143,7 +143,7 @@ constexpr auto pressed_ui = lv::box[
 
 void one_name_is_a_slot(lv::display& display) {
   auto root = lv::mount<pressed_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   for (lv_obj_t* o : {root->get<"on">().raw(), root->get<"slot">().raw()}) {
     check(lv_obj_get_style_radius(o, LV_PART_MAIN) != 13);
@@ -163,7 +163,7 @@ template <const auto& Tree>
 std::size_t heap_of(lv::display& display) {
   const auto before = used_bytes();
   auto root = lv::mount<Tree>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   return used_bytes() - before;
 }
 
@@ -199,7 +199,7 @@ constexpr auto theme_ui = lv::box[lv::slider({.id = "theme"}),
 void theme_with_a_layer(lv::application& app) {
   lv::display display{app, frame, themed};
   auto root = lv::mount<theme_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   lv_obj_t* from_theme = root->get<"theme">().raw();
   lv_obj_t* own = root->get<"own">().raw();
@@ -222,7 +222,7 @@ constexpr auto runtime_ui = lv::slider({.id = "slider"});
 // A view sets a layered style again and again; the widget keeps one entry for it.
 void set_at_run_time(lv::display& display) {
   auto root = lv::mount<runtime_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   auto slider = root->get<"slider">();
   slider.set({.style = styled_knob});
@@ -236,7 +236,7 @@ void set_at_run_time(lv::display& display) {
 // A layered style merged with a plain one at run time keeps its layers, in either order.
 void merge_with_a_plain_style_at_run_time(lv::display& display) {
   auto root = lv::mount<runtime_ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   auto slider = root->get<"slider">();
   style_type layered = styled_knob;

@@ -39,7 +39,7 @@ std::size_t used_bytes() {
 void follows_its_font() {
   check(title.size() == 20 * px && odd.size() == 31 * px);
   auto root = lv::mount<ui>(lv::screen_active());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   lv_obj_t* label = root->get<"title">().raw();
   lv_obj_t* plain = root->get<"plain">().raw();

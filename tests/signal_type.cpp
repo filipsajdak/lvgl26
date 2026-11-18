@@ -108,7 +108,7 @@ void sets_text(lv::theme_styles theme, const char* reference) {
   lv_obj_clean(screen);
 
   auto root = lv::mount<ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   check(font_of(root->get<"body">().raw()) == body);
   check(font_of(root->get<"start">().raw()) == label && font_of(root->get<"word">().raw()) == label);

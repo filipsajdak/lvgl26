@@ -107,7 +107,7 @@ void works_without_a_subject() {
 void widgets_follow(lv::obj screen) {
   start_values();
   auto root = lv::mount<ui>(screen);
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
 
   auto warning = root->get<"warning">();

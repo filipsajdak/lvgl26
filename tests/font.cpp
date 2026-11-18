@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
   reads_other_files();
   {
     auto root = lv::mount<ui>(lv::screen_active());
-    check(static_cast<bool>(root));
+    check(root.has_value());
     if (root) {
       check(lv_obj_get_style_text_font(root->get<"title">().raw(), LV_PART_MAIN) == *title);
       check(lv_obj_get_style_text_font(root->get<"odd">().raw(), LV_PART_MAIN) == odd);

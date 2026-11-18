@@ -85,7 +85,7 @@ lv_obj_t* kid(lv::obj o, std::int32_t i) { return lv_obj_get_child(o.raw(), i); 
 
 void tiles_are_children_of_the_row(lv::obj screen) {
   auto m = lv::mount<home>(screen);
-  check(static_cast<bool>(m));
+  check(m.has_value());
   check(count(m->root()) == 4);
   check(std::strcmp(lv_label_get_text(lv_obj_get_child(kid(m->root(), 0), 0)), "P") == 0);
   check(std::strcmp(lv_label_get_text(lv_obj_get_child(kid(m->root(), 3), 1)), "usb") == 0);

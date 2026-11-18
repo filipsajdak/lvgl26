@@ -152,7 +152,7 @@ void stores_for_32_bits() {
 
 void draws(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   check(lv_image_get_src(root->get<"ring">().raw()) == ring);
   lv_obj_update_layout(lv_screen_active());

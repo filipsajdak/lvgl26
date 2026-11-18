@@ -63,7 +63,7 @@ constexpr auto ui = lv::column({.flex_align = {"center", "end", "space_between"}
 void names_reach_lvgl() {
   auto screen = lv::screen_active();
   auto root = lv::mount<ui>(screen);
-  check(static_cast<bool>(root));
+  check(root.has_value());
   lv_obj_t* column = lv_obj_get_child(screen.raw(), 0);
   check(lv_obj_get_style_flex_main_place(column, LV_PART_MAIN) == LV_FLEX_ALIGN_CENTER);
   check(lv_obj_get_style_flex_cross_place(column, LV_PART_MAIN) == LV_FLEX_ALIGN_END);
@@ -92,7 +92,7 @@ void names_reach_lvgl() {
 void names_beside_values() {
   auto screen = lv::screen_active();
   auto root = lv::mount<ui>(screen);
-  check(static_cast<bool>(root));
+  check(root.has_value());
   auto days = root->get<"days">();
   check(lv_roller_get_option_count(days.raw()) == 3);
   // An infinite roller repeats its options; a normal one does not.

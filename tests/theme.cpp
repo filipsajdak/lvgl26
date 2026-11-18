@@ -122,7 +122,7 @@ void styles_each_kind(lv::display& display) {
 
 void a_node_overrides(lv::display& display) {
   auto root = lv::mount<ui>(display.screen());
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   check(radius(root->get<"plain">().raw()) == 0);
   check(radius(root->get<"own">().raw()) == 9);

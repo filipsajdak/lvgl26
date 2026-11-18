@@ -93,7 +93,7 @@ struct watched_rows {
 void builds_a_row_for_each_track(lv::obj screen) {
   fill(3);
   auto root = lv::mount<playlist>(screen);
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
   const lv::obj rows = root->root();
   check(lv_obj_get_child_count(rows.raw()) == 3);

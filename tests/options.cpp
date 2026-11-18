@@ -242,7 +242,7 @@ std::size_t mount_cost(lv::display& display) {
   std::size_t cost = 0;
   {
     auto root = lv::mount<Tree>(display.screen());
-    check(static_cast<bool>(root));
+    check(root.has_value());
     cost = used_bytes() - before;
   }
   check(used_bytes() == before);
@@ -290,7 +290,7 @@ int main(int argc, char**) {
   lv::display display{app, frame};
   {
     auto root = lv::mount<ui>(display.screen());
-    check(static_cast<bool>(root));
+    check(root.has_value());
     if (root) {
       a_list_is_the_text_of_lvgl(*root);
       a_roller_takes_a_list_and_a_mode(*root);

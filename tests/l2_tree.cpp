@@ -52,7 +52,7 @@ static_assert((lv::rgb(0x3366ff)).red == 0x33 && (lv::rgb(0x3366ff)).blue == 0xf
 
 void builds_and_names(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(static_cast<bool>(root));
+  check(root.has_value());
   if (!root) return;
 
   auto title = root->get<"title">();
