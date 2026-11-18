@@ -283,19 +283,6 @@ consteval std::vector<std::string> style_property_names() {
   return out;
 }
 
-// The properties that `name` stands for when LVGL keeps no value under its own name (pad_all, pad_gap),
-// or none. A look holds the long forms, so that its style is a constant and a layer can override one.
-consteval std::vector<std::string_view> long_names(std::string_view name) {
-  for (const auto& s : shorthands)
-    if (s.name == name) {
-      std::vector<std::string_view> out;
-      for (auto target : s.sets)
-        if (!target.empty()) out.push_back(target);
-      return out;
-    }
-  return {};
-}
-
 template <class A>
 using first_type = std::tuple_element_t<0, typename A::types>;
 
@@ -414,17 +401,6 @@ consteval void put_vendor(look_style_of<D>& s, std::string_view where) {
   }
 }
 
-// The value of one token for each long form of the shorthand Target.
-template <class D, std::meta::info Target, class V>
-consteval void put_long_forms(look_style_of<D>& s, const V& v) {
-  constexpr std::string_view shorthand_name = std::meta::identifier_of(Target);
-  template for (constexpr std::size_t i : indices<long_names(shorthand_name).size()>) {
-    constexpr auto m = style_property<D>(long_names(shorthand_name)[i]);
-    using A = typename[:std::meta::type_of(m):];
-    s.[:m:] = A(v);
-  }
-}
-
 [[noreturn]] consteval void fail_several_values(std::string_view entry, std::string_view where) {
   fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' sets several properties from several values, "
        "and a token holds one. Write each of them: " + (entry == "size" ? "width and height." : "see lv::style."));
@@ -439,17 +415,14 @@ template <class First, class V>
 
 [[noreturn]] consteval void fail_percent_value(std::string_view entry, std::string_view where);
 
-// A value that the property takes as it is. A shorthand is its long forms: a constant style holds
-// those, and a layer can override one of them.
+// A value that the property takes as it is. A shorthand is spelled out when its level is done
+// (with_long_forms), so that a constant style holds the long forms and a layer can override one.
 template <class D, std::meta::info Target, class A, class V>
 consteval void put_plain(look_style_of<D>& s, const V& v, std::string_view entry, std::string_view where) {
   if constexpr (std::same_as<V, token<length>>) {
     if (LV_COORD_IS_PCT(v->raw())) fail_percent_value(entry, where);
   }
-  if constexpr (long_names(std::meta::identifier_of(Target)).empty())
-    s.[:Target:] = A(v);
-  else
-    put_long_forms<D, Target>(s, v);
+  s.[:Target:] = A(v);
 }
 
 template <class First>
@@ -615,7 +588,9 @@ consteval void nest(look_style_of<D>& here, std::vector<style_layer>& layers, lv
   if constexpr (!names_part_or_state<>(name)) {
     fail_not_a_layer(name, where);
   } else if constexpr (selector_of_name<>(name) == 0) {
-    fill_level<D, G.[:M:]>(here, layers, selector, where);  // main or default: this level itself
+    look_style_of<D> own{};  // main or default: this level itself, over what it sets beside
+    fill_level<D, G.[:M:]>(own, layers, selector, where);
+    here = here | (sets_shorthand<void>(own) ? with_long_forms<void>(own) : own);
   } else {
     const lv_style_selector_t combined = selector | selector_of_name<>(name);
     look_style_of<D> own{};
@@ -633,17 +608,15 @@ consteval bool adds_no_selector(std::meta::info member) {
   return is_group_member(member) && names_part_or_state<Part, State>(name) && selector_of_name<Part, State>(name) == 0;
 }
 
-// Where an entry goes in the order of a look, the highest first: wider shorthands (pad_all stands
-// for 4 properties, pad_hor for 2), then any other member, then a main or default group.
+// Where an entry goes in the order of a look, the highest first: a main or default group last.
 template <class Part = lv_part_t, class State = lv_state_t>
 consteval std::size_t order_rank(std::meta::info member) {
-  if (adds_no_selector<Part, State>(member)) return 0;
-  return 1 + long_names(std::meta::identifier_of(member)).size();
+  return adds_no_selector<Part, State>(member) ? 0 : 1;
 }
 
 // The members of a group in the order a look puts them, each rank in file order. A JSON object has
-// no order, so an entry the group names itself beats a shorthand that covers it, pad_hor beats
-// pad_all, and a main or default group beats the entries beside it, however they are written.
+// no order, so a main or default group beats the entries beside it however they are written; the
+// shorthands among the entries follow the one rule of with_long_forms.
 template <class Group>
 consteval std::vector<std::meta::info> ordered_members() {
   std::vector<std::meta::info> out;
@@ -682,6 +655,7 @@ consteval look_style_of<D> style_of_group(std::string_view where) {
   look_style_of<D> s{};
   std::vector<style_layer> layers;
   fill_level<D, G>(s, layers, 0, where);
+  if (sets_shorthand<void>(s)) s = with_long_forms<void>(s);
   if (!layers.empty()) s.layers = style_layers(std::define_static_array(layers));
   return s;
 }
