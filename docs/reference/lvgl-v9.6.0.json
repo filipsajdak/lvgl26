@@ -304,7 +304,7 @@
     ],
     "dropdown": [
     {"name": "dir", "kind": "property", "sets": "lv_dropdown_set_dir", "takes": [{"write": "one of the enum's names, in quotes", "enum": "lv_dir_t"}]},
-    {"name": "options", "kind": "property", "sets": "lv_dropdown_set_options", "takes": [{"write": "const char*"}]},
+    {"name": "options", "kind": "property", "sets": "lv_dropdown_set_options", "takes": [{"write": "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line break between the options"}]},
     {"name": "options_static", "kind": "property", "sets": "lv_dropdown_set_options_static", "takes": [{"write": "const char*"}]},
     {"name": "selected", "kind": "property", "sets": "lv_dropdown_set_selected", "takes": [{"write": "a whole number (not bool, not floating point)"}]},
     {"name": "selected_highlight", "kind": "property", "sets": "lv_dropdown_set_selected_highlight", "takes": [{"write": "true or false"}]},
@@ -353,7 +353,7 @@
 
     ],
     "roller": [
-    {"name": "options", "kind": "property", "sets": "lv_roller_set_options", "takes": [{"write": "const char*"}, {"write": "one of the enum's names, in quotes", "enum": "lv_roller_mode_t"}]},
+    {"name": "options", "kind": "property", "sets": "lv_roller_set_options", "takes": [{"write": "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line break between the options"}, {"write": "one of the enum's names, in quotes", "enum": "lv_roller_mode_t"}]},
     {"name": "selected", "kind": "property", "sets": "lv_roller_set_selected", "takes": [{"write": "a whole number (not bool, not floating point)"}, {"write": "true or false"}]},
     {"name": "selected_str", "kind": "property", "sets": "lv_roller_set_selected_str", "takes": [{"write": "const char*"}, {"write": "true or false"}]},
     {"name": "visible_row_count", "kind": "property", "sets": "lv_roller_set_visible_row_count", "takes": [{"write": "a whole number (not bool, not floating point)"}]}

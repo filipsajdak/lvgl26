@@ -69,6 +69,14 @@ lvgl26_test(watchers)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
+lvgl26_test(options)
+# LVGL says which setters take options separated by line breaks in its doc comments; the names
+# that lvgl26 goes by must agree with them.
+lvgl26_test(options_docs)
+# A state of an enum given to set() at run time breaks its contract.
+add_test(NAME options_violation_enum_state_in_set
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
@@ -232,6 +240,11 @@ lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
 lvgl26_widget_ports(buttonmatrix event map)
 lvgl26_widget_ports(dropdown bind_value direction event text)
+# LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
+# sanitizer stops on. The picture is compared in the builds that have none.
+if(NOT LVGL26_SANITIZE)
+  lvgl26_widget_ports(roller bind_value options)
+endif()
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 lvgl26_widget_ports(textarea placeholder)
 lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
@@ -544,6 +557,11 @@ add_executable(example_parts ${PROJECT_SOURCE_DIR}/examples/parts/main.cpp)
 target_link_libraries(example_parts PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_parts COMMAND example_parts)
 
+# The example of docs/options.md: the texts of an enum's options, and some enumerators left out.
+add_executable(example_options ${PROJECT_SOURCE_DIR}/examples/options/main.cpp)
+target_link_libraries(example_options PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_options COMMAND example_options)
+
 # The example of docs/lists.md. Its picture is the one on the page.
 add_executable(example_lists ${PROJECT_SOURCE_DIR}/examples/lists/main.cpp)
 target_compile_options(example_lists PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/lists)
@@ -820,3 +838,16 @@ if(Python3_FOUND)
     set_tests_properties(editor_support PROPERTIES TIMEOUT 600)
   endif()
 endif()
+
+# Lists of options: see tests/options.cpp.
+lvgl26_compile_fail(options_empty_item "option 2 of the list is empty")
+lvgl26_compile_fail(options_line_break "option 2 of the list, .*holds a line break. The list is the separator")
+lvgl26_compile_fail(options_but_other_enum "lv::but in lv::options_of names enumerators of the enum given to lv::options_of")
+lvgl26_compile_fail(options_but_all "lv::options_of<quality> has no option left")
+lvgl26_compile_fail(options_not_an_enum "lv::options_of<E> takes an enum")
+lvgl26_compile_fail(options_other_enum ".selected follows a state of sheet, and the options come from quality")
+lvgl26_compile_fail(options_plain_list ".selected follows a state of sheet, and the options of this widget do not come from that enum")
+lvgl26_compile_fail(options_enum_state_elsewhere "a state of an enum follows only the choice of a dropdown or a roller")
+lvgl26_compile_fail(options_roller_without_mode "It takes a list of options .* then lv_roller_mode_t")
+lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
+lvgl26_compile_fail(options_row_enum "a field of a row that holds an enum cannot follow a whole number")

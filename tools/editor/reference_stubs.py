@@ -19,6 +19,7 @@ import re
 # What a value's `write` text starts with, and the C++ type that takes such a value.
 # The longer of two texts that start alike comes first.
 UNITS = [
+    ("a list of options", "lv::option_list"),
     ("true or false", "lv::strict<bool>"),
     ("a whole number", "lv::strict<std::int32_t>"),
     ("a length", "lv::length"),

@@ -58,6 +58,22 @@ inline constexpr std::span<const std::meta::info> api = std::define_static_array
   for (;;) static_cast<void>(stop);
 }
 
+// A number in decimal digits.
+consteval std::string decimal(std::size_t n) {
+  std::string digits;
+  do digits.insert(digits.begin(), static_cast<char>('0' + n % 10));
+  while ((n /= 10) > 0);
+  return digits;
+}
+
+// The parts one after the other, as one text. An operator+ chain costs the compiler an overload
+// resolution among the many operator+ of std::string at each +; a message is built here.
+consteval std::string join(std::initializer_list<std::string_view> parts) {
+  std::string out;
+  for (const std::string_view part : parts) out.append(part);
+  return out;
+}
+
 // The function called `name`, or a null reflection.
 consteval std::meta::info find(std::string_view name) {
   for (auto f : api)

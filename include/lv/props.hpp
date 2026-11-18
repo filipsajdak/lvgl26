@@ -133,8 +133,15 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   const auto prop = std::meta::identifier_of(f).substr(prefix_size);
   const auto params = std::meta::parameters_of(f);
   std::vector<std::meta::info> types;
-  for (std::size_t i = 1; i < params.size(); ++i)
-    types.push_back(value_type<D>(f, prop, params[i]));
+  // A setter called options may take a list: one comparison for each setter of every widget,
+  // which every file pays.
+  const bool may_list = prop == "options";
+  for (std::size_t i = 1; i < params.size(); ++i) {
+    auto type = value_type<D>(f, prop, params[i]);
+    if (may_list && type == (^^const char*) && takes_option_list(f, parameter_name(params[i])))
+      type = ^^option_list;
+    types.push_back(type);
+  }
   return {prop, std::meta::substitute(^^arg, types), f};
 }
 
@@ -609,6 +616,8 @@ void watch_member(lv_obj_t* o, const A& a) {
 template <fixed W, std::size_t I, class A>
 void bind_member(lv_obj_t* o, const A& a) {
   constexpr auto setter = targets<W>[I];
+  contract_assert(a.follows != follows_choice &&
+                  "a state of an enum follows the choice of options in a constexpr tree only");
   constexpr auto native = binder<setter>;
   if constexpr (keeps_binder<setter>) {
     lv_subject_t* subject = a.bound_ops().subject(a.bound);
@@ -651,6 +660,111 @@ void set_property(lv_obj_t* o, V... v) {
   } else {
     [:Target:](o, v...);
   }
+}
+
+// lv_<widget>_set_options_static for lv_<widget>_set_options, or a null reflection.
+consteval std::meta::info static_options_of(std::meta::info setter) {
+  if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
+  const auto name = std::meta::identifier_of(setter);
+  if (!name.ends_with("_set_options")) return {};
+  const auto f = find(str(name) + "_static");
+  if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
+  return f;
+}
+
+// The list of options of a property that takes only that: the dropdown keeps the pointer of a
+// list that the compiler joined, or of any list in a constexpr tree, and copies nothing.
+template <fixed W, std::meta::info Target, bool Constant>
+void set_property(lv_obj_t* o, const option_list& list) {
+  constexpr auto kept = static_options_of(Target);
+  if constexpr (kept != std::meta::info{}) {
+    if (Constant || list.kept)
+      [:kept:](o, list.text);
+    else
+      [:Target:](o, list.text);
+  } else {
+    [:Target:](o, list.text);
+  }
+}
+
+// ---- an enum state that follows the choice of options ---------------------------------
+
+consteval bool same_text(const char* a, const char* b) {
+  while (*a != '\0' && *a == *b) ++a, ++b;
+  return *a == *b;
+}
+
+// Stops the compilation when a state of the enum named `state_enum` cannot follow the choice
+// that goes with the list `options`, which `is_set`.
+consteval void check_enum_choice(bool is_set, const option_list& options, const char* state_enum) {
+  if (!is_set || is_null(options.enum_name))
+    fail(join({"lv: .selected follows a state of ", state_enum,
+               ", and the options of this widget do not come from that enum. Give the widget "
+               ".options = lv::options_of<", state_enum, ">, or bind a state that holds the index."}));
+  if (!same_text(options.enum_name, state_enum))
+    fail(join({"lv: .selected follows a state of ", state_enum, ", and the options come from ", options.enum_name,
+               ". A state follows the choice of the options of its own enum: use .options = lv::options_of<",
+               state_enum, ">."}));
+}
+
+// What the observer and the event of an enum state need, in read-only memory.
+struct enum_link {
+  const void* source;                       // the state
+  source_ops_fn ops;                        // finds its subject
+  const option_list* options;
+};
+
+// The type of parameter K of a setter.
+template <std::meta::info Setter, std::size_t K>
+using parameter_type = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[K]):];
+
+// Shows option `index`: calls the setter of the choice with it, and a default value for
+// every parameter after it (a roller's animation is off).
+template <fixed W, std::size_t I>
+void show_choice(lv_obj_t* o, std::uint32_t index) {
+  constexpr auto setter = targets<W>[I];
+  [&]<std::size_t... K>(std::index_sequence<K...>) {
+    [:setter:](o, index, parameter_type<setter, K + 2>{}...);
+  }(std::make_index_sequence<std::meta::parameters_of(setter).size() - 2>{});
+}
+
+// The place of the chosen option: the getter that goes with the setter of the choice.
+template <fixed W, std::size_t I>
+std::uint32_t chosen_index(const lv_obj_t* o) {
+  constexpr auto name = std::meta::identifier_of(targets<W>[I]);
+  constexpr auto getter = find(str(name.substr(0, name.find("_set_"))) + "_get_" + str(name.substr(name.find("_set_") + 5)));
+  return [:getter:](o);
+}
+
+// The state changed: show the option of its enumerator. An enumerator that is not in the
+// list (left out by lv::but) changes nothing.
+template <fixed W, std::size_t I>
+void follow_choice(lv_observer_t* observer, lv_subject_t* subject) {
+  auto* target = static_cast<lv_obj_t*>(lv_observer_get_target(observer));
+  const auto& link = *static_cast<const enum_link*>(lv_observer_get_user_data(observer));
+  const auto index = link.options->index_of(lv_subject_get_int(subject));
+  if (index < link.options->count) show_choice<W, I>(target, index);
+}
+
+// The user chose an option: the state gets its enumerator.
+template <fixed W, std::size_t I>
+void report_choice(lv_event_t* e) {
+  auto* target = lv_event_get_current_target_obj(e);
+  const auto& link = *static_cast<const enum_link*>(lv_event_get_user_data(e));
+  lv_subject_t* subject = link.ops().subject(link.source);
+  if (subject == nullptr) return;
+  const auto index = chosen_index<W, I>(target);
+  if (index < link.options->count) lv_subject_set_int(subject, link.options->values[index]);
+}
+
+// Makes the choice of member I of props<W> follow the state of the link, both ways.
+template <fixed W, std::size_t I>
+void bind_choice(lv_obj_t* o, const enum_link& link) {
+  lv_subject_t* subject = link.ops().subject(link.source);
+  if (subject == nullptr) return;  // LVGL had no memory for the subject
+  auto* data = const_cast<enum_link*>(&link);
+  lv_obj_add_event_cb(o, &report_choice<W, I>, LV_EVENT_VALUE_CHANGED, data);
+  lv_subject_add_observer_obj(subject, &follow_choice<W, I>, o, data);
 }
 
 // Applies member number I of props<W>, whose value is `a`, to a widget. `Constant` says
@@ -742,6 +856,23 @@ using kept = typename kept_of<W, D>::type;
 template <fixed W>
 inline constexpr auto members_of_kept = std::define_static_array(
     std::meta::nonstatic_data_members_of(^^kept<W>, std::meta::access_context::unchecked()));
+
+// The number of the member of props<W> that takes a list of options, or the number of
+// members when the widget has none.
+template <fixed W>
+consteval std::size_t option_member_of() {
+  const auto members = members_of_props<W>;
+  for (std::size_t i = 0; i < members.size(); ++i) {
+    const auto type = std::meta::type_of(members[i]);
+    if (std::meta::has_template_arguments(type) && std::meta::template_of(type) == ^^arg &&
+        std::meta::template_arguments_of(type)[0] == ^^option_list)
+      return i;
+  }
+  return members.size();
+}
+
+template <fixed W>
+inline constexpr std::size_t option_member = option_member_of<W>();
 
 // `p` in the form a node keeps.
 template <fixed W, class D>
