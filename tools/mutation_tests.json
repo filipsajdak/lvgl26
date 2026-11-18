@@ -17,7 +17,7 @@
       "targets": "concepts computed"
     },
     "include/lv/tree.hpp": {
-      "tests": "^concepts$|^handlers$|^l2_tree$|fail_part_tree_node|fail_unknown_id|fail_duplicate_id",
+      "tests": "^concepts$|^handlers$|^l2_tree$|fail_part_tree_node|fail_unknown_id|fail_duplicate_id|fail_mount|fail_place",
       "targets": "concepts handlers l2_tree"
     },
     "include/lv/style.hpp": {
@@ -33,7 +33,7 @@
       "targets": "lists lists_selection"
     },
     "include/lv/owned.hpp": {
-      "tests": "^l1_views$|^l2_tree$",
+      "tests": "^l1_views$|^l2_tree$|fail_weak|fail_owned",
       "targets": "l1_views l2_tree"
     },
     "include/lv/props.hpp": {

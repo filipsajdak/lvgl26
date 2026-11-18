@@ -4,6 +4,7 @@ tools/mutation_summary.py: python3 tools/test_mutation.py"""
 
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -88,6 +89,41 @@ class Plan(unittest.TestCase):
             self.assertTrue(chosen["tests"] and chosen["targets"], header)
 
 
+def registered_tests():
+    """(ctest names, build targets) that tests/CMakeLists.txt registers, read from its text.
+    A compile-fail test is the ctest `fail_<name>` and has no target of its own to build."""
+    text = (plan.ROOT / "tests/CMakeLists.txt").read_text()
+    targets = set(re.findall(r"^\s*(?:lvgl26_test|add_executable)\((\w+)", text, re.M))
+    names = set(targets) | set(re.findall(r"add_test\(NAME (\w+)", text))
+    names |= {"fail_" + n for n in re.findall(r"^\s*lvgl26_compile_fail\((\w+)", text, re.M)}
+    return names, targets
+
+
+class MappingMatchesTheTests(unittest.TestCase):
+    """A pattern that matches no test, or a target that does not exist, makes a shard of the
+    nightly run stop on its baseline or judge a header by nothing (owned.hpp, tokens.hpp)."""
+
+    def test_every_alternative_of_every_pattern_matches_a_registered_test(self):
+        names, _ = registered_tests()
+        config = json.loads(plan.CONFIG.read_text())
+        for header, chosen in config["headers"].items():
+            for alternative in chosen["tests"].split("|"):
+                self.assertTrue(any(re.search(alternative, n) for n in names), f"{header}: {alternative}")
+
+    def test_every_target_exists(self):
+        _, targets = registered_tests()
+        config = json.loads(plan.CONFIG.read_text())
+        for header, chosen in config["headers"].items():
+            for target in chosen["targets"].split():
+                self.assertIn(target, targets, header)
+
+    def test_the_reader_finds_both_kinds_of_test(self):
+        names, targets = registered_tests()
+        self.assertTrue({"tokens", "fail_token_bad_color", "signal_tokens_check"} <= names)
+        self.assertIn("tokens", targets)
+        self.assertNotIn("fail_token_bad_color", targets)
+
+
 class Accepted(unittest.TestCase):
     def test_a_mutant_is_matched_without_its_line_number(self):
         self.assertEqual(mutation.mutant_text("line 12: a == b  ->  a != b"), "a == b  ->  a != b")
@@ -100,6 +136,44 @@ class Accepted(unittest.TestCase):
         self.assertEqual(mutation.accepted_for(str(path), "h1"), {"x  ->  y": "equivalent"})
         self.assertEqual(mutation.accepted_for(None, "h1"), {})
         self.assertEqual(mutation.accepted_for(str(path.with_name("none.json")), "h1"), {})
+
+
+class AcceptedFile(unittest.TestCase):
+    def test_every_triage_names_a_header_a_mutant_and_a_reason(self):
+        rows = json.loads((plan.TOOLS / "mutation_accepted.json").read_text())
+        for row in rows:
+            self.assertTrue((plan.ROOT / row["header"]).exists(), row)
+            self.assertIn("  ->  ", row["mutant"])
+            self.assertTrue(row["reason"].strip(), row)
+
+    def test_the_triaged_mutant_of_runtime_hpp_is_matched_as_the_run_describes_it(self):
+        accepted = mutation.accepted_for(str(plan.TOOLS / "mutation_accepted.json"), "include/lv/runtime.hpp")
+        self.assertIn(mutation.mutant_text("line 507: }  ->  continue;"), accepted)
+
+
+class ChildLocale(unittest.TestCase):
+    def test_a_command_runs_in_the_c_locale_so_that_gcc_writes_plain_quotes(self):
+        code, output = mutation.run("echo $LC_ALL", cwd=".")
+        self.assertEqual((code, output.strip()), (0, "C"))
+
+
+class Baseline(unittest.TestCase):
+    def test_a_failed_baseline_shows_the_verdict_and_the_end_of_the_output(self):
+        output = "\n".join(f"line {n}" for n in range(mutation.BASELINE_TAIL_LINES + 10))
+        text = mutation.baseline_failure("invalid", output)
+        self.assertIn("do not pass on the unchanged header", text)
+        self.assertIn("(invalid)", text)
+        self.assertIn(f"line {mutation.BASELINE_TAIL_LINES + 9}", text)
+        self.assertNotIn("line 9\n", text)
+
+    def test_judge_with_output_says_which_step_decided(self):
+        steps = iter([(1, "error: expected ';'"), (0, "built"), (1, "1 test failed")])
+        old, mutation.run = mutation.run, lambda command, cwd=None: next(steps)
+        try:
+            self.assertEqual(mutation.judge_with_output("p", "t", None, 1), ("invalid", "error: expected ';'"))
+            self.assertEqual(mutation.judge_with_output("p", "t", None, 1), ("killed", "1 test failed"))
+        finally:
+            mutation.run = old
 
 
 class Result(unittest.TestCase):
