@@ -236,6 +236,11 @@ lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
 lvgl26_widget_ports(buttonmatrix event map)
 lvgl26_widget_ports(dropdown bind_value direction event text)
+# LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
+# sanitizer stops on. The picture is compared in the builds that have none.
+if(NOT LVGL26_SANITIZE)
+  lvgl26_widget_ports(roller bind_value options)
+endif()
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 lvgl26_widget_ports(textarea placeholder)
 lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
@@ -544,6 +549,11 @@ endif()
 add_executable(example_parts ${PROJECT_SOURCE_DIR}/examples/parts/main.cpp)
 target_link_libraries(example_parts PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_parts COMMAND example_parts)
+
+# The example of docs/options.md: the texts of an enum's options, and some enumerators left out.
+add_executable(example_options ${PROJECT_SOURCE_DIR}/examples/options/main.cpp)
+target_link_libraries(example_options PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_options COMMAND example_options)
 
 # The example of docs/lists.md. Its picture is the one on the page.
 add_executable(example_lists ${PROJECT_SOURCE_DIR}/examples/lists/main.cpp)

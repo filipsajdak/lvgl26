@@ -115,6 +115,10 @@ void dropdown_direction(lv::obj screen);   // lv_example_dropdown_direction
 void dropdown_event(lv::obj screen);       // lv_example_dropdown_event
 void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
 
+// roller
+void roller_bind_value(lv::obj screen);  // lv_example_roller_bind_value
+void roller_options(lv::obj screen);     // lv_example_roller_options
+
 // spinbox
 void spinbox_bind_value(lv::obj screen);  // lv_example_spinbox_bind_value
 void spinbox_format(lv::obj screen);      // lv_example_spinbox_format
