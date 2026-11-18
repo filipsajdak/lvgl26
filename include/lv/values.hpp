@@ -352,6 +352,18 @@ inline constexpr bool is_strict = false;
 template <class I>
 inline constexpr bool is_strict<strict<I>> = true;
 
+// What a binding to a state of the enum T tells the property: the name of the enum, or null
+// for any other type. A dropdown or a roller whose options are made from an enum follows
+// such a state (see lv/options.hpp); the tag lets the compiler check that the state and
+// the options are of the same enum.
+template <class T>
+inline constexpr const char* enum_tag = [] -> const char* {
+  if constexpr (std::is_enum_v<T>)
+    return std::define_static_string(type_text<T>());
+  else
+    return nullptr;
+}();
+
 // What a property of a node follows: nothing, a state, or a field of a row of lv::each.
 // A number, because under a sanitizer GCC cannot tell at compile time that an address is
 // not null, nor that two functions differ.
@@ -548,10 +560,13 @@ struct arg {
   template <class T>
   constexpr arg(binding<T> b)
       : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(b.subject),
-        bound_format(text_of_quantity<T> ? detail::quantity_format<T> : nullptr) {
+        bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
     using first = std::tuple_element_t<0, types>;
+    // A state of an enum follows the whole number of a property too: the choice of a
+    // dropdown or a roller whose options come from lv::options_of (checked where it is used).
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
-                      std::convertible_to<typename detail::state_payload<T>::type, first>,
+                      std::convertible_to<typename detail::state_payload<T>::type, first> ||
+                      (std::is_enum_v<T> && detail::is_strict<first>),
                   "lv: this property cannot be bound to a state of that type. The state's "
                   "type, or the number inside its quantity or named type, must be what the "
                   "property takes.");
@@ -566,6 +581,10 @@ struct arg {
   // A field of a row of lv::each: checked as a state's binding, and marked.
   template <class T>
   constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.subject}) {
+    static_assert(!(std::is_enum_v<T> && !std::convertible_to<T, std::tuple_element_t<0, types>> &&
+                    detail::is_strict<std::tuple_element_t<0, types>>),
+                  "lv: a field of a row that holds an enum cannot follow a whole number. The choice of "
+                  "options follows a state of the enum: .selected = lv::bind(state).");
     follows = detail::follows_row_field;
   }
 

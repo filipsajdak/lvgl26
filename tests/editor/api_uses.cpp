@@ -228,6 +228,7 @@ void use_state() {
 // ---- option lists -----------------------------------------------------------------
 
 enum class quality { best, medium, draft };
+constinit lv::state<quality> chosen_quality{quality::medium};
 static_assert(std::same_as<decltype(lv::options_of<quality>), const lv::option_list>);
 static_assert(std::same_as<decltype(lv::options_of<quality, lv::but<quality::draft>>), const lv::option_list>);
 static_assert(std::is_empty_v<lv::but<quality::draft>>);
@@ -250,7 +251,8 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "start"}, .si
     lv::textarea({.id = "note", .one_line = true}),
     lv::dropdown({.id = "choice", .options = "a\nb"}),
     lv::dropdown({.id = "sizes", .options = {"100%", "75%", "50%"}}),
-    lv::dropdown({.id = "grade", .options = lv::options_of<quality, lv::but<quality::draft>>}),
+    lv::dropdown({.id = "grade", .options = lv::options_of<quality, lv::but<quality::draft>>,
+                  .selected = lv::bind(chosen_quality)}),
     lv::roller({.id = "wheel", .options = {{"Mon", "Tue", "Wed"}, "infinite"}}),
     lv::spinner({.id = "busy"}),
     lv::widget<"spinbox">({.id = "count", .range = {0, 9}}),

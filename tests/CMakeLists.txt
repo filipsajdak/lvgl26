@@ -69,6 +69,10 @@ lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
 lvgl26_test(options)
+# A state of an enum given to set() at run time breaks its contract.
+add_test(NAME options_violation_enum_state_in_set
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(animate)
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
@@ -824,6 +828,9 @@ lvgl26_compile_fail(options_line_break "option 2 of the list, .*holds a line bre
 lvgl26_compile_fail(options_but_other_enum "lv::but in lv::options_of names enumerators of the enum given to lv::options_of")
 lvgl26_compile_fail(options_but_all "lv::options_of<quality> has no option left")
 lvgl26_compile_fail(options_not_an_enum "lv::options_of<E> takes an enum")
+lvgl26_compile_fail(options_other_enum ".selected follows a state of sheet, and the options come from quality")
+lvgl26_compile_fail(options_plain_list ".selected follows a state of sheet, and the options of this widget do not come from that enum")
+lvgl26_compile_fail(options_enum_state_elsewhere "a state of an enum follows only the choice of a dropdown or a roller")
 lvgl26_compile_fail(options_roller_without_mode "It takes a list of options .* then lv_roller_mode_t")
 lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
 lvgl26_compile_fail(options_header_not_read "'lv_dial_set_options' takes options, and only LVGL's doc comment says whether they are a list separated by line breaks.*options_header_not_read.cpp. Add that header to option_headers")

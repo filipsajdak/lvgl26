@@ -96,10 +96,20 @@ static_assert(std::same_as<decltype(lv::props<"label">{}.text), lv::arg<const ch
 
 // ---- on a screen ---------------------------------------------------------------------
 
+constinit lv::state<quality> chosen{quality::medium};
+constinit lv::state<level> grade{level::high};
+struct place {
+  std::int32_t index;
+};
+constinit lv::state<place> where{place{1}};
+
 constexpr auto ui = lv::group({})[
     lv::dropdown({.id = "size", .options = {"100%", "75%", "50%"}}),
-    lv::dropdown({.id = "quality", .options = lv::options_of<quality>}),
-    lv::roller({.id = "level", .options = {lv::options_of<level>, "normal"}}),
+    lv::dropdown({.id = "quality", .options = lv::options_of<quality>, .selected = lv::bind(chosen)}),
+    lv::dropdown({.id = "reduced", .options = lv::options_of<quality, lv::but<quality::medium>>,
+                  .selected = lv::bind(chosen)}),
+    lv::roller({.id = "level", .options = {lv::options_of<level>, "normal"}, .selected = lv::bind(grade)}),
+    lv::dropdown({.id = "where", .options = lv::options_of<quality>, .selected = lv::bind(where)}),
     lv::roller({.id = "week", .options = {{"Mon", "Tue", "Wed"}, "infinite"}}),
     lv::roller({.id = "days", .options = {"Mon\nTue", "normal"}}),
     lv::dropdown({.id = "plain", .options = "x\ny"})];
@@ -135,6 +145,61 @@ void a_roller_takes_a_list_and_a_mode(auto& root) {
   auto days = root.template get<"days">();
   check(lv_roller_get_option_count(days.raw()) == 2);
   check(std::string_view{lv_roller_get_options(days.raw())} == "Mon\nTue");
+}
+
+// The state shows in the widget, and the user's choice is written to the state.
+void an_enum_state_follows_the_choice(auto& root) {
+  auto box = root.template get<"quality">();
+  check(lv_dropdown_get_selected(box.raw()) == 1);  // medium
+  chosen = quality::draft;
+  check(lv_dropdown_get_selected(box.raw()) == 2);
+  chosen = quality::best;
+  check(lv_dropdown_get_selected(box.raw()) == 0);
+
+  lv_dropdown_set_selected(box.raw(), 2);
+  lv_obj_send_event(box.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(chosen.get() == quality::draft);
+  // Another widget on the same state follows it as well.
+  check(lv_dropdown_get_selected(root.template get<"quality">().raw()) == 2);
+}
+
+// An enumerator that was left out has no place: the widget keeps what it showed. Places count
+// the options that are there, not the enumerators.
+void a_left_out_enumerator_is_not_shown(auto& root) {
+  auto reduced = root.template get<"reduced">();  // best, draft
+  check(options_of_widget(reduced.raw()) == "best\ndraft");
+  chosen = quality::draft;
+  check(lv_dropdown_get_selected(reduced.raw()) == 1);
+  chosen = quality::medium;
+  check(lv_dropdown_get_selected(reduced.raw()) == 1);  // unchanged
+  chosen = quality::best;
+  check(lv_dropdown_get_selected(reduced.raw()) == 0);
+
+  lv_dropdown_set_selected(reduced.raw(), 1);
+  lv_obj_send_event(reduced.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(chosen.get() == quality::draft);  // place 1 is draft, not medium
+}
+
+// The place of an option and the value of its enumerator are two things.
+void values_are_not_places(auto& root) {
+  auto level_roller = root.template get<"level">();
+  check(lv_roller_get_selected(level_roller.raw()) == 2);  // high
+  grade = level::low;
+  check(lv_roller_get_selected(level_roller.raw()) == 0);
+  lv_roller_set_selected(level_roller.raw(), 1, LV_ANIM_OFF);
+  lv_obj_send_event(level_roller.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(grade.get() == level::mid);
+}
+
+// A state that holds an index keeps working with a list made from an enum.
+void an_index_state_still_works(auto& root) {
+  auto box = root.template get<"where">();
+  check(lv_dropdown_get_selected(box.raw()) == 1);
+  where = place{2};
+  check(lv_dropdown_get_selected(box.raw()) == 2);
+  lv_dropdown_set_selected(box.raw(), 0);
+  lv_obj_send_event(box.raw(), LV_EVENT_VALUE_CHANGED, nullptr);
+  check(where.get().index == 0);
 }
 
 // A list typed at run time works as before, and is copied by LVGL.
@@ -206,7 +271,21 @@ void a_static_list_adds_no_copy(lv::display& display) {
 
 }  // namespace
 
-int main() {
+// A state of an enum follows the choice in a constexpr tree. Given to set() it is a contract
+// violation: nothing in read-only memory holds what the observer needs.
+int set_with_an_enum_state() {
+  lv::application app;
+  lv::display display{app, frame};
+  auto box = display.screen().add<"dropdown">();
+  box.set({.options = lv::options_of<quality>, .selected = lv::bind(chosen)});
+  return 0;
+}
+
+int main(int argc, char**) {
+  if (argc == 2) {
+    std::printf("no contract violation: %d\n", set_with_an_enum_state());
+    return 0;
+  }
   lv::application app;
   lv::display display{app, frame};
   {
@@ -215,11 +294,18 @@ int main() {
     if (root) {
       a_list_is_the_text_of_lvgl(*root);
       a_roller_takes_a_list_and_a_mode(*root);
+      an_enum_state_follows_the_choice(*root);
+      a_left_out_enumerator_is_not_shown(*root);
+      values_are_not_places(*root);
+      an_index_state_still_works(*root);
       a_text_made_later_is_copied(*root);
     }
   }
   a_document_sets_options(display.screen());
   a_static_list_adds_no_copy(display);
+  chosen.reset();
+  grade.reset();
+  where.reset();
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }
