@@ -543,14 +543,21 @@ consteval void put_entry(look_style_of<D>& s, std::string_view where) {
 
 // ---- parts and states as layers ----------------------------------------------
 
+// The key that the token reader made the member `member` of: default_ was "default", a keyword.
+// A dash is an underscore in both, so the names of parts and states need nothing else.
+consteval std::string_view key_of_member(std::string_view member) {
+  const std::string_view bare = member.substr(0, member.size() - 1);
+  return member.ends_with('_') && is_keyword(bare) ? bare : member;
+}
+
 // The part or state of E whose name, read as the token reader reads a key, is `member`: the
 // group "default" is the member default_, "focus-key" is focus_key. `any` is not a layer.
 template <class E>
 consteval std::optional<lv_style_selector_t> layer_named(std::string_view member) {
-  for (const enum_name& e : enum_names<E>) {
-    const std::string name = short_enum_name<E>(e);
-    if (name != "any" && token_member_name(name) == member) return static_cast<lv_style_selector_t>(e.value);
-  }
+  const std::string_view key = key_of_member(member);
+  if (key == "any") return std::nullopt;
+  for (const enum_name& e : enum_names<E>)
+    if (short_enum_name<E>(e) == key) return static_cast<lv_style_selector_t>(e.value);
   return std::nullopt;
 }
 
@@ -640,10 +647,13 @@ consteval std::size_t order_rank(std::meta::info member) {
 template <class Group>
 consteval std::vector<std::meta::info> ordered_members() {
   std::vector<std::meta::info> out;
+  std::vector<std::size_t> ranks;  // of `out`, each worked out once
   for (auto m : group_members<Group>) {
-    auto at = out.begin();
-    while (at != out.end() && order_rank(*at) >= order_rank(m)) ++at;
-    out.insert(at, m);
+    const std::size_t r = order_rank(m);
+    std::size_t at = 0;
+    while (at < ranks.size() && ranks[at] >= r) ++at;
+    out.insert(out.begin() + static_cast<std::ptrdiff_t>(at), m);
+    ranks.insert(ranks.begin() + static_cast<std::ptrdiff_t>(at), r);
   }
   return out;
 }
