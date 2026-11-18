@@ -32,6 +32,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 | [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
 | [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |
+| [lvgl-safe.md](lvgl-safe.md) | Whether lvgl26 can get a second back end over LVGL Safe: its licence, its API in full, a mapping of our widgets and features, a layout computed by the compiler, and three shapes for a safety product compared. |
 | [dtcg.md](dtcg.md) | The Design Tokens Format 2025.10 against its draft of 2026-09-08, whether a percentage exists, what design tools read, `$extends` and variants, the resolver and colour modules, what our token files and reader do outside the standard, and a plan. |
 
 ## How each claim is marked
