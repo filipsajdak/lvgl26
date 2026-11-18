@@ -108,6 +108,20 @@ class Uses(unittest.TestCase):
     def test_a_text_that_only_looks_like_a_look_is_not_one(self):
         self.assertIn("gauge", unused('// a look<"gauge"> in a comment, not lv::look'))
 
+    def test_a_look_in_a_comment_is_no_use(self):
+        self.assertIn("gauge", unused('// lv::look<"gauge">\n'))
+        self.assertIn("gauge", unused('/* lv::look<"gauge"> */'))
+        self.assertIn("tile-print", unused('lv::look<"tile"> // lv::look_of<"tile", E>'))
+
+    def test_a_look_in_a_string_is_no_use(self):
+        self.assertIn("gauge", unused('auto s = "lv::look<\\"gauge\\">";'))
+        self.assertIn("gauge", unused('auto s = R"(lv::look<"gauge">)";'))
+
+    def test_a_comment_sign_in_a_string_hides_nothing(self):
+        self.assertNotIn("gauge", unused('auto s = "//"; auto g = lv::look<"gauge">;'))
+        self.assertNotIn("gauge", unused("auto c = '\"'; auto g = lv::look<\"gauge\">;"))
+        self.assertNotIn("gauge", unused("auto n = 1'000; auto g = lv::look<\"gauge\">;"))
+
 
 class Reference(unittest.TestCase):
     def test_the_committed_reference_names_parts_and_states(self):

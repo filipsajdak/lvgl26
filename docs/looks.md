@@ -398,7 +398,7 @@ A token file grows, and a group that no element names is dead weight. `tools/loo
 python3 tools/look_groups.py tokens.json src/
 ```
 
-A component group is a group with an entry named for a style property, or with vendor data under `$extensions`, itself or in one of its layers (a look that sets something only when `checked` is one). Groups of values (`color`, `space`, `text`) have none, and are never listed. A group named like a state or a part belongs to the look above it; with no look above it, it is a look of its own. `lv::look_of<"tile", E>` uses every sibling group named `tile-...`, since the compiler picks one by the name of an enumerator. A group that another program uses is passed with `--ignore`. The test `look_groups_example` runs it on this example, and a misspelled `status.cheked` is listed, because no look reaches it.
+A component group is a group with an entry named for a style property, or with vendor data under `$extensions`, itself or in one of its layers (a look that sets something only when `checked` is one). Groups of values (`color`, `space`, `text`) have none, and are never listed. A group named like a state or a part belongs to the look above it; with no look above it, it is a look of its own. `lv::look_of<"tile", E>` uses every sibling group named `tile-...`, since the compiler picks one by the name of an enumerator. A look in a comment or inside another string uses nothing. A group that another program uses is passed with `--ignore`. The test `look_groups_example` runs it on this example, and a misspelled `status.cheked` is listed, because no look reaches it.
 
 ## The same screen, written out
 

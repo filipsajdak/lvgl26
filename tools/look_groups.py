@@ -13,7 +13,8 @@ style property only in its layers is a look too, and so is a group named like a 
 
 A source uses a group when it names it in lv::look<"a.b">, in a list such as lv::look<"a a.b">,
 or by lv::look_of<"a", E>, which uses every sibling group named `a-...` (`a-print`, `a-scan`): the
-compiler picks it by the name of an enumerator, which this tool cannot read.
+compiler picks it by the name of an enumerator, which this tool cannot read. Only code counts: a
+look in a comment or inside another string literal uses nothing.
 
 One file cannot see the whole program: a group that another program uses is listed with
 --ignore. Exits with 1 and the unused groups if there are any. Uses the standard library only.
@@ -31,8 +32,11 @@ from token_stubs import member_name  # noqa: E402  (the one copy of the compiler
 
 REFERENCE = ROOT / "docs" / "reference" / "lvgl-v9.6.0.json"
 SOURCE_SUFFIXES = (".cpp", ".hpp", ".h", ".cc", ".cxx", ".ipp")
-LOOK = re.compile(r'lv::look\s*<\s*"([^"]*)"')
-LOOK_OF = re.compile(r'lv::look_of\s*<\s*"([^"]*)"')
+# The code just before a look's string: lv::look< or lv::look_of<, with any space.
+LOOK_HEAD = re.compile(r"\blv\s*::\s*(look|look_of)\s*<\s*$")
+RAW_PREFIX = re.compile(r"(?:\b|^)(?:u8|u|U|L)?R$")
+# How much code before a string is enough to see lv::look_of< in it, with some space.
+CODE_KEPT = 64
 LAYER_ENUMS = ("lv_part_t", "lv_state_t")
 
 
@@ -121,10 +125,63 @@ def source_files(paths: list[str]) -> list[pathlib.Path]:
     return files
 
 
+def string_end(text: str, start: int) -> tuple[int, str]:
+    """The end of the literal opened by the quote at `start`, and its contents. A raw string
+    (R"x(...)x") ends at its own delimiter; any other ends at an unescaped quote."""
+    quote = text[start]
+    opening = text.find("(", start)
+    if quote == '"' and opening > 0 and RAW_PREFIX.search(text[max(0, start - 3):start]):
+        delimiter = text[start + 1:opening]
+        close = text.find(")" + delimiter + '"', start)
+        close = len(text) if close < 0 else close
+        return close + len(delimiter) + 2, text[start + len(delimiter) + 2:close]
+    i = start + 1
+    while i < len(text) and text[i] != quote:
+        i += 2 if text[i] == "\\" else 1
+    return i + 1, text[start + 1:i]
+
+
+def comment_end(text: str, start: int) -> int:
+    if text.startswith("//", start):
+        end = text.find("\n", start)
+        return len(text) if end < 0 else end
+    end = text.find("*/", start + 2)
+    return len(text) if end < 0 else end + 2
+
+
+def opens_literal(text: str, i: int) -> bool:
+    """A quote that starts a string or a character; the ' of 1'000 is part of a number."""
+    return text[i] == '"' or (text[i] == "'" and not (i and text[i - 1].isalnum()))
+
+
+def look_strings(text: str):
+    """(look or look_of, the text of its string) for each string literal that follows lv::look< or
+    lv::look_of< in code: not in a comment, and not inside another string."""
+    code = ""
+    i = 0
+    while i < len(text):
+        if text.startswith(("//", "/*"), i):
+            i = comment_end(text, i)
+            code += " "
+        elif opens_literal(text, i):
+            i, contents = string_end(text, i)
+            head = LOOK_HEAD.search(code) if text[i - 1] == '"' else None
+            if head:
+                yield head.group(1), contents
+            code = " "
+        else:
+            code = (code + text[i])[-CODE_KEPT:]
+            i += 1
+
+
 def uses_in(text: str) -> tuple[set[str], set[str]]:
     """The group paths named in `text`, and the prefixes named by lv::look_of."""
-    used = {path for names in LOOK.findall(text) for path in names.split()}
-    prefixes = set(LOOK_OF.findall(text))
+    used, prefixes = set(), set()
+    for kind, contents in look_strings(text):
+        if kind == "look":
+            used |= set(contents.split())
+        else:
+            prefixes.add(contents)
     return used, prefixes
 
 
