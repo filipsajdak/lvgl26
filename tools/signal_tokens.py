@@ -26,6 +26,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "design" / "signal" / "tokens.design.json"
 OUT = ROOT / "include" / "lv" / "signal"
 LENGTHS = {"spacing": "space", "radius": "radius", "stroke": "stroke", "size": "size"}
+SCHEMA = "https://www.designtokens.org/schemas/2025.10/format.json"
 WRITTEN = "Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit."
 
 
@@ -42,7 +43,7 @@ def document(design: dict, theme: str) -> str:
     colors = {"$type": "color"}
     for token in design["color"]["tokens"]:
         colors[token["name"]] = {"$value": token["value"][theme].lower()}
-    doc = {"$description": f"Signal, {theme} theme. {WRITTEN}", "color": colors}
+    doc = {"$schema": SCHEMA, "$description": f"Signal, {theme} theme. {WRITTEN}", "color": colors}
     for section, group in LENGTHS.items():
         doc[group] = lengths(design, section, group)
     return json.dumps(doc, indent=2) + "\n"
@@ -79,7 +80,7 @@ def styles(design: dict) -> dict:
 
 
 def typography(design: dict) -> str:
-    doc = {"$description": f"Signal, typography. {WRITTEN}", "font": families(design), "text": styles(design)}
+    doc = {"$schema": SCHEMA, "$description": f"Signal, typography. {WRITTEN}", "font": families(design), "text": styles(design)}
     return json.dumps(doc, indent=2) + "\n"
 
 

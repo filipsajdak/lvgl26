@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
   "$description": "Signal, day theme. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
   "color": {
     "$type": "color",
