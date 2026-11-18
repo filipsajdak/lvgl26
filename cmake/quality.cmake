@@ -18,7 +18,13 @@ if(LVGL26_SANITIZE)
 endif()
 
 option(LVGL26_ANALYZE "Run GCC's static analyzer (-fanalyzer) on the tests" OFF)
+# Under the analyzer a test file needs 1.0 to 2.4 GB at its peak (state.cpp 2.2 GB, watchers.cpp
+# 2.2 GB, computed.cpp 1.9 GB, measured 2026-11-18). Four at once took a CI runner of 16 GB down
+# three times ("the hosted runner lost communication"). Three at once leave room.
+set(LVGL26_ANALYZE_JOBS 3 CACHE STRING "How many files the analyzer build compiles at once")
 if(LVGL26_ANALYZE)
+  set_property(GLOBAL APPEND PROPERTY JOB_POOLS analyze=${LVGL26_ANALYZE_JOBS})
+  set(CMAKE_JOB_POOL_COMPILE analyze)
   # A target with the property LVGL26_NO_ANALYZER is left out: see lvgl26_skip_analyzer below.
   target_compile_options(lvgl26_warnings INTERFACE
                          $<$<NOT:$<BOOL:$<TARGET_PROPERTY:LVGL26_NO_ANALYZER>>>:-fanalyzer>)

@@ -17,10 +17,23 @@
 // A count is an lv::counter. A state can also hold any struct with one member
 // (an index, an id), a bool, an enum, a color or a pointer.
 //
-// A state is an lv_subject_t underneath, created the first time something binds to
-// it or asks for raw(). C code can use that subject like any other.
+// A state keeps its own list of watchers: the widgets bound to it, every lv::computed and
+// lv::effect that depends on it, and lv::changed. Following a state costs no LVGL subject
+// and no LVGL observer.
+//
+// raw() gives the state's lv_subject_t, created the first time it is asked for. From then
+// on the two stay one value: what lvgl26 sets reaches the subject's C observers, and what C
+// code writes with lv_subject_set_*() reaches every watcher. C observers are told after the
+// watchers of lvgl26, whatever the order in which they were added. observe() is a C
+// observer, so it makes the subject too.
+//
+// A state tells its watchers when its value changes: setting the value it has tells nobody,
+// except a pointer, which cannot be compared. detail/watch.hpp says what a walk over the
+// watchers promises, for a watcher that changes the state or its neighbours.
 // Like all of LVGL, a state must only be touched from the UI thread.
 
+#include <lv/detail/source.hpp>
+#include <lv/detail/watch.hpp>
 #include <lv/values.hpp>
 #include <lv/view.hpp>
 
@@ -67,46 +80,188 @@ void write_subject(lv_subject_t* s, T v) {
     lv_subject_set_int(s, static_cast<std::int32_t>(v));
 }
 
+// The value of a state of type T made from a number: what an LVGL integer subject holds.
+template <class T>
+T value_of_number(std::int32_t n) {
+  if constexpr (integer_quantity<T>) {
+    return T{static_cast<typename T::rep>(n), T::reference};
+  } else if constexpr (strong_value<T>) {
+    return T{static_cast<typename state_payload<T>::type>(n)};
+  } else if constexpr (std::same_as<T, bool>) {
+    return n != 0;
+  } else {
+    return static_cast<T>(n);
+  }
+}
+
+// The number a state carries in an integer subject: of a quantity, in its own unit; of a
+// named value, its member.
+template <class T>
+std::int32_t number_of(const T& v) {
+  if constexpr (integer_quantity<T>)
+    return static_cast<std::int32_t>(v.numerical_value_in(T::unit));
+  else if constexpr (strong_value<T>)
+    return static_cast<std::int32_t>(v.[:strong_member<T>():]);
+  else
+    return static_cast<std::int32_t>(v);
+}
+
 template <class T>
 T read_subject(lv_subject_t* s) {
-  if constexpr (std::same_as<T, lv_color_t>) {
+  if constexpr (std::same_as<T, lv_color_t>)
     return lv_subject_get_color(s);
-  } else if constexpr (std::is_pointer_v<T>) {
+  else if constexpr (std::is_pointer_v<T>)
     return static_cast<T>(lv_subject_get_pointer(s));
-  } else if constexpr (integer_quantity<T>) {
-    return T{static_cast<typename T::rep>(lv_subject_get_int(s)), T::reference};
-  } else if constexpr (strong_value<T>) {
-    using member = typename state_payload<T>::type;
-    return T{static_cast<member>(lv_subject_get_int(s))};
-  } else if constexpr (std::same_as<T, bool>) {
-    return lv_subject_get_int(s) != 0;
-  } else {
-    return static_cast<T>(lv_subject_get_int(s));
+  else
+    return value_of_number<T>(lv_subject_get_int(s));
+}
+
+// The value in the form a subject holds it.
+template <class T>
+subject_value to_subject_value(const T& v) {
+  if constexpr (std::same_as<T, lv_color_t>)
+    return {.number = 0, .color = v, .pointer = nullptr};
+  else if constexpr (std::is_pointer_v<T>)
+    return {.number = 0, .color = {}, .pointer = static_cast<const void*>(v)};
+  else
+    return {.number = number_of(v), .color = {}, .pointer = nullptr};
+}
+
+// Whether setting `now` over `before` changes nothing: LVGL's rule for its subjects. A
+// pointer always counts as a change.
+template <class T>
+bool same_value(const T& before, const T& now) {
+  if constexpr (std::same_as<T, lv_color_t>)
+    return lv_color_eq(before, now);
+  else if constexpr (std::is_pointer_v<T>)
+    return false;
+  else
+    return number_of(before) == number_of(now);
+}
+
+// What a state and a computed share: the current value, the list of watchers, and the LVGL
+// subject that raw() makes on demand.
+//
+// Without a subject `value_` is the value. With one the subject is: C code may write it, and
+// the observer `forward` (the first on the subject) tells the watchers about every change,
+// whoever made it.
+template <class T>
+class watched {
+ protected:
+  mutable T value_{};
+  mutable lv_subject_t* subject_ = nullptr;
+  mutable watch_list watchers_;
+
+  constexpr watched() = default;
+  constexpr explicit watched(T initial) : value_(initial) {}
+  watched(const watched&) = delete;
+  watched& operator=(const watched&) = delete;
+
+  // The value now.
+  T current() const { return subject_ ? read_subject<T>(subject_) : value_; }
+
+  // Makes `v` the value and tells the watchers if it is a change.
+  void publish(T v) const {
+    const bool same = same_value(value_, v);
+    value_ = v;
+    if (subject_)
+      write_subject(subject_, v);  // `forward` tells the watchers if the subject changed
+    else if (!same)
+      watchers_.tell();
   }
-}
 
-// The LVGL subject behind a state, created on first use.
-template <class T, class O>
-lv_subject_t* subject_of(const void* source) {
-  return static_cast<const state<T, O>*>(source)->raw();
-}
+  lv_subject_t* subject() const {
+    if (subject_ == nullptr) subject_ = make_subject();
+    return subject_;
+  }
 
-// For lv::computed and lv::effect (lv/computed.hpp): how many subjects a state or a
-// computed has deleted so far. Deleting a subject frees the observers on it, so
-// whoever keeps one of them compares this number before it deletes the observer.
-struct graph_access {
-  template <class D>
-  static std::uint32_t epoch(const D& d) {
-    return d.epoch_;
+  // Ends the walks and forgets every watcher, then deletes the subject. What C code wrote
+  // last stays the value.
+  void release() const {
+    watchers_.detach_all();
+    if (subject_ != nullptr && lv_is_initialized()) {
+      value_ = read_subject<T>(subject_);
+      lv_subject_delete(subject_);
+    }
+    subject_ = nullptr;
+  }
+
+ private:
+  lv_subject_t* make_subject() const {
+    lv_subject_t* s = lv_subject_create(subject_type<T>());
+    if (s == nullptr) return nullptr;
+    write_subject(s, value_);
+    // subject_ is still null here, so forward() ignores LVGL's first call.
+    if (lv_subject_add_observer(s, &forward, const_cast<watched*>(this)) == nullptr) {
+      lv_subject_delete(s);
+      return nullptr;
+    }
+    return s;
+  }
+
+  static void forward(lv_observer_t* observer, lv_subject_t*) {
+    const auto* self = static_cast<const watched*>(lv_observer_get_user_data(observer));
+    if (self->subject_ != nullptr) self->watchers_.tell();
   }
 };
+
+// For lv::computed, lv::effect and lv::changed (lv/computed.hpp, lv/task.hpp): the watchers
+// of a state or a computed.
+struct graph_access {
+  template <class D>
+  static watch_list& watchers(const D& d) {
+    return d.follow();
+  }
+};
+
+// A source a widget can write a number to: a state of a number, not of a color or a pointer.
+template <class S>
+inline constexpr bool writable_source =
+    requires(S& s, typename S::value_type v) { s.set(v); } &&
+    !std::same_as<typename S::value_type, lv_color_t> && !std::is_pointer_v<typename S::value_type>;
+
+// The functions of source_ops for S, a state or a computed.
+template <class S>
+struct source_functions {
+  static lv_subject_t* subject(const void* source) { return static_cast<const S*>(source)->raw(); }
+  static watch_list& watchers(const void* source) {
+    return graph_access::watchers(*static_cast<const S*>(source));
+  }
+  static subject_value read(const void* source) {
+    return to_subject_value(static_cast<const S*>(source)->current_value());
+  }
+  static std::int32_t number(const void* source) {
+    return to_subject_value(static_cast<const S*>(source)->current_value()).number;
+  }
+  static void write(const void* source, std::int32_t number) {
+    const_cast<S*>(static_cast<const S*>(source))->set(value_of_number<typename S::value_type>(number));
+  }
+  static consteval auto write_function() {
+    if constexpr (writable_source<S>)
+      return &write;
+    else
+      return static_cast<void (*)(const void*, std::int32_t)>(nullptr);
+  }
+};
+
+// The table of a state or a computed. A binding holds this function, not the table.
+template <class S>
+const source_ops& source_ops_of() {
+  using fn = source_functions<S>;
+  static constexpr source_ops ops{.subject = &fn::subject,
+                                  .watchers = &fn::watchers,
+                                  .read = &fn::read,
+                                  .number = &fn::number,
+                                  .write = fn::write_function()};
+  return ops;
+}
 
 }  // namespace detail
 
 // A value that widgets can follow. See the top of this file.
 // O is the settings tag; leave it out.
 template <class T, class O = override>
-class state {
+class state : detail::watched<T> {
   static_assert(!detail::unit_quantity<T> || detail::integer_quantity<T>,
                 "lv: a quantity in a state needs an integer number for now, for example "
                 "`0 * km / h` rather than `0.0 * km / h`.");
@@ -121,26 +276,24 @@ class state {
                 "anything else, name it: `struct tab_index { int value; };`. To allow plain "
                 "integers, set lv::config::raw_integer_state.");
 
-  T value_{};
-  mutable lv_subject_t* subject_ = nullptr;
-  std::uint32_t epoch_ = 0;  // see detail::graph_access
+  using base = detail::watched<T>;
   friend detail::graph_access;
+  friend detail::source_functions<state>;
 
  public:
+  using value_type = T;
+
   constexpr state() = default;
-  constexpr explicit state(T initial) : value_(initial) {}
+  constexpr explicit state(T initial) : base(initial) {}
   state(const state&) = delete;
   state& operator=(const state&) = delete;
   ~state() { reset(); }
 
   // The current value. Reads the subject, so a change made by C code is seen.
-  T get() const { return subject_ ? detail::read_subject<T>(subject_) : value_; }
+  T get() const { return base::current(); }
 
   // Changes the value and updates everything bound to it.
-  void set(T v) {
-    value_ = v;
-    if (subject_) detail::write_subject(subject_, v);
-  }
+  void set(T v) { base::publish(v); }
 
   state& operator=(T v) {
     set(v);
@@ -202,15 +355,9 @@ class state {
     set(f(get()));
   }
 
-  // The LVGL subject, created on first use. Needs lv_init() to have run.
-  // Null only if LVGL has no memory left.
-  lv_subject_t* raw() const {
-    if (subject_ == nullptr) {
-      subject_ = lv_subject_create(detail::subject_type<T>());
-      if (subject_) detail::write_subject(subject_, value_);
-    }
-    return subject_;
-  }
+  // The LVGL subject, created on first use. Needs lv_init() to have run. From then on
+  // it and the state are one value, in both directions. Null only if LVGL has no memory left.
+  lv_subject_t* raw() const { return base::subject(); }
 
   // Calls `f(value)` now and after every change. The handler may capture nothing,
   // or one pointer-sized trivially copyable value. Returns LVGL's observer, which
@@ -233,19 +380,15 @@ class state {
     }
   }
 
-  // Deletes the subject. Widgets bound to it stop following, and so does every
-  // lv::computed and lv::effect that depends on this state (see lv/computed.hpp).
-  // Called by the destructor.
-  void reset() {
-    if (subject_ != nullptr && lv_is_initialized()) {
-      value_ = detail::read_subject<T>(subject_);
-      lv_subject_delete(subject_);
-    }
-    if (subject_ != nullptr) ++epoch_;
-    subject_ = nullptr;
-  }
+  // Stops everything that follows this state and deletes its subject. Widgets bound to
+  // it stop following, and so does every lv::computed and lv::effect that depends on it
+  // (see lv/computed.hpp). The value stays. Called by the destructor.
+  void reset() { base::release(); }
 
  private:
+  detail::watch_list& follow() const { return this->watchers_; }
+  T current_value() const { return get(); }
+
   template <class F>
   static void call_stateless(lv_observer_t*, lv_subject_t* subject) {
     F h{};
@@ -264,13 +407,13 @@ class state {
 // Binds a property to a state: .value = lv::bind(speed).
 template <class T, class O>
 constexpr binding<T> bind(const state<T, O>& s) {
-  return {&s, &detail::subject_of<T, O>};
+  return {&s, &detail::source_ops_of<state<T, O>>};
 }
 
 // Binds a text property to a state through a format: lv::bind(speed, "{} km/h").
 template <class T, class O>
 constexpr formatted_binding<T> bind(const state<T, O>& s, text_format format) {
-  return {&s, &detail::subject_of<T, O>, format.printf};
+  return {&s, &detail::source_ops_of<state<T, O>>, format.printf};
 }
 
 }  // namespace lv

@@ -59,7 +59,7 @@ class computed {
   value_type get() const { __builtin_unreachable(); }
   /// The LVGL subject, created on first use.
   lv_subject_t* raw() const { __builtin_unreachable(); }
-  /// Deletes the subject. Widgets bound to it stop following.
+  /// Stops following the dependencies and deletes the subject. Widgets bound to it stop following.
   void reset() const {}
 };
 
@@ -88,7 +88,7 @@ class effect {
   effect& operator=(const effect&) = delete;
   ~effect() {}
 
-  /// Runs the function now, and after every change. False if LVGL has no memory.
+  /// Runs the function now, and after every change. Always true.
   bool start() { __builtin_unreachable(); }
   /// Stops following.
   void reset() {}

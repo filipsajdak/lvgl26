@@ -515,37 +515,38 @@ struct sleep_source {
 // The next change of a state.
 template <class T, class O>
 struct change_source {
+  // A watcher of the state, with the wait it belongs to.
+  struct node : watch_node {
+    change_source* owner = nullptr;
+  };
+
   const state<T, O>* source = nullptr;
   void (*done)(void*) = nullptr;
   void* context = nullptr;
-  lv_observer_t* observer = nullptr;
-  std::uint32_t epoch = 0;  // of the state when the observer was added: see graph_access
+  node watcher{};
   bool armed = false;
   alignas(T) unsigned char before[sizeof(T)]{};  // the value when the wait began
 
   explicit change_source(const state<T, O>* s) : source(s) {}
+  // Moved before it is armed only: the state's list points at an armed one.
   change_source(change_source&&) = default;
   ~change_source() { disarm(); }
 
   bool arm(void (*done_fn)(void*), void* done_context, task_promise_base*) noexcept {
-    if (source->raw() == nullptr) return false;
     done = done_fn;
     context = done_context;
-    // LVGL calls a new observer once at once; only later calls are changes.
-    observer = lv_subject_add_observer(source->raw(), &changed_cb, this);
-    epoch = graph_access::epoch(*source);
-    armed = observer != nullptr;
+    watcher.owner = this;
+    watcher.changed = &changed_cb;
+    graph_access::watchers(*source).append(watcher);
+    armed = true;
     const T now = source->get();
     std::memcpy(before, &now, sizeof(T));
-    return armed;
+    return true;
   }
 
-  // The observer is gone already if the state deleted its subject since arm(), or if
-  // LVGL was shut down. LVGL may have given its memory to another observer since.
+  // The state takes the watcher out itself when it is reset or goes.
   void disarm() noexcept {
-    const bool exists = observer != nullptr && epoch == graph_access::epoch(*source);
-    if (exists && lv_is_initialized()) lv_observer_delete(observer);
-    observer = nullptr;
+    watch_list::remove(watcher);
     armed = false;
   }
 
@@ -560,12 +561,10 @@ struct change_source {
     return {std::move(*this), std::move(handler)};
   }
 
-  static void changed_cb(lv_observer_t* o, lv_subject_t*) {
-    auto* self = static_cast<change_source*>(lv_observer_get_user_data(o));
+  static void changed_cb(watch_node& n) {
+    auto* self = static_cast<node&>(n).owner;
     if (!self->armed) return;
-    // A task that waits again inside a notification adds its observer while LVGL
-    // still goes through the list, and LVGL calls it in the same round. That call
-    // brings no new value: without this check a loop of waits would never end.
+    // A pointer is told on every set, even to the same address: that is no new value.
     const T now = self->source->get();
     if (std::memcmp(self->before, &now, sizeof(T)) == 0) return;
     self->disarm();
