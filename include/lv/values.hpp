@@ -333,6 +333,20 @@ inline constexpr bool is_binding<formatted_binding<T>> = true;
 template <>
 inline constexpr bool is_binding<font_binding> = true;
 
+// Whether a pointer constant is null. Compared by reflection: under a sanitizer GCC 16.2
+// does not compare the address of a function or of a static object with null in a
+// constant expression.
+template <class P>
+consteval bool is_null(P p) {
+  return std::meta::reflect_constant(p) == std::meta::reflect_constant(P{});
+}
+
+// Whether T is a whole number of a property, strict<I>.
+template <class T>
+inline constexpr bool is_strict = false;
+template <class I>
+inline constexpr bool is_strict<strict<I>> = true;
+
 // What a property of a node follows: nothing, a state, or a field of a row of lv::each.
 // A number, because under a sanitizer GCC cannot tell at compile time that an address is
 // not null, nor that two functions differ.
@@ -393,14 +407,6 @@ constexpr text_span lower(std::string_view text) { return {text.data(), text.siz
 // strict<> or of a style value; T itself for anything else.
 template <class T>
 using lowered = std::remove_cvref_t<decltype(lower(std::declval<const T&>()))>;
-
-// A number in decimal digits.
-consteval std::string decimal(std::size_t n) {
-  std::string digits;
-  do digits.insert(digits.begin(), static_cast<char>('0' + n % 10));
-  while ((n /= 10) > 0);
-  return digits;
-}
 
 // Members of the given types, called <prefix>0, <prefix>1, ...: what
 // std::meta::define_aggregate needs to make a struct of them.

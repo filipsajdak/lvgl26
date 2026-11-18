@@ -340,12 +340,6 @@ consteval std::uint64_t most_for(std::meta::info setter) {
   return std::numeric_limits<std::uint64_t>::max();
 }
 
-// Whether T is a whole number of a document, strict<I>.
-template <class T>
-inline constexpr bool is_strict = false;
-template <class I>
-inline constexpr bool is_strict<strict<I>> = true;
-
 // The C type of value argument I of a setter: its parameter after the widget.
 template <std::meta::info Setter, std::size_t I>
 using parameter_t = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[I + 1]):];

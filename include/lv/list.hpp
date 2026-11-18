@@ -429,14 +429,6 @@ class list {
 
 namespace detail {
 
-// Whether a pointer constant is null. Compared by reflection: under a sanitizer GCC 16.2
-// does not compare the address of a function or of a static object with null in a
-// constant expression.
-template <class P>
-consteval bool is_null(P p) {
-  return std::meta::reflect_constant(p) == std::meta::reflect_constant(P{});
-}
-
 // What names one row. Like the value of a state: a named value or an enum. A plain integer
 // only where lv::config::raw_integer_state allows one.
 template <class K>

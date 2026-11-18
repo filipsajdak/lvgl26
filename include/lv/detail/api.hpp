@@ -58,6 +58,14 @@ inline constexpr std::span<const std::meta::info> api = std::define_static_array
   for (;;) static_cast<void>(stop);
 }
 
+// A number in decimal digits.
+consteval std::string decimal(std::size_t n) {
+  std::string digits;
+  do digits.insert(digits.begin(), static_cast<char>('0' + n % 10));
+  while ((n /= 10) > 0);
+  return digits;
+}
+
 // The function called `name`, or a null reflection.
 consteval std::meta::info find(std::string_view name) {
   for (auto f : api)
