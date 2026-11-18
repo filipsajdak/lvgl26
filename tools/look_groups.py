@@ -14,7 +14,9 @@ style property only in its layers is a look too, and so is a group named like a 
 A source uses a group when it names it in lv::look<"a.b">, in a list such as lv::look<"a a.b">,
 or by lv::look_of<"a", E>, which uses every sibling group named `a-...` (`a-print`, `a-scan`): the
 compiler picks it by the name of an enumerator, which this tool cannot read. Only code counts: a
-look in a comment or inside another string literal uses nothing.
+look in a comment or inside another string literal uses nothing. A name is compared as the compiler
+reads it, a C++ member name for each part of the path (`tile_print` for `tile-print`); the report
+keeps the spelling of the token file.
 
 One file cannot see the whole program: a group that another program uses is listed with
 --ignore. Exits with 1 and the unused groups if there are any. Uses the standard library only.
@@ -174,31 +176,43 @@ def look_strings(text: str):
             i += 1
 
 
+def canonical(path: str) -> str:
+    """A dotted path as the compiler follows it: each name as a C++ member (`tile_print` for `tile-print`)."""
+    return ".".join(member_name(segment) for segment in path.split("."))
+
+
 def uses_in(text: str) -> tuple[set[str], set[str]]:
-    """The group paths named in `text`, and the prefixes named by lv::look_of."""
+    """The group paths named in `text`, and the prefixes named by lv::look_of, both canonical."""
     used, prefixes = set(), set()
     for kind, contents in look_strings(text):
         if kind == "look":
-            used |= set(contents.split())
+            used |= {canonical(path) for path in contents.split()}
         else:
             prefixes.add(contents)
     return used, prefixes
 
 
 def is_variant_of(path: str, prefix: str) -> bool:
-    """Whether `path` is a sibling group of `prefix` that lv::look_of<prefix, E> may name: prefix-name."""
-    return path.startswith(prefix + "-") and "." not in path[len(prefix) + 1:]
+    """Whether `path` is a sibling group of `prefix` that lv::look_of<prefix, E> may name: prefix-name.
+    The compiler follows prefix + "-" + the enumerator's name, so both are compared as it reads them."""
+    *parent, last = path.split(".")
+    *prefix_parent, prefix_last = prefix.split(".")
+    head = member_name(prefix_last + "-")
+    return canonical(".".join(parent)) == canonical(".".join(prefix_parent)) and \
+        len(parent) == len(prefix_parent) and member_name(last).startswith(head) and len(member_name(last)) > len(head)
 
 
 def unused_groups(tokens: dict, files: list[pathlib.Path], styles: set[str], layers: set[str], ignore: set[str]) -> list[str]:
+    """The component groups that no file names, in the spelling of the token file."""
     used, prefixes = set(), set()
     for file in files:
         u, p = uses_in(file.read_text())
         used |= u
         prefixes |= p
+    named = used | {canonical(path) for path in ignore}
     unused = []
     for path in component_groups(tokens, styles, layers):
-        if path in used or path in ignore or any(is_variant_of(path, prefix) for prefix in prefixes):
+        if canonical(path) in named or any(is_variant_of(path, prefix) for prefix in prefixes):
             continue
         unused.append(path)
     return unused

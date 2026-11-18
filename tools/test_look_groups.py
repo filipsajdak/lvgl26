@@ -122,6 +122,17 @@ class Uses(unittest.TestCase):
         self.assertNotIn("gauge", unused("auto c = '\"'; auto g = lv::look<\"gauge\">;"))
         self.assertNotIn("gauge", unused("auto n = 1'000; auto g = lv::look<\"gauge\">;"))
 
+    def test_a_path_may_use_the_member_spelling(self):
+        found = unused('lv::look<"tile_print"> | lv::look<"gauge">', ignore=("tile", "status"))
+        self.assertEqual(found, ["tile-usb"])
+
+    def test_look_of_may_use_the_member_spelling(self):
+        tokens = {"ink-tile": {"radius": LENGTH}, "ink-tile-print": {"radius": LENGTH}, "inkx": {"radius": LENGTH}}
+        self.assertEqual(unused('lv::look<"ink_tile"> | lv::look_of<"ink_tile", E>', tokens), ["inkx"])
+
+    def test_a_report_keeps_the_spelling_of_the_token_file(self):
+        self.assertIn("tile-usb", unused('lv::look<"tile">'))
+
 
 class Reference(unittest.TestCase):
     def test_the_committed_reference_names_parts_and_states(self):
