@@ -16,11 +16,13 @@
 
 #include <mp-units/systems/si.h>
 
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -283,9 +285,12 @@ static_assert(whole.raw() == 3 && truth.raw());
 static_assert(sweep.get() == 270 * deg);
 static_assert(std::same_as<decltype(lv::label()), lv::node<"label">>);
 static_assert(std::same_as<decltype(lv::view<"button">{}.next().clicked), lv::event_ref<LV_EVENT_CLICKED>>);  // C API
-static_assert(std::same_as<decltype(lv::mount<ui>(lv::obj{})), std::expected<lv::mounted<ui>, lv::mount_error>>);
+static_assert(std::same_as<decltype(lv::mount<ui>(lv::obj{})), lv::mounted<ui>>);
+static_assert(lv::storage_size<ui> == sizeof(lv::mounted<ui>));
 
 // ---- an application, a display, a mounted tree ------------------------------------
+
+constinit lv::mounted<ui> page;
 
 constinit lv::frame<320, 240> frame;
 constinit lv::band<320, 240, 10> band;
@@ -370,6 +375,16 @@ int use_application() {
 
   static_cast<void>(lv::place<ui>(plain.screen()));
   static_cast<void>(root->detach());
+
+  if (page) return 7;
+  if (page.error() != lv::mount_error::not_mounted) return 8;
+  if (!page.mount(plain.screen())) return 9;
+  static_cast<void>((*page).root());
+  alignas(lv::mounted<ui>) std::array<std::byte, lv::storage_size<ui>> memory;
+  lv::mounted<ui>& in_memory = lv::mount_in<ui>(memory, plain.screen());
+  std::destroy_at(&in_memory);
+  lv::mounted<ui> direct{plain.screen()};
+  static_cast<void>(direct.root());
   lv::application::options none{};
   static_cast<void>(none.clock == lv::host.clock);
   return app.run();

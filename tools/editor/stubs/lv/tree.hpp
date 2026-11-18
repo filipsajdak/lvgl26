@@ -15,6 +15,7 @@
 
 #include <cstddef>
 #include <expected>
+#include <span>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -155,16 +156,33 @@ inline constexpr stub::factory<"obj"> row{};
 /// Why lv::mount failed.
 enum class mount_error {
   out_of_memory,  // LVGL could not create a widget
+  not_mounted,    // an lv::mounted made empty, whose mount(parent) has not run
 };
 
-/// The widgets built from a tree. Owns them: they are deleted with this object.
+/// The widgets built from a tree. Owns them: they are deleted with this object. It is neither copied nor moved, and
+/// carries its own failure: `if (!root) return root.error();`.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class mounted {
  public:
-  mounted() = default;
-  mounted(mounted&&) noexcept = default;
-  mounted& operator=(mounted&&) noexcept = default;
+  /// Holds no widgets until mount(parent): a constinit global, or a member.
+  constexpr mounted() = default;
+  /// Builds the widgets of `Tree` under `parent`, here.
+  explicit mounted(obj) {}
+  mounted(const mounted&) = delete;
+  mounted& operator=(const mounted&) = delete;
+
+  /// Builds the widgets of `Tree` under `parent`, for an lv::mounted made empty.
+  std::expected<void, mount_error> mount(obj parent) { __builtin_unreachable(); }
+
+  /// Whether the widgets were built.
+  explicit operator bool() const noexcept { __builtin_unreachable(); }
+  /// Why the widgets were not built.
+  mount_error error() const { __builtin_unreachable(); }
+  mounted* operator->() { __builtin_unreachable(); }
+  const mounted* operator->() const { __builtin_unreachable(); }
+  mounted& operator*() { __builtin_unreachable(); }
+  const mounted& operator*() const { __builtin_unreachable(); }
 
   /// The root widget, or an empty view if its parent already deleted it.
   obj root() const { __builtin_unreachable(); }
@@ -178,10 +196,21 @@ class mounted {
   stub::view_of_id<Tree, Name> get() const { __builtin_unreachable(); }
 };
 
-/// Builds the widgets of the constexpr tree `Tree` under `parent`, and owns them.
+/// The bytes that lv::mount_in needs for `Tree`. Its alignment is alignof(lv::mounted<Tree>).
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
-std::expected<mounted<Tree>, mount_error> mount(obj parent) { __builtin_unreachable(); }
+inline constexpr std::size_t storage_size = sizeof(mounted<Tree>);
+
+/// Builds the widgets of the constexpr tree `Tree` under `parent`, in the caller's
+/// variable, and owns them. Check it with `if (!root)`.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree> mount(obj parent) { __builtin_unreachable(); }
+
+/// The same, built in memory of the caller's. End it with std::destroy_at.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree>& mount_in(std::span<std::byte> memory, obj parent) { __builtin_unreachable(); }
 
 /// Builds the widgets of `Tree` under `parent` and leaves them to it. Returns the
 /// root, or an empty view if LVGL had no memory.

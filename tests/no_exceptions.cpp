@@ -32,7 +32,7 @@ int main() {
   lv_test_display_create(320, 240);
   {
     auto root = lv::mount<ui>(lv::screen_active());
-    check(root.has_value());
+    check(static_cast<bool>(root));
     if (root) {
       check(lv::spawn(run(root->get<"dial">())));
       lv_test_wait(100);

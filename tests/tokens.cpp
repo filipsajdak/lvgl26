@@ -158,7 +158,7 @@ bool same(lv_color_t a, lv_color_t b) {
 void applies_tokens(lv::obj screen) {
   auto d = lv::mount<themed<dark>>(screen);
   auto l = lv::mount<themed<light>>(screen);
-  check(d.has_value() && l.has_value());
+  check(static_cast<bool>(d) && static_cast<bool>(l));
   if (!d || !l) return;
 
   auto dc = d->get<"card">();

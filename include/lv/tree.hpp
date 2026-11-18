@@ -20,7 +20,11 @@
 #include <lv/view.hpp>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <expected>
+#include <memory>
+#include <new>
 #include <span>
 #include <tuple>
 #include <type_traits>
@@ -467,53 +471,154 @@ lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
 
 enum class mount_error {
   out_of_memory,  // LVGL could not create a widget
+  not_mounted,    // an lv::mounted made empty, whose mount(parent) has not run
 };
 
 // The widgets built from a tree. Owns them: they are deleted with this object.
+//
+// It is neither copied nor moved: LVGL's handler on the root points at it. It is built
+// where it lives, and carries its own failure:
+//   auto root = lv::mount<ui>(display.screen());   // on the stack, built in place
+//   if (!root) return root.error();
+//   root->get<"title">().set({.text = "Ready"});
+//
+//   constinit lv::mounted<ui> page;               // a global, mounted later
+//   if (!page.mount(display.screen())) ...
+//
+// sizeof and alignof are constants: lv::mount_in builds one in memory of the caller's.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class mounted {
-  owned<obj> root_;
+  lv_obj_t* root_ = nullptr;
+  mount_error error_ = mount_error::not_mounted;
+  bool built_ = false;
   std::array<lv_obj_t*, detail::id_count<Tree>> ids_{};
 
-  template <const auto& T>
-    requires tree_node<decltype(T)>
-  friend std::expected<mounted<T>, mount_error> mount(obj);
+  // LVGL deletes the root, from here or from outside.
+  static void root_deleted(lv_event_t* e) {
+    static_cast<mounted*>(lv_event_get_user_data(e))->root_ = nullptr;
+  }
+
+  std::expected<void, mount_error> build(obj parent) {
+    detail::build_state st{ids_.data()};
+    lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
+    if (st.ok && root != nullptr &&
+        lv_obj_add_event_cb(root, &root_deleted, LV_EVENT_DELETE, this) != nullptr) {
+      root_ = root;
+      built_ = true;
+      return {};
+    }
+    if (root != nullptr) lv_obj_delete(root);  // a half-built tree
+    error_ = mount_error::out_of_memory;
+    return std::unexpected(error_);
+  }
 
  public:
-  mounted() = default;
-  mounted(mounted&&) noexcept = default;
-  mounted& operator=(mounted&&) noexcept = default;
+  // Holds no widgets until mount(parent): a constinit global, or a member.
+  constexpr mounted() = default;
+
+  // Builds the widgets of `Tree` under `parent`, here. Check the result with operator bool.
+  explicit mounted(obj parent)
+    pre(parent.raw() != nullptr)
+  {
+    (void)build(parent);
+  }
+
+  mounted(const mounted&) = delete;
+  mounted& operator=(const mounted&) = delete;
+
+  ~mounted() {
+    if (root_ != nullptr) lv_obj_delete(root_);
+  }
+
+  // Builds the widgets of `Tree` under `parent`, for an lv::mounted made empty.
+  std::expected<void, mount_error> mount(obj parent)
+    pre(parent.raw() != nullptr)
+    pre(!built_)
+  {
+    return build(parent);
+  }
+
+  // Whether the widgets were built. They stay built when the parent deletes them later:
+  // root() is then empty.
+  explicit operator bool() const noexcept { return built_; }
+
+  // Why the widgets were not built.
+  mount_error error() const
+    pre(!built_)
+  {
+    return error_;
+  }
+
+  // Shaped like std::expected, so that root->get<"id">() reads as before.
+  mounted* operator->()
+    pre(built_)
+  {
+    return this;
+  }
+  const mounted* operator->() const
+    pre(built_)
+  {
+    return this;
+  }
+  mounted& operator*()
+    pre(built_)
+  {
+    return *this;
+  }
+  const mounted& operator*() const
+    pre(built_)
+  {
+    return *this;
+  }
 
   // The root widget, or an empty view if its parent already deleted it.
-  obj root() const { return root_.get(); }
+  obj root() const { return obj{root_}; }
 
   // Gives the widgets to their parent: they now live until the parent is deleted,
   // as widgets made with LVGL's C API do. Returns the root.
-  obj detach() { return root_.release(); }
+  obj detach() {
+    lv_obj_t* root = std::exchange(root_, nullptr);
+    if (root != nullptr) lv_obj_remove_event_cb_with_user_data(root, &root_deleted, this);
+    return obj{root};
+  }
 
   // A typed view of the node with this id.
   template <detail::fixed Name>
   auto get() const {
     // A check in the body, not pre(): GCC 16.2 crashes on pre() with a deduced return type.
-    contract_assert(root_ && "the mounted tree was deleted by its parent");
+    contract_assert(root_ != nullptr && "the mounted tree was deleted by its parent");
     using view_type = typename[:detail::id_view<Tree>(Name.sv()):];
     return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
   }
 };
 
-// Builds the widgets of the constexpr tree `Tree` under `parent`.
+// The bytes that lv::mount_in needs for `Tree`: sizeof(lv::mounted<Tree>), a constant.
+// Its alignment is alignof(lv::mounted<Tree>).
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
-std::expected<mounted<Tree>, mount_error> mount(obj parent)
+inline constexpr std::size_t storage_size = sizeof(mounted<Tree>);
+
+// Builds the widgets of the constexpr tree `Tree` under `parent`. The result is built in
+// the caller's variable, and carries its failure: `if (!root) ... root.error()`.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree> mount(obj parent)
   pre(parent.raw() != nullptr)
 {
-  mounted<Tree> m;
-  detail::build_state st{m.ids_.data()};
-  lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
-  m.root_ = owned<obj>{obj{root}};  // also deletes a half-built tree on failure
-  if (!st.ok || !m.root_) return std::unexpected(mount_error::out_of_memory);
-  return m;
+  return mounted<Tree>{parent};
+}
+
+// The same, built in `memory` of the caller's: a region laid out at start, a buffer of
+// a screen. The caller ends it with std::destroy_at, which deletes the widgets.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree>& mount_in(std::span<std::byte> memory, obj parent)
+  pre(parent.raw() != nullptr)
+  pre(memory.size() >= sizeof(mounted<Tree>))
+  pre(reinterpret_cast<std::uintptr_t>(memory.data()) % alignof(mounted<Tree>) == 0)
+{
+  return *::new (static_cast<void*>(memory.data())) mounted<Tree>(parent);
 }
 
 // Builds the widgets of `Tree` under `parent` and leaves them to it, as widgets
@@ -524,8 +629,8 @@ template <const auto& Tree>
 obj place(obj parent)
   pre(parent.raw() != nullptr)
 {
-  auto built = mount<Tree>(parent);
-  return built ? built->detach() : obj{};
+  mounted<Tree> built{parent};
+  return built ? built.detach() : obj{};
 }
 
 }  // namespace lv

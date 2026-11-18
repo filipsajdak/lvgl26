@@ -146,7 +146,7 @@ void a_frame_holds_the_picture() {
     check(display.screen().raw() == lv_screen_active());
     check(display.raw() == lv_display_get_default());
     auto root = lv::mount<ui>(display.screen());
-    check(root.has_value());
+    check(static_cast<bool>(root));
     const std::size_t pixel = lv_color_format_get_size(LV_COLOR_FORMAT_NATIVE);
     check(lv::frame<64, 48>::stride == 64 * pixel);
     check(frame.bytes().size() == 64 * 48 * pixel);

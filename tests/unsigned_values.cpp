@@ -37,7 +37,7 @@ constexpr auto ui = lv::column[lv::spinner({.arc_sweep = 270 * deg, .id = "spin"
 
 void sweeps_reach_lvgl(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   check(lv_spinner_get_arc_sweep(root->get<"spin">().raw()) == 270);
   check(lv_spinner_get_arc_sweep(root->get<"none">().raw()) == 0);
   check(lv_spinner_get_arc_sweep(root->get<"widest">().raw()) == 2'147'483'647U);

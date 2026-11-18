@@ -52,7 +52,7 @@ static_assert((lv::rgb(0x3366ff)).red == 0x33 && (lv::rgb(0x3366ff)).blue == 0xf
 
 void builds_and_names(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
 
   auto title = root->get<"title">();
@@ -79,11 +79,11 @@ void owns_its_widgets(lv::obj screen) {
   {
     auto root = lv::mount<ui>(screen);
     check(lv_obj_get_child_count(screen.raw()) == before + 1);
-    auto moved = std::move(*root);
-    check(lv_obj_get_child_count(screen.raw()) == before + 1);
-    check(moved.get<"speedo">().get<"value">() == 120);
+    check(root->get<"speedo">().get<"value">() == 120);
   }
   check(lv_obj_get_child_count(screen.raw()) == before);
+  // It stays where it was built: the widgets and the states it follows point into it.
+  static_assert(!std::is_move_constructible_v<lv::mounted<ui>> && !std::is_copy_constructible_v<lv::mounted<ui>>);
 
   // The parent deletes first: nothing is deleted twice.
   {

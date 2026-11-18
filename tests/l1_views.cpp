@@ -230,7 +230,7 @@ void mount_owns_its_tree_or_leaves_nothing(lv::obj screen) {
     full_heap heap{room};
     auto m = lv::mount<one_label>(screen);
     heap.release();
-    mounted = m.has_value();
+    mounted = static_cast<bool>(m);
     check(count() == before + (mounted ? 1 : 0));
     check(!mounted || m->root());
   }

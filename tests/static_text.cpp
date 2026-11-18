@@ -29,7 +29,7 @@ std::size_t used_bytes() {
 // The label's text is the very literal of the tree: no copy was made.
 void keeps_the_pointer(lv::display& display) {
   auto root = lv::mount<ui>(display.screen());
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
   check(lv_label_get_text(root->get<"plain">().raw()) == greeting);
   check(lv_label_get_text(root->get<"box">().raw()) != nullptr);
@@ -71,7 +71,7 @@ std::size_t mount_cost(lv::display& display) {
   std::size_t cost = 0;
   {
     auto root = lv::mount<Tree>(display.screen());
-    check(root.has_value());
+    check(static_cast<bool>(root));
     cost = used_bytes() - before;
   }
   check(used_bytes() == before);

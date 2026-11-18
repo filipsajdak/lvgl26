@@ -542,7 +542,7 @@ void style_rotation_is_in_tenths(lv::obj screen) {
   lv_obj_delete(box.raw());
 
   auto root = lv::mount<tilted>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
   const auto t = root->get<"tilted">();
   check(lv_obj_get_style_transform_rotation(t.raw(), LV_PART_MAIN) == 225);

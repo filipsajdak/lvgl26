@@ -110,7 +110,7 @@ bool same_color(lv_color_t a, lv_color_t b) {
 
 void mounts_every_widget(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
 
   check(count_widgets(root->root().raw()) == 112);

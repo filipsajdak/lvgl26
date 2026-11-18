@@ -109,7 +109,7 @@ void reset_keeps_the_value() {
 
 void widgets_follow(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
 
   auto dial = root->get<"dial">();
@@ -189,7 +189,7 @@ constexpr auto week = lv::roller({.id = "week", .options = {"Mon\nTue\nWed", "no
 // A roller and a dropdown follow a state, and write the user's choice back to it.
 void choices_follow_a_state(lv::obj screen) {
   auto root = lv::mount<week>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   auto roller = root->get<"week">();
   check(lv_roller_get_selected(roller.raw()) == 1);
   weekday = choice{2};

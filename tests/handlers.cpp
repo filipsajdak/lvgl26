@@ -50,7 +50,7 @@ static_assert(std::is_same_v<decltype(in_the_tree.p.on_clicked), lv::arg<lv::han
 
 void fires(lv::obj screen) {
   auto root = lv::mount<all>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
 
   taps = 0;

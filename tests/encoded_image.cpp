@@ -56,7 +56,7 @@ void reads_sizes_of_two_bytes() {
 
 void is_decoded_and_drawn(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
   lv_obj_update_layout(lv_screen_active());
   // LVGL's decoders accepted both files: the widgets have the pictures' sizes.

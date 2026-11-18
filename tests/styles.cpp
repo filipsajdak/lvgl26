@@ -61,7 +61,7 @@ std::size_t free_bytes() {
 
 void applies(lv::obj screen) {
   auto root = lv::mount<ui>(screen);
-  check(root.has_value());
+  check(static_cast<bool>(root));
   if (!root) return;
 
   auto c = root->get<"card">();
