@@ -110,6 +110,13 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   embedded LVGL headers (`include/lv/detail/angle_docs.hpp`). A hand-written list of setters is not
   allowed. A new header with an angle goes into `angle_headers`; `tests/angle_units.cpp` checks the
   reading against the pixels.
+- A list of options for a dropdown or a roller is written `.options = {"a", "b"}` or
+  `lv::options_of<E>`, not as a text with line breaks: examples and docs use the list. Which setters take a
+  list is read from LVGL's doc comments (`include/lv/detail/option_docs.hpp`), never listed by hand; a widget
+  whose header is not embedded there is a compile error. A state of an enum follows `.selected` through
+  `lv::options_of<E>` in a constexpr tree only (the observer's data is in read-only memory); at run time
+  `set()` refuses it with a contract. `lv::but` lives in `include/lv/but.hpp`, one definition for every
+  user of it.
 - Anything a header does at namespace scope costs compile time in every file. Keep reflection
   scans lazy: put them behind a template parameter (see `props_of` in `include/lv/props.hpp`).
 - Inside a template, name what is generated for one widget through a template parameter
@@ -120,7 +127,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Under a sanitizer GCC 16.2 does not compare two different function addresses, nor the address of
   an inline variable or a template parameter object with null, in a constant expression. Carry a
   number instead (`follows` of `lv::arg` says what a property follows), or compare
-  `std::meta::reflect_constant` of both (see `detail::is_null` in `include/lv/list.hpp`).
+  `std::meta::reflect_constant` of both (see `detail::is_null` in `include/lv/values.hpp`).
 - GCC 16.2 runs a call whose arguments are all constants twice when it is written inside a
   function template: once when the template is instantiated, once when the function runs. Hand
   the result of a scan in as an argument (see `scan_base` in `include/lv/props.hpp`).

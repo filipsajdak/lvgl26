@@ -40,7 +40,7 @@ How it works:
   `.flex_align = {"center", "center", "start"}`.
   The name is the enumerator without what all of its enum share, in lower case, so `LV_ALIGN_TOP_LEFT` is `"top_left"`.
   An internal enumerator that LVGL marks with an underscore keeps its whole name and does not shorten the others.
-  A name may stand beside values of other kinds: a roller takes `.options = {"Mon\nTue", "infinite"}`.
+  A name may stand beside values of other kinds: a roller takes `.options = {{"Mon", "Tue"}, "infinite"}`.
   A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
@@ -143,6 +143,18 @@ constexpr auto home = lv::row[lv::for_each<page, lv::but<page::none>>(tile)];   
 ```
 
 - The widgets are children of the tree, as if written by hand: no list, no memory from lvgl26. [docs/repetition.md](docs/repetition.md) has the rest.
+
+A dropdown and a roller take their options as a list, not as a text with line breaks. The compiler joins the list and keeps it in read-only memory:
+
+```cpp
+lv::dropdown({.options = {"100%", "75%", "50%"}})
+lv::dropdown({.options = lv::options_of<quality>, .selected = lv::bind(chosen)})  // chosen holds a quality
+lv::roller({.options = {{"Mon", "Tue", "Wed"}, "infinite"}})
+```
+
+- `lv::options_of<E>` makes one option for each enumerator, `lv::but<...>` leaves some out, and a state of the enum follows the choice both ways.
+- An empty option or one with a line break is a compile error. [docs/options.md](docs/options.md) has the rest.
+
 A reusable part is a function that returns a piece of tree. Its parameters are constrained by the concepts of namespace `lv`, and a captureless lambda is a handler:
 
 ```cpp
