@@ -100,6 +100,10 @@ constexpr auto alpha_explicit_ui = lv::box({.id = "explicit", .style = lv::look<
 constexpr auto pad_order_ui = lv::box({.id = "order", .style = lv::look<"pad-order">});
 constexpr auto pad_narrow_ui = lv::box({.id = "narrow", .style = lv::look<"pad-narrow">});
 constexpr auto pad_narrow_after_ui = lv::box({.id = "after", .style = lv::look<"pad-narrow-after">});
+constexpr auto main_then_wide_ui = lv::box({.id = "main_then_wide", .style = lv::look<"main-wide wide">});
+// lv::on keeps a rule of its own for two shorthands: the first in alphabetical order (pad_all) wins.
+constexpr auto on_shorthands_ui = lv::box({.checked = true, .id = "on_shorthands",
+                                          .style = lv::on("checked", {.pad_all = tok.flat.pad_all, .pad_hor = tok.tile.radius})});
 constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
 constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
 
@@ -296,6 +300,22 @@ void a_long_form_beats_a_shorthand_in_any_order() {
   }
 }
 
+// A main group is the look itself, so a later look in the list beats it as it beats the entries.
+void a_later_look_beats_a_main_group() {
+  auto built = lv::mount<main_then_wide_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_update_layout(built->root().raw());
+  check(lv_obj_get_width(built->root().raw()) == 100);
+}
+
+void on_lets_the_first_shorthand_win() {
+  auto built = lv::mount<on_shorthands_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  check(lv_obj_get_style_pad_left(built->root().raw(), LV_PART_MAIN) == 7);
+}
+
 void a_label_inherits_the_text_of_its_parents_look() {
   auto built = lv::mount<inherit_ui>(lv::screen_active());
   check(built.has_value());
@@ -466,6 +486,8 @@ int main() {
   a_part_takes_the_design();
   a_look_costs_no_heap_beyond_the_style_list();
   a_rows_look_flow_keeps_the_flex_layout();
+  a_later_look_beats_a_main_group();
+  on_lets_the_first_shorthand_win();
   a_main_group_counts_as_the_look();
   a_groups_own_side_beats_its_default();  // after it: its widgets move the heap's free blocks
   a_theme_takes_a_look();
