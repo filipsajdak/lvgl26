@@ -782,7 +782,7 @@ struct selection {
 
   constexpr selection() = default;
   template <class U>
-  constexpr selection(binding<U> b) : state{b.source, b.subject} {
+  constexpr selection(binding<U> b) : state{b.source, b.ops} {
     static_assert(std::same_as<U, K>,
                   "lv: .selected follows the key of the selected row. Bind a state of the key's "
                   "type: `constinit lv::state<track_id> current{};`, then .selected = lv::bind(current).");
@@ -1119,7 +1119,7 @@ struct each_parts {
 
   static lv_subject_t* selection() {
     const auto& b = node.options.selected.state;
-    return b.subject(b.source);
+    return b.ops().subject(b.source);
   }
 
   static constexpr each_kind kind{source::capacity(), &size, &at, &key, &watchers, &build_row, &apply,

@@ -390,7 +390,7 @@ void follow_enum_choice(lv_obj_t* w) {
     static_assert(checked);
     // Its own storage: the address of the tree's would keep the whole tree in the program.
     static constexpr option_list options = given.v.v0;
-    static constexpr enum_link link{chosen.bound, chosen.bound_subject, &options};
+    static constexpr enum_link link{chosen.bound, chosen.bound_ops, &options};
     bind_choice<W, Member>(w, link);
   }
 }

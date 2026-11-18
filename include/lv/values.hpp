@@ -9,6 +9,7 @@
 #include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/detail/option_docs.hpp>
+#include <lv/detail/source.hpp>
 #include <lv/event.hpp>
 #include <lv/options.hpp>
 #include <lv/units.hpp>
@@ -283,7 +284,7 @@ inline constexpr const char* quantity_format<Q> = [] {
 template <class T>
 struct binding {
   const void* source;
-  lv_subject_t* (*subject)(const void*);
+  detail::source_ops_fn ops;
 };
 
 // The format of a text binding: text with exactly one {} where the value goes,
@@ -323,7 +324,7 @@ struct font_binding {
 template <class T>
 struct formatted_binding {
   const void* source;
-  lv_subject_t* (*subject)(const void*);
+  detail::source_ops_fn ops;
   const char* format;
 };
 
@@ -381,12 +382,12 @@ inline constexpr follow follows_of_binding = std::is_enum_v<T> && is_strict<Firs
 template <class T>
 struct row_binding {
   const void* source;
-  lv_subject_t* (*subject)(const void*);
+  detail::source_ops_fn ops;
 };
 template <class T>
 struct row_formatted_binding {
   const void* source;
-  lv_subject_t* (*subject)(const void*);
+  detail::source_ops_fn ops;
   const char* format;
 };
 template <class T>
@@ -395,13 +396,14 @@ template <class T>
 inline constexpr bool is_binding<row_formatted_binding<T>> = true;
 
 // What a binding to a field of a row (lv::bind(&track::title), see lv/list.hpp) holds
-// where a state's binding has the function that finds its subject. lv::each applies such
+// where a state's binding has the function that finds its table (source_ops). lv::each applies such
 // a property with each row's value. A tree outside lv::each refuses it at compile time;
 // view.set() at run time reaches this function, which breaks its contract.
-inline lv_subject_t* row_field_marker(const void* field) {
-  contract_assert(field == nullptr &&
+inline const source_ops& row_field_marker() {
+  contract_assert(false &&
                   "lv::bind(&T::field) follows a field of a row: use it in the row template of lv::each");
-  return nullptr;
+  static constexpr source_ops none{};
+  return none;
 }
 
 }  // namespace detail
@@ -514,7 +516,7 @@ struct arg {
 
   // Set when the property follows a state instead of holding a value.
   const void* bound;
-  lv_subject_t* (*bound_subject)(const void*);
+  detail::source_ops_fn bound_ops;
   const char* bound_format;
 
   // The types of the property, as they are written: arg<angle>::types is std::tuple<angle>.
@@ -530,7 +532,7 @@ struct arg {
                                       detail::is_binding<std::remove_cvref_t<U>>) && ...))) &&
             (!detail::names_an_enumerator<types, std::tuple<U...>>)
   constexpr arg(U&&... u)
-      : set(true), follows(detail::follows_nothing), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(detail::follows_nothing), v(convert(std::forward<U>(u)...)), bound(nullptr), bound_ops(nullptr),
         bound_format(nullptr) {}
 
   // An LVGL enumerator by its name: `.align = "center"`, `.flex_align = {"start", "center", "center"}`.
@@ -539,7 +541,7 @@ struct arg {
     requires(sizeof...(N) == sizeof...(Ts)) && (std::is_enum_v<Ts> && ...)
   consteval arg(const char (&... name)[N])
       : set(true), follows(detail::follows_nothing), v(convert(detail::enumerator_named<Ts>(name)...)), bound(nullptr),
-        bound_subject(nullptr), bound_format(nullptr) {}
+        bound_ops(nullptr), bound_format(nullptr) {}
 
   // A list of options: `.options = {"100%", "75%", "50%"}`, joined by the compiler.
   template <std::size_t... N>
@@ -550,13 +552,13 @@ struct arg {
   // setter that takes a text, then an enumerator.
   constexpr arg(detail::value_or_name<Ts>... u)
     requires(sizeof...(Ts) > 1) && (std::is_enum_v<Ts> || ...)
-      : set(true), follows(detail::follows_nothing), v(convert(detail::given_value(u)...)), bound(nullptr), bound_subject(nullptr),
+      : set(true), follows(detail::follows_nothing), v(convert(detail::given_value(u)...)), bound(nullptr), bound_ops(nullptr),
         bound_format(nullptr) {}
 
   template <class T>
   constexpr arg(binding<T> b)
       : set(true), follows(detail::follows_of_binding<T, std::tuple_element_t<0, types>>), v{}, bound(b.source),
-        bound_subject(b.subject), bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
+        bound_ops(b.ops), bound_format(text_of_quantity<T> ? detail::quantity_format<T> : detail::enum_tag<T>) {
     using first = std::tuple_element_t<0, types>;
     // A state of an enum follows the whole number of a property too: the choice of a
     // dropdown or a roller whose options come from lv::options_of (checked where it is used).
@@ -576,7 +578,7 @@ struct arg {
 
   // A field of a row of lv::each: checked as a state's binding, and marked.
   template <class T>
-  constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.subject}) {
+  constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.ops}) {
     static_assert(detail::follows_of_binding<T, std::tuple_element_t<0, types>> != detail::follows_choice,
                   "lv: a field of a row that holds an enum cannot follow a whole number. The choice of "
                   "options follows a state of the enum: .selected = lv::bind(state).");
@@ -584,18 +586,18 @@ struct arg {
   }
 
   template <class T>
-  constexpr arg(detail::row_formatted_binding<T> b) : arg(formatted_binding<T>{b.source, b.subject, b.format}) {
+  constexpr arg(detail::row_formatted_binding<T> b) : arg(formatted_binding<T>{b.source, b.ops, b.format}) {
     follows = detail::follows_row_field;
   }
 
-  constexpr arg(font_binding b) : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(nullptr), bound_format(nullptr) {
+  constexpr arg(font_binding b) : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_ops(nullptr), bound_format(nullptr) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, styled<const lv_font_t*>> && ...),
                   "lv: lv::bind(font) is for a font property of a style, such as .text_font.");
   }
 
   template <class T>
   constexpr arg(formatted_binding<T> b)
-      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_subject(b.subject), bound_format(b.format) {
+      : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_ops(b.ops), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
                   "lv: lv::bind(state, format) is for text properties only.");
   }

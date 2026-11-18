@@ -56,6 +56,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - An LVGL enumerator is written as a name in quotes (`.align = "center"`). An example names no
   `lv_` function, `lv_..._t` type or `LV_` name: `tools/check_examples.py` fails on one. A line
   that needs the C API on purpose ends with the comment `// C API`.
+- Something follows an `lv::state` or an `lv::computed` through a node in its list (`detail::watch_node`, `include/lv/detail/watch.hpp`): a widget, an `lv::computed`, an `lv::effect`, `lv::changed`. Do not add an LVGL observer for it: the LVGL subject exists only for `raw()`. LVGL's own bind function, and with it a subject, is kept only where `keeps_lvgl_binder` in `include/lv/props.hpp` says so (an animation LVGL starts after the first draw, and `checked`). A walk over a list is safe against watchers that remove or add watchers, and the tests in `tests/watchers.cpp` say how.
 - Views never delete widgets. Only `lv::mount` and `lv::owned` own.
 - Styles take design tokens only. Add the token to the token file; use `lv::raw(...)` only for a
   reasoned exception. Use semantic or component tokens in UI code, not primitives.
