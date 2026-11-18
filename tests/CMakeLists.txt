@@ -311,9 +311,15 @@ lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to se
 lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
 # A part that constrains its parameters with the public concepts (docs/concepts.md).
-lvgl26_compile_fail(handler_capturing_lambda "A handler in a constexpr tree is a plain function pointer")
+# The whole message of a handler that holds state, sentence by sentence: each says what to do.
+string(CONCAT handler_state_message "It takes a function or a lambda that captures nothing: `&function`, `\\[\\] \\{ \\.\\.\\. \\}` or "
+    "`\\[\\]\\(lv::event e\\) \\{ \\.\\.\\. \\}`\\. A handler in a constexpr tree is a plain function pointer, "
+    "so it cannot hold state: name the state as a template argument "
+    "\\(`template <lv::dependency auto& Count>`\\) and use it in the lambda, or add the handler to "
+    "the view with on<LV_EVENT_\\.\\.\\.>\\(\\)\\.")
+lvgl26_compile_fail(handler_capturing_lambda "${handler_state_message}")
 lvgl26_compile_fail(part_handler_capturing_lambda "without_captures__name_the_state_as_a_template_argument")
-lvgl26_compile_fail(part_event_handler_capturing_lambda "A handler in a constexpr tree is a plain function pointer")
+lvgl26_compile_fail(part_event_handler_capturing_lambda "${handler_state_message}")
 lvgl26_compile_fail(part_tree_handler_not_callable "requires +tree_handler<")
 lvgl26_compile_fail(part_handler_not_callable "requires +event_handler<")
 lvgl26_compile_fail(part_dependency_plain_value "requires +dependency<")
