@@ -114,6 +114,7 @@ constexpr auto wide_ui = lv::group({.id = "wide", .style = lv::look<"wide">});
 constexpr auto own_ui = lv::group({.id = "own", .size = {30 * px, 20 * px}, .style = lv::look<"tile">});
 constexpr auto own_width_ui = lv::group({.id = "own_width", .style = lv::look<"tall">, .width = 30 * px});
 constexpr auto own_height_ui = lv::group({.height = 20 * px, .id = "own_height", .style = lv::look<"wide">});
+constexpr auto checked_wide_ui = lv::group({.checked = true, .id = "checked_wide", .style = lv::look<"checked-wide">});
 constexpr auto width_only_ui = lv::group({.id = "width_only", .width = 30 * px});
 constexpr auto flow_ui = lv::row({.id = "flow", .style = lv::look<"tile">});
 constexpr auto row_ui = lv::row({.id = "row"});
@@ -377,6 +378,19 @@ void a_groups_own_side_beats_its_default() {
   check(lv_obj_get_height(width_only->root().raw()) == lv_obj_get_height(lv_screen_active()));
 }
 
+// A width in a state layer beats the group's default in that state: LVGL ranks a style for a state
+// above one for the default state, a local one too. Out of the state, the default of 100% is back.
+void a_state_layer_beats_the_groups_default() {
+  const auto built = lv::mount<checked_wide_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* g = built->root().raw();
+  lv_obj_update_layout(lv_screen_active());
+  check(lv_obj_get_width(g) == 40);
+  lv_obj_remove_state(g, LV_STATE_CHECKED);
+  check(lv_obj_get_style_width(g, LV_PART_MAIN) == lv_pct(100));
+}
+
 // lv::row is a flex row, unless the look says the flow.
 void a_rows_flow_gives_way_to_a_look() {
   const auto flow = lv::mount<flow_ui>(lv::screen_active());
@@ -489,6 +503,7 @@ int main() {
   a_later_look_beats_a_main_group();
   on_lets_the_first_shorthand_win();
   a_main_group_counts_as_the_look();
+  a_state_layer_beats_the_groups_default();
   a_groups_own_side_beats_its_default();  // after it: its widgets move the heap's free blocks
   a_theme_takes_a_look();
   return failures;
