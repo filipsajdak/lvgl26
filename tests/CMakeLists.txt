@@ -846,3 +846,4 @@ lvgl26_compile_fail(options_plain_list ".selected follows a state of sheet, and 
 lvgl26_compile_fail(options_enum_state_elsewhere "a state of an enum follows only the choice of a dropdown or a roller")
 lvgl26_compile_fail(options_roller_without_mode "It takes a list of options .* then lv_roller_mode_t")
 lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
+lvgl26_compile_fail(options_row_enum "a field of a row that holds an enum cannot follow a whole number")

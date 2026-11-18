@@ -577,8 +577,7 @@ struct arg {
   // A field of a row of lv::each: checked as a state's binding, and marked.
   template <class T>
   constexpr arg(detail::row_binding<T> b) : arg(binding<T>{b.source, b.subject}) {
-    static_assert(!(std::is_enum_v<T> && !std::convertible_to<T, std::tuple_element_t<0, types>> &&
-                    detail::is_strict<std::tuple_element_t<0, types>>),
+    static_assert(detail::follows_of_binding<T, std::tuple_element_t<0, types>> != detail::follows_choice,
                   "lv: a field of a row that holds an enum cannot follow a whole number. The choice of "
                   "options follows a state of the enum: .selected = lv::bind(state).");
     follows = detail::follows_row_field;
