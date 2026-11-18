@@ -24,6 +24,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
 | Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
 
+- The analyzer build compiles three files at once (`LVGL26_ANALYZE_JOBS` in `cmake/quality.cmake`): a test file needs up to 2.4 GB under the analyzer, and four at once lost the CI runner. Raise it only with a measurement of peak memory.
 - The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
 - A check belongs in the pull request run if it takes a few minutes and a change can
   plausibly break it. Anything long goes to the nightly run.
