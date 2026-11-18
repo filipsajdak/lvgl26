@@ -596,8 +596,11 @@ void watch_member(lv_obj_t* o, const A& a) {
   } else {
     node = watch(o, a.bound, a.bound_ops, &show_value<W, I, value_type>);
   }
-  if constexpr (binder<setter> != std::meta::info{} && number_getter<setter> != std::meta::info{}) {
-    if (node != nullptr) write_back_with(o, *node, &write_back<number_getter<setter>>);
+  // Nested, not `&&`: the getter of a property that LVGL has no bind function for is not looked up.
+  if constexpr (binder<setter> != std::meta::info{}) {
+    if constexpr (number_getter<setter> != std::meta::info{}) {
+      if (node != nullptr) write_back_with(o, *node, &write_back<number_getter<setter>>);
+    }
   }
 }
 
