@@ -825,9 +825,14 @@ Fix: `drawn_font<D, font_key{file, px}>` in `look.hpp` is a variable template, s
 
 A look that asks for a font nobody drew yet still costs about 7 G more than the tree, 13 percent of the drawing; the cause is not found. `reasoned`: an instantiation of the walk for each token.
 
-### Decisions the build made that the owner may want to turn
+### Decisions of the owner after the review (2026-11-18), as built
 
-- A nested group that is neither a part nor a state is a look of its own at the top of a look, because variants (decision 3) are such groups: `tile.print` is nested in `tile`. Decision 25 says "a nested group is a part or a state", and decision 26 asks for an error for a group that is neither. Inside a layer (`checked`, `knob`) such a group is an error, because nothing can reach it there. A typo such as `"cheked"` at the top is caught by `tools/look_groups.py`, which lists it as a group that no look names.
-- A percentage in a look is read (`"width": "50%"`), as the token reader already reads `%`. Neither refused nor documented: a separate task checks whether the DTCG draft takes percentages.
-- `size` is refused in a look: a token holds one value and `size` takes two. The look says `width` and `height`.
-- `lv::look_of<"tile", Page>` is the look of one path. A variant is `lv::look<"tile"> | lv::look_of<"tile", Page>`; a call that merges both would be `lv::looks<"tile", Page>` of the sketches.
+The sources are `docs/research/dtcg.md` (pull request 114) and an interview.
+
+- A group nested in a look is a part or a state, and nothing else: any other name is a compile error with a "did you mean" and the lists of parts and states. A variant is a sibling group (`tile-print` beside `tile`), because Format 6.4.4 calls a group that extends its own parent circular, and a name holds no dot (5.1.1). That removes the edge where a variant named `alt`, `knob` or `focused` was silently a layer.
+- `lv::look<"tile tile-print">` stacks looks, a later one wins; `lv::look_of<"tile", Page>` is `tile-print`.
+- `$extends` is wanted and belongs to the token reader, in the work that implements 2025.10 fully. Until then the reader marks a group that has it (`lvgl26_extends` member), and a look of it is a compile error.
+- The token file holds no custom `$type`. An LVGL value by name and a percentage are in the group's `$extensions` under `io.github.filipsajdak.lvgl26` (Format 5.2.3: reverse domain notation, tools keep it). The reader makes a struct of the strings (`lvgl26_vendor` member); a value that is not a string is a reader error. A string token and a percentage `$value` in a look are compile errors that point there.
+- A color written `#rrggbbaa` is a `token<rgba_color>` and sets the opacity beside its property (`bg_color` with `bg_opa`; `image_recolor` with `image_recolor_opa`); an opaque color sets none, and an explicit opacity entry wins. This reverses decision 7 for a color that carries alpha. Colors as objects are left to the reader work.
+- `lv::look_of` and the look paths with a dash: the compiler spells `-` as `_`, so a message lists `tile_print`.
+- Percentages in the standard: see `docs/research/dtcg.md`; no percentage is refused or documented as final.

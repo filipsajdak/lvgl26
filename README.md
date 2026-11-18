@@ -136,7 +136,7 @@ tracks.update(1, [](track& t) { ++t.plays; });          // sets that row's label
 An element names its look, and the token file says how it looks. A look is a group of the design tokens, used as a style:
 
 ```cpp
-lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Page>})   // the groups "tile" and "tile.print"
+lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Page>})   // the groups "tile" and "tile-print"
 lv::label({.checked = true, .style = lv::look<"status">})             // "checked" in the group is a layer
 ```
 

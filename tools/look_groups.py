@@ -11,8 +11,8 @@ never reported. A group named like an LVGL state or part (`checked`, `knob`) is 
 above it, which lv::look takes along, so it is reported only through its parent.
 
 A source uses a group when it names it in lv::look<"a.b">, in a list such as lv::look<"a a.b">,
-or by lv::look_of<"a", E>, which uses every group directly under `a`: the compiler picks it by
-the name of an enumerator, which this tool cannot read.
+or by lv::look_of<"a", E>, which uses every sibling group named `a-...` (`a-print`, `a-scan`): the
+compiler picks it by the name of an enumerator, which this tool cannot read.
 
 One file cannot see the whole program: a group that another program uses is listed with
 --ignore. Exits with 1 and the unused groups if there are any. Uses the standard library only.
@@ -60,7 +60,13 @@ def groups_of(node: dict, prefix: str = ""):
         yield from groups_of(value, path + ".")
 
 
+VENDOR_KEY = "io.github.filipsajdak.lvgl26"
+
+
 def has_style_entry(group: dict, styles: set[str]) -> bool:
+    """An entry named for a style property, or vendor data under $extensions (include/lv/tokens.hpp)."""
+    if isinstance(group.get("$extensions"), dict) and VENDOR_KEY in group["$extensions"]:
+        return True
     return any(key in styles and not is_group(value) for key, value in group.items() if not key.startswith("$"))
 
 
@@ -95,6 +101,11 @@ def uses_in(text: str) -> tuple[set[str], set[str]]:
     return used, prefixes
 
 
+def is_variant_of(path: str, prefix: str) -> bool:
+    """Whether `path` is a sibling group of `prefix` that lv::look_of<prefix, E> may name: prefix-name."""
+    return path.startswith(prefix + "-") and "." not in path[len(prefix) + 1:]
+
+
 def unused_groups(tokens: dict, files: list[pathlib.Path], styles: set[str], layers: set[str], ignore: set[str]) -> list[str]:
     used, prefixes = set(), set()
     for file in files:
@@ -103,8 +114,7 @@ def unused_groups(tokens: dict, files: list[pathlib.Path], styles: set[str], lay
         prefixes |= p
     unused = []
     for path in component_groups(tokens, styles, layers):
-        parent = path.rpartition(".")[0]
-        if path in used or path in ignore or (parent and parent in prefixes):
+        if path in used or path in ignore or any(is_variant_of(path, prefix) for prefix in prefixes):
             continue
         unused.append(path)
     return unused

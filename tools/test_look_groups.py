@@ -18,13 +18,10 @@ LENGTH = {"$type": "dimension", "$value": "4px"}
 TOKENS = {
     "color": {"$type": "color", "white": {"$value": "#ffffff"}},
     "space": {"$type": "dimension", "gap": {"$value": "8px"}},
-    "tile": {
-        "radius": LENGTH,
-        "pressed": {"bg_color": COLOR},
-        "print": {"bg_color": COLOR},
-        "usb": {"bg_color": COLOR},
-    },
-    "status": {"text_color": COLOR, "checked": {"text_color": COLOR}, "cheked": {"text_color": COLOR}},
+    "tile": {"radius": LENGTH, "pressed": {"bg_color": COLOR}},
+    "tile-print": {"bg_color": COLOR},
+    "tile-usb": {"bg_color": COLOR},
+    "status": {"text_color": COLOR, "checked": {"text_color": COLOR}},
     "gauge": {"width": LENGTH, "knob": {"pressed": {"bg_color": COLOR}}},
 }
 
@@ -45,7 +42,7 @@ class ComponentGroups(unittest.TestCase):
     def test_a_group_named_for_style_properties_is_one(self):
         self.assertEqual(
             tool.component_groups(TOKENS, STYLES, LAYERS),
-            ["tile", "tile.print", "tile.usb", "status", "status.cheked", "gauge"],
+            ["tile", "tile-print", "tile-usb", "status", "gauge"],
         )
 
     def test_a_state_or_part_belongs_to_its_parent(self):
@@ -55,14 +52,24 @@ class ComponentGroups(unittest.TestCase):
         self.assertNotIn("gauge.knob", found)
 
 
+class VendorData(unittest.TestCase):
+    def test_a_group_with_only_vendor_data_is_a_component(self):
+        tokens = {"row": {"$extensions": {tool.VENDOR_KEY: {"flex_flow": "row"}}}}
+        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), ["row"])
+
+    def test_the_vendor_data_of_another_vendor_is_not(self):
+        tokens = {"row": {"$extensions": {"com.example": {"flex_flow": "row"}}}}
+        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), [])
+
+
 class Uses(unittest.TestCase):
     def test_a_look_names_its_group(self):
         self.assertNotIn("tile", unused('lv::look<"tile">'))
 
     def test_a_list_names_each_group(self):
-        found = unused('lv::look<"tile tile.print">')
-        self.assertNotIn("tile.print", found)
-        self.assertIn("tile.usb", found)
+        found = unused('lv::look<"tile tile-print">')
+        self.assertNotIn("tile-print", found)
+        self.assertIn("tile-usb", found)
 
     def test_a_look_over_several_lines(self):
         self.assertNotIn("gauge", unused('lv::look<\n    "gauge">'))
@@ -72,18 +79,16 @@ class Uses(unittest.TestCase):
 
     def test_look_of_names_every_group_under_its_prefix(self):
         found = unused('lv::look<"tile"> | lv::look_of<"tile", Action>')
-        self.assertNotIn("tile.print", found)
-        self.assertNotIn("tile.usb", found)
+        self.assertNotIn("tile-print", found)
+        self.assertNotIn("tile-usb", found)
 
-    def test_look_of_reaches_the_groups_directly_under_the_prefix_only(self):
-        tokens = {"a": {"radius": LENGTH, "b": {"radius": LENGTH, "c": {"radius": LENGTH}}}}
-        self.assertEqual(unused('lv::look_of<"a", E>', tokens), ["a", "a.b.c"])
+    def test_look_of_reaches_the_siblings_of_its_prefix_only(self):
+        tokens = {"a": {"radius": LENGTH}, "a-b": {"radius": LENGTH}, "a-b-c": {"radius": LENGTH},
+                  "q": {"a-x": {"radius": LENGTH}}, "ab": {"radius": LENGTH}}
+        self.assertEqual(unused('lv::look_of<"a", E>', tokens), ["a", "q.a-x", "ab"])
 
     def test_a_group_no_source_names_is_reported(self):
-        self.assertEqual(unused('lv::look<"tile">'), ["tile.print", "tile.usb", "status", "status.cheked", "gauge"])
-
-    def test_a_misspelled_layer_is_reported(self):
-        self.assertIn("status.cheked", unused('lv::look<"status">'))
+        self.assertEqual(unused('lv::look<"tile">'), ["tile-print", "tile-usb", "status", "gauge"])
 
     def test_another_program_may_use_a_group(self):
         self.assertNotIn("gauge", unused("", ignore=("gauge",)))
