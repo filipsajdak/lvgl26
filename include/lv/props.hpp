@@ -428,6 +428,9 @@ consteval bool bindable() {
 // lv_<widget>_get_<prop> for the setter lv_<widget>_set_<prop>, if it takes the widget
 // alone and returns an integer. A widget the user changes is read back with it.
 consteval std::meta::info number_getter_of(std::meta::info setter) {
+  // A setter of a text or a pointer has no number to read back: skip the search by name.
+  const auto value = std::meta::remove_cv(std::meta::dealias(std::meta::type_of(std::meta::parameters_of(setter)[1])));
+  if (!std::meta::is_integral_type(value)) return {};
   const auto name = std::meta::identifier_of(setter);
   const auto at = name.find("_set_");
   const auto g = find(str(name.substr(0, at)) + "_get_" + str(name.substr(at + 5)));
