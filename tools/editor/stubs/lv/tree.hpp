@@ -178,6 +178,8 @@ class mounted {
 
   /// Whether the widgets were built.
   explicit operator bool() const noexcept { __builtin_unreachable(); }
+  /// The same as operator bool, as std::expected names it.
+  bool has_value() const noexcept { __builtin_unreachable(); }
   /// Why the widgets were not built.
   mount_error error() const { __builtin_unreachable(); }
   mounted* operator->() { __builtin_unreachable(); }

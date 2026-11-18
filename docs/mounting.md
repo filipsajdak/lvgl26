@@ -13,13 +13,13 @@ An `lv::mounted` is never copied or moved. LVGL's handler on the root widget poi
   shown->get<"message">().set({.text = "Saved at 12:00"});
 ```
 
-`if (!shown)` tells whether LVGL had memory for the widgets, and `shown.error()` says why it had not. `shown->get<"id">()` reaches a widget by its id, as with `std::expected`. When the variable goes, the widgets go with it.
+`if (!shown)`, or `shown.has_value()`, tells whether LVGL had memory for the widgets, and `shown.error()` says why it had not. `shown->get<"id">()` reaches a widget by its id, as with `std::expected`. When the variable goes, the widgets go with it.
 
 A function may return `lv::mount<ui>(parent)`, and a struct may hold one as a member initialised from it: the result is built in place. A named `lv::mounted` cannot be returned, and a `std::vector` cannot hold one. For a screen that is replaced later, keep a `std::optional<lv::mounted<ui>>`: `screen.emplace(parent)` builds the widgets inside it, and `screen.reset()` deletes them.
 
 ## In a global
 
-A global made with `constinit` holds no widgets until `mount(parent)` runs. Before that, `!home_page` is true and `home_page.error()` is `lv::mount_error::not_mounted`.
+A global made with `constinit` holds no widgets until `mount(parent)` runs. Before that, `home_page.has_value()` is false and `home_page.error()` is `lv::mount_error::not_mounted`.
 
 <!-- snippet: examples/mounting/main.cpp global -->
 ```cpp

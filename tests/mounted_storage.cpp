@@ -226,10 +226,10 @@ void ends_with_the_root(lv::obj screen) {
 constinit lv::mounted<ui> page;
 
 void a_global_page(lv::obj screen) {
-  check(!page && page.error() == lv::mount_error::not_mounted);
+  check(!page && !page.has_value() && page.error() == lv::mount_error::not_mounted);
   built_at.clear();
   const auto mounted = page.mount(screen);
-  check(mounted.has_value() && static_cast<bool>(page) && alive == 3 && built_inside(page));
+  check(mounted.has_value() && page.has_value() && static_cast<bool>(page) && alive == 3 && built_inside(page));
 }
 
 // In memory of the caller's, with placement new behind a name.

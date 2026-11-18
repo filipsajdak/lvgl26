@@ -376,7 +376,7 @@ int use_application() {
   static_cast<void>(lv::place<ui>(plain.screen()));
   static_cast<void>(root->detach());
 
-  if (page) return 7;
+  if (page || page.has_value()) return 7;
   if (page.error() != lv::mount_error::not_mounted) return 8;
   if (!page.mount(plain.screen())) return 9;
   static_cast<void>((*page).root());

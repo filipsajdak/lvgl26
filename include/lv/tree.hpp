@@ -637,9 +637,9 @@ enum class mount_error {
 //
 // It is neither copied nor moved: LVGL's handler on the root, and what the nodes keep,
 // point into it.
-// It is built where it lives, and carries its own failure:
+// It is built where it lives, and carries its own failure in the shape of std::expected:
 //   auto root = lv::mount<ui>(display.screen());   // on the stack, built in place
-//   if (!root) return root.error();
+//   if (!root.has_value()) return root.error();    // or: if (!root)
 //   root->get<"title">().set({.text = "Ready"});
 //
 //   constinit lv::mounted<ui> page;               // a global, mounted later
@@ -709,6 +709,7 @@ class mounted {
   // Whether the widgets were built. They stay built when the parent deletes them later:
   // root() is then empty.
   explicit operator bool() const noexcept { return built_; }
+  bool has_value() const noexcept { return built_; }
 
   // Why the widgets were not built.
   mount_error error() const
