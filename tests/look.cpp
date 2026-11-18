@@ -1,0 +1,326 @@
+// lv::look: a group of the project's tokens as a style, by name.
+
+#include <lv/lv.hpp>
+
+#include "check.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+
+namespace {
+
+using namespace lv::units;
+
+constexpr char tokens_json[] = {
+#embed "look_tokens.json"
+    , 0};
+constexpr char other_json[] = {
+#embed "look_other.json"
+    , 0};
+constexpr unsigned char barlow[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr auto tok = lv::tokens<tokens_json>;
+constexpr auto other = lv::tokens<other_json>;
+
+struct other_design {};
+
+}  // namespace
+
+template <>
+inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{
+    .tokens = tok, .type = lv::typeface({{"Barlow", 500, barlow}})};
+template <>
+inline constexpr lv::design_of<decltype(other)> lv::design<other_design>{.tokens = other};
+
+namespace {
+
+// ---- what the compiler knows, without a display ----
+
+// A look finds the style property of an entry by halving the members of lv::style, which needs
+// them in alphabetical order. A template, because GCC 16.2 warns that `i` shadows itself in a plain function.
+template <class D = lv::override>
+consteval bool every_style_property_is_found() {
+  const auto members = lv::detail::style_members<std::void_t<D>>;
+  for (std::size_t i = 0; i < members.size(); ++i) {
+    if (lv::detail::style_property<D>(std::meta::identifier_of(members[i])) != members[i]) return false;
+    if (i > 0 && !(std::meta::identifier_of(members[i - 1]) < std::meta::identifier_of(members[i]))) return false;
+  }
+  return lv::detail::style_property<D>("no_such_property") == std::meta::info{};
+}
+static_assert(every_style_property_is_found());
+
+static_assert(lv::style_value<decltype(lv::look<"tile">)>);
+static_assert(lv::look<"tile">.radius.set && lv::look<"tile">.width.set && lv::look<"tile">.text_font.set);
+static_assert(!lv::look<"tile">.bg_color.set, "bg_color is in the variants");
+// A look that sets bg_color does not set bg_opa by itself.
+static_assert(lv::look<"tile.print">.bg_color.set && !lv::look<"tile.print">.bg_opa.set);
+static_assert(lv::look<"status">.layers.count == 1 && lv::look<"tile">.layers.count == 0);
+static_assert(lv::look<"gauge">.layers.count == 3);  // indicator, knob, knob + pressed
+// A shorthand is held as its long forms: a constant style has no value under its own name.
+static_assert(!lv::look<"padded">.pad_all.set && lv::look<"padded">.pad_top.set && lv::look<"padded">.pad_column.set);
+// Spaces between looks, any number.
+static_assert(lv::look<"tile tile.print">.bg_color.set && lv::look<"tile.print"  " tile">.radius.set);
+
+constexpr auto tile_ui = lv::button({.id = "tile", .style = lv::look<"tile"> | lv::look<"tile.print">})[
+    lv::group({.id = "inner", .style = lv::look<"tile.inner">})];
+
+constexpr auto status_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status">, .text = "PRINTING"});
+constexpr auto later_wins_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status status.loud">, .text = "X"});
+constexpr auto padded_ui = lv::box({.checked = true, .id = "padded", .style = lv::look<"padded">});
+constexpr auto gauge_ui = lv::slider({.id = "gauge", .style = lv::look<"gauge">});
+constexpr auto card_ui = lv::box({.id = "card", .style = lv::look<"card">});
+constexpr auto inherit_ui = lv::group({.id = "parent", .style = lv::look<"plain">})[lv::label({.id = "child", .text = "text"})];
+
+// A look merged with lv::on and with a style: the later one wins, the layers are kept.
+constexpr auto combined_ui = lv::label({.checked = true, .id = "combined",
+                                        .style = lv::look<"status"> | lv::on("pressed", {.text_color = tok.color.ink}) |
+                                                 lv::style({.radius = tok.flat.pad_all})});
+
+// Defaults of a factory give way to a look that says it.
+constexpr auto fills_ui = lv::group({.id = "fills"});
+constexpr auto sized_ui = lv::group({.id = "sized", .style = lv::look<"tile">});
+constexpr auto wide_ui = lv::group({.id = "wide", .style = lv::look<"wide">});
+constexpr auto own_ui = lv::group({.id = "own", .size = {30 * px, 20 * px}, .style = lv::look<"tile">});
+constexpr auto flow_ui = lv::row({.id = "flow", .style = lv::look<"tile">});
+constexpr auto row_ui = lv::row({.id = "row"});
+
+// The look named for an enumerator, in a part that lv::for_each repeats.
+enum class subpage { none, print, scan };
+constexpr auto tile = []<subpage Page> {
+  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Page>});
+};
+constexpr auto tiles_ui = lv::group({.id = "tiles"})[lv::for_each<subpage, lv::but<subpage::none>>(tile)];
+static_assert(lv::look_of<"tile", subpage::print>.bg_color.set && !lv::look_of<"tile", subpage::print>.radius.set);
+
+// A part library takes the design as a parameter.
+template <class Design = lv::override>
+constexpr auto chip = lv::box({.style = lv::look<"chip", Design>});
+constexpr auto chip_ui = lv::group[chip<other_design>];
+
+constexpr auto themed = lv::theme({.obj = {.style = lv::look<"padded">}});
+
+lv::application* the_app = nullptr;
+
+unsigned rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xffffffu; }
+
+constinit lv::frame<320, 240> frame;
+constinit lv::frame<64, 48> small_frame;
+
+// LVGL keeps one entry in a widget's list of styles for each style it adds.
+constexpr std::size_t style_entry = 16;
+
+std::size_t used_bytes() {
+  lv_mem_monitor_t m;
+  lv_mem_monitor(&m);
+  return m.total_size - m.free_size;
+}
+
+void a_look_sets_what_its_entries_name() {
+  auto built = lv::mount<tile_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* b = built->get<"tile">().raw();
+  lv_obj_update_layout(b);
+  check(lv_obj_get_style_radius(b, LV_PART_MAIN) == 24);
+  check(lv_obj_get_width(b) == 162 && lv_obj_get_height(b) == 192);
+  check(rgb(lv_obj_get_style_bg_color(b, LV_PART_MAIN)) == 0x2b7fff);
+  check(rgb(lv_obj_get_style_bg_grad_color(b, LV_PART_MAIN)) == 0x155dfc);
+  check(lv_obj_get_style_bg_opa(b, LV_PART_MAIN) == LV_OPA_COVER);
+  check(lv_obj_get_style_bg_grad_dir(b, LV_PART_MAIN) == LV_GRAD_DIR_VER);
+  check(lv_obj_get_style_text_align(b, LV_PART_MAIN) == LV_TEXT_ALIGN_CENTER);
+  check(lv_obj_get_style_pad_row(b, LV_PART_MAIN) == 10);
+  check(lv_obj_get_style_flex_flow(b, LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+  check(lv_obj_get_style_flex_main_place(b, LV_PART_MAIN) == LV_FLEX_ALIGN_CENTER);
+  check(rgb(lv_obj_get_style_text_color(b, LV_PART_MAIN)) == 0xffffff);
+  const lv_font_t* font = lv_obj_get_style_text_font(b, LV_PART_MAIN);
+  check(font != lv_font_get_default() && font->line_height > 18);
+  lv_obj_t* inner = built->get<"inner">().raw();
+  check(lv_obj_get_style_radius(inner, LV_PART_MAIN) == 16);
+  check(lv_obj_get_style_bg_opa(inner, LV_PART_MAIN) == LV_OPA_20);
+  check(lv_obj_get_width(inner) == 64);
+}
+
+void a_state_group_is_a_layer() {
+  auto built = lv::mount<status_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* s = built->get<"status">().raw();
+  check(rgb(lv_obj_get_style_text_color(s, LV_PART_MAIN)) == 0x155dfc);
+  lv_obj_remove_state(s, LV_STATE_CHECKED);
+  check(rgb(lv_obj_get_style_text_color(s, LV_PART_MAIN)) == 0x62748e);
+}
+
+void a_later_look_wins_in_a_layer_too() {
+  auto built = lv::mount<later_wins_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* s = built->get<"status">().raw();
+  check(rgb(lv_obj_get_style_text_color(s, LV_PART_MAIN)) == 0xff2056);
+}
+
+void parts_and_states_make_layers() {
+  auto built = lv::mount<gauge_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* g = built->get<"gauge">().raw();
+  check(rgb(lv_obj_get_style_bg_color(g, LV_PART_MAIN)) == 0x62748e);
+  check(rgb(lv_obj_get_style_bg_color(g, LV_PART_INDICATOR)) == 0x155dfc);
+  check(rgb(lv_obj_get_style_bg_color(g, LV_PART_KNOB)) == 0xffffff);
+  lv_obj_add_state(g, LV_STATE_PRESSED);
+  const auto pressed_knob = static_cast<lv_part_t>(static_cast<unsigned>(LV_PART_KNOB) | LV_STATE_PRESSED);
+  check(rgb(lv_obj_get_style_prop(g, pressed_knob, LV_STYLE_BG_COLOR).color) == 0xff2056);
+}
+
+void composite_tokens_are_merged() {
+  auto built = lv::mount<card_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* c = built->get<"card">().raw();
+  check(lv_obj_get_style_shadow_width(c, LV_PART_MAIN) == 12 && lv_obj_get_style_shadow_offset_y(c, LV_PART_MAIN) == 4);
+  check(lv_obj_get_style_shadow_spread(c, LV_PART_MAIN) == 2);
+  check(lv_obj_get_style_border_width(c, LV_PART_MAIN) == 3);
+  check(rgb(lv_obj_get_style_border_color(c, LV_PART_MAIN)) == 0x1d293d);
+  check(lv_obj_get_style_anim_duration(c, LV_PART_MAIN) == 150);
+  check(lv_obj_get_style_text_letter_space(c, LV_PART_MAIN) == 1);
+  check(lv_obj_get_style_text_font(c, LV_PART_MAIN) != lv_font_get_default());
+}
+
+void a_shorthand_does_not_beat_a_layer() {
+  auto built = lv::mount<padded_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* p = built->get<"padded">().raw();
+  check(lv_obj_get_style_pad_top(p, LV_PART_MAIN) == 3);  // checked
+  check(lv_obj_get_style_pad_bottom(p, LV_PART_MAIN) == 7 && lv_obj_get_style_pad_left(p, LV_PART_MAIN) == 7);
+  check(lv_obj_get_style_pad_row(p, LV_PART_MAIN) == 5 && lv_obj_get_style_pad_column(p, LV_PART_MAIN) == 5);
+  lv_obj_remove_state(p, LV_STATE_CHECKED);
+  check(lv_obj_get_style_pad_top(p, LV_PART_MAIN) == 7);
+}
+
+void a_label_inherits_the_text_of_its_parents_look() {
+  auto built = lv::mount<inherit_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* child = built->get<"child">().raw();
+  check(rgb(lv_obj_get_style_text_color(child, LV_PART_MAIN)) == 0xff2056);
+  check(lv_obj_get_style_text_font(child, LV_PART_MAIN) == lv_obj_get_style_text_font(built->get<"parent">().raw(), LV_PART_MAIN));
+  lv_obj_t* loose = lv_label_create(lv_screen_active());  // a bare label outside it keeps LVGL's
+  check(rgb(lv_obj_get_style_text_color(loose, LV_PART_MAIN)) != 0xff2056);
+}
+
+void a_look_merges_with_on_and_style() {
+  auto built = lv::mount<combined_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* l = built->get<"combined">().raw();
+  check(rgb(lv_obj_get_style_text_color(l, LV_PART_MAIN)) == 0x155dfc);  // the look's checked layer
+  check(lv_obj_get_style_radius(l, LV_PART_MAIN) == 7);
+  lv_obj_add_state(l, LV_STATE_PRESSED);
+  check(rgb(lv_obj_get_style_text_color(l, LV_PART_MAIN)) == 0x1d293d);
+}
+
+// A group fills its parent, unless a look sets its width or its height.
+void a_groups_default_gives_way_to_a_look() {
+  const auto fills = lv::mount<fills_ui>(lv::screen_active());
+  const auto sized = lv::mount<sized_ui>(lv::screen_active());
+  const auto wide = lv::mount<wide_ui>(lv::screen_active());
+  const auto own = lv::mount<own_ui>(lv::screen_active());
+  check(fills.has_value());
+  check(sized.has_value());
+  check(wide.has_value());
+  check(own.has_value());
+  if (!fills || !sized || !wide || !own) return;
+  lv_obj_update_layout(lv_screen_active());
+  const auto screen_w = lv_obj_get_width(lv_screen_active());
+  const auto screen_h = lv_obj_get_height(lv_screen_active());
+  check(lv_obj_get_width(fills->root().raw()) == screen_w);  // no look: the group fills
+  check(lv_obj_get_width(sized->root().raw()) == 162);
+  check(lv_obj_get_height(sized->root().raw()) == 192);
+  // A look with a width only: the height still fills.
+  check(lv_obj_get_width(wide->root().raw()) == 100);
+  check(lv_obj_get_height(wide->root().raw()) == screen_h);
+  // The node's own .size beats the look.
+  check(lv_obj_get_width(own->root().raw()) == 30);
+  check(lv_obj_get_height(own->root().raw()) == 20);
+}
+
+// lv::row is a flex row, unless the look says the flow.
+void a_rows_flow_gives_way_to_a_look() {
+  const auto flow = lv::mount<flow_ui>(lv::screen_active());
+  const auto plain_row = lv::mount<row_ui>(lv::screen_active());
+  check(flow.has_value());
+  check(plain_row.has_value());
+  if (!flow || !plain_row) return;
+  check(lv_obj_get_style_flex_flow(flow->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+  check(lv_obj_get_style_flex_flow(plain_row->root().raw(), LV_PART_MAIN) == LV_FLEX_FLOW_ROW);
+}
+
+void a_variant_for_each_enumerator() {
+  auto built = lv::mount<tiles_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* group = built->root().raw();
+  check(lv_obj_get_child_count(group) == 2);
+  check(rgb(lv_obj_get_style_bg_color(lv_obj_get_child(group, 0), LV_PART_MAIN)) == 0x2b7fff);
+  check(rgb(lv_obj_get_style_bg_color(lv_obj_get_child(group, 1), LV_PART_MAIN)) == 0x00bc7d);
+}
+
+void a_part_takes_the_design() {
+  auto built = lv::mount<chip_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* c = lv_obj_get_child(built->root().raw(), 0);
+  check(rgb(lv_obj_get_style_bg_color(c, LV_PART_MAIN)) == 0x009688 && lv_obj_get_style_radius(c, LV_PART_MAIN) == 4);
+}
+
+void a_theme_takes_a_look() {
+  lv::application& app = *the_app;
+  lv::display display{app, small_frame, themed};
+  lv_obj_t* box = lv_obj_create(display.screen().raw());
+  check(lv_obj_get_style_pad_top(box, LV_PART_MAIN) == 7 && lv_obj_get_style_pad_row(box, LV_PART_MAIN) == 5);
+}
+
+// A look is a constant: a widget that has one takes no more heap than a plain one, apart from
+// LVGL's list of its styles (one entry for the look, one for each layer).
+constexpr auto plain_ui = lv::box({});
+constexpr auto looked_ui = lv::box({.style = lv::look<"tile"> | lv::look<"tile.print">});
+constexpr auto layered_ui = lv::box({.style = lv::look<"gauge">});
+
+std::size_t heap_of_mounted(auto mounted) {
+  const auto start = used_bytes();
+  auto built = mounted();
+  return used_bytes() - start;
+}
+
+void a_look_costs_no_heap_beyond_the_style_list() {
+  const auto plain = heap_of_mounted([] { return lv::mount<plain_ui>(lv::screen_active()); });
+  const auto looked = heap_of_mounted([] { return lv::mount<looked_ui>(lv::screen_active()); });
+  const auto layered = heap_of_mounted([] { return lv::mount<layered_ui>(lv::screen_active()); });
+  std::printf("heap: a box %zu bytes, with two looks %zu, with a look of three layers %zu\n", plain, looked, layered);
+  check(looked <= plain + style_entry && layered <= plain + 4 * style_entry);
+}
+
+}  // namespace
+
+int main() {
+  lv::application app;
+  the_app = &app;
+  lv::display display{app, frame};
+  a_look_sets_what_its_entries_name();
+  a_state_group_is_a_layer();
+  a_later_look_wins_in_a_layer_too();
+  parts_and_states_make_layers();
+  composite_tokens_are_merged();
+  a_shorthand_does_not_beat_a_layer();
+  a_label_inherits_the_text_of_its_parents_look();
+  a_look_merges_with_on_and_style();
+  a_groups_default_gives_way_to_a_look();
+  a_rows_flow_gives_way_to_a_look();
+  a_variant_for_each_enumerator();
+  a_part_takes_the_design();
+  a_look_costs_no_heap_beyond_the_style_list();
+  a_theme_takes_a_look();
+  return failures;
+}

@@ -400,6 +400,9 @@ struct face_file {
 // Called with a typography token it gives the font the token asks for.
 class typeface {
  public:
+  // A design without fonts: the project's looks hold no typography token.
+  consteval typeface() = default;
+
   consteval typeface(std::initializer_list<face_file> files) {
     if (files.size() > files_.size()) detail::fail("lv: a typeface has at most eight files.");
     for (const auto& f : files) files_[count_++] = f;
