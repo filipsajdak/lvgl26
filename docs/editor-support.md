@@ -69,6 +69,17 @@ A look names a group of a token file: `lv::look<"tile-print">`. The stub of each
 
 When you change a token file, the next build runs CMake again, and the editor sees the new tokens. A new token file needs one run of CMake by hand.
 
+### Check a token file against the standard
+
+Design tools open a token file only when it follows the Design Tokens Format 2025.10.
+The repository checks every token file with the official JSON Schemas of that version: `python3 tools/check_tokens.py`.
+It needs the Python package `jsonschema`, and it runs as the ctest test `tokens_check`.
+
+Most files of the repository still write a colour as `"#3366ff"` and a length as `"8px"`, which the standard does not allow.
+`tools/token_exceptions.json` counts these violations for each file and kind.
+The check fails on a violation that the list lacks, and on a listed one that has gone, so the list shrinks as the files convert.
+A file may name the schema in its first member: `"$schema": "https://www.designtokens.org/schemas/2025.10/format.json"`.
+
 ## If you have a `.clangd` already
 
 CMake never changes a `.clangd` that exists. It writes what lvgl26 needs into `lvgl26-editor/clangd.example` in your build directory, and says so. Copy the `CompileFlags` part into your file.

@@ -35,6 +35,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - The CI jobs run in the image of `.github/ci-image/Dockerfile`. Add a tool there, not as an
   install step in a workflow.
 - A change to `site/` or to a Markdown file alone does not start the pull request run.
+- Every token file is checked against the official Design Tokens Format schemas 2025.10 (`tools/check_tokens.py`, ctest `tokens_check`). The schemas are copies in `tools/dtcg/`. A file that does not conform is listed in `tools/token_exceptions.json` with counts per violation kind: a new violation fails, and so does a listed one that no longer occurs. Write the list again with `--update` after a file converges, never to hide a new violation.
 - The CI jobs compile through ccache (`.github/actions/setup`). Each build step prints its
   hit rate: an unchanged file must be a hit.
 - Module scanning is off (`CMAKE_CXX_SCAN_FOR_MODULES` in `CMakeLists.txt`): ccache refuses a
