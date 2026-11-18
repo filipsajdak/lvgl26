@@ -82,6 +82,10 @@
     }
   },
 
+  "twin": {
+    "text_font": {"$value": "{text.label}"}
+  },
+
   "flat": {
     "pad_all": {"$type": "dimension", "$value": "7px"},
     "anim_duration": {"$type": "duration", "$value": "200ms"}

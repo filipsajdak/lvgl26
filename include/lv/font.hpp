@@ -408,13 +408,23 @@ class typeface {
     for (const auto& f : files) files_[count_++] = f;
   }
 
-  consteval token<const lv_font_t*> operator()(const token<typography_token>& t) const {
+  // The number of the file that a typography token asks for.
+  consteval std::size_t file_of(const token<typography_token>& t) const {
     for (std::size_t i = 0; i < count_; ++i)
-      if (files_[i].family == t->font_family && files_[i].weight == t->font_weight)
-        return {detail::make_font(files_[i].file, t->font_size.raw(), files_[i].characters), detail::from_design_tokens{}};
+      if (files_[i].family == t->font_family && files_[i].weight == t->font_weight) return i;
     detail::fail("lv: the typeface has no file for the family '" + detail::str(t->font_family) + "' at weight " +
                  detail::decimal(static_cast<std::size_t>(t->font_weight)) + ". Add it: lv::typeface({{\"" + detail::str(t->font_family) + "\", " +
                  detail::decimal(static_cast<std::size_t>(t->font_weight)) + ", its_ttf}}).");
+  }
+
+  // The font of file number `file` at `px` pixels.
+  consteval const lv_font_t* draw(std::size_t file, std::int32_t px) const {
+    return detail::make_font(files_[file].file, px, files_[file].characters);
+  }
+
+  /// The font of a typography token: its family, weight and size.
+  consteval token<const lv_font_t*> operator()(const token<typography_token>& t) const {
+    return {draw(file_of(t), t->font_size.raw()), detail::from_design_tokens{}};
   }
 
  private:

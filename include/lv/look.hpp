@@ -288,6 +288,27 @@ consteval std::meta::info enum_of_property(std::meta::info scope, std::string_vi
   return {};
 }
 
+// A font that a look draws is named by what the drawing depends on: the file of the typeface and
+// the size. The same file and size are drawn once for the whole program, however many looks and
+// tokens ask for them. A look cannot rely on the compiler remembering the call: GCC caches the
+// result of a call only down to -fconstexpr-cache-depth levels of nesting (8), and a look is
+// deeper than that, so each look drew its fonts again (6.5 G instructions each).
+struct font_key {
+  std::size_t file;
+  std::int32_t px;
+  friend constexpr bool operator==(const font_key&, const font_key&) = default;
+};
+
+template <class D, font_key K>
+inline constexpr const lv_font_t* drawn_font = design<D>.type.draw(K.file, K.px);
+
+// The font of the typography token T, from the typeface of the design D.
+template <class D, const auto& T>
+consteval const lv_font_t* font_of() {
+  constexpr font_key key{design<D>.type.file_of(T), T->font_size.raw()};
+  return drawn_font<D, key>;
+}
+
 // Found once for each property in a file, not once for each look that sets it.
 template <std::meta::info Target>
 inline constexpr std::meta::info number_enum = enum_of_property(^^::, std::meta::identifier_of(Target));
@@ -341,9 +362,10 @@ consteval void put_plain(look_style_of<D>& s, const V& v) {
     put_long_forms<D, Target>(s, v);
 }
 
-template <class D, std::meta::info Target, class V>
-consteval void put_value(look_style_of<D>& s, const V& v, const typeface& type, std::string_view entry,
-                         std::string_view where) {
+template <class D, std::meta::info Target, const auto& T>
+consteval void put_value(look_style_of<D>& s, std::string_view entry, std::string_view where) {
+  const auto& v = T;
+  using V = std::remove_cvref_t<decltype(T)>;
   using A = typename[:std::meta::type_of(Target):];
   using first = first_type<A>;
   if constexpr (std::tuple_size_v<typename A::types> != 1) {
@@ -351,7 +373,7 @@ consteval void put_value(look_style_of<D>& s, const V& v, const typeface& type, 
   } else if constexpr (std::same_as<V, token<std::string_view>>) {
     put_string<D, Target>(s, v, entry, where);
   } else if constexpr (std::same_as<V, token<typography_token>> && std::same_as<first, styled<const lv_font_t*>>) {
-    s.[:Target:] = A(type(v));
+    s.[:Target:] = A(token<const lv_font_t*>{font_of<D, T>(), from_design_tokens{}});
   } else if constexpr (!std::same_as<V, token<typography_token>> && std::is_constructible_v<first, const V&>) {
     put_plain<D, Target, A>(s, v);
   } else {
@@ -360,22 +382,24 @@ consteval void put_value(look_style_of<D>& s, const V& v, const typeface& type, 
 }
 
 // A typography token under a name that is no style property: its font and its letter spacing.
-template <class D>
-consteval void put_typography(look_style_of<D>& s, const token<typography_token>& v, const typeface& type) {
-  s.text_font = type(v);
-  s.text_letter_space = part(v->letter_spacing);
+template <class D, const auto& T>
+consteval void put_typography(look_style_of<D>& s) {
+  s.text_font = token<const lv_font_t*>{font_of<D, T>(), from_design_tokens{}};
+  s.text_letter_space = part(T->letter_spacing);
 }
 
-template <class D, std::meta::info M, class V>
-consteval void put_entry(look_style_of<D>& s, const V& v, const typeface& type, std::string_view where) {
+template <class D, std::meta::info M, const auto& T>
+consteval void put_entry(look_style_of<D>& s, std::string_view where) {
+  const auto& v = T;
+  using V = std::remove_cvref_t<decltype(T)>;
   constexpr std::string_view entry = std::meta::identifier_of(M);
   constexpr auto target = style_property<D>(entry);
   if constexpr (is_composite_token<V>) {
     s = s | v;
   } else if constexpr (target != std::meta::info{}) {
-    put_value<D, target>(s, v, type, entry, where);
+    put_value<D, target, T>(s, entry, where);
   } else if constexpr (std::same_as<V, token<typography_token>>) {
-    put_typography<D>(s, v, type);
+    put_typography<D, T>(s);
   } else {
     fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' fits no style property. Nearest style properties: " +
          nearest_names(entry, style_property_names<D>()) +
@@ -397,12 +421,12 @@ consteval lv_style_selector_t selector_of_name(std::string_view name) {
   return *selector_named<State>(name);
 }
 
-template <class D, class Group>
-consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, const Group& g, lv_style_selector_t selector,
+template <class D, const auto& G>
+consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
                           bool in_layer, std::string_view where);
 
-template <class D, std::meta::info M, class Group>
-consteval void nest(std::vector<style_layer>& layers, const Group& g, lv_style_selector_t selector, bool in_layer,
+template <class D, std::meta::info M, const auto& G>
+consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t selector, bool in_layer,
                     std::string_view where) {
   constexpr std::string_view name = std::meta::identifier_of(M);
   if constexpr (!names_part_or_state<>(name)) {
@@ -416,29 +440,29 @@ consteval void nest(std::vector<style_layer>& layers, const Group& g, lv_style_s
     const lv_style_selector_t combined = selector | selector_of_name<>(name);
     look_style_of<D> own{};
     std::vector<style_layer> inner;
-    fill_level<D>(own, inner, g.[:M:], combined, true, where);
+    fill_level<D, G.[:M:]>(own, inner, combined, true, where);
     if (sets_a_value<look_style_of<D>, void>(own)) layers.push_back({combined, stored_style<look_style_of<D>, void>(own)});
     layers.insert(layers.end(), inner.begin(), inner.end());
   }
 }
 
-template <class D, class Group>
-consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, const Group& g, lv_style_selector_t selector,
+template <class D, const auto& G>
+consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
                           bool in_layer, std::string_view where) {
-  template for (constexpr auto m : group_members<Group>) {
+  template for (constexpr auto m : group_members<std::remove_cvref_t<decltype(G)>>) {
     if constexpr (is_group_member(m))
-      nest<D, m>(layers, g, selector, in_layer, where);
+      nest<D, m, G>(layers, selector, in_layer, where);
     else
-      put_entry<D, m>(own, g.[:m:], design<D>.type, where);
+      put_entry<D, m, G.[:m:]>(own, where);
   }
 }
 
 // The style of one group: its entries, then a layer for each of its parts and states.
-template <class D, class Group>
-consteval look_style_of<D> style_of_group(const Group& g, std::string_view where) {
+template <class D, const auto& G>
+consteval look_style_of<D> style_of_group(std::string_view where) {
   look_style_of<D> s{};
   std::vector<style_layer> layers;
-  fill_level<D>(s, layers, g, 0, false, where);
+  fill_level<D, G>(s, layers, 0, false, where);
   if (!layers.empty()) s.layers = style_layers(std::define_static_array(layers));
   return s;
 }
@@ -448,8 +472,9 @@ consteval look_style_of<D> style_of_group(const Group& g, std::string_view where
 template <fixed Path>
 inline constexpr auto segments_of = std::define_static_array(pieces(Path.sv(), ".", true));
 
-template <fixed Path, std::size_t I, class D, class Group>
-consteval look_style_of<D> walk(const Group& g) {
+template <fixed Path, std::size_t I, class D, const auto& G>
+consteval look_style_of<D> walk() {
+  using Group = std::remove_cvref_t<decltype(G)>;
   constexpr piece at = segments_of<Path>[I];
   constexpr std::string_view segment = Path.sv().substr(at.at, at.size);
   constexpr std::string_view so_far = Path.sv().substr(0, at.at + at.size);
@@ -467,16 +492,16 @@ consteval look_style_of<D> walk(const Group& g) {
            "' holds one value. A look is a group of tokens, written lv::look<\"" + str(so_far.substr(0, at.at ? at.at - 1 : 0)) +
            "\">, and the style property is its entry '" + str(segment) + "'.");
     } else if constexpr (I + 1 == segments_of<Path>.size()) {
-      return style_of_group<D>(g.[:m:], quoted_path);
+      return style_of_group<D, G.[:m:]>(quoted_path);
     } else {
-      return walk<Path, I + 1, D>(g.[:m:]);
+      return walk<Path, I + 1, D, G.[:m:]>();
     }
   }
 }
 
 // The style of one look: a path such as "queue.card".
 template <fixed Path, class D>
-inline constexpr look_style_of<D> one_look = walk<Path, 0, D>(design<D>.tokens);
+inline constexpr look_style_of<D> one_look = walk<Path, 0, D, design<D>.tokens>();
 
 template <fixed Paths>
 inline constexpr auto words_of = std::define_static_array(pieces(Paths.sv(), " \t\n", false));

@@ -78,6 +78,10 @@ constexpr auto combined_ui = lv::label({.checked = true, .id = "combined",
                                         .style = lv::look<"status"> | lv::on("pressed", {.text_color = tok.color.ink}) |
                                                  lv::style({.radius = tok.flat.pad_all})});
 
+// Two looks that ask for the same typeface file and size share one drawn font.
+constexpr auto twin_ui = lv::box({.id = "twin", .style = lv::look<"twin">});
+constexpr auto tile_alone_ui = lv::box({.id = "alone", .style = lv::look<"tile">});
+
 // Defaults of a factory give way to a look that says it.
 constexpr auto fills_ui = lv::group({.id = "fills"});
 constexpr auto sized_ui = lv::group({.id = "sized", .style = lv::look<"tile">});
@@ -140,6 +144,16 @@ void a_look_sets_what_its_entries_name() {
   check(lv_obj_get_style_radius(inner, LV_PART_MAIN) == 16);
   check(lv_obj_get_style_bg_opa(inner, LV_PART_MAIN) == LV_OPA_20);
   check(lv_obj_get_width(inner) == 64);
+}
+
+void looks_with_the_same_font_share_it() {
+  auto twin = lv::mount<twin_ui>(lv::screen_active());
+  auto alone = lv::mount<tile_alone_ui>(lv::screen_active());
+  check(twin.has_value() && alone.has_value());
+  if (!twin || !alone) return;
+  const lv_font_t* first = lv_obj_get_style_text_font(twin->root().raw(), LV_PART_MAIN);
+  check(first == lv_obj_get_style_text_font(alone->root().raw(), LV_PART_MAIN));
+  check(first != lv_font_get_default());
 }
 
 void a_state_group_is_a_layer() {
@@ -309,6 +323,7 @@ int main() {
   the_app = &app;
   lv::display display{app, frame};
   a_look_sets_what_its_entries_name();
+  looks_with_the_same_font_share_it();
   a_state_group_is_a_layer();
   a_later_look_wins_in_a_layer_too();
   parts_and_states_make_layers();
