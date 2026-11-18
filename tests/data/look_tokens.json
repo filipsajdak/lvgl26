@@ -364,5 +364,11 @@
    "$type": "dimension",
    "$value": "2px"
   }
+ },
+ "tall": {
+  "height": {
+   "$type": "dimension",
+   "$value": "50px"
+  }
  }
 }

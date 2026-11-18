@@ -185,16 +185,24 @@ constexpr bool style_sets_flex_flow(const Kept& p) {
 // These run in the compiler only, so they have no run-time coverage: each stays at complexity 2,
 // the most that CRAP 8 allows without any.
 template <class Kept>
+constexpr bool node_sets_width(const Kept& p) {
+  return p.size.set || p.width.set;
+}
+template <class Kept>
+constexpr bool node_sets_height(const Kept& p) {
+  return p.size.set || p.height.set;
+}
+template <class Kept>
 constexpr bool flow_is_free(const Kept& p) {
   return !p.flex_flow.set && !style_sets_flex_flow(p);
 }
 template <class Kept>
 constexpr bool width_is_free(const Kept& p) {
-  return !p.size.set && !style_sets_width(p);
+  return !node_sets_width(p) && !style_sets_width(p);
 }
 template <class Kept>
 constexpr bool height_is_free(const Kept& p) {
-  return !p.size.set && !style_sets_height(p);
+  return !node_sets_height(p) && !style_sets_height(p);
 }
 template <class Kept>
 constexpr bool both_sides_are_free(const Kept& p) {
@@ -209,8 +217,8 @@ constexpr bool only_height_is_free(const Kept& p) {
   return height_is_free(p) && !width_is_free(p);
 }
 
-// A group fills its parent. A look that sets one side leaves the other to fill; one that sets
-// both, or a .size, leaves none.
+// A group fills its parent. The node's own .width or .height, or a look, that sets one side leaves
+// the other to fill; one that sets both, or a .size, leaves none.
 template <class Kept>
 constexpr void fill_both_sides(Kept& p) {
   if (both_sides_are_free(p)) p.size = {percent{100}, percent{100}};
