@@ -766,7 +766,7 @@ set_source_files_properties(editor/api_uses.cpp ${PROJECT_SOURCE_DIR}/tools/edit
 # Files that only Clang reads, with the stubs. They are never built: a target gives
 # each one a line in compile_commands.json, which tools/editor/check.py takes its flags from.
 add_library(editor_clang_only OBJECT EXCLUDE_FROM_ALL
-            editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp
+            editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp editor/wrong_look.cpp
             editor/tokens_by_bytes.cpp ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp PROPERTIES GENERATED TRUE)
 target_compile_options(editor_clang_only PRIVATE --embed-dir=${CMAKE_CURRENT_BINARY_DIR}/editor)
@@ -825,12 +825,12 @@ if(Python3_FOUND)
     add_test(NAME editor_tokens_by_bytes
              COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/tokens_by_bytes.cpp)
     # Mistakes are marked on the line they are written on.
-    foreach(case wrong_enumerator unknown_member wrong_widget)
+    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look)
       add_test(NAME editor_${case}
                COMMAND ${LVGL26_EDITOR_CHECK} --verify ${CMAKE_CURRENT_SOURCE_DIR}/editor/${case}.cpp)
     endforeach()
     set_tests_properties(editor_examples editor_api_uses editor_names_declared editor_tokens_by_bytes
-                         editor_wrong_enumerator editor_unknown_member editor_wrong_widget
+                         editor_wrong_enumerator editor_unknown_member editor_wrong_widget editor_wrong_look
                          PROPERTIES FIXTURES_REQUIRED editor_stubs)
     set_property(TEST editor_names_declared APPEND PROPERTY FIXTURES_REQUIRED editor_names)
   endif()

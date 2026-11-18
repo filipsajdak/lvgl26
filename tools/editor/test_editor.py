@@ -131,6 +131,19 @@ class Tokens(unittest.TestCase):
         self.assertIn("struct nest_tokens_ {", text)
         self.assertIn("token<double> nest_tokens{};", text)
 
+    def test_the_groups_a_look_can_name(self):
+        root = {"tile": {"radius": {"$type": "dimension", "$value": "1px"},
+                         "ink-level": {"bg_color": {"$type": "color", "$value": "#000"}, "deep": {"x": {"$value": 1}}}},
+                "color": {"ink": {"$type": "color", "$value": "#000"}}, "$description": "no group"}
+        self.assertEqual(token_stubs.group_paths(root),
+                         ["tile", "tile.ink-level", "tile.ink-level.deep", "tile.ink_level", "tile.ink_level.deep", "color"])
+        paths = token_stubs.group_paths(root)
+        self.assertIn("tile.ink-level", paths)
+        self.assertIn("tile.ink_level.deep", paths)
+        self.assertNotIn("tile.radius", paths)  # a token is no look
+        self.assertNotIn("$description", paths)
+        self.assertIn('look_groups<tokens_', token_stubs.file_struct(json.dumps(root).encode(), "a test"))
+
     def test_alias_in_a_circle_ends(self):
         root = {"a": {"$value": "{b}"}, "b": {"$value": "{a}"}}
         self.assertIsNone(token_stubs.token_type(root, root["a"], None))
