@@ -79,6 +79,7 @@ What the table shows:
 - Slint stays shorter in (b) at the call site and in (e): see "Where Slint stays shorter".
 - The token entries are counted from the sketch's token file where it has them (tile, spin box, details), and estimated for the rest.
 - An entry costs 5 words in the DTCG form (`"radius": {"$type": "dimension", "$value": "24px"}`): 166 words for 34 entries of `home` and `tile`. `measured`
+  Corrected 2026-11-18: the form of Design Tokens Format 2025.10 is `"$value": {"value": 24, "unit": "px"}`, and `"24px"` is the older string form. See `docs/research/dtcg.md`.
 
 ### The design tokens named in code
 
