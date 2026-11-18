@@ -79,18 +79,18 @@ void owns_its_widgets(lv::obj screen) {
   {
     auto root = lv::mount<ui>(screen);
     check(lv_obj_get_child_count(screen.raw()) == before + 1);
-    auto moved = std::move(*root);
-    check(lv_obj_get_child_count(screen.raw()) == before + 1);
-    check(moved.get<"speedo">().get<"value">() == 120);
+    check(root->get<"speedo">().get<"value">() == 120);
   }
   check(lv_obj_get_child_count(screen.raw()) == before);
+  // It stays where it was built: the widgets and the states it follows point into it.
+  static_assert(!std::is_move_constructible_v<lv::mounted<ui>> && !std::is_copy_constructible_v<lv::mounted<ui>>);
 
   // The parent deletes first: nothing is deleted twice.
   {
     auto box = screen.add<"obj">();
     auto root = lv::mount<ui>(box);
     lv_obj_delete(box.raw());
-    check(!root->root());
+    check(!root && !root.root());  // not mounted any more
   }
   check(lv_obj_get_child_count(screen.raw()) == before);
 }

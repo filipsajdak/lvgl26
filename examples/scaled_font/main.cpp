@@ -41,6 +41,5 @@ int main() {
 
   app.advance(50 * ms), app.step();  // one frame: the layout is worked out
   const bool grew = root->get<"reading">().get<"height">() > small;
-  root = lv::mount<ui>(display.screen());  // not needed in a program; here it frees the label before the font
   return grew ? 0 : 2;
 }

@@ -17,7 +17,7 @@ constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::arc({.id = "speedo", .range = {0, 240}, .value = 120}),
     lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
 
-auto root = lv::mount<ui>(display.screen());      // std::expected; owns the widgets
+auto root = lv::mount<ui>(display.screen());      // built in place; owns the widgets
 root->get<"speedo">().set({.value = 0});          // a typed view of the arc
 ```
 
@@ -48,6 +48,11 @@ How it works:
   contains only the LVGL calls for the properties that are set.
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
   `lv::weak<T>` empties itself when LVGL deletes the widget.
+- **A mounted tree stays where it is built.** `lv::mounted` owns the widgets and holds what the tree's
+  nodes keep at run time, sized by the compiler: lvgl26 allocates nothing for it. It is never moved, and
+  carries its own failure: `if (!root) return root.error();`. It lives in a variable, in a `constinit`
+  global with `page.mount(parent)` and `page.unmount()`, for a window that opens and closes in the
+  same memory. See [Where a tree lives](docs/mounting.md).
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

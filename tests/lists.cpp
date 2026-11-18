@@ -8,6 +8,7 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -313,12 +314,12 @@ void out_of_memory_changes_nothing(lv::obj screen) {
 // Two views of one list follow it both.
 void two_views_follow_one_list(lv::obj screen) {
   fill(2);
-  auto left = lv::mount<playlist>(screen);
+  std::optional<lv::mounted<playlist>> left{std::in_place, screen};
   auto right = lv::mount<playlist>(screen);
-  if (!left || !right) return check(false);
+  if (!*left || !right) return check(false);
   check(tracks.push_back(numbered(2)).has_value());
   check(lv_obj_get_child_count(left->root().raw()) == 3 && lv_obj_get_child_count(right->root().raw()) == 3);
-  left = {};  // one view goes; the other still follows
+  left.reset();  // one view goes; the other still follows
   tracks.erase(0);
   check(lv_obj_get_child_count(right->root().raw()) == 2 && shows(row_at(right->root(), 0), "b"));
 }

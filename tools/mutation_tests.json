@@ -17,8 +17,8 @@
       "targets": "concepts computed"
     },
     "include/lv/tree.hpp": {
-      "tests": "^concepts$|^handlers$|^l2_tree$|fail_part_tree_node|fail_unknown_id|fail_duplicate_id|fail_mount|fail_place|^look$",
-      "targets": "concepts handlers l2_tree look"
+      "tests": "^concepts$|^handlers$|^l2_tree$|^mounted_storage$|mounted_storage_violation|fail_part_tree_node|fail_unknown_id|fail_duplicate_id|fail_mount|fail_place|fail_storage_kind|^look$",
+      "targets": "concepts handlers l2_tree mounted_storage look"
     },
     "include/lv/style.hpp": {
       "tests": "^concepts$|^styles$|^style_selectors$|fail_part_style|fail_style",

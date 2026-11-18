@@ -20,7 +20,11 @@
 #include <lv/view.hpp>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <expected>
+#include <memory>
+#include <new>
 #include <span>
 #include <tuple>
 #include <type_traits>
@@ -415,6 +419,7 @@ consteval std::meta::info id_view(std::string_view name) {
 struct build_state {
   lv_obj_t** next_id;
   bool ok = true;
+  void* storage = nullptr;  // the run-time storage of the node being built, if it keeps any
 };
 
 template <class T>
@@ -431,6 +436,125 @@ constexpr const Node& descend(const Node& n) {
 template <std::size_t First, std::size_t... Rest, class Node>
 constexpr const auto& descend(const Node& n) {
   return descend<Rest...>(kid<First>(n.kids));
+}
+
+// ---- run-time storage -------------------------------------------------------
+//
+// A node kind that keeps data while its widgets exist says so in its own type, with a
+// nested template that the tree's position fills in:
+//
+//   struct my_kind {
+//     template <const auto& Tree, std::size_t... Path>
+//     struct storage { lv::detail::watch_node watcher; int shown = -1; };
+//     template <const auto& Tree, std::size_t... Path>
+//     static lv_obj_t* build(lv_obj_t* parent, build_state& st);  // storage_of<Tree, Path...>(st)
+//   };
+//
+// The storage of a tree is one plain object made from these, sized by the compiler: a
+// member s<k> for child number k of each widget that has storage below it. lv::mounted
+// holds it, so lvgl26 allocates nothing for it. It is value-initialised before the
+// widgets are built, and destroyed while they all still exist: a storage destructor lets
+// go of what the node holds, and never deletes a widget.
+
+// Whether the kind K declares a member named `storage`.
+template <class K>
+consteval bool declares_storage() {
+  for (auto m : std::meta::members_of(^^K, std::meta::access_context::unchecked()))
+    if (std::meta::has_identifier(m) && std::meta::identifier_of(m) == "storage") return true;
+  return false;
+}
+
+template <class N>
+consteval bool keeps_storage() {
+  if constexpr (is_structural<N>)
+    return declares_storage<N>();
+  else
+    return false;
+}
+
+// Whether the node type N, or a node below it, keeps run-time storage. Asked once per type,
+// so that a tree of plain widgets costs one look at each type of node.
+template <class N>
+inline constexpr bool any_storage = keeps_storage<N>();
+template <fixed W, class... Kids>
+inline constexpr bool any_storage<node<W, Kids...>> = (false || ... || any_storage<Kids>);
+
+// What the storage of a kind must be: made from nothing, and ended without an error.
+template <class K, const auto& Tree, std::size_t... Path>
+concept storage_kind = requires { typename K::template storage<Tree, Path...>; } &&
+                       std::default_initializable<typename K::template storage<Tree, Path...>> &&
+                       std::is_nothrow_destructible_v<typename K::template storage<Tree, Path...>>;
+
+template <const auto& Tree, std::size_t... Path>
+struct storage_of_node;
+
+// The run-time storage of the node of `Tree` at Path.
+template <const auto& Tree, std::size_t... Path>
+using storage_t = typename storage_of_node<Tree, Path...>::type;
+
+// The members of a widget's storage: s<k> for each child k that keeps storage.
+template <const auto& Tree, std::size_t... Path>
+consteval std::vector<std::meta::info> storage_members() {
+  using node_type = std::remove_cvref_t<decltype(descend<Path...>(Tree))>;
+  std::vector<std::meta::info> specs;
+  template for (constexpr auto k : indices<kid_count<node_type>>) {
+    if constexpr (any_storage<std::remove_cvref_t<decltype(descend<Path..., k>(Tree))>>)
+      specs.push_back(std::meta::data_member_spec(^^storage_t<Tree, Path..., k>, {.name = "s" + decimal(k)}));
+  }
+  return specs;
+}
+
+template <const auto& Tree, std::size_t... Path>
+struct widget_storage {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, storage_members<Tree, Path...>()); }
+};
+
+template <class K, const auto& Tree, std::size_t... Path>
+consteval std::meta::info kind_storage() {
+  if constexpr (storage_kind<K, Tree, Path...>) {
+    return ^^typename K::template storage<Tree, Path...>;
+  } else {
+    static_assert(false,
+                  "lv: a node kind with a member `storage` declares it as "
+                  "`template <const auto& Tree, std::size_t... Path> struct storage { ... };`, "
+                  "default-constructible and with a destructor that does not throw.");
+    return ^^void;
+  }
+}
+
+template <const auto& Tree, std::size_t... Path>
+struct storage_of_node {
+  using node_type = std::remove_cvref_t<decltype(descend<Path...>(Tree))>;
+  static consteval std::meta::info find() {
+    if constexpr (is_structural<node_type>)
+      return kind_storage<node_type, Tree, Path...>();
+    else
+      return ^^typename widget_storage<Tree, Path...>::type;
+  }
+  using type = [:find():];
+};
+
+// The storage of the empty tree: a tree whose nodes keep nothing.
+struct no_storage {};
+
+template <const auto& Tree>
+using tree_storage = std::conditional_t<any_storage<std::remove_cvref_t<decltype(Tree)>>,
+                                        storage_t<Tree>, no_storage>;
+
+// Where the storage of child K of the widget at Path lies in the widget's storage.
+template <const auto& Tree, std::size_t K, std::size_t... Path>
+consteval std::size_t locate() {
+  for (auto m : std::meta::nonstatic_data_members_of(^^storage_t<Tree, Path...>,
+                                                    std::meta::access_context::unchecked()))
+    if (std::meta::identifier_of(m) == "s" + decimal(K)) return static_cast<std::size_t>(std::meta::offset_of(m).bytes);
+  fail("lv: internal: no storage for child " + decimal(K));
+}
+
+// The storage of the node being built: what a kind's `build` uses.
+template <const auto& Tree, std::size_t... Path>
+storage_t<Tree, Path...>& storage_of(const build_state& st) {
+  return *static_cast<storage_t<Tree, Path...>*>(st.storage);
 }
 
 // Whether a structural node lies on the way from `n` down the path Path, such as the
@@ -557,10 +681,48 @@ lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
   apply_node<Tree, Path...>(w.raw());
 
   template for (constexpr auto i : indices<kid_count<node_type>>) {
-    if (st.ok) build<Tree, Path..., i>(w.raw(), st);
+    if constexpr (any_storage<std::remove_cvref_t<decltype(descend<Path..., i>(Tree))>>) {
+      void* own = st.storage;
+      st.storage = static_cast<std::byte*>(own) + locate<Tree, i, Path...>();
+      if (st.ok) build<Tree, Path..., i>(w.raw(), st);
+      st.storage = own;
+    } else {
+      if (st.ok) build<Tree, Path..., i>(w.raw(), st);
+    }
   }
   return w.raw();
 }
+
+// The storage of a tree inside the object that holds it: alive from the start of a mount
+// until the root is deleted. A tree that keeps nothing holds nothing.
+template <class S>
+class storage_place {
+  struct none {};
+  union {
+    none none_{};  // active until start(), so that a constinit holder is constant
+    S value_;
+  };
+
+ public:
+  constexpr storage_place() {}
+  storage_place(const storage_place&) = delete;
+  storage_place& operator=(const storage_place&) = delete;
+  constexpr ~storage_place() {}
+
+  void* start() { return std::construct_at(&value_); }
+  void end() noexcept { std::destroy_at(&value_); }
+};
+
+template <>
+class storage_place<no_storage> {
+ public:
+  constexpr storage_place() = default;
+  storage_place(const storage_place&) = delete;
+  storage_place& operator=(const storage_place&) = delete;
+
+  void* start() { return nullptr; }
+  void end() noexcept {}
+};
 
 }  // namespace detail
 
@@ -568,53 +730,184 @@ lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
 
 enum class mount_error {
   out_of_memory,  // LVGL could not create a widget
+  not_mounted,    // an lv::mounted made empty, whose mount(parent) has not run
 };
 
-// The widgets built from a tree. Owns them: they are deleted with this object.
+// The widgets built from a tree, and the run-time storage of its nodes. Owns the
+// widgets: they are deleted with this object.
+//
+// It is neither copied nor moved: LVGL's handler on the root, and what the nodes keep,
+// point into it.
+// It is built where it lives, and carries its own failure in the shape of std::expected:
+//   auto root = lv::mount<ui>(display.screen());   // on the stack, built in place
+//   if (!root.has_value()) return root.error();    // or: if (!root)
+//   root->get<"title">().set({.text = "Ready"});
+//
+//   constinit lv::mounted<ui> page;               // a global, mounted later
+//   if (!page.mount(display.screen())) ...
+//   page.unmount();                               // the window closes; mount again later
+//
+// sizeof and alignof are constants: lv::mount_in builds one in memory of the caller's.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class mounted {
-  owned<obj> root_;
+  lv_obj_t* root_ = nullptr;
+  mount_error error_ = mount_error::not_mounted;
+  bool built_ = false;
   std::array<lv_obj_t*, detail::id_count<Tree>> ids_{};
+  [[no_unique_address]] detail::storage_place<detail::tree_storage<Tree>> storage_;
 
-  template <const auto& T>
-    requires tree_node<decltype(T)>
-  friend std::expected<mounted<T>, mount_error> mount(obj);
+  static constexpr bool keeps_storage = detail::any_storage<std::remove_cvref_t<decltype(Tree)>>;
+
+  // The one way a mounted tree ends: the storage ends while every widget of the tree still
+  // exists, and the object is not mounted again, ready for mount(parent) in the same memory.
+  void end() noexcept {
+    storage_.end();
+    root_ = nullptr;
+    built_ = false;
+    error_ = mount_error::not_mounted;
+  }
+
+  // LVGL deletes the root: from unmount(), from the destructor, or from outside.
+  static void root_deleted(lv_event_t* e) { static_cast<mounted*>(lv_event_get_user_data(e))->end(); }
+
+  std::expected<void, mount_error> build(obj parent) {
+    detail::build_state st{ids_.data(), true, storage_.start()};
+    lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
+    if (st.ok && root != nullptr &&
+        lv_obj_add_event_cb(root, &root_deleted, LV_EVENT_DELETE, this) != nullptr) {
+      root_ = root;
+      built_ = true;
+      return {};
+    }
+    storage_.end();                         // first the storage,
+    if (root != nullptr) lv_obj_delete(root);  // then a half-built tree
+    error_ = mount_error::out_of_memory;
+    return std::unexpected(error_);
+  }
 
  public:
-  mounted() = default;
-  mounted(mounted&&) noexcept = default;
-  mounted& operator=(mounted&&) noexcept = default;
+  // Holds no widgets until mount(parent): a constinit global, or a member.
+  constexpr mounted() = default;
 
-  // The root widget, or an empty view if its parent already deleted it.
-  obj root() const { return root_.get(); }
+  // Builds the widgets of `Tree` under `parent`, here. Check the result with operator bool.
+  explicit mounted(obj parent)
+    pre(parent.raw() != nullptr)
+  {
+    (void)build(parent);
+  }
+
+  mounted(const mounted&) = delete;
+  mounted& operator=(const mounted&) = delete;
+
+  ~mounted() {
+    if (root_ != nullptr) lv_obj_delete(root_);  // root_deleted ends the storage
+  }
+
+  // Builds the widgets of `Tree` under `parent`, in this object's own memory: when it was
+  // never mounted, after unmount(), after a failed mount, or after the parent deleted the
+  // widgets. lvgl26 allocates nothing for it.
+  std::expected<void, mount_error> mount(obj parent)
+    pre(parent.raw() != nullptr)
+    pre(!built_)
+  {
+    return build(parent);
+  }
+
+  // Deletes the widgets and ends the storage: the object is not mounted, as when it was
+  // made. For the end of a root's life, such as a window that closes.
+  void unmount()
+    pre(built_)
+  {
+    lv_obj_delete(root_);  // root_deleted ends it
+  }
+
+  // Whether the widgets are mounted: built, and not deleted since.
+  explicit operator bool() const noexcept { return built_; }
+  bool has_value() const noexcept { return built_; }
+
+  // Why the widgets are not mounted: not_mounted, or the failure of the last mount.
+  mount_error error() const
+    pre(!built_)
+  {
+    return error_;
+  }
+
+  // Shaped like std::expected, so that root->get<"id">() reads as before.
+  mounted* operator->()
+    pre(built_)
+  {
+    return this;
+  }
+  const mounted* operator->() const
+    pre(built_)
+  {
+    return this;
+  }
+  mounted& operator*()
+    pre(built_)
+  {
+    return *this;
+  }
+  const mounted& operator*() const
+    pre(built_)
+  {
+    return *this;
+  }
+
+  // The root widget, or an empty view when the tree is not mounted.
+  obj root() const { return obj{root_}; }
 
   // Gives the widgets to their parent: they now live until the parent is deleted,
   // as widgets made with LVGL's C API do. Returns the root.
-  obj detach() { return root_.release(); }
+  obj detach()
+    requires(!keeps_storage)
+  {
+    lv_obj_t* root = root_;
+    if (root != nullptr) lv_obj_remove_event_cb_with_user_data(root, &root_deleted, this);
+    end();
+    return obj{root};
+  }
+  obj detach() = delete(
+      "lv: this tree keeps run-time storage inside its lv::mounted, so its widgets cannot "
+      "outlive it. Keep the lv::mounted as long as the widgets are shown.");
 
   // A typed view of the node with this id.
   template <detail::fixed Name>
   auto get() const {
     // A check in the body, not pre(): GCC 16.2 crashes on pre() with a deduced return type.
-    contract_assert(root_ && "the mounted tree was deleted by its parent");
+    contract_assert(root_ != nullptr && "the tree is not mounted");
     using view_type = typename[:detail::id_view<Tree>(Name.sv()):];
     return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
   }
 };
 
-// Builds the widgets of the constexpr tree `Tree` under `parent`.
+// The bytes that lv::mount_in needs for `Tree`: sizeof(lv::mounted<Tree>), a constant.
+// Its alignment is alignof(lv::mounted<Tree>).
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
-std::expected<mounted<Tree>, mount_error> mount(obj parent)
+inline constexpr std::size_t storage_size = sizeof(mounted<Tree>);
+
+// Builds the widgets of the constexpr tree `Tree` under `parent`. The result is built in
+// the caller's variable, and carries its failure: `if (!root) ... root.error()`.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree> mount(obj parent)
   pre(parent.raw() != nullptr)
 {
-  mounted<Tree> m;
-  detail::build_state st{m.ids_.data()};
-  lv_obj_t* root = detail::build<Tree>(parent.raw(), st);
-  m.root_ = owned<obj>{obj{root}};  // also deletes a half-built tree on failure
-  if (!st.ok || !m.root_) return std::unexpected(mount_error::out_of_memory);
-  return m;
+  return mounted<Tree>{parent};
+}
+
+// The same, built in `memory` that is not a variable of its own, such as a slice of one
+// region reserved at start. The caller ends it with std::destroy_at, which deletes the widgets.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+mounted<Tree>& mount_in(std::span<std::byte> memory, obj parent)
+  pre(parent.raw() != nullptr)
+  pre(memory.size() >= sizeof(mounted<Tree>))
+  pre(reinterpret_cast<std::uintptr_t>(memory.data()) % alignof(mounted<Tree>) == 0)
+{
+  return *::new (static_cast<void*>(memory.data())) mounted<Tree>(parent);
 }
 
 // Builds the widgets of `Tree` under `parent` and leaves them to it, as widgets
@@ -625,8 +918,12 @@ template <const auto& Tree>
 obj place(obj parent)
   pre(parent.raw() != nullptr)
 {
-  auto built = mount<Tree>(parent);
-  return built ? built->detach() : obj{};
+  static_assert(!detail::any_storage<std::remove_cvref_t<decltype(Tree)>>,
+                "lv: lv::place leaves the widgets to their parent, and this tree keeps run-time "
+                "storage that must live as long as they do. Keep it in an lv::mounted: "
+                "lv::mount<ui>(parent), or lv::mount_in<ui>(memory, parent) for memory of your own.");
+  mounted<Tree> built{parent};
+  return built ? built.detach() : obj{};
 }
 
 }  // namespace lv

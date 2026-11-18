@@ -6,8 +6,8 @@
 namespace {
 
 void same_screen() {
-  const auto written_out = render([](lv::obj parent) { check(lv::mount<looks::before::ui>(parent).value().detach().raw()); }, nothing);
-  const auto with_looks = render([](lv::obj parent) { check(lv::mount<looks::ui>(parent).value().detach().raw()); }, nothing);
+  const auto written_out = render([](lv::obj parent) { check(lv::place<looks::before::ui>(parent).raw()); }, nothing);
+  const auto with_looks = render([](lv::obj parent) { check(lv::place<looks::ui>(parent).raw()); }, nothing);
   const long at = written_out.first_difference(with_looks);
   check(written_out.valid() && with_looks.valid());
   check(at == -1);

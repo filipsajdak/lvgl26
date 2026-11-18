@@ -1148,6 +1148,9 @@ struct each_node {
   static lv_obj_t* build(lv_obj_t* parent, build_state& st) {
     static_assert(sizeof...(Row) == 1,
                   "lv: lv::each needs a row template: lv::each(tracks, &track::id)[lv::label(...)].");
+    static_assert((!any_storage<Row> && ...),
+                  "lv: a row of lv::each cannot hold a node that keeps run-time storage yet: "
+                  "lv::each builds its rows outside the tree's storage. Put that node outside the row template.");
     if (!each_view::start(parent, each_parts<Tree, Path...>::kind, descend<Path...>(Tree).rows)) st.ok = false;
     return parent;
   }

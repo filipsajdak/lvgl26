@@ -40,6 +40,13 @@ lvgl26_test(json)
 lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
+lvgl26_test(mounted_storage)
+# unmount() of a tree that is not mounted, and mount() of one that is, end the program.
+foreach(case unmount_not_mounted mount_twice unmount_after_parent)
+  add_test(NAME mounted_storage_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:mounted_storage> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 lvgl26_test(look)
 target_link_libraries(look PRIVATE lvgl26_test_data)
 # Two files of one program name looks, with the registration in a header they share.
@@ -339,6 +346,10 @@ lvgl26_compile_fail(unknown_id "the tree has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(duplicate_id "the id 'a' is used twice in one tree")
 lvgl26_compile_fail(list_without_rows "a list holds at least one row")
 lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
+lvgl26_compile_fail(each_row_storage "a row of lv::each cannot hold a node that keeps run-time storage")
+lvgl26_compile_fail(mounted_detach_storage "keeps run-time storage inside its lv::mounted, so its widgets cannot")
+lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent, and this tree keeps run-time")
+lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
 lvgl26_compile_fail(each_plain_key "a key names one row")
 lvgl26_compile_fail(each_not_a_list "lv::each takes an lv::list and the member of its rows that holds the key")
@@ -593,6 +604,11 @@ endif()
 add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
 target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_repeat COMMAND example_repeat)
+
+# The example of docs/mounting.md: a tree in a variable, in a global, in memory set aside.
+add_executable(example_mounting ${PROJECT_SOURCE_DIR}/examples/mounting/main.cpp)
+target_link_libraries(example_mounting PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_mounting COMMAND example_mounting)
 
 # The example of docs/themes.md. Its pictures are the ones on the page.
 add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)

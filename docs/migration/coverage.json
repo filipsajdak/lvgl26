@@ -132,7 +132,7 @@
         {"concept": "Framebuffer strategy, partial buffers", "status": "works", "answer": "lv::frame and lv::band"},
         {"concept": "The HAL and the display driver", "status": "works", "answer": "A panel function: lv::display display{app, frame, &changed}"},
         {"concept": "A real board", "status": "planned", "answer": "The slice runs on a Cortex-M4 in an emulator", "gap": "real-board"},
-        {"concept": "Planned memory", "status": "partial", "answer": "The heap of a screen is measured. A fixed region is not built", "gap": "memory-region"},
+        {"concept": "Planned memory", "status": "partial", "answer": "The heap of a screen is measured. What lvgl26 keeps for a screen goes where the program says (lv::mount_in), and its size is a constant. LVGL's widgets stay on LVGL's heap", "gap": "memory-region"},
         {"concept": "TouchGFX Designer", "status": "planned", "answer": "A live preview and design tools through agents", "gap": "live-preview"}
       ]
     }
