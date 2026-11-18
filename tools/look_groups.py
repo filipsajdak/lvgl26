@@ -7,8 +7,9 @@ A component group is a group of the token file whose entries are named for style
 (`radius`, `bg_color`, ...): the groups that lv::look turns into a style. The token file holds
 nothing of ours: it is a plain Design Tokens file that design tools open. Groups of primitive and
 semantic tokens (`color`, `space`, `text`) have no entry named for a style property, and are
-never reported. A group named like an LVGL state or part (`checked`, `knob`) is a layer of the group
-above it, which lv::look takes along, so it is reported only through its parent.
+never reported. A group named like an LVGL state or part (`checked`, `knob`) is a layer of the look
+above it, which lv::look takes along, so it is reported only through its parent. A group that sets a
+style property only in its layers is a look too, and so is a group named like a part that no look holds.
 
 A source uses a group when it names it in lv::look<"a.b">, in a list such as lv::look<"a a.b">,
 or by lv::look_of<"a", E>, which uses every sibling group named `a-...` (`a-print`, `a-scan`): the
@@ -25,6 +26,9 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools" / "editor"))
+from token_stubs import member_name  # noqa: E402  (the one copy of the compiler's naming rule)
+
 REFERENCE = ROOT / "docs" / "reference" / "lvgl-v9.6.0.json"
 SOURCE_SUFFIXES = (".cpp", ".hpp", ".h", ".cc", ".cxx", ".ipp")
 LOOK = re.compile(r'lv::look\s*<\s*"([^"]*)"')
@@ -70,14 +74,37 @@ def has_style_entry(group: dict, styles: set[str]) -> bool:
     return any(key in styles and not is_group(value) for key, value in group.items() if not key.startswith("$"))
 
 
+def is_layer_name(key: str, layers: set[str]) -> bool:
+    """Whether a group of this name in a look is one of its layers. The compiler reads the name as
+    a C++ member (`focus-key` as focus_key, `default` as default_), and so does this."""
+    return member_name(key) in {member_name(layer) for layer in layers}
+
+
+def layer_children(group: dict, layers: set[str]):
+    return [value for key, value in group.items() if not key.startswith("$") and is_group(value) and is_layer_name(key, layers)]
+
+
+def is_look(group: dict, styles: set[str], layers: set[str]) -> bool:
+    """A group that sets a style property itself or in one of its layers (`checked` only, say)."""
+    return has_style_entry(group, styles) or any(is_look(layer, styles, layers) for layer in layer_children(group, layers))
+
+
 def component_groups(tokens: dict, styles: set[str], layers: set[str]) -> list[str]:
-    """The paths of the component groups, not counting the layers of another group."""
+    """The paths of the component groups. A group named for a part or a state is a layer of the
+    look above it, and lv::look takes it along; where no look holds it, it is a look of its own."""
     found = []
-    for path, group in groups_of(tokens):
-        if path.split(".")[-1] in layers:
-            continue
-        if has_style_entry(group, styles):
-            found.append(path)
+
+    def visit(node: dict, prefix: str, in_a_look: bool) -> None:
+        for key, value in node.items():
+            if key.startswith("$") or not is_group(value) or (in_a_look and is_layer_name(key, layers)):
+                continue
+            path = f"{prefix}{key}"
+            look = is_look(value, styles, layers)
+            if look:
+                found.append(path)
+            visit(value, path + ".", look)
+
+    visit(tokens, "", False)
     return found
 
 

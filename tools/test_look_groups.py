@@ -11,7 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import look_groups as tool  # noqa: E402
 
 STYLES = {"bg_color", "radius", "text_color", "width"}
-LAYERS = {"checked", "pressed", "knob", "indicator"}
+LAYERS = {"checked", "pressed", "knob", "indicator", "default", "focus_key"}
 COLOR = {"$type": "color", "$value": "#ffffff"}
 LENGTH = {"$type": "dimension", "$value": "4px"}
 
@@ -50,6 +50,18 @@ class ComponentGroups(unittest.TestCase):
         self.assertNotIn("tile.pressed", found)
         self.assertNotIn("status.checked", found)
         self.assertNotIn("gauge.knob", found)
+
+    def test_a_look_with_entries_only_in_its_layers_is_one(self):
+        tokens = {"status-loud": {"checked": {"text_color": COLOR}}, "deep": {"pressed": {"knob": {"radius": LENGTH}}}}
+        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), ["status-loud", "deep"])
+
+    def test_a_group_named_like_a_part_is_a_look_where_no_look_holds_it(self):
+        tokens = {"indicator": {"bg_color": COLOR}, "panel": {"knob": {"radius": LENGTH}}}
+        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), ["indicator", "panel"])
+
+    def test_a_layer_is_named_as_the_compiler_reads_it(self):
+        tokens = {"tile": {"radius": LENGTH, "default": {"radius": LENGTH}, "focus-key": {"radius": LENGTH}}}
+        self.assertEqual(tool.component_groups(tokens, STYLES, LAYERS), ["tile"])
 
 
 class VendorData(unittest.TestCase):
