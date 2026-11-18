@@ -38,7 +38,7 @@ constexpr auto ui = lv::group({.flex_flow = "column",
     lv::label({.style = {.text_font = type(tok.title.text_font)}, .text = "Printer"}),
     lv::group({.flex_flow = "row",
                .style = {.height = tok.tiles.height, .pad_column = tok.tiles.pad_column, .width = tok.tiles.width}})[
-        tile(names::print, tok.tile.print), tile(names::scan, tok.tile.scan), tile(names::copy, tok.tile.copy)],
+        tile(names::print, tok.tile_print), tile(names::scan, tok.tile_scan), tile(names::copy, tok.tile_copy)],
     lv::label({.checked = true,
                .style = {.text_color = tok.status.text_color},
                .style_checked = {.text_color = tok.status.checked.text_color},

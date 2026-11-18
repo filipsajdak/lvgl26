@@ -2,21 +2,28 @@
 
 // Named looks: a group of the project's design tokens becomes a style, by name.
 //
-//   // tokens.json: "queue": {"card": {"bg_color": "{color.card}", "radius": "{radius.card}",
-//   //                                 "checked": {"bg_color": "{color.active}"}}}
+//   // tokens.json: "queue": {"card": {"bg_color": {"$value": "{color.card}"},
+//   //                                 "radius": {"$value": "{radius.card}"},
+//   //                                 "checked": {"bg_color": {"$value": "{color.active}"}}}}
 //
 //   lv::button({.style = lv::look<"queue.card">})              // what the element is
-//   lv::button({.style = lv::look<"tile tile.print">})         // a variant: several looks, a later one wins
+//   lv::button({.style = lv::look<"tile tile-print">})         // a variant: several looks, a later one wins
 //   lv::button({.style = lv::look<"tile"> | lv::on("pressed", {...})})
 //
-// The code says what an element is; the token file says how it looks. Each entry of the group
-// is matched to the style property of the same name, and its token type is checked against what
-// the property takes: a color, a dimension, an opacity (a number from 0 to 1), a duration, a
-// typography token (a font, drawn by the compiler through the project's lv::typeface), a string
-// that names an LVGL enumerator (`"center"`, `"flex"`), or a composite token (a shadow, a border,
-// a transition) that is merged as `style | token` is. A nested group named like an LVGL state
-// (`checked`, `pressed`) or part (`knob`, `indicator`) is a layer: lv::on of its own. Any other
-// nested group is a look of its own (`queue.card.title`), and is not part of the card's look.
+// The code says what an element is; the token file says how it looks. The file is a plain Design
+// Tokens file that design tools open. Each entry of the group is matched to the style property of
+// the same name, and its token type is checked against what the property takes: a color (written
+// #rrggbbaa, it also sets the opacity of the same name, bg_color with bg_opa), a dimension, an
+// opacity (a number from 0 to 1), a duration, a typography token (a font, drawn by the compiler
+// through the project's lv::typeface), or a composite token (a shadow, a border, a transition)
+// that is merged as `style | token` is. What the standard has no type for goes in the group's
+// "$extensions" under the key io.github.filipsajdak.lvgl26: an LVGL value by name, "flex_flow":
+// "row", and a size in percent, "width": "50%".
+//
+// A group nested in a look is a layer, and nothing else: its name is an LVGL part (`knob`,
+// `indicator`) or state (`checked`, `pressed`), as lv::on takes them. A variant is a sibling group,
+// `tile-print` beside `tile`; lv::look<"tile tile-print"> stacks them. Any other nested group is a
+// compile error. "$extends" is not read yet and is a compile error in a look.
 //
 // A look is one constant style per path, worked out by the compiler on first use: it costs
 // nothing in a file that names none, and no heap at run time. Equal looks share one constant
@@ -157,9 +164,18 @@ template <class Group>
 inline constexpr auto group_members =
     std::define_static_array(std::meta::nonstatic_data_members_of(^^Group, std::meta::access_context::unchecked()));
 
+// The members that hold the vendor data of a group and its "$extends", not tokens or groups.
+consteval bool is_vendor_member(std::meta::info member) {
+  return std::meta::identifier_of(member) == vendor_member;
+}
+consteval bool is_extends_member(std::meta::info member) {
+  return std::meta::identifier_of(member) == extends_member;
+}
+
 // A member that is a group of tokens, not a token: a token is an lv::token<T>.
 consteval bool is_group_member(std::meta::info member) {
-  return !std::meta::has_template_arguments(std::meta::type_of(member));
+  return !std::meta::has_template_arguments(std::meta::type_of(member)) && !is_vendor_member(member) &&
+         !is_extends_member(member);
 }
 
 consteval std::meta::info member_named(std::meta::info group, std::string_view name) {
@@ -181,8 +197,10 @@ consteval std::string groups_hint(std::meta::info group, std::string_view wanted
   if (names.empty()) return "It holds no group.";
   std::string out = "The groups there: " + joined_names(names) + ".";
   if (wanted.empty()) return out;
-  const std::string closest = nearest_list(wanted, names).front();
-  if (distance_between(wanted, closest) <= close_enough) out += " Did you mean '" + closest + "'?";
+  // A name in the token file may hold a dash; the compiler knows it with an underscore.
+  const std::string like_a_member = token_member_name(wanted);
+  const std::string closest = nearest_list(like_a_member, names).front();
+  if (distance_between(like_a_member, closest) <= close_enough) out += " Did you mean '" + closest + "'?";
   return out;
 }
 
@@ -220,6 +238,8 @@ template <>
 inline constexpr const char* token_kind<token<bezier>> = "a cubic bezier";
 template <>
 inline constexpr const char* token_kind<token<gradient_token>> = "a gradient";
+template <>
+inline constexpr const char* token_kind<token<rgba_color>> = "a color with an alpha";
 
 // What a style property takes, in the same words.
 template <class T>
@@ -313,19 +333,83 @@ consteval const lv_font_t* font_of() {
 template <std::meta::info Target>
 inline constexpr std::meta::info number_enum = enum_of_property(^^::, std::meta::identifier_of(Target));
 
-template <class D, std::meta::info Target, class V>
-consteval void put_string(look_style_of<D>& s, const V& v, std::string_view entry, std::string_view where) {
+// The properties that LVGL lets take a size in percent.
+inline constexpr std::string_view percent_properties[] = {
+    "width", "height", "min_width", "min_height", "max_width", "max_height", "x", "y",
+    "transform_width", "transform_height", "translate_x", "translate_y"};
+
+consteval bool takes_percent(std::string_view property) {
+  for (auto name : percent_properties)
+    if (name == property) return true;
+  return false;
+}
+
+consteval std::string percent_properties_list() {
+  std::string out;
+  for (auto name : percent_properties) out += (out.empty() ? "" : ", ") + str(name);
+  return out;
+}
+
+// "50%" is a size in percent.
+consteval bool is_percent_text(std::string_view text) {
+  return text.size() > 1 && text.ends_with("%");
+}
+
+consteval std::int32_t percent_of(std::string_view text, std::string_view entry, std::string_view where) {
+  std::int32_t n = 0;
+  for (char c : text.substr(0, text.size() - 1)) {
+    if (c < '0' || c > '9')
+      fail("lv: the $extensions entry '" + str(entry) + "' of '" + str(where) + "' is '" + str(text) +
+           "', and a percentage is written as whole digits and %, such as \"50%\".");
+    n = n * 10 + (c - '0');
+  }
+  return n;
+}
+
+// An LVGL value by its name, from the vendor data: "flex_flow": "row".
+template <class D, std::meta::info Target>
+consteval void put_name(look_style_of<D>& s, std::string_view text, std::string_view entry, std::string_view where) {
   using A = typename[:std::meta::type_of(Target):];
   using first = first_type<A>;
   if constexpr (std::is_enum_v<first>) {
-    s.[:Target:] = A(enumerator_named<first>(*v));
+    s.[:Target:] = A(enumerator_named<first>(text));
   } else if constexpr (number_enum<Target> != std::meta::info{}) {
     using named = typename[:number_enum<Target>:];
-    s.[:Target:] = A(token<strict<std::uint16_t>>{strict<std::uint16_t>(static_cast<std::uint16_t>(enumerator_named<named>(*v))),
+    s.[:Target:] = A(token<strict<std::uint16_t>>{strict<std::uint16_t>(static_cast<std::uint16_t>(enumerator_named<named>(text))),
                                                from_design_tokens{}});
   } else {
-    fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' is a string, but the style property '" +
-         str(entry) + "' takes " + property_kind<first> + ". Change its $type in the token file.");
+    fail("lv: the $extensions entry '" + str(entry) + "' of '" + str(where) + "' is the text '" + str(text) +
+         "', and the style property '" + str(entry) + "' takes " + property_kind<first> +
+         ". $extensions holds LVGL values by name and sizes in percent: write this one as a token, with its $type.");
+  }
+}
+
+// A size in percent, from the vendor data: "width": "50%".
+template <class D, std::meta::info Target>
+consteval void put_percent(look_style_of<D>& s, std::string_view text, std::string_view entry, std::string_view where) {
+  using A = typename[:std::meta::type_of(Target):];
+  using first = first_type<A>;
+  if (!takes_percent(entry))
+    fail("lv: the $extensions entry '" + str(entry) + "' of '" + str(where) + "' is a percentage, and LVGL takes one for " +
+         percent_properties_list() + " only.");
+  if constexpr (std::is_constructible_v<first, const token<length>&>)
+    s.[:Target:] = A(token<length>{length{percent{percent_of(text, entry, where)}}, from_design_tokens{}});
+}
+
+// One entry of the vendor data: the style property of its name, from a name or a percentage.
+template <class D, std::meta::info M, const auto& T>
+consteval void put_vendor(look_style_of<D>& s, std::string_view where) {
+  constexpr std::string_view entry = std::meta::identifier_of(M);
+  constexpr auto target = style_property<D>(entry);
+  if constexpr (target == std::meta::info{}) {
+    fail("lv: the $extensions entry '" + str(entry) + "' of '" + str(where) + "' fits no style property. Nearest style properties: " +
+         nearest_names(entry, style_property_names<D>()) + ".");
+  } else {
+    const std::string_view text = *T;
+    if (is_percent_text(text))
+      put_percent<D, target>(s, text, entry, where);
+    else
+      put_name<D, target>(s, text, entry, where);
   }
 }
 
@@ -352,14 +436,61 @@ template <class First, class V>
        ". Change the entry's $type or its value in the token file.");
 }
 
+[[noreturn]] consteval void fail_percent_value(std::string_view entry, std::string_view where);
+
 // A value that the property takes as it is. A shorthand is its long forms: a constant style holds
 // those, and a layer can override one of them.
 template <class D, std::meta::info Target, class A, class V>
-consteval void put_plain(look_style_of<D>& s, const V& v) {
+consteval void put_plain(look_style_of<D>& s, const V& v, std::string_view entry, std::string_view where) {
+  if constexpr (std::same_as<V, token<length>>) {
+    if (LV_COORD_IS_PCT(v->raw())) fail_percent_value(entry, where);
+  }
   if constexpr (long_names(std::meta::identifier_of(Target)).empty())
     s.[:Target:] = A(v);
   else
     put_long_forms<D, Target>(s, v);
+}
+
+template <class First>
+[[noreturn]] consteval void fail_string_token(std::string_view entry, std::string_view where) {
+  fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' is a string token, and a string is no standard "
+       "value for the style property '" + str(entry) + "', which takes " + property_kind<First> +
+       ". An LVGL value by name (\"flex_flow\": \"row\") goes in \"$extensions\": {\"" + str(vendor_key) +
+       "\": {...}} of the group.");
+}
+
+[[noreturn]] consteval void fail_percent_value(std::string_view entry, std::string_view where) {
+  fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' is a percentage, and Design Tokens Format 2025.10 has no "
+       "percentage. Write a size in pixels as the $value, for design tools, and the percentage in \"$extensions\": {\"" +
+       str(vendor_key) + "\": {\"" + str(entry) + "\": \"50%\"}} of the group.");
+}
+
+// The opacity property that goes with a color property: bg_color with bg_opa, image_recolor with
+// image_recolor_opa. Empty when there is none.
+consteval std::string opacity_name(std::string_view color) {
+  if (color.ends_with("_color")) return str(color.substr(0, color.size() - 6)) + "_opa";
+  if (color.ends_with("recolor")) return str(color) + "_opa";
+  return {};
+}
+
+// A color with alpha: the color, and the opacity of the same name unless the group sets one itself.
+template <class D, std::meta::info Target, const auto& T>
+consteval void put_rgba(look_style_of<D>& s, std::string_view entry, std::string_view where) {
+  using A = typename[:std::meta::type_of(Target):];
+  if constexpr (!std::is_constructible_v<first_type<A>, const token<lv_color_t>&>) {
+    fail_wrong_kind<first_type<A>, token<rgba_color>>(entry, where);
+  } else {
+    s.[:Target:] = A(token<lv_color_t>{T->color, from_design_tokens{}});
+    constexpr std::string_view opa_property = std::define_static_string(opacity_name(std::meta::identifier_of(Target)));
+    constexpr auto opacity = style_property<D>(opa_property);
+    if constexpr (opacity == std::meta::info{}) {
+      fail("lv: the look entry '" + str(entry) + "' of '" + str(where) + "' carries an alpha, and the style has no opacity property for '" +
+           str(entry) + "'. Write the color as #rrggbb.");
+    } else if (T->alpha != 255) {
+      using O = typename[:std::meta::type_of(opacity):];
+      if (!s.[:opacity:].set) s.[:opacity:] = O(raw_value<opa>{opa::from_raw(T->alpha)});
+    }
+  }
 }
 
 template <class D, std::meta::info Target, const auto& T>
@@ -371,11 +502,13 @@ consteval void put_value(look_style_of<D>& s, std::string_view entry, std::strin
   if constexpr (std::tuple_size_v<typename A::types> != 1) {
     fail_several_values(entry, where);
   } else if constexpr (std::same_as<V, token<std::string_view>>) {
-    put_string<D, Target>(s, v, entry, where);
+    fail_string_token<first>(entry, where);
+  } else if constexpr (std::same_as<V, token<rgba_color>>) {
+    put_rgba<D, Target, T>(s, entry, where);
   } else if constexpr (std::same_as<V, token<typography_token>> && std::same_as<first, styled<const lv_font_t*>>) {
     s.[:Target:] = A(token<const lv_font_t*>{font_of<D, T>(), from_design_tokens{}});
   } else if constexpr (!std::same_as<V, token<typography_token>> && std::is_constructible_v<first, const V&>) {
-    put_plain<D, Target, A>(s, v);
+    put_plain<D, Target, A>(s, v, entry, where);
   } else {
     fail_wrong_kind<first, V>(entry, where);
   }
@@ -421,26 +554,52 @@ consteval lv_style_selector_t selector_of_name(std::string_view name) {
   return *selector_named<State>(name);
 }
 
+[[noreturn]] consteval void fail_extends(std::string_view where) {
+  fail("lv: the group of the look '" + str(where) + "' has \"$extends\", which Design Tokens Format 2025.10 has and lvgl26 does "
+       "not read yet. Write the entries of the group out, or use the sibling groups of a variant: lv::look<\"a a-b\">.");
+}
+
+template <class D, const auto& V>
+consteval void put_vendor_entries(look_style_of<D>& s, std::string_view where) {
+  template for (constexpr auto m : group_members<std::remove_cvref_t<decltype(V)>>)
+    put_vendor<D, m, V.[:m:]>(s, where);
+}
+
 template <class D, const auto& G>
 consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
-                          bool in_layer, std::string_view where);
+                          std::string_view where);
+
+// The names of the parts and states of LVGL, without `any`.
+consteval std::vector<std::string> layer_names() {
+  std::vector<std::string> out;
+  for (const enum_name& e : enum_names<lv_part_t>)
+    if (short_enum_name<lv_part_t>(e) != "any") out.push_back(short_enum_name<lv_part_t>(e));
+  for (const enum_name& e : enum_names<lv_state_t>)
+    if (short_enum_name<lv_state_t>(e) != "any") out.push_back(short_enum_name<lv_state_t>(e));
+  return out;
+}
+
+[[noreturn]] consteval void fail_not_a_layer(std::string_view name, std::string_view where) {
+  const auto near = nearest_list(name, layer_names());
+  std::string hint;
+  if (distance_between(name, near.front()) <= close_enough) hint = " Did you mean '" + near.front() + "'?";
+  fail("lv: in the look '" + str(where) + "' the group '" + str(name) + "' is neither a part nor a state." + hint +
+       " A group nested in a look is a layer: a part (" + selector_names<lv_part_t>() + ") or a state (" +
+       selector_names<lv_state_t>() + "). A variant of a look is a sibling group, 'a-" + str(name) +
+       "' beside 'a', used as lv::look<\"a a-" + str(name) + "\">.");
+}
 
 template <class D, std::meta::info M, const auto& G>
-consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t selector, bool in_layer,
+consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t selector,
                     std::string_view where) {
   constexpr std::string_view name = std::meta::identifier_of(M);
   if constexpr (!names_part_or_state<>(name)) {
-    // At the top a group of another name is a look of its own, such as tile.print.
-    if (in_layer)
-      fail("lv: in the look '" + str(where) + "' the group '" + str(name) +
-           "' sits inside a state or a part, which holds values, parts and states only, and '" + str(name) +
-           "' is neither. The parts: " + selector_names<lv_part_t>() + ". The states: " + selector_names<lv_state_t>() +
-           ". Move it out of the layer: it is a look of its own, there.");
+    fail_not_a_layer(name, where);
   } else {
     const lv_style_selector_t combined = selector | selector_of_name<>(name);
     look_style_of<D> own{};
     std::vector<style_layer> inner;
-    fill_level<D, G.[:M:]>(own, inner, combined, true, where);
+    fill_level<D, G.[:M:]>(own, inner, combined, where);
     if (sets_a_value<look_style_of<D>, void>(own)) layers.push_back({combined, stored_style<look_style_of<D>, void>(own)});
     layers.insert(layers.end(), inner.begin(), inner.end());
   }
@@ -448,10 +607,14 @@ consteval void nest(std::vector<style_layer>& layers, lv_style_selector_t select
 
 template <class D, const auto& G>
 consteval void fill_level(look_style_of<D>& own, std::vector<style_layer>& layers, lv_style_selector_t selector,
-                          bool in_layer, std::string_view where) {
+                          std::string_view where) {
   template for (constexpr auto m : group_members<std::remove_cvref_t<decltype(G)>>) {
-    if constexpr (is_group_member(m))
-      nest<D, m, G>(layers, selector, in_layer, where);
+    if constexpr (is_extends_member(m))
+      fail_extends(where);
+    else if constexpr (is_vendor_member(m))
+      put_vendor_entries<D, G.[:m:]>(own, where);
+    else if constexpr (is_group_member(m))
+      nest<D, m, G>(layers, selector, where);
     else
       put_entry<D, m, G.[:m:]>(own, where);
   }
@@ -462,7 +625,7 @@ template <class D, const auto& G>
 consteval look_style_of<D> style_of_group(std::string_view where) {
   look_style_of<D> s{};
   std::vector<style_layer> layers;
-  fill_level<D, G>(s, layers, 0, false, where);
+  fill_level<D, G>(s, layers, 0, where);
   if (!layers.empty()) s.layers = style_layers(std::define_static_array(layers));
   return s;
 }
@@ -550,12 +713,13 @@ template <fixed Prefix, auto V>
 consteval auto path_of_enumerator() {
   constexpr std::string_view name = name_of<V>;
   constexpr std::size_t size = Prefix.sv().size() + 1 + name.size();
-  return fixed_from<size>(str(Prefix.sv()) + "." + str(name));
+  return fixed_from<size>(str(Prefix.sv()) + "-" + str(name));
 }
 
 }  // namespace detail
 
-// The look named for an enumerator: lv::look_of<"tile", subpage::print> is lv::look<"tile.print">.
+// The look named for an enumerator: lv::look_of<"tile", subpage::print> is lv::look<"tile-print">, a
+// sibling group of "tile" (a group nested in a look is a layer, so a variant cannot be nested).
 template <detail::fixed Prefix, auto V, class D = override>
   requires std::is_enum_v<decltype(V)>
 inline constexpr auto look_of = look<detail::path_of_enumerator<Prefix, V>(), D>;

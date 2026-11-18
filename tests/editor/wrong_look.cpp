@@ -11,12 +11,12 @@ constexpr auto tok = lv::tokens<tokens_json>;
 template <>
 inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};
 
-constexpr auto right = lv::box({.style = lv::look<"tile.print">});
-constexpr auto several = lv::box({.style = lv::look<"tile tile.print">});
-constexpr auto spelled_either_way = lv::box({.style = lv::look<"tile.ink-level"> | lv::look<"tile.ink_level">});
+constexpr auto right = lv::box({.style = lv::look<"tile-print">});
+constexpr auto several = lv::box({.style = lv::look<"tile tile-print">});
+constexpr auto spelled_either_way = lv::box({.style = lv::look<"tile-ink-level"> | lv::look<"tile_ink_level">});
 
 // expected-error@*:* {{this look names no group of the token file}}
 constexpr auto typo = lv::box({.style = lv::look<"tile.pritn">});
 
 // expected-error@*:* {{this look names no group of the token file}}
-constexpr auto in_a_list = lv::box({.style = lv::look<"tile tile.scann">});
+constexpr auto in_a_list = lv::box({.style = lv::look<"tile tile-scann">});

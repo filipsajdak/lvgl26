@@ -55,19 +55,26 @@ static_assert(lv::style_value<decltype(lv::look<"tile">)>);
 static_assert(lv::look<"tile">.radius.set && lv::look<"tile">.width.set && lv::look<"tile">.text_font.set);
 static_assert(!lv::look<"tile">.bg_color.set, "bg_color is in the variants");
 // A look that sets bg_color does not set bg_opa by itself.
-static_assert(lv::look<"tile.print">.bg_color.set && !lv::look<"tile.print">.bg_opa.set);
+static_assert(lv::look<"tile-print">.bg_color.set && !lv::look<"tile-print">.bg_opa.set);
 static_assert(lv::look<"status">.layers.count == 1 && lv::look<"tile">.layers.count == 0);
 static_assert(lv::look<"gauge">.layers.count == 3);  // indicator, knob, knob + pressed
 // A shorthand is held as its long forms: a constant style has no value under its own name.
 static_assert(!lv::look<"padded">.pad_all.set && lv::look<"padded">.pad_top.set && lv::look<"padded">.pad_column.set);
-// Spaces between looks, any number.
-static_assert(lv::look<"tile tile.print">.bg_color.set && lv::look<"tile.print"  " tile">.radius.set);
+// Enumerators and percentages come from "$extensions"; a color's alpha sets the opacity beside it.
+static_assert(lv::look<"flex-ext">.flex_flow.set && lv::look<"flex-ext">.layout.set && lv::look<"flex-ext">.layers.count == 1);
+static_assert(lv::look<"pct">.width.set && lv::look<"pct">.height.set);
+static_assert(lv::look<"alpha">.bg_opa.set && lv::look<"alpha">.bg_color.set);
+static_assert(!lv::look<"alpha">.text_opa.set, "an opaque color sets no opacity");
+static_assert(lv::look<"alpha-explicit">.bg_opa.set);
 
-constexpr auto tile_ui = lv::button({.id = "tile", .style = lv::look<"tile"> | lv::look<"tile.print">})[
-    lv::group({.id = "inner", .style = lv::look<"tile.inner">})];
+// Spaces between looks, any number.
+static_assert(lv::look<"tile tile-print">.bg_color.set && lv::look<"tile-print"  " tile">.radius.set);
+
+constexpr auto tile_ui = lv::button({.id = "tile", .style = lv::look<"tile"> | lv::look<"tile-print">})[
+    lv::group({.id = "inner", .style = lv::look<"tile-inner">})];
 
 constexpr auto status_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status">, .text = "PRINTING"});
-constexpr auto later_wins_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status status.loud">, .text = "X"});
+constexpr auto later_wins_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status status-loud">, .text = "X"});
 constexpr auto padded_ui = lv::box({.checked = true, .id = "padded", .style = lv::look<"padded">});
 constexpr auto gauge_ui = lv::slider({.id = "gauge", .style = lv::look<"gauge">});
 constexpr auto card_ui = lv::box({.id = "card", .style = lv::look<"card">});
@@ -81,6 +88,11 @@ constexpr auto combined_ui = lv::label({.checked = true, .id = "combined",
 // Two looks that ask for the same typeface file and size share one drawn font.
 constexpr auto twin_ui = lv::box({.id = "twin", .style = lv::look<"twin">});
 constexpr auto tile_alone_ui = lv::box({.id = "alone", .style = lv::look<"tile">});
+
+constexpr auto pct_ui = lv::box({.id = "pct", .style = lv::look<"pct">});
+constexpr auto alpha_ui = lv::box({.id = "alpha", .style = lv::look<"alpha">});
+constexpr auto alpha_explicit_ui = lv::box({.id = "explicit", .style = lv::look<"alpha-explicit">});
+constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
 
 // Defaults of a factory give way to a look that says it.
 constexpr auto fills_ui = lv::group({.id = "fills"});
@@ -154,6 +166,38 @@ void looks_with_the_same_font_share_it() {
   const lv_font_t* first = lv_obj_get_style_text_font(twin->root().raw(), LV_PART_MAIN);
   check(first == lv_obj_get_style_text_font(alone->root().raw(), LV_PART_MAIN));
   check(first != lv_font_get_default());
+}
+
+void a_percentage_is_read_from_the_extensions() {
+  auto built = lv::mount<pct_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* b = built->get<"pct">().raw();
+  check(lv_obj_get_style_width(b, LV_PART_MAIN) == LV_PCT(50));  // the $value of 100px is for design tools
+  check(lv_obj_get_style_height(b, LV_PART_MAIN) == LV_PCT(25));
+}
+
+void a_color_with_alpha_sets_its_opacity() {
+  auto built = lv::mount<alpha_ui>(lv::screen_active());
+  auto explicit_opa = lv::mount<alpha_explicit_ui>(lv::screen_active());
+  check(built.has_value() && explicit_opa.has_value());
+  if (!built || !explicit_opa) return;
+  lv_obj_t* b = built->get<"alpha">().raw();
+  check(rgb(lv_obj_get_style_bg_color(b, LV_PART_MAIN)) == 0x2b7fff);
+  check(lv_obj_get_style_bg_opa(b, LV_PART_MAIN) == 0x80);
+  // The group says bg_opa itself: it wins over the alpha of the color.
+  check(lv_obj_get_style_bg_opa(explicit_opa->get<"explicit">().raw(), LV_PART_MAIN) == LV_OPA_COVER);
+}
+
+void the_extensions_of_a_layer_are_its_own() {
+  auto built = lv::mount<ext_layer_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  lv_obj_t* l = built->get<"ext">().raw();
+  check(lv_obj_get_style_flex_flow(l, LV_PART_MAIN) == LV_FLEX_FLOW_ROW);
+  check(lv_obj_get_style_text_align(l, LV_PART_MAIN) == LV_TEXT_ALIGN_RIGHT);  // checked
+  lv_obj_remove_state(l, LV_STATE_CHECKED);
+  check(lv_obj_get_style_text_align(l, LV_PART_MAIN) != LV_TEXT_ALIGN_RIGHT);
 }
 
 void a_state_group_is_a_layer() {
@@ -299,7 +343,7 @@ void a_theme_takes_a_look() {
 // A look is a constant: a widget that has one takes no more heap than a plain one, apart from
 // LVGL's list of its styles (one entry for the look, one for each layer).
 constexpr auto plain_ui = lv::box({});
-constexpr auto looked_ui = lv::box({.style = lv::look<"tile"> | lv::look<"tile.print">});
+constexpr auto looked_ui = lv::box({.style = lv::look<"tile"> | lv::look<"tile-print">});
 constexpr auto layered_ui = lv::box({.style = lv::look<"gauge">});
 
 std::size_t heap_of_mounted(auto mounted) {
@@ -324,6 +368,9 @@ int main() {
   lv::display display{app, frame};
   a_look_sets_what_its_entries_name();
   looks_with_the_same_font_share_it();
+  a_percentage_is_read_from_the_extensions();
+  a_color_with_alpha_sets_its_opacity();
+  the_extensions_of_a_layer_are_its_own();
   a_state_group_is_a_layer();
   a_later_look_wins_in_a_layer_too();
   parts_and_states_make_layers();

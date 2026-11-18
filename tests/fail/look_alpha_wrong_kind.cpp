@@ -1,4 +1,4 @@
-// A string for a property that takes a dimension.
+// A color with alpha for a property that takes a dimension.
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {
@@ -8,6 +8,6 @@ constexpr auto tok = lv::tokens<tokens_json>;
 template <>
 inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};
 
-constexpr auto ui = lv::box({.style = lv::look<"wrongstring">});
+constexpr auto ui = lv::box({.style = lv::look<"alpharadius">});
 
 int main() {}

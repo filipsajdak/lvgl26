@@ -6,7 +6,7 @@
 
 namespace {
 
-constexpr auto tile = lv::button({.style = lv::look<"tile"> | lv::look<"tile.print">});
+constexpr auto tile = lv::button({.style = lv::look<"tile"> | lv::look<"tile-print">});
 
 unsigned rgb(lv_color_t c) { return lv_color_to_u32(c) & 0xffffffu; }
 
@@ -24,6 +24,6 @@ int main() {
   check(rgb(lv_obj_get_style_bg_color(here->root().raw(), LV_PART_MAIN)) == 0x2b7fff);
   check(rgb(lv_obj_get_style_bg_color(there.raw(), LV_PART_MAIN)) == 0x2b7fff);
   check(lv_obj_get_style_radius(here->root().raw(), LV_PART_MAIN) == 24);
-  check(lv_obj_get_style_radius(there.raw(), LV_PART_MAIN) == 12);  // card's own 12px, before tile.print
+  check(lv_obj_get_style_radius(there.raw(), LV_PART_MAIN) == 12);  // card's own 12px, before tile-print
   return failures;
 }

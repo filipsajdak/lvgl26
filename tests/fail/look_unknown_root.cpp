@@ -1,4 +1,4 @@
-// A first name that is no group of the token file.
+// A typo in a variant, which is a sibling group.
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {
@@ -8,6 +8,6 @@ constexpr auto tok = lv::tokens<tokens_json>;
 template <>
 inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};
 
-constexpr auto ui = lv::box({.style = lv::look<"tyle">});
+constexpr auto ui = lv::box({.style = lv::look<"tile-pritn">});
 
 int main() {}

@@ -1,4 +1,4 @@
-// A group that is neither a part nor a state, inside a state.
+// A group inside a state that is neither a part nor a state.
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {
@@ -8,6 +8,6 @@ constexpr auto tok = lv::tokens<tokens_json>;
 template <>
 inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};
 
-constexpr auto ui = lv::box({.style = lv::look<"layered">});
+constexpr auto ui = lv::box({.style = lv::look<"layeredin">});
 
 int main() {}

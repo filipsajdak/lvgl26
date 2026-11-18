@@ -3,7 +3,7 @@
 
 namespace {
 
-constexpr auto card = lv::box({.style = lv::look<"card"> | lv::look<"tile.print">});
+constexpr auto card = lv::box({.style = lv::look<"card"> | lv::look<"tile-print">});
 
 }  // namespace
 
