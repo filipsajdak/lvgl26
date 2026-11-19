@@ -261,6 +261,10 @@ struct picture {
   int colour = 0;                        // 0 grey, 2 RGB, 3 palette, 4 grey and alpha, 6 RGBA
   std::size_t step = 0;                  // bytes for each pixel in `rows`
   std::vector<unsigned char> rows;       // for each row: its filter byte, then its pixels
+  const unsigned char* shared = nullptr;  // rows that someone else holds: they are not copied (see picture_from)
+
+  // The rows: for each its filter byte, then its pixels.
+  consteval const unsigned char* bits() const { return shared != nullptr ? shared : rows.data(); }
   std::vector<unsigned char> palette;    // three bytes for each colour
   // The tRNS chunk. For a palette: the alpha of each colour. For grey and RGB: the one
   // colour that is see-through, each sample in two bytes.
@@ -285,21 +289,36 @@ consteval std::vector<unsigned char> chunk(bytes d, std::size_t body, std::size_
 consteval std::uint32_t width_of(bytes d) { return check_header(d), be32(d, 16); }
 consteval std::uint32_t height_of(bytes d) { return check_header(d), be32(d, 20); }
 
-// The picture with its filters undone.
-consteval picture decode(bytes d) {
+// The bytes of a pixel for each colour type: 0 grey, 2 RGB, 3 palette, 4 grey and alpha, 6 RGBA.
+inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};
+
+// What the header says, which needs no decoding: the size of the rows once the filters are undone.
+consteval std::size_t rows_size(bytes d) {
+  return (static_cast<std::size_t>(width_of(d)) * pixel_steps[d[25]] + 1) * height_of(d);
+}
+
+// The header, the palette and the see-through colours of a file, and the zlib data if `z` is given.
+// The rows are left empty.
+consteval picture read_picture(bytes d, std::vector<unsigned char>* z) {
   check_header(d);
   picture out{.w = be32(d, 16), .h = be32(d, 20), .colour = d[25]};
-  std::vector<unsigned char> z;
   for (std::size_t at = 8; at + 12 <= d.size();) {
     const std::size_t n = be32(d, at), body = at + 8;
     const auto tag = be32(d, at + 4);
     if (tag == 0x504c5445) out.palette = chunk(d, body, n);        // PLTE
     if (tag == 0x74524e53) out.transparency = chunk(d, body, n);  // tRNS
-    if (tag == 0x49444154) z.insert(z.end(), d.begin() + static_cast<std::ptrdiff_t>(body), d.begin() + static_cast<std::ptrdiff_t>(body + n));
+    if (tag == 0x49444154 && z != nullptr)                        // IDAT
+      z->insert(z->end(), d.begin() + static_cast<std::ptrdiff_t>(body), d.begin() + static_cast<std::ptrdiff_t>(body + n));
     at = body + n + 4;
   }
-  constexpr std::size_t steps[] = {1, 0, 3, 1, 2, 0, 4};
-  out.step = steps[out.colour];
+  out.step = pixel_steps[out.colour];
+  return out;
+}
+
+// The picture with its filters undone.
+consteval picture decode(bytes d) {
+  std::vector<unsigned char> z;
+  picture out = read_picture(d, &z);
   const std::size_t stride = out.w * out.step;
   out.rows = inflate(z, (stride + 1) * out.h);
   const std::vector<unsigned char> zeros(stride);
@@ -307,6 +326,13 @@ consteval picture decode(bytes d) {
     unsigned char* row = out.rows.data() + y * (stride + 1) + 1;
     unfilter(row, y > 0 ? row - stride - 1 : zeros.data(), stride, out.step, row[-1]);
   }
+  return out;
+}
+
+// The same picture, from rows that were decoded already: rows_size(d) bytes at `rows`, which are read where they are.
+consteval picture picture_from(bytes d, const unsigned char* rows) {
+  picture out = read_picture(d, nullptr);
+  out.shared = rows;
   return out;
 }
 
