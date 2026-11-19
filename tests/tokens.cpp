@@ -75,6 +75,31 @@ static_assert(is_rgb(color_token(R"({"components": [1, 0.5, 0]})"), 255, 128, 0)
 static_assert(is_rgb(color_token(R"({"hex": "#102030"})"), 0x10, 0x20, 0x30));
 static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 
+// The forms from before the Design Tokens Format 2025.10 are read only when the settings allow them,
+// and give the same values as the object forms of tokens.json (the token file was rewritten by tools/dtcg_fix.py).
+struct legacy_settings {};
+}  // namespace
+template <>
+inline constexpr lv::config lv::cfg<legacy_settings>{.tokens_legacy_values = true};
+namespace {
+
+constexpr bool same_color(lv_color_t a, lv_color_t b) { return a.red == b.red && a.green == b.green && a.blue == b.blue; }
+
+constexpr char legacy_json[] = {
+#embed "tokens_legacy.json"
+    , 0};
+constexpr auto legacy = lv::tokens<legacy_json, legacy_settings>;
+static_assert(same_color(*legacy.primitive.color.blue_500, *dark.primitive.color.blue_500));
+static_assert(same_color(*legacy.primitive.color.paper, *dark.primitive.color.paper));
+static_assert(same_color(*legacy.primitive.color.black, *dark.primitive.color.black));
+static_assert(legacy.primitive.space._1 == dark.primitive.space._1 && legacy.primitive.space._6 == dark.primitive.space._6);
+static_assert(legacy.primitive.duration.fast == dark.primitive.duration.fast);
+static_assert(legacy.card.shadow->blur == dark.card.shadow->blur && same_color(legacy.card.shadow->color, dark.card.shadow->color));
+static_assert(legacy.card.border->width == dark.card.border->width && same_color(legacy.card.border->color, dark.card.border->color));
+static_assert(legacy.text.title->font_size == dark.text.title->font_size);
+static_assert(legacy.text.title->letter_spacing == dark.text.title->letter_spacing);
+static_assert(legacy.motion.enter->delay == dark.motion.enter->delay && legacy.card.fill->count == dark.card.fill->count);
+
 // A color object that has components only, or an alpha: the standard's way to write them.
 constexpr char object_colors_json[] = R"({"c": {"$type": "color",
   "components": {"$value": {"colorSpace": "srgb", "components": [0.2, 0.4, 1]}},

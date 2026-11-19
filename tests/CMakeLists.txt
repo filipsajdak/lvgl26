@@ -462,6 +462,13 @@ lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a lengt
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
 lvgl26_compile_fail(token_color_alpha "design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
+# The forms from before the Design Tokens Format 2025.10 are errors unless lv::config::tokens_legacy_values is set.
+lvgl26_compile_fail(token_legacy_color "'ink' is written .*#3366ff.*a form from before the Design Tokens Format 2025.10.*colorSpace.*tools/dtcg_fix.py.*tokens_legacy_values")
+lvgl26_compile_fail(token_legacy_dimension "'gap' is written .*8px.*a form from before the Design Tokens Format 2025.10.*value.*unit.*tools/dtcg_fix.py")
+lvgl26_compile_fail(token_legacy_duration "'fast' is written .*200ms.*a form from before the Design Tokens Format 2025.10.*tools/dtcg_fix.py")
+lvgl26_compile_fail(token_legacy_number "'gap' is written 8, a form from before the Design Tokens Format 2025.10")
+lvgl26_compile_fail(token_legacy_member "'body' member 'fontSize' is written .*16px.*a form from before the Design Tokens Format 2025.10")
+lvgl26_compile_fail(token_legacy_in_list "'lift' member 'offsetX' is written .*0px.*a form from before the Design Tokens Format 2025.10")
 lvgl26_compile_fail(token_color_no_hash "design tokens: the color 'x123456' is not #rgb or #rrggbb")
 lvgl26_compile_fail(token_color_too_long "design tokens: the color '#1122334455' is not #rgb or #rrggbb")
 lvgl26_compile_fail(token_color_too_short "design tokens: the color '#' is not #rgb or #rrggbb")

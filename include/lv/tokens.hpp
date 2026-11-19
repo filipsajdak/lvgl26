@@ -17,6 +17,7 @@
 // alias that points nowhere, is a compile error. A misspelled token name is too,
 // because it is a struct member.
 
+#include <lv/config.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/json.hpp>
 #include <lv/token_types.hpp>
@@ -32,6 +33,7 @@ namespace lv {
 
 namespace detail {
 
+// The composite types, from shadow to gradient, stay together: check_forms tests the range.
 enum class token_type {
   none, color, dimension, duration, number, font_weight, string,
   cubic_bezier, shadow, border, typography, transition, gradient,
@@ -476,6 +478,70 @@ struct token_payload<token<T>> {
   using type = T;
 };
 
+// ---- the forms before Design Tokens Format 2025.10 -----------------------------------------
+
+// Whether `v` is written in a form that the standard replaced, for a value of type `kind`:
+// "#22201c" for a color, "8px" or a bare number for a dimension or a duration.
+consteval bool is_legacy_form(token_type kind, json::value v) {
+  const bool alias = v.is(json::kind::string) && v.string().starts_with("{");
+  switch (kind) {
+    case token_type::color: return v.is(json::kind::string) && !alias;
+    case token_type::dimension:
+    case token_type::duration: return (v.is(json::kind::string) && !alias) || v.is(json::kind::number);
+    default: return false;
+  }
+}
+
+// What the standard writes in its place.
+consteval std::string_view standard_form(token_type kind) {
+  switch (kind) {
+    case token_type::color: return "{\"colorSpace\": \"srgb\", \"components\": [0.2, 0.4, 1], \"hex\": \"#3366ff\"}";
+    case token_type::duration: return "{\"value\": 200, \"unit\": \"ms\"}";
+    default: return "{\"value\": 8, \"unit\": \"px\"}";
+  }
+}
+
+consteval void fail_legacy(std::string_view where, token_type kind, json::value v) {
+  token_fail("'" + str(where) + "' is written " + str(v.text()) + ", a form from before the Design Tokens Format 2025.10. "
+             "The standard writes it as " + str(standard_form(kind)) + ". Run python3 tools/dtcg_fix.py on the token file, "
+             "or set lv::config::tokens_legacy_values while the files convert");
+}
+
+// The members of a composite token that hold a color, a dimension or a duration.
+struct composite_part {
+  token_type owner;
+  std::string_view member;
+  token_type kind;
+};
+
+consteval void check_part(std::string_view where, std::string_view member, token_type kind, json::value v) {
+  if (is_legacy_form(kind, v)) fail_legacy(str(where) + "' member '" + str(member), kind, v);
+}
+
+consteval void check_parts(std::string_view where, token_type owner, json::value v) {
+  const std::initializer_list<composite_part> parts = {
+      {token_type::border, "color", token_type::color}, {token_type::border, "width", token_type::dimension},
+      {token_type::shadow, "color", token_type::color}, {token_type::shadow, "offsetX", token_type::dimension},
+      {token_type::shadow, "offsetY", token_type::dimension}, {token_type::shadow, "blur", token_type::dimension},
+      {token_type::shadow, "spread", token_type::dimension}, {token_type::typography, "fontSize", token_type::dimension},
+      {token_type::typography, "letterSpacing", token_type::dimension},
+      {token_type::transition, "duration", token_type::duration}, {token_type::transition, "delay", token_type::duration},
+      {token_type::gradient, "color", token_type::color}};
+  for (const composite_part& part : parts)
+    if (part.owner == owner) check_part(where, part.member, part.kind, v[part.member]);
+}
+
+// A shadow may be a list of shadows and a gradient is a list of stops: each element is checked.
+consteval void check_forms(std::string_view where, token_type kind, json::value v) {
+  if (v.is(json::kind::array)) {
+    for (const json::value element : v.elements()) check_forms(where, kind, element);
+  } else if (is_legacy_form(kind, v)) {
+    fail_legacy(where, kind, v);
+  } else if (v.is(json::kind::object) && kind >= token_type::shadow && kind <= token_type::gradient) {
+    check_parts(where, kind, v);
+  }
+}
+
 // The strings of a vendor object, for the struct made by vendor_specs.
 template <class G>
 consteval G fill_vendor(json::value object) {
@@ -496,7 +562,7 @@ consteval bool is_named(std::meta::info member, std::string_view name) {
 // Fills the generated struct G from its group. Struct members and used JSON
 // members are in the same order, so they are walked together; the members that
 // hold vendor data and "$extends" come last and have no JSON member of their own.
-template <class G, const auto& Doc>
+template <class G, const auto& Doc, bool Legacy>
 consteval G fill_tokens(json::value group, token_type inherited) {
   const auto root = token_root<Doc>();
   if (auto t = group["$type"]) inherited = token_type_of(t.string());
@@ -517,9 +583,10 @@ consteval G fill_tokens(json::value group, token_type inherited) {
       ++walk;
       if constexpr (is_token_leaf<M>) {
         const auto resolved = resolve_token(root, child, inherited);
+        if constexpr (!Legacy) check_forms(member.key, resolved.type, resolved.value);
         out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root, resolved.value), from_design_tokens{}};
       } else {
-        out.[:m:] = fill_tokens<M, Doc>(child, inherited);
+        out.[:m:] = fill_tokens<M, Doc, Legacy>(child, inherited);
       }
     }
   }
@@ -531,9 +598,9 @@ template <const auto& Doc>
 inline constexpr std::size_t token_root_offset =
     static_cast<std::size_t>(token_root<Doc>().text().data() - token_text<Doc>().data());
 
-template <const auto& Doc>
+template <const auto& Doc, bool Legacy>
 consteval auto load_tokens() {
-  return fill_tokens<token_group_t<Doc, token_root_offset<Doc>, token_type::none>, Doc>(
+  return fill_tokens<token_group_t<Doc, token_root_offset<Doc>, token_type::none>, Doc, Legacy>(
       token_root<Doc>(), token_type::none);
 }
 
@@ -547,8 +614,11 @@ concept embedded_text = std::is_bounded_array_v<std::remove_cvref_t<T>> &&
 }  // namespace detail
 
 // The design tokens of the embedded DTCG document `Doc`, as a typed constant.
-template <const auto& Doc>
+//
+// A value in a form from before the Design Tokens Format 2025.10 ("#3366ff", "8px") is a compile error,
+// unless the settings `O` name lv::config::tokens_legacy_values. tools/dtcg_fix.py rewrites a file.
+template <const auto& Doc, class O = override>
   requires detail::embedded_text<decltype(Doc)>
-inline constexpr auto tokens = detail::load_tokens<Doc>();
+inline constexpr auto tokens = detail::load_tokens<Doc, cfg<O>.tokens_legacy_values>();
 
 }  // namespace lv

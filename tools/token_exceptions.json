@@ -2,7 +2,8 @@
   "excluded": {
     "fuzz/corpus/": "inputs of the fuzzers",
     "tests/data/bad_": "invalid on purpose: the compile-fail tests read them",
-    "tools/dtcg/": "the schemas themselves, which name \"$value\" as a property"
+    "tools/dtcg/": "the schemas themselves, which name \"$value\" as a property",
+    "tests/data/tokens_legacy.json": "the forms before 2025.10 on purpose: the test tokens reads them with tokens_legacy_values and compares them with tokens.json"
   },
   "known": {
     "tests/data/look_bad.json": {
