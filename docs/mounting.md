@@ -55,7 +55,7 @@ constinit lv::mounted<dialog> asked;    // a window that opens and closes
 
 ## A window that shows one of several trees
 
-`lv::one_of<saving, failed>` is one slot for one of several trees, as `std::variant` holds one of several types. Its size and alignment are those of the largest `lv::mounted` of its trees, and one tree is alive at a time.
+`lv::one_of<saving, failed>` is one slot for one of several trees, as `std::variant` holds one of several types. It is in its own header: a program that uses a slot writes `#include <lv/one_of.hpp>`, so that other files do not pay for it. Its size and alignment are those of the largest `lv::mounted` of its trees, and one tree is alive at a time.
 
 <!-- snippet: examples/mounting/main.cpp slot -->
 ```cpp

@@ -3,6 +3,7 @@
 // shows this file.
 
 #include <lv/lv.hpp>
+#include <lv/one_of.hpp>
 
 using namespace lv::units;
 

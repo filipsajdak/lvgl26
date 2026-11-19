@@ -1,6 +1,7 @@
 // lv::one_of: one slot for one of several trees, in one region of the largest size, one
 // tree alive at a time; and its visit.
 #include <lv/lv.hpp>
+#include <lv/one_of.hpp>
 
 #include "check.hpp"
 #include "full_heap.hpp"
