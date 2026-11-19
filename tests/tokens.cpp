@@ -80,7 +80,7 @@ static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 struct legacy_settings {};
 }  // namespace
 template <>
-inline constexpr lv::config lv::cfg<legacy_settings>{.tokens_legacy_values = true};
+inline constexpr lv::config lv::cfg<legacy_settings>{.rules = {.tokens_legacy_values = true}};
 namespace {
 
 constexpr bool same_color(lv_color_t a, lv_color_t b) { return a.red == b.red && a.green == b.green && a.blue == b.blue; }

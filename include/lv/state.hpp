@@ -32,6 +32,7 @@
 // watchers promises, for a watcher that changes the state or its neighbours.
 // Like all of LVGL, a state must only be touched from the UI thread.
 
+#include <lv/detail/settings.hpp>
 #include <lv/detail/source.hpp>
 #include <lv/detail/watch.hpp>
 #include <lv/values.hpp>
@@ -269,12 +270,12 @@ class state : detail::watched<T> {
                 "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one "
                 "integer, bool or enum member, a bool, an enum, an lv_color_t or a pointer "
                 "(for text: const char*).");
-  static_assert(!detail::integer<T> || cfg<O>.raw_integer_state,
+  static_assert(!detail::integer<T> || detail::project<O>.rules.raw_integer_state,
                 "lv: a state of a plain integer does not say what the number is. If it is a "
                 "measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it "
                 "counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For "
                 "anything else, name it: `struct tab_index { int value; };`. To allow plain "
-                "integers, set lv::config::raw_integer_state.");
+                "integers, set rules.raw_integer_state in the settings.");
 
   using base = detail::watched<T>;
   friend detail::graph_access;

@@ -9,6 +9,7 @@
 #include <lv/detail/enum_names.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/detail/option_docs.hpp>
+#include <lv/detail/settings.hpp>
 #include <lv/detail/source.hpp>
 #include <lv/event.hpp>
 #include <lv/options.hpp>
@@ -796,7 +797,7 @@ inline constexpr bool is_token_or_raw<raw_value<T>> = true;
 
 // The type of a design value in a style: a color, length, opacity, time or number.
 // It only accepts a design token or lv::raw(...), so that styles cannot drift away
-// from the design system. Set lv::config::raw_style_values to accept plain values.
+// from the design system. Set rules.raw_style_values in the settings to accept plain values.
 namespace detail {
 
 // A number token as a whole number. A fraction is a contract violation, and so a
@@ -851,10 +852,10 @@ class styled {
     requires std::convertible_to<const U&, T>
   constexpr styled(const raw_value<U>& r) : v_(static_cast<T>(r.value)) {}
 
-  // A plain value, when the project allows it: see lv::config::raw_style_values.
+  // A plain value, when the project allows it: see rules.raw_style_values in lv/config.hpp.
   // O only delays reading the setting until this constructor is considered.
   template <class U, class O = override>
-    requires(cfg<O>.raw_style_values) && (!detail::is_token_or_raw<std::remove_cvref_t<U>>) &&
+    requires(detail::project<O>.rules.raw_style_values) && (!detail::is_token_or_raw<std::remove_cvref_t<U>>) &&
             (!std::same_as<std::remove_cvref_t<U>, styled>) && std::convertible_to<U, T>
   constexpr styled(U&& u) : v_(static_cast<T>(std::forward<U>(u))) {}
 
