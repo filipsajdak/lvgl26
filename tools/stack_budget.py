@@ -11,7 +11,9 @@ import pathlib
 import re
 import sys
 
-# Stack that one run-time set may take on the Cortex-M4.
+# Stack that one run-time set of plain properties may take on the Cortex-M4. It holds for a named
+# style and a look too, which set takes by reference; a style written inline as lv::style({...})
+# is built in the call and adds about 2.6 KB, which the budget does not cover.
 SET_STACK_BUDGET = 4096
 # The functions of examples/mcu/set_probe.cpp, by the name -fstack-usage gives them.
 PROBED = ("set_value",)
