@@ -749,9 +749,13 @@ Decided 2026-11-18, while the first storage slice was in review.
 | 17 | `lv::one_of<home, settings, dialog>` is one slot for one of several trees, under the rules of `std::variant`: size and alignment are the largest, and one tree is alive at a time. |
 | 18 | `slot.mount<settings>(parent)` ends the tree that is there first, as `emplace` does. A failed mount leaves the slot empty with its error. A tree that is not in the list is a compile error. |
 | 19 | The one-of region is built once. `lv::shown` and `lv::one_of` both use it, and so does `lv::one_of<>` in the memory layout. |
-| 20 | `slot.visit(arms...)` takes any number of functions, with no `lv::overloaded`. The parameter type of an arm is its pattern: `lv::mounted<home>&`, or `auto&` for every other tree. |
+| 20 | `slot.visit(arms...)` takes any number of functions, with no `lv::overloaded`. The parameter type of an arm is its pattern: `lv::mounted<home>&`, or `auto&` for every other tree. Decision 23 replaced the parameter with `lv::held<home>`, and `auto&` with `auto`. |
 | 21 | An arm for the empty slot, `lv::not_mounted`, is optional. Without it, arms that return nothing are skipped on an empty slot, and arms that return `R` give `std::optional<R>`. With it the result is `R`. |
 | 22 | A tree of the slot that no arm accepts is a compile error. So is an arm that can never be called, with a message that lists the slot's trees. |
+| 23 | An arm receives `lv::held<home>` by value, not `lv::mounted<home>&`: a handle that never owns and checks at each use that the slot holds that tree. `if (page)` asks without a violation. Writing `lv::mounted<home>&` in an arm is a compile error that says to write `lv::held<home>`. |
+| 24 | An arm may mount another tree into the same slot. Using its handle afterwards is a contract violation, not a dead reference. |
+| 25 | The result of `visit` is the `std::common_type` of the arms' results, as `std::visit` allows. `visit<R>(arms...)` names it, as `std::visit<R>` does: every result converts to `R`, and `visit<void>` discards. |
+| 26 | A tree listed twice in one `lv::one_of` is a compile error that names it. |
 
 An arm that names the widgets it needs, such as `lv::view<"label", "title">`, belongs to the handler injection slice.
 The owner chose functions over a `then()` chain here: `lv::is` and `lv::otherwise` stay with `lv::shown`, where an arm is a tree.

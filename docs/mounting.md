@@ -55,6 +55,40 @@ constinit lv::mounted<dialog> asked;    // a window that opens and closes
 
 `unmount()` is for the life of a root: a window that closes, a screen that is torn down. Pages that take turns inside a tree are switched with `lv::shown`, which is planned and not built yet. It keeps one page alive at a time in memory of the tree's own.
 
+## A window that shows one of several trees
+
+`lv::one_of<saving, failed>` is one slot for one of several trees, as `std::variant` holds one of several types. It is in its own header: a program that uses a slot writes `#include <lv/one_of.hpp>`, so that other files do not pay for it. Its size and alignment are those of the largest `lv::mounted` of its trees, and one tree is alive at a time.
+
+<!-- snippet: examples/mounting/main.cpp slot -->
+```cpp
+constinit lv::one_of<saving, failed> status;  // a window that shows one of two dialogs
+```
+
+`status.mount<failed>(parent)` ends the tree that is there first, then builds `failed` in the same memory. lvgl26 allocates nothing for it, so switching many times ends at the heap it started from. A failed mount leaves the slot empty, with its error. A tree that is not one of the slot's is a compile error that lists them.
+
+<!-- snippet: examples/mounting/main.cpp slot-use -->
+```cpp
+  if (!status.mount<saving>(display.screen())) return 6;
+  app.advance(50 * ms), app.step();
+  if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
+  status.visit([](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+               [](const auto&) {});                    // saving has nothing to update
+```
+
+The slot carries its failure as `lv::mounted` does: `if (!status)`, `status.has_value()`, and `status.error()`, which is `lv::mount_error::not_mounted` while it holds no tree. `status.holds<failed>()` tells which tree is mounted. `unmount()` deletes the widgets, and so does the parent or C code: the slot is empty afterwards.
+
+`visit` takes any number of functions, and the parameter type of each is its pattern. `lv::held<failed>` takes that tree, `auto` every tree that no other arm names, and `lv::not_mounted` the empty slot. Without an arm for the empty slot, arms that return nothing are skipped there, and arms that return `R` give `std::optional<R>`; with it, the result is `R`. A tree that no arm takes, or an arm that can never be called, is a compile error that lists the slot's trees.
+
+The result is the common type of what the arms return, as `std::visit` allows: an arm that returns `int` and one that returns `double` give `double`. `status.visit<R>(arms...)` names it instead, as `std::visit<R>` does: every arm's result converts to `R`, such as `std::variant<int, std::string_view>`, and `visit<void>` discards them. An arm whose result does not convert is a compile error that names its type and `R`.
+
+### A handle, not a reference
+
+An arm gets an `lv::held<failed>`, a small value that never owns: the slot, with the tree in its type. Every use checks that the slot holds that tree at that moment. `f->get<"reason">()` and `*f` break a precondition once the slot was unmounted or holds another tree. `if (f)` and `f.has_value()` ask without breaking one. So an arm may mount another tree into the same slot: its handle then no longer holds, and a use after that is caught, not a dead reference. `status.get<failed>()` gives the same handle outside a visit.
+
+A handle may be copied and kept. It holds again when the same tree is mounted again: it answers "does the slot hold `failed` now?", not "is this the mount I saw?". A handle must not outlive its slot: a slot is a `constinit` global, or it outlives its handles. Writing `lv::mounted<failed>&` in an arm is a compile error that says to write `lv::held<failed>`.
+
+A slot is for a root, as `unmount()` is: a window that shows one of several dialogs. Pages that take turns inside a tree are switched with `lv::shown`, which is planned and not built yet.
+
 ## In memory that is not a variable
 
 `lv::mount_in` builds an `lv::mounted` in memory that is not a variable of its own, such as a slice of one region reserved at start. `lv::storage_size<ui>` and `alignof(lv::mounted<ui>)` say how much it needs, and `std::destroy_at` ends it.
