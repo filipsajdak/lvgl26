@@ -58,6 +58,11 @@ struct any_probe {};
 template <class A>
 inline constexpr bool empty_arm = std::is_invocable_v<A&, not_mounted> && !std::is_invocable_v<A&, any_probe>;
 
+// No result named: the common type of the arms' results.
+struct no_named_result {};
+
+template <class Named, class Common>
+using visit_type = std::conditional_t<std::is_same_v<Named, no_named_result>, Common, Named>;
 
 }  // namespace stub
 
@@ -95,12 +100,12 @@ class one_of {
 
   /// Calls the arm whose parameter names the tree that is mounted, with a handle:
   /// lv::held<home>, auto for every other tree, lv::not_mounted for the empty slot. The
-  /// result is the common type of the arms' results; in a std::optional without the arm for
-  /// the empty slot.
-  template <class... Arms>
+  /// result is R of visit<R>, or the common type of the arms' results; in a std::optional
+  /// without the arm for the empty slot.
+  template <class Named = stub::no_named_result, class... Arms>
   auto visit(Arms&&... arms)
-      -> stub::visit_out<std::common_type_t<typename stub::first_result<
-                                                     std::remove_cvref_t<Arms>, held<Trees>..., not_mounted>::type...>,
+      -> stub::visit_out<stub::visit_type<Named, std::common_type_t<typename stub::first_result<
+                                                     std::remove_cvref_t<Arms>, held<Trees>..., not_mounted>::type...>>,
                          (stub::empty_arm<std::remove_cvref_t<Arms>> || ...)> {
     __builtin_unreachable();
   }

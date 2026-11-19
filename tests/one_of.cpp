@@ -11,6 +11,7 @@
 #include <cstring>
 #include <optional>
 #include <string_view>
+#include <variant>
 #include <type_traits>
 #include <vector>
 
@@ -206,6 +207,21 @@ void handles_follow_the_slot(lv::obj screen) {
   held_again(screen, kept, remount_in_arm(screen));
 }
 
+// visit<R> names the result: every arm's result converts to R; visit<void> discards.
+void visit_with_a_named_result(lv::obj screen) {
+  using word = std::variant<int, std::string_view>;
+  const auto empty = window.visit<word>([](lv::held<home>) { return 1; }, [](auto) { return std::string_view{"other"}; });
+  static_assert(std::is_same_v<decltype(empty), const std::optional<word>>);
+  check(!empty);
+  check(window.mount<settings>(screen).has_value());
+  const word named = window.visit<word>([](lv::held<home>) { return 1; }, [](auto) { return std::string_view{"other"}; },
+                                        [](lv::not_mounted) { return 0; });
+  check(std::get<std::string_view>(named) == "other");
+  static_assert(std::is_void_v<decltype(window.visit<void>([](auto) { return 1; }))>);
+  window.visit<void>([](auto) { return 1; });
+  window.unmount();
+}
+
 // A click on a button of home switches the slot to settings, from inside home.
 void switches_from_inside(lv::obj screen) {
   lv_test_indev_create_all();
@@ -383,6 +399,7 @@ int main(int argc, char** argv) {
   visit_calls_the_arm_of_the_tree(screen);
   switches_from_inside(screen);
   handles_follow_the_slot(screen);
+  visit_with_a_named_result(screen);
   fails_over_a_live_tree(screen);
   out_of_memory_leaves_the_slot_empty(screen);
   check(window.mount<dialog>(screen).has_value());  // the global outlives LVGL

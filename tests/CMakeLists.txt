@@ -363,6 +363,7 @@ lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*
 lvgl26_compile_fail(visit_arm_takes_mounted "an arm of visit takes lv::held<home>, not lv::mounted<home>: write \\[\\]\\(lv::held<home> page\\)")
 lvgl26_compile_fail(visit_arm_takes_tree_by_value "an arm of visit takes lv::held<home>, not lv::mounted<home>")
 lvgl26_compile_fail(visit_arm_auto_reference "arm 2 of visit cannot take lv::held<settings>. Take the handle by value")
+lvgl26_compile_fail(visit_named_no_conversion "arm 2 of visit returns std::basic_string_view<char>, which does not convert to int, the result that visit<R> names")
 lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
 lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
 lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")

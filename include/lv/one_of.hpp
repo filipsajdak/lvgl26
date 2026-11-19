@@ -248,14 +248,30 @@ consteval std::meta::info common_of(std::meta::info a, std::meta::info b) {
   return std::meta::dealias(std::meta::substitute(^^std::common_type_t, {a, b}));
 }
 
+// The result of visit when no type is named: the common type of the arms' results.
+struct no_named_result {};
+
 // What one arm returns.
 struct arm_result {
   std::meta::info type;
   std::size_t arm;
 };
 
-// What visit returns from the results of its arms: their common type, as std::visit allows.
-consteval std::meta::info one_result(const std::vector<arm_result>& results) {
+// Fails unless every arm's result converts to the type that visit<R> names.
+consteval std::meta::info named_result(const std::vector<arm_result>& results, std::meta::info named) {
+  for (const arm_result& r : results)
+    if (!std::meta::is_convertible_type(r.type, named))
+      fail("lv: arm " + decimal(r.arm + 1) + " of visit returns " +
+           str(std::meta::display_string_of(std::meta::dealias(r.type))) + ", which does not convert to " +
+           str(std::meta::display_string_of(std::meta::dealias(named))) + ", the result that visit<R> names.");
+  return named;
+}
+
+// What visit returns from the results of its arms: R of visit<R>, where every result
+// converts to R (visit<void> discards them), or else their common type, as std::visit allows.
+consteval std::meta::info one_result(const std::vector<arm_result>& results, std::meta::info named) {
+  if (named == ^^void) return named;
+  if (named != ^^no_named_result) return named_result(results, named);
   std::meta::info common = results.front().type;
   for (const arm_result& r : results) common = common_of(common, r.type);
   return common;
@@ -329,7 +345,7 @@ class one_of {
     return held<Trees...[I]>{this, &find<I>};
   }
 
-  template <auto Plan, class... Arms>
+  template <auto Plan, class Named, class... Arms>
   static consteval std::meta::info result_of_arms() {
     std::vector<detail::arm_result> results;
     template for (constexpr auto t : detail::indices<count>) {
@@ -341,7 +357,7 @@ class one_of {
       constexpr auto a = static_cast<std::size_t>(Plan.empty_arm);
       results.push_back({^^std::invoke_result_t<Arms...[a]&, not_mounted>, a});
     }
-    return detail::one_result(results);
+    return detail::one_result(results, ^^Named);
   }
 
   // What visit returns: R with an arm for the empty slot or when the arms return nothing,
@@ -423,15 +439,15 @@ class one_of {
 
   // Calls the arm whose parameter names the tree that is mounted, with a handle to it:
   // lv::held<home> for home, auto for every tree no other arm names, lv::not_mounted for the
-  // empty slot. The result is the common type R of what the arms return, as std::visit
-  // allows. Without the arm for the empty slot, an empty slot calls nothing, and the result
-  // is std::optional<R>.
+  // empty slot. The result is R of visit<R>, to which every arm's result converts
+  // (visit<void> discards them), or else their common type R, as std::visit allows. Without
+  // the arm for the empty slot, an empty slot calls nothing, and the result is std::optional<R>.
   // An arm may mount another tree into this slot: its handle then no longer holds.
-  template <class... Arms>
+  template <class Named = detail::no_named_result, class... Arms>
   auto visit(Arms&&... arms) {
     static constexpr auto plan = detail::plan_visit<count, sizeof...(Arms)>(
         std::array<int, sizeof...(Arms)>{detail::arm_pattern<Arms, Trees...>()...}, names, list);
-    using R = typename[:result_of_arms<plan, std::remove_cvref_t<Arms>...>():];
+    using R = typename[:result_of_arms<plan, Named, std::remove_cvref_t<Arms>...>():];
     using Out = visit_result<plan, R>;
     const std::size_t at = mounted_index();
     template for (constexpr auto t : detail::indices<count>) {
