@@ -1,0 +1,5 @@
+{
+  "allow": {"threads": false},
+  "rules": {"raw_style_values": true},
+  "limits": {"compile_time_image": {"value": 64, "unit": "px"}}
+}

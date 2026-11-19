@@ -13,6 +13,7 @@
 // because LVGL's public API reads PNG files but does not write them.
 
 #include <lv/detail/png.hpp>
+#include <lv/detail/settings.hpp>
 #include <lv/view.hpp>
 
 #include <cerrno>
@@ -30,9 +31,12 @@ enum class png_error {
 };
 
 // The widget `what` and its children as the bytes of a PNG file.
-inline std::expected<std::vector<std::uint8_t>, png_error> encode_png(obj what)
+// O only delays reading the project's settings until the function is used.
+template <class O = override>
+std::expected<std::vector<std::uint8_t>, png_error> encode_png(obj what)
   pre(what.raw() != nullptr)
 {
+  detail::require<^^allow_settings::allocation, O, "lv::encode_png", " The bytes of the file are a std::vector.">();
   lv_draw_buf_t* picture = lv_snapshot_take(what.raw(), LV_COLOR_FORMAT_ARGB8888);
   if (picture == nullptr) return std::unexpected(png_error::no_picture);
   auto file = detail::png::encode(picture->data, picture->header.w, picture->header.h,
@@ -49,8 +53,10 @@ inline png_error open_error(int error) {
 }
 
 // Draws `what` and writes it to `path`, opened with the fopen mode `mode`.
-inline std::expected<void, png_error> write_png_file(obj what, const char* path, const char* mode) {
-  const auto file = encode_png(what);
+template <class O>
+std::expected<void, png_error> write_png_file(obj what, const char* path, const char* mode) {
+  require<^^allow_settings::files, O, "lv::write_png">();
+  const auto file = encode_png<O>(what);
   if (!file) return std::unexpected(file.error());
   errno = 0;
   std::FILE* out = std::fopen(path, mode);
@@ -65,20 +71,22 @@ inline std::expected<void, png_error> write_png_file(obj what, const char* path,
 
 // Writes the widget `what` and its children to a PNG file at `path`. A file that
 // is there already is replaced.
-inline std::expected<void, png_error> write_png(obj what, const char* path)
+template <class O = override>
+std::expected<void, png_error> write_png(obj what, const char* path)
   pre(what.raw() != nullptr)
   pre(path != nullptr)
 {
-  return detail::write_png_file(what, path, "wb");
+  return detail::write_png_file<O>(what, path, "wb");
 }
 
 // The same, for a name that comes from outside: it only ever makes a new file.
 // If `path` names a file or a symbolic link, nothing is written (fopen mode "x").
-inline std::expected<void, png_error> write_new_png(obj what, const char* path)
+template <class O = override>
+std::expected<void, png_error> write_new_png(obj what, const char* path)
   pre(what.raw() != nullptr)
   pre(path != nullptr)
 {
-  return detail::write_png_file(what, path, "wbx");
+  return detail::write_png_file<O>(what, path, "wbx");
 }
 
 }  // namespace lv

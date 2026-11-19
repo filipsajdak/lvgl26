@@ -430,10 +430,10 @@ class list {
 namespace detail {
 
 // What names one row. Like the value of a state: a named value or an enum. A plain integer
-// only where lv::config::raw_integer_state allows one.
+// only where rules.raw_integer_state of the settings allows one.
 template <class K>
 concept row_key =
-    strong_value<K> || std::is_enum_v<K> || (integer<K> && cfg<typename settings<K>::tag>.raw_integer_state);
+    strong_value<K> || std::is_enum_v<K> || (integer<K> && project<typename settings<K>::tag>.rules.raw_integer_state);
 
 // A key as the whole number a state's subject holds for it.
 template <class K>
@@ -528,11 +528,11 @@ consteval void check_field() {
                 "lv: a field of a row follows like a state: a text (const char*, std::string or a "
                 "char array), a quantity, a named value, an enum, a bool, an lv_color_t or a "
                 "pointer.");
-  static_assert(!integer<F> || cfg<typename settings<F>::tag>.raw_integer_state,
+  static_assert(!integer<F> || project<typename settings<F>::tag>.rules.raw_integer_state,
                 "lv: a field of a plain integer does not say what the number is. If it is a "
                 "measure, give it a unit with mp-units. If it counts things, use lv::counter. For "
                 "anything else, name it: `struct pages { int value; };`. To allow plain integers, "
-                "set lv::config::raw_integer_state.");
+                "set rules.raw_integer_state in the settings.");
 }
 
 // The room a formatted number needs: the format, and an int32 with its sign.
@@ -1167,7 +1167,7 @@ constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::eac
   static_assert(detail::row_key<K>,
                 "lv: a key names one row, and is compared as a state compares its value. Give it a "
                 "named type, `struct track_id { int value; };`, or an enum. To allow plain integers, "
-                "set lv::config::raw_integer_state.");
+                "set rules.raw_integer_state in the settings.");
   return {&rows, key, options, {}};
 }
 

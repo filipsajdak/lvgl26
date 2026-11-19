@@ -33,6 +33,7 @@
 // This header needs a hosted C++ library (std::mutex). <lv/lv.hpp> does not
 // include it.
 
+#include <lv/detail/settings.hpp>
 #include <lv/task.hpp>
 #include <lv/units.hpp>
 
@@ -188,8 +189,12 @@ concept postable = std::invocable<F&> && std::move_constructible<F>;
 class ui_scheduler {
  public:
   // On the UI thread. The queue is emptied once every `period`.
+  // O only delays reading the project's settings until a scheduler is made.
+  template <class O = override>
   explicit ui_scheduler(duration period = duration{LV_DEF_REFR_PERIOD})
-      : timer_(lv_timer_create(&turn, period.ms, this)) {}
+      : timer_(lv_timer_create(&turn, period.ms, this)) {
+    detail::require<^^allow_settings::threads, O, "lv::ui_scheduler">();
+  }
 
   ui_scheduler(const ui_scheduler&) = delete;
   ui_scheduler& operator=(const ui_scheduler&) = delete;
@@ -207,6 +212,8 @@ class ui_scheduler {
   // Returns false if there is no memory to queue it; `work` is then destroyed.
   template <detail::postable F>
   bool post(F work) {
+    detail::require<^^allow_settings::allocation, typename detail::settings<F>::tag, "lv::ui_scheduler::post",
+                    " It keeps each piece of posted work on the heap until the UI thread runs it.">();
     // Owned here until it is in the queue: locking the mutex can throw.
     std::unique_ptr<detail::posted<F>> entry{new (std::nothrow) detail::posted<F>{std::move(work)}};
     if (entry == nullptr) return false;
