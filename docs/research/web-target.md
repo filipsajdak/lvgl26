@@ -90,7 +90,7 @@ Sizes and times of the first version of the example, a still frame, with GCC at 
 ### An interactive application (2026-11-19)
 
 The owner asked for an application that keeps running in the page, with pointer input.
-`examples/wasm/app.hpp` is written with lvgl26 only: a tree, states, bindings, handlers and a task.
+`examples/wasm/counter/app.hpp` is written with lvgl26 only: a tree, states, bindings, handlers and a task.
 `examples/wasm/platform.cpp` gives it a clock, a pointer, a frame and one step.
 
 | Finding | Link or how checked | Mark |
@@ -106,6 +106,25 @@ The owner asked for an application that keeps running in the page, with pointer 
 | LVGL samples input every 33 ms, so a press shorter than that can be missed. The page holds a press for 50 ms. | `tools/wasm/page/index.html` | `measured` 2026-11-19 |
 
 Not tried: keyboard, the wheel, high-DPI scaling, resizing, more than one display, and touch on a phone.
+
+### The bouncing ball (2026-11-19)
+
+The owner asked for the bouncing ball of the site's "Motion, written as a coroutine" as the test of coroutines.
+The scene was removed from `main` in commit 506e60e and is in history as `examples/window/bounce/`.
+`examples/wasm/bounce/scene.hpp` is that file, with the SDL window, the recorder and `main` left out.
+The tree, the tokens and the five coroutines are unchanged.
+
+| Finding | Link or how checked | Mark |
+|---|---|---|
+| The scene builds against today's library with no change. The platform file of the page gives it the display and the clock. | `examples/wasm/bounce/app.hpp` | `measured` 2026-11-19 |
+| A script of 8 s in 16 ms steps from a clock the test controls gives 14 frames, 8,601,600 bytes. The host build and the module agree byte for byte, at -O1 and -O2. | `tools/wasm/replay.mjs`, `cmp` | `measured` 2026-11-19 |
+| The same bytes include the shadow and its blur, which LVGL's software renderer draws. | same | `measured` 2026-11-19 |
+| The first run trapped with "memory access out of bounds" in the task `shape`. The default stack of 64 KiB is too small. | stack sizes 160 KiB failed, 192 KiB passed | `measured` 2026-11-19 |
+| One `.set({...})` on a widget needs well over 100 KiB of stack, because its temporary holds every property. | same | `measured` 2026-11-19 |
+| The module is linked with a stack of 1 MiB. | `tools/wasm/link-demo.sh` | `measured` 2026-11-19 |
+| Chrome ran the page for 70 s with no trap: 3,960 frames drawn at 60 frames a second, 4,267 coroutine resumes, LVGL's heap between 7.8 and 8.8 KiB. | `tools/wasm/drive-chrome.mjs --run`, `count-resumes.cpp` | `measured` 2026-11-19 |
+| A resume is a call of `lv::detail::resume_task`. The counting build counts them with `-finstrument-functions`. Node counted 4,163 in 62 s of clock. | `tools/wasm/count-resumes.cpp` | `measured` 2026-11-19 |
+| A step with its draw takes 0.2 ms. A normal Chrome window on macOS also gave 60 frames a second. | headless and headed Chrome | `measured` 2026-11-19 |
 
 What is not verified:
 
