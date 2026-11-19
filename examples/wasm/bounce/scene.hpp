@@ -40,22 +40,22 @@ constexpr auto scene = lv::group()[
     lv::group({.id = "sky",
                .size = {100 * pct, 50 * pct},
                .style = {.bg_color = tok.sky.top, .bg_grad_color = tok.sky.bottom,
-                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}}),
+                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}}), // C API
     lv::group({.id = "ground",
                .size = {100 * pct, 50 * pct},
                .style = {.bg_color = tok.ground.top, .bg_grad_color = tok.ground.bottom,
-                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid},
+                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}, // C API
                .y = 50 * pct}),
     // A soft shadow, as under the sun: a dark oval, and over it a clear widget that blurs
     // what is behind it. (LVGL's blur works on a widget's own drawing or on its backdrop,
     // not on its children.)
     lv::group({.id = "shadow", .size = {shadow_box * px, (14 + 2 * margin) * px}, .y = (ground - 7 - margin) * px})[
-        lv::group({.align = LV_ALIGN_CENTER,
+        lv::group({.align = LV_ALIGN_CENTER, // C API
                    .size = {ball * px, 14 * px},
                    .style = {.bg_color = tok.shadow.fill, .bg_opa = tok.shadow.strength,
                              .radius = tok.ball.round}}),
         lv::group({.size = {100 * pct, 100 * pct},
-                   .style = {.blur_backdrop = true, .blur_quality = LV_BLUR_QUALITY_PRECISION,
+                   .style = {.blur_backdrop = true, .blur_quality = LV_BLUR_QUALITY_PRECISION, // C API
                              .blur_radius = tok.shadow.blur}})],
     lv::group({.id = "box", .size = {box * px, box * px}, .x = left * px, .y = (floor - drop_height) * px})[
         lv::group({.id = "body",
@@ -113,10 +113,10 @@ lv::task<> bounce(lv::view<"obj"> box_view) {
 // Every frame: the ball's shape from its speed and its last hit, and the shadow under it.
 lv::task<> shape(lv::view<"obj"> box_view, lv::view<"obj"> body, lv::view<"obj"> shadow,
                  lv::view<"obj"> oval, lv::view<"obj"> frost) {
-  int last_y = lv_obj_get_y(box_view.raw());
+  int last_y = lv_obj_get_y(box_view.raw()); // C API
   for (;;) {
-    const int y = lv_obj_get_y(box_view.raw());
-    const int x = lv_obj_get_x(box_view.raw());
+    const int y = lv_obj_get_y(box_view.raw()); // C API
+    const int x = lv_obj_get_x(box_view.raw()); // C API
     const int speed = y > last_y ? y - last_y : last_y - y;  // pixels since the last frame
     last_y = y;
 
@@ -144,12 +144,12 @@ void start(lv::obj screen) {
   const lv::obj root = lv::place<scene>(screen);
   // The tree is placed, so its widgets live as long as the screen. Its children are
   // in the order the tree lists them.
-  const lv::view<"obj"> shadow{lv_obj_get_child(root.raw(), 2)};
-  const lv::view<"obj"> box_view{lv_obj_get_child(root.raw(), 3)};
-  const lv::view<"obj"> body{lv_obj_get_child(box_view.raw(), 0)};
+  const lv::view<"obj"> shadow{lv_obj_get_child(root.raw(), 2)}; // C API
+  const lv::view<"obj"> box_view{lv_obj_get_child(root.raw(), 3)}; // C API
+  const lv::view<"obj"> body{lv_obj_get_child(box_view.raw(), 0)}; // C API
   lv::spawn(bounce(box_view));
-  const lv::view<"obj"> oval{lv_obj_get_child(shadow.raw(), 0)};
-  const lv::view<"obj"> frost{lv_obj_get_child(shadow.raw(), 1)};
+  const lv::view<"obj"> oval{lv_obj_get_child(shadow.raw(), 0)}; // C API
+  const lv::view<"obj"> frost{lv_obj_get_child(shadow.raw(), 1)}; // C API
   lv::spawn(shape(box_view, body, shadow, oval, frost));
 }
 

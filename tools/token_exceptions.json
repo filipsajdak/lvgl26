@@ -53,6 +53,10 @@
       "color $value: type": 5,
       "dimension $value: type": 7
     },
+    "examples/wasm/bounce/tokens.json": {
+      "color $value: type": 7,
+      "dimension $value: type": 3
+    },
     "include/lv/signal/dark.json": {
       "color $value: type": 15,
       "dimension $value: type": 14
