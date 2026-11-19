@@ -162,26 +162,33 @@ consteval resolved_token resolve_token(json::value root, json::value token, toke
   return {v, type};
 }
 
+// Whether a member of a group is a group or a token: "$type", "$description" and the like are not.
+consteval bool is_group_or_token(json::member m) {
+  if (m.key.starts_with("$")) return false;
+  if (!json::value{m.text}.is(json::kind::object))
+    token_fail("'" + str(m.key) + "' is neither a group nor a token");
+  return true;
+}
+
 // Whether a member of a group becomes a struct member: a sub-group, or a token of
 // a supported type. "$type", "$description" and the like are not members.
 consteval bool token_member_used(json::value root, json::member m, token_type inherited) {
-  if (m.key.starts_with("$")) return false;
+  if (!is_group_or_token(m)) return false;
   const json::value child{m.text};
-  if (!child.is(json::kind::object))
-    token_fail("'" + str(m.key) + "' is neither a group nor a token");
   if (!child["$value"]) return true;
   return token_cpp_type(resolve_token(root, child, inherited).type) != std::meta::info{};
 }
 
-// A color written #rrggbbaa.
-consteval bool has_alpha_digits(json::value v) {
+// A color with an alpha: the object form has an "alpha" member, the form before 2025.10 is #rrggbbaa.
+consteval bool has_alpha(json::value v) {
+  // A search of the text: a color object has no string that could say "alpha" but its key.
+  if (v.is(json::kind::object)) return v.text().find("\"alpha\"") != std::string_view::npos;
   return v.is(json::kind::string) && v.string().starts_with("#") && v.string().size() == 9;
 }
 
 // The member type of a token: token<value type>, and token<rgba_color> for a color with alpha.
-consteval std::meta::info token_member_type(json::value root, json::value child, token_type inherited) {
-  const auto resolved = resolve_token(root, child, inherited);
-  if (resolved.type == token_type::color && has_alpha_digits(resolved.value))
+consteval std::meta::info token_member_type(const resolved_token& resolved) {
+  if (resolved.type == token_type::color && has_alpha(resolved.value))
     return std::meta::substitute(^^token, {^^rgba_color});
   return token_cpp_type(resolved.type);
 }
@@ -246,14 +253,14 @@ consteval std::vector<std::meta::info> token_specs(std::size_t offset, token_typ
 
   std::vector<std::string> names;
   std::vector<std::meta::info> specs;
-  for (std::size_t i = 0; i < group.size(); ++i) {
-    const auto m = group.member_at(i);
-    if (!token_member_used(root, m, inherited)) continue;
+  for (const json::member m : group.members()) {
+    if (!is_group_or_token(m)) continue;
 
     const json::value child{m.text};
     std::meta::info type;
     if (child["$value"]) {
-      type = token_member_type(root, child, inherited);
+      type = token_member_type(resolve_token(root, child, inherited));
+      if (type == std::meta::info{}) continue;
     } else {
       const auto child_offset = static_cast<std::size_t>(m.text.data() - doc.data());
       type = std::meta::dealias(std::meta::substitute(
@@ -275,8 +282,7 @@ template <const auto& Doc>
 consteval std::vector<std::meta::info> vendor_specs(std::size_t offset) {
   const auto object = value_at(token_text<Doc>(), offset);
   std::vector<std::meta::info> specs;
-  for (std::size_t i = 0; i < object.size(); ++i) {
-    const auto m = object.member_at(i);
+  for (const json::member m : object.members()) {
     if (!json::value{m.text}.is(json::kind::string))
       token_fail("the value of '" + str(m.key) + "' in $extensions '" + str(vendor_key) +
                  "' is not a string. Write an LVGL value by its name (\"flex_flow\": \"row\") or a size in percent (\"width\": \"50%\")");
@@ -360,7 +366,9 @@ consteval lv_color_t read_token(read_as<lv_color_t>, json::value, json::value v)
   return c;
 }
 
-consteval rgba_color read_token(read_as<rgba_color>, json::value, json::value v) {
+consteval rgba_color read_token(read_as<rgba_color>, json::value root, json::value v) {
+  if (v.is(json::kind::object))
+    return {read_token(read_as<lv_color_t>{}, root, v), static_cast<std::uint8_t>(rounded(v["alpha"].number() * 255))};
   const auto s = v.string();
   const auto rgb = color_from_hex(s.substr(0, 7));
   return {rgb, static_cast<std::uint8_t>(hex_digit(s[7]) * 16 + hex_digit(s[8]))};
@@ -472,10 +480,11 @@ struct token_payload<token<T>> {
 template <class G>
 consteval G fill_vendor(json::value object) {
   G out{};
-  std::size_t i = 0;
+  auto walk = object.members().begin();
   template for (constexpr auto m : std::define_static_array(std::meta::nonstatic_data_members_of(
                     ^^G, std::meta::access_context::unchecked()))) {
-    out.[:m:] = {json::value{object.member_at(i++).text}.string(), from_design_tokens{}};
+    out.[:m:] = {json::value{(*walk).text}.string(), from_design_tokens{}};
+    ++walk;
   }
   return out;
 }
@@ -493,7 +502,7 @@ consteval G fill_tokens(json::value group, token_type inherited) {
   if (auto t = group["$type"]) inherited = token_type_of(t.string());
 
   G out{};
-  [[maybe_unused]] std::size_t i = 0;  // unused when the group has no members
+  [[maybe_unused]] auto walk = group.members().begin();  // unused when the group has no members
   template for (constexpr auto m : std::define_static_array(std::meta::nonstatic_data_members_of(
                     ^^G, std::meta::access_context::unchecked()))) {
     using M = typename[:std::meta::type_of(m):];
@@ -502,15 +511,16 @@ consteval G fill_tokens(json::value group, token_type inherited) {
     } else if constexpr (is_named(m, extends_member)) {
       out.[:m:] = {group["$extends"].is(json::kind::string) ? group["$extends"].string() : std::string_view{}};
     } else {
-      while (!token_member_used(root, group.member_at(i), inherited)) ++i;
-      const json::value child{group.member_at(i).text};
-      ++i;
-      if constexpr (is_token_leaf<M>)
-        out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root,
-                                 resolve_token(root, child, inherited).value),
-                      from_design_tokens{}};
-      else
+      while (!token_member_used(root, *walk, inherited)) ++walk;
+      const json::member member = *walk;
+      const json::value child{member.text};
+      ++walk;
+      if constexpr (is_token_leaf<M>) {
+        const auto resolved = resolve_token(root, child, inherited);
+        out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root, resolved.value), from_design_tokens{}};
+      } else {
         out.[:m:] = fill_tokens<M, Doc>(child, inherited);
+      }
     }
   }
   return out;

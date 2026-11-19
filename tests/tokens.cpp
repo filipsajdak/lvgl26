@@ -75,6 +75,19 @@ static_assert(is_rgb(color_token(R"({"components": [1, 0.5, 0]})"), 255, 128, 0)
 static_assert(is_rgb(color_token(R"({"hex": "#102030"})"), 0x10, 0x20, 0x30));
 static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 
+// A color object that has components only, or an alpha: the standard's way to write them.
+constexpr char object_colors_json[] = R"({"c": {"$type": "color",
+  "components": {"$value": {"colorSpace": "srgb", "components": [0.2, 0.4, 1]}},
+  "alpha": {"$value": {"colorSpace": "srgb", "components": [0.2, 0.4, 1], "alpha": 0.502, "hex": "#3366ff"}},
+  "opaque": {"$value": {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}}}})";
+constexpr auto object_colors = lv::tokens<object_colors_json>;
+static_assert(std::is_same_v<decltype(object_colors.c.components), lv::token<lv_color_t>>);
+static_assert(is_rgb(*object_colors.c.components, 51, 102, 255));
+static_assert(std::is_same_v<decltype(object_colors.c.alpha), lv::token<lv::rgba_color>>);
+static_assert(is_rgb(object_colors.c.alpha->color, 51, 102, 255) && object_colors.c.alpha->alpha == 128);
+static_assert(object_colors.c.opaque->alpha == 255);
+
+
 
 // One value of each simple type, in each way it can be written.
 template <class T>
