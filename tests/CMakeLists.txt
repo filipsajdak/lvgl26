@@ -764,6 +764,9 @@ if(Python3_FOUND)
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # The token files of the Signal theme are written from the design system.
   add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
+  # The copy of Signal's design file, its record (version and hash) and the written files agree.
+  add_test(NAME signal_sync_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_sync.py)
+  add_test(NAME signal_sync_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_signal_sync.py)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
