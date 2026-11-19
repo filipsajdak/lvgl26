@@ -172,7 +172,7 @@ consteval bool has_an_angle(std::meta::info f) {
 // header whose doc comments were not read. There must be none.
 consteval string_view angles_not_read() {
   std::string out;
-  for (auto f : d::api)
+  for (auto f : d::api_table<>)
     if (has_an_angle(f) && !d::is_declared_in(f, d::angle_headers))
       out += " " + d::str(std::meta::identifier_of(f)) + " (" +
              d::str(std::meta::source_location_of(f).file_name()) + ")";
@@ -214,7 +214,7 @@ struct maker {
 };
 consteval std::vector<maker> makers() {
   std::vector<maker> out;
-  for (auto f : d::api) {
+  for (auto f : d::api_table<>) {
     const auto name = std::meta::identifier_of(f);
     if (name.ends_with("_create") && std::meta::parameters_of(f).size() == 1 &&
         std::meta::return_type_of(f) == ^^lv_obj_t*)
@@ -248,7 +248,7 @@ consteval void add_widget_targets(std::vector<target>& out, std::meta::info f,
 consteval std::vector<target> scan_targets() {
   const auto widgets = makers();
   std::vector<target> out;
-  for (auto f : d::api) {
+  for (auto f : d::api_table<>) {
     if (std::meta::identifier_of(f).starts_with(d::style_prefix))
       add_style_target(out, f);
     else

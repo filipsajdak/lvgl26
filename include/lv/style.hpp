@@ -145,7 +145,7 @@ consteval style_item style_item_of(std::meta::info f, std::string_view prop,
 template <class D>
 consteval std::vector<style_item> scan_style(const std::vector<style_id>& ids) {
   std::vector<style_item> items;
-  for (auto f : api) {
+  for (auto f : api(style_prefix)) {
     const auto name = std::meta::identifier_of(f);
     if (!name.starts_with(style_prefix) || std::meta::is_vararg_function(f)) continue;
     if (std::meta::parameters_of(f).size() < 3) continue;
@@ -241,14 +241,16 @@ inline constexpr std::span<const std::meta::info> style_ids =
     std::define_static_array(style_column<D>(2));
 
 // The font of a font property that follows an lv::scaled_font. Defined in
-// lv/scaled_font.hpp, which a program that binds a font has included.
+// lv/scaled_font.hpp, which a program that binds a font has included. A template, so that
+// TinyTTF's functions are searched for only in a file that binds a font.
+template <class D = void>
 const lv_font_t* bound_font(const void* source);
 
 // Calls a style setter with the value of one member: what it holds, or the font it follows.
 template <class A, class Setter>
 void set_style_value(lv_obj_t* o, const A& a, Setter setter, lv_style_selector_t selector) {
   if constexpr (std::same_as<A, arg<styled<const lv_font_t*>>>) {
-    if (a.bound != nullptr) return setter(o, bound_font(a.bound), selector);
+    if (a.bound != nullptr) return setter(o, bound_font<A>(a.bound), selector);
   }
   const auto& [... x] = a.v;
   setter(o, lower(x)..., selector);
