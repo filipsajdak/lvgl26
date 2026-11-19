@@ -13,6 +13,8 @@ seq 20 | xargs -P 4 -I{} arm-none-eabi-g++ -std=gnu++26 -Os -mcpu=cortex-m4 -mth
     -isystem "${sysroot}/include/c++/16.2.0/arm-none-eabi" -isystem "${sysroot}/include" \
     -c tools/arm_gcc_128870.cpp -o /dev/null
 cmake --preset arm-m4 "$@" > /dev/null
+# The work-around must reach the compiler: the build must name the flag.
+grep -q -- "-fno-declone-ctor-dtor" build/arm-m4/build.ninja
 cmake --build --preset arm-m4 > /dev/null
 # One run-time set must stay within its stack budget (tools/stack_budget.py).
 python3 tools/stack_budget.py build/arm-m4/examples/mcu/CMakeFiles/set_stack_probe.dir/set_probe.cpp.su
