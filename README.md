@@ -247,6 +247,7 @@ lv::task<> open(lv::view<"arc"> arc) {
 - The result is `false` when something stopped the animation: a newer animation of the same
   property took over, or `lv_anim_delete()` removed it.
 - Cancelling the task, or losing in `lv::first`, deletes the animation.
+- [examples/bounce/scene.hpp](examples/bounce/scene.hpp) is a whole scene in motion: a ball that falls, bounces lower each time and squashes, with a shadow under it. `tests/example_bounce.cpp` steps its clock and pins the motion, and its pictures at fixed times.
 
 A program starts LVGL with two objects and calls no C function:
 
@@ -370,7 +371,7 @@ lv::display display{app, frame, mine};                // or lv::signal::dark, fr
 
 [docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
 
-Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash.
+Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash. The tell-tale lamp colours that the law defines are in a header of their own, `lv/signal_lamps.hpp`.
 
 A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
 read-only memory, no heap and no converter. A typography token chooses it:

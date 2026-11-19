@@ -21,6 +21,7 @@ Signal is the look of one family of eight devices. They are a thermostat, a smar
 - Draw tracks, separators and the normal band of a gauge in `line`. `line` is decoration: a control without a fill gets a `line-strong` border.
 - Fill the primary action and the selected mode with `active` and set their text in `on-active`.
 - Do not use `active` for a state of the machine, the vehicle or the patient. States use the alarm colours below.
+- `lamp-green` and `lamp-blue` are for a tell-tale lamp that the law defines as green or blue (direction indicators, lights on, main beam). They are never a value, a state or a control, so the rule that normal has no colour stands. In code they are in `lv/signal_lamps.hpp`, not in the theme headers: `lv::signal::lamps.dark.green`.
 
 ## Alarms and states
 
@@ -79,3 +80,14 @@ These rules keep a screen cheap for a microcontroller to draw.
 - Keep `numeral-xl` and `numeral-l` in a font file of their own that holds only the digits, the degree sign, the colon, the point and the minus.
 - A screen in 16-bit colour shows bands in a gradient, which is one more reason Signal has none.
 - Redraw the number, not the screen: a reading sits in its own block so that only that block changes.
+
+## Keeping Signal in step
+
+Signal's source is a design system in Claude Design. This directory holds a copy of it, `tokens.design.json`, and `source.json`, which records the version of the design the copy holds and a SHA-256 of its content (the JSON with sorted keys and no white space, so a change of layout does not count).
+
+- `python3 tools/signal_sync.py` checks. It fails when the copy was edited without `--record`, and when a file that `tools/signal_tokens.py` writes is not what the tool writes from the copy. It runs as the tests `signal_sync_check` and `signal_tokens_check`.
+- It cannot see a change made in the design tool. It reads no network and holds no login, and a program without a login gets only a page shell from the link.
+- To compare with the design tool, someone with access saves its `project/tokens.json` to a file and runs `python3 tools/signal_sync.py --compare <file>`. Each line says which side has the difference.
+- To take a change in, edit `tokens.design.json`, run `python3 tools/signal_sync.py --record`, run `python3 tools/signal_tokens.py`, and commit all of them.
+- Writing a change back to the design tool is a separate step, done with the Artifact tool of Claude or Claude Code under a login. The skill `skills/sync-signal` says how an agent does both.
+- Check again after 2026-12-14, when standalone Claude Design closes: whether the link is read the same way.

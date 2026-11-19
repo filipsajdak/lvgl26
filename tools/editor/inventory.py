@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 STUBS = ROOT / "tools" / "editor" / "stubs"
 USES = ROOT / "tests" / "editor" / "api_uses.cpp"
 COMMENT = re.compile(r"//[^\n]*")
-HEADERS = ["lv/host.hpp", "lv/lv.hpp", "lv/mcp.hpp", "lv/one_of.hpp", "lv/png.hpp", "lv/pointer.hpp", "lv/signal.hpp", "lv/signal_type.hpp", "lv/ui_scheduler.hpp"]
+HEADERS = ["lv/host.hpp", "lv/lv.hpp", "lv/mcp.hpp", "lv/one_of.hpp", "lv/png.hpp", "lv/pointer.hpp", "lv/signal.hpp", "lv/signal_lamps.hpp", "lv/signal_type.hpp", "lv/ui_scheduler.hpp"]
 
 
 def public_names(text: str) -> list[str]:

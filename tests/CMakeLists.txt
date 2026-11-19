@@ -135,6 +135,8 @@ add_executable(signal_type signal_type.cpp)
 target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
                                               A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# Signal's tell-tale lamp colours, a header of its own.
+lvgl26_test(signal_lamps)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
@@ -410,6 +412,9 @@ lvgl26_compile_fail(like_missing_member "finds no member named 'scan'")
 lvgl26_compile_fail(each_selected_wrong_type ".selected follows the key of the selected row. Bind a state of the key's type")
 lvgl26_compile_fail(each_selected_and_checked ".selected gives the selected row the checked state, and this row template sets .checked itself")
 lvgl26_compile_fail(props_without_braces "made_with_braces")
+lvgl26_compile_fail(set_inline_style "lv: a style in set\\(\\) is made with lv::style\\(\\{...\\}\\)")
+lvgl26_compile_fail(set_named_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
+lvgl26_compile_fail(set_constexpr_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(props_wrong_unit "It takes an angle in whole degrees \\(90 \\* lv::deg\\). You gave lv::length")
@@ -682,6 +687,26 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_looks_picture PROPERTIES FIXTURES_REQUIRED example_looks_picture)
 endif()
 
+# The bouncing ball of examples/bounce: its motion on a stepped clock, and pictures at fixed times.
+add_executable(example_bounce example_bounce.cpp)
+target_include_directories(example_bounce PRIVATE ${PROJECT_SOURCE_DIR}/examples/bounce)
+target_compile_options(example_bounce PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/bounce)
+target_link_libraries(example_bounce PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_bounce COMMAND example_bounce)
+set(bounce_times 300 420 730 1500 3000)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out)
+add_test(NAME example_bounce_shot COMMAND bounce_shot ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out ${bounce_times})
+set_tests_properties(example_bounce_shot PROPERTIES FIXTURES_SETUP example_bounce_pictures)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  foreach(at IN LISTS bounce_times)
+    add_test(NAME example_bounce_picture_${at}
+             COMMAND ${CMAKE_COMMAND} -E compare_files
+                     ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out/bounce_${at}.png
+                     ${CMAKE_CURRENT_SOURCE_DIR}/ref/bounce_${at}.png)
+    set_tests_properties(example_bounce_picture_${at} PROPERTIES FIXTURES_REQUIRED example_bounce_pictures)
+  endforeach()
+endif()
+
 # The same screen with looks and with every value written out: the same pixels.
 add_executable(looks_example looks_example.cpp)
 target_compile_options(looks_example PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks
@@ -773,6 +798,9 @@ if(Python3_FOUND)
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # The token files of the Signal theme are written from the design system.
   add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
+  # The copy of Signal's design file, its record (version and hash) and the written files agree.
+  add_test(NAME signal_sync_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_sync.py)
+  add_test(NAME signal_sync_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_signal_sync.py)
   # The migration table of the status page is written from docs/migration/coverage.json.
   add_test(NAME migration_matrix COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/migration_matrix.py --check)
   add_test(NAME migration_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_migration_matrix.py)
@@ -783,6 +811,7 @@ if(Python3_FOUND)
                    ${PROJECT_SOURCE_DIR}/examples/looks/tokens.json ${PROJECT_SOURCE_DIR}/examples/looks/screen.hpp
                    --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE})
   add_test(NAME look_groups_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_look_groups.py)
+  add_test(NAME stack_budget_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_stack_budget.py)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)

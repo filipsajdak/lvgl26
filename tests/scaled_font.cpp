@@ -71,7 +71,7 @@ void binds_through_a_view() {
   // Which font is only known when the program runs, so the binding is made then.
   volatile bool use_title = false;
   lv::scaled_font& chosen = use_title ? title : odd;
-  label.set({.style = {.text_font = lv::bind(chosen)}});
+  label.set({.style = lv::style({.text_font = lv::bind(chosen)})});
   check(lv_obj_get_style_text_font(label.raw(), LV_PART_MAIN) == odd.raw());
   lv_obj_delete(label.raw());
 }

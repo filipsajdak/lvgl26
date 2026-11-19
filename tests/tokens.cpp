@@ -215,7 +215,7 @@ void applies_tokens(lv::obj screen) {
   check(d->get<"title">().get<"style_text_letter_space">(LV_PART_MAIN) == 1);
 
   // lv::raw marks a deliberate exception and is accepted in strict mode.
-  dc.set({.style = {.radius = lv::raw(3 * px)}});
+  dc.set({.style = lv::style({.radius = lv::raw(3 * px)})});
   check(dc.get<"style_radius">(LV_PART_MAIN) == 3);
 }
 

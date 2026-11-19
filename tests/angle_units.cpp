@@ -534,7 +534,7 @@ constexpr auto tilted = lv::box({.id = "tilted", .size = {80 * px, 30 * px},
                                            .transform_skew_x = lv::raw(-3 * deg)}});
 
 void style_rotation_is_in_tenths(lv::obj screen) {
-  auto box = screen.add<"obj">().set({.style = {.transform_rotation = lv::raw(90 * deg)}});
+  auto box = screen.add<"obj">().set({.style = lv::style({.transform_rotation = lv::raw(90 * deg)})});
   check(lv_obj_get_style_transform_rotation(box.raw(), LV_PART_MAIN) == 900);
   check(box.get<"style_transform_rotation">(LV_PART_MAIN) == 90 * deg);
   static_assert(std::same_as<decltype(box.get<"style_transform_rotation">(LV_PART_MAIN)),

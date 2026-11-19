@@ -13,6 +13,7 @@
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
 #include <lv/signal.hpp>
+#include <lv/signal_lamps.hpp>
 #include <lv/signal_type.hpp>
 #include <lv/ui_scheduler.hpp>
 
@@ -129,6 +130,8 @@ constexpr lv::typeface own_barlow{{"Barlow", 500, lv::signal::barlow_medium_ttf}
                                   {"Barlow Condensed", 700, lv::signal::barlow_condensed_bold_ttf}};
 constexpr auto signal_fonts = std::pair{lv::signal::body_font, lv::signal::label_font};
 constexpr lv::length signal_spacing = lv::signal::label_spacing;
+static_assert(std::same_as<decltype(lv::signal::lamps.dark.green), lv::token<lv_color_t>>);  // C API
+static_assert(std::same_as<decltype(lv::signal::lamps.day.blue), lv::token<lv_color_t>>);  // C API
 
 // ---- styles and themes ------------------------------------------------------------
 
