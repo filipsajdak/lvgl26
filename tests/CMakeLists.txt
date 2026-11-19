@@ -53,6 +53,18 @@ foreach(case all own)
 endforeach()
 set_tests_properties(settings_scan_all PROPERTIES PASS_REGULAR_EXPRESSION
   "mark_b.cpp.o was compiled with other settings \\(lvgl26_settings_bbbbbbbbbbbbbbbb\\) than this program, whose settings file is lvgl26.json")
+# The restrictions change no code: one file with none and with all four.
+add_library(settings_cost_open OBJECT settings_zero_cost.cpp)
+add_library(settings_cost_closed OBJECT settings_zero_cost.cpp)
+target_compile_options(settings_cost_closed PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/settings/all_forbidden.hpp)
+foreach(target settings_cost_open settings_cost_closed)
+  target_link_libraries(${target} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  target_compile_options(${target} PRIVATE -O2 -g0)
+endforeach()
+add_test(NAME settings_zero_cost
+         COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${CMAKE_OBJDUMP} -DNM=${CMAKE_NM}
+                 "-DOPEN=$<TARGET_OBJECTS:settings_cost_open>" "-DCLOSED=$<TARGET_OBJECTS:settings_cost_closed>"
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/settings_same_objects.cmake)
 # The library in a program without exceptions and run-time type information.
 lvgl26_test(no_exceptions)
 target_compile_options(no_exceptions PRIVATE -fno-exceptions -fno-rtti)
@@ -563,6 +575,19 @@ lvgl26_compile_fail(bind_format_not_text "is for text properties only")
 lvgl26_compile_fail(state_bad_type "a state holds a quantity")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
 lvgl26_compile_fail(config_too_late "specialization of .lv::cfg<lv::override>. after instantiation")
+# Each part of lvgl26 that a project can forbid, with the message that names the setting.
+lvgl26_compile_fail(restrict_ui_scheduler "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow\\.threads\\)\\.")
+lvgl26_compile_fail(restrict_post "lv: lv::ui_scheduler::post needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. It keeps each piece of posted work on the heap until the UI thread runs it\\.")
+lvgl26_compile_fail(restrict_encode_png "lv: lv::encode_png needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. The bytes of the file are a std::vector\\.")
+lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this project does not allow them \\(allow\\.files\\)\\.")
+lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
+lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
+lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
+lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
+lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
+                       ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
+target_compile_options(fail_restrict_from_file PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted/settings.hpp)
 # Each mistake in a settings file, with the message that names it.
 # A settings file and a specialization of lv::cfg at once: the compiler shows the line of the
 # file's header that says what to do.

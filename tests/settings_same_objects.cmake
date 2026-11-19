@@ -1,0 +1,20 @@
+# Fails unless the objects OPEN and CLOSED have the same code and the same symbols.
+#   cmake -DOBJDUMP=<objdump> -DNM=<nm> -DOPEN=<object> -DCLOSED=<object> -P settings_same_objects.cmake
+foreach(kind IN ITEMS OPEN CLOSED)
+  execute_process(COMMAND "${OBJDUMP}" -d "${${kind}}" OUTPUT_VARIABLE code_${kind} RESULT_VARIABLE failed)
+  if(failed)
+    message(FATAL_ERROR "${OBJDUMP} -d ${${kind}} failed")
+  endif()
+  # The first lines name the file.
+  string(REGEX REPLACE "^[^\n]*${${kind}}[^\n]*\n" "" code_${kind} "${code_${kind}}")
+  string(REPLACE "${${kind}}" "" code_${kind} "${code_${kind}}")
+  execute_process(COMMAND "${NM}" "${${kind}}" OUTPUT_VARIABLE symbols_${kind})
+endforeach()
+if(NOT code_OPEN STREQUAL code_CLOSED)
+  message(FATAL_ERROR "The restrictions changed the code of ${OPEN}")
+endif()
+if(NOT symbols_OPEN STREQUAL symbols_CLOSED)
+  message(FATAL_ERROR "The restrictions changed the symbols of ${OPEN}")
+endif()
+string(LENGTH "${code_OPEN}" size)
+message(STATUS "same code (${size} characters of disassembly) and the same symbols")
