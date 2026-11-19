@@ -42,8 +42,8 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(one_of)
-# A wrong call on a slot ends the program: unmount() of an empty slot, get<T>() of a tree
-# that is not mounted, a handle used after its arm switched the slot, error() of a full slot.
+# A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
+# that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
 foreach(case unmount_empty get_other held_after_remount error_of_mounted)
   add_test(NAME one_of_violation_${case}
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}

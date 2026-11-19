@@ -393,7 +393,8 @@ int use_application() {
   lv::mounted<ui> direct{plain.screen()};
   if (!slot.mount<popup>(plain.screen())) return 11;
   if (!slot.has_value() || !slot || !slot.holds<popup>()) return 12;
-  static_cast<void>(slot.get<popup>().root());
+  const lv::held<popup> handle = slot.get<popup>();
+  if (!handle || !handle.has_value() || !handle->root() || !(*handle).root()) return 14;
   const std::optional<int> which = slot.visit([](lv::held<ui>) { return 1; }, [](auto) { return 2; });
   const int or_empty = slot.visit([](auto) { return 1; }, [](lv::not_mounted) { return 0; });
   slot.visit([](lv::held<popup>) {}, [](auto) {});

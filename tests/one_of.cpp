@@ -127,7 +127,7 @@ void starts_empty() { check(is_empty(window) && !window.holds<home>() && !window
 // Whether the slot holds the tree T, mounted in the slot's own memory.
 template <const auto& T>
 bool holds_inside() {
-  return window.has_value() && window.holds<T>() && inside(&window.get<T>(), window) && window.get<T>().root();
+  return window.has_value() && window.holds<T>() && inside(&*window.get<T>(), window) && window.get<T>()->root();
 }
 
 // mount ends the tree that is there first; each tree lives in the slot's own memory.
@@ -149,7 +149,7 @@ void ends_with_the_root(lv::obj screen) {
   lv_obj_delete(box.raw());
   check(is_empty(window) && alive == 0);
   check(window.mount<home>(screen).has_value());
-  lv_obj_delete(window.get<home>().root().raw());  // C API
+  lv_obj_delete(window.get<home>()->root().raw());  // C API
   check(is_empty(window) && alive == 0);
 }
 
@@ -193,9 +193,9 @@ lv::held<home> remount_in_arm(lv::obj screen) {
 
 // After the slot changed, kept handles no longer hold; mounting home again, they do.
 void held_again(lv::obj screen, lv::held<home> kept, lv::held<home> in_arm) {
-  check(!kept && !in_arm && window.holds<settings>());
+  check(!kept && !in_arm && window.holds<settings>() && window.get<settings>());
   window.unmount();
-  check(!kept && !window.holds<settings>());
+  check(!kept && !window.get<settings>());
   check(window.mount<home>(screen).has_value() && kept && in_arm);  // the same tree again
   window.unmount();
 }
@@ -355,7 +355,7 @@ constexpr violation violations[] = {
     {"get_other",
      [](lv::obj screen) {
        static_cast<void>(misused.mount<home>(screen));
-       return misused.get<settings>().root() ? 1 : 0;
+       return misused.get<settings>()->root() ? 1 : 0;
      }},
     {"held_after_remount",
      [](lv::obj screen) {

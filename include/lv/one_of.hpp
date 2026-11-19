@@ -37,7 +37,8 @@ template <const auto&... Trees>
   requires(tree_node<decltype(Trees)> && ...)
 class one_of;
 
-// A handle to the tree Tree in an lv::one_of: what an arm of visit gets. It is a small value that never owns, and may be copied and kept.
+// A handle to the tree Tree in an lv::one_of: what an arm of visit gets, and what
+// slot.get<Tree>() gives. It is a small value that never owns, and may be copied and kept.
 // Every use checks that the slot holds Tree at that moment: page->get<"title">() and *page
 // break a precondition once the slot was unmounted or holds another tree, and hold again
 // when Tree is mounted again. if (page) and page.has_value() ask without breaking one.
@@ -428,13 +429,11 @@ class one_of {
     return mounted_index() == detail::tree_index<T, Trees...>();
   }
 
-  // The tree T, which must be the one mounted.
+  // A handle to the tree T: true while the slot holds T, checked at each use.
   template <const auto& T>
     requires tree_node<decltype(T)>
-  mounted<T>& get()
-    pre(holds<T>())
-  {
-    return region_.template get<detail::tree_index<T, Trees...>()>();
+  held<T> get() noexcept {
+    return handle<detail::tree_index<T, Trees...>()>();
   }
 
   // Calls the arm whose parameter names the tree that is mounted, with a handle to it:

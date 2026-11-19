@@ -20,7 +20,8 @@ namespace lv {
 /// The arm of visit for a slot that holds no tree: [](lv::not_mounted) { ... }.
 struct not_mounted {};
 
-/// A handle to the tree Tree in an lv::one_of: what an arm of visit gets. It never owns; each use checks that the slot holds Tree.
+/// A handle to the tree Tree in an lv::one_of: what an arm of visit gets, and what
+/// slot.get<Tree>() gives. It never owns; each use checks that the slot holds Tree.
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class held {
@@ -93,10 +94,10 @@ class one_of {
   template <const auto& T>
     requires tree_node<decltype(T)>
   bool holds() const noexcept { __builtin_unreachable(); }
-  /// The tree T, which must be the one mounted.
+  /// A handle to the tree T: true while the slot holds T.
   template <const auto& T>
     requires tree_node<decltype(T)>
-  mounted<T>& get() { __builtin_unreachable(); }
+  held<T> get() noexcept { __builtin_unreachable(); }
 
   /// Calls the arm whose parameter names the tree that is mounted, with a handle:
   /// lv::held<home>, auto for every other tree, lv::not_mounted for the empty slot. The
