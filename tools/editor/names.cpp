@@ -8,6 +8,7 @@
 #include <lv/host.hpp>
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
+#include <lv/one_of.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_type.hpp>
