@@ -17,11 +17,17 @@ on:
         required: false
         type: boolean
         default: false
+      arm_only:
+        description: Run only the Arm Cortex-M4 jobs (image-arm, arm). A manual run opens no issue.
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
   # The container the jobs below run in. It is built only when its Dockerfile changed.
   image:
+    if: ${{ !inputs.arm_only }}
     uses: ./.github/workflows/image.yml
     permissions:
       contents: read
@@ -30,7 +36,7 @@ jobs:
   # The presets that the quick checks leave out, with every test that runs a program.
   # (A compile-fail test only compiles, so a sanitizer has nothing to check in it.)
   host:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     needs: image
     permissions:
@@ -69,7 +75,7 @@ jobs:
   # Half an hour of libFuzzer on the JSON reader. An input that crashes it is kept as
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -167,6 +173,7 @@ jobs:
           done
 
   image-wasm:
+    if: ${{ !inputs.arm_only }}
     uses: ./.github/workflows/image.yml
     with:
       name: ci-wasm
@@ -276,7 +283,7 @@ jobs:
   # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
   # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
   mutation-plan:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
