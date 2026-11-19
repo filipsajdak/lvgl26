@@ -262,3 +262,23 @@ What the first pull request built, and what it measured on the host, `measured` 
 - `examples/platform/sdl_window.hpp` shows the frame in an SDL2 window and feeds the pointer; the window example and both window ports link and run under SDL's dummy video driver on macOS.
 - The queue is fed from the code that steps the application. Feeding it from an interrupt is not supported in this slice.
 
+### The window joins the application's loop
+
+Decided 2026-11-19, after the owner read the window example of pull request 132.
+
+| # | Decision |
+|---|---|
+| 8 | `main` ends with `return app.run();` on every platform. A platform object joins the application's loop and is polled before each step; `step()` stays for a host that owns the loop, such as the browser page. |
+| 9 | A close request of the window ends `run()` by default; the program can take it and decide to quit, to ignore it, or to hide the window. |
+| 10 | `window.hide()` and `window.show()` keep the display, its trees and their state. `lv::display` carries a `visible` state that the platform writes, with `display.show()` and `display.hide()` forwarded to a panel that has them, and `lv::display_of(view)`. |
+| 11 | A task that belongs to a screen is spawned with the tree's root as its owner, so unmounting ends it and mounting again starts exactly one. |
+
+How it was built, and what was chosen where the decision left a choice, `measured` 2026-11-19 on the host with both LVGL versions where it says so:
+
+- A source joins with a member `lv::in_loop<Source>`: a node of an intrusive list in the application, filled in the source's constructor and unlinked in its destructor. Nothing is allocated; `tests/app_loop.cpp` checks the heap.
+- `step()` polls every source in the order they joined, then runs LVGL. So a host that steps needs no second call, and the browser page did not change.
+- The wait between two steps is the first source's that can wait, else the application's `idle` function, else none. One source owns the wait because only one can block on its events; a second window would have its events read at the next step, at most 10 ms later with the SDL adapter. Several windows that each block are not supported by this rule; that would need a wait on several event sources at once.
+- A source may leave while the loop polls another one: the walk moves past it. A source that outlives its application leaves the loop when the application ends, and later ends without touching it. A temporary application is a compile error.
+- A hidden display draws what was marked before (`lv_refr_now`), then turns marking off (`lv_display_enable_invalidation`). Marking off alone was not enough: a layout change wakes the refresh, which then drew areas marked before the hide. While hidden the frame does not change; on show the whole screen is marked once. Of the visibility note's options this is "invalidation off", with one draw at the moment of hiding.
+- The visible state is observable without an allocation: a `detail::watch_list` in the display, told on each change, for the later pause of `lv::run` tasks.
+
