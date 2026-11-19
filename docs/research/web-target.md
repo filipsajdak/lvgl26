@@ -60,7 +60,7 @@ A Rust binding of lvgl26 itself is not possible: the library is header-only temp
 ## The native WebAssembly spike (2026-11-19)
 
 The question: can an lvgl26 application run in a browser as WebAssembly that GCC wrote, linked with LVGL that Clang built?
-The scripts are in `tools/wasm/`, the program in `examples/wasm/frame.cpp`, on the branch `spike/wasm-native`.
+The scripts are in `tools/wasm/`, the program in `examples/wasm/`, on the branch `spike/wasm-native`.
 Marks follow [README.md](README.md).
 
 | Finding | Link or how checked | Mark |
@@ -77,7 +77,7 @@ Marks follow [README.md](README.md).
 | The frame of the slice screen is 153,600 bytes. The WebAssembly build and the host build (GCC 16) write the same bytes. | `cmp`, SHA-256 4b0fac4a | `measured` 2026-11-19 |
 | Headless Chrome runs the module in a page, draws the frame on a canvas, and computes the same SHA-256. | `tools/wasm/page/index.html` | `measured` 2026-11-19 |
 
-Sizes and times, for `examples/wasm/frame.cpp` with GCC at -O2 and LVGL at -Os:
+Sizes and times of the first version of the example, a still frame, with GCC at -O2 and LVGL at -Os:
 
 | What | Value | Mark |
 |---|---|---|
@@ -86,6 +86,26 @@ Sizes and times, for `examples/wasm/frame.cpp` with GCC at -O2 and LVGL at -Os:
 | The compile of the file by `cc1plus` on the host (GCC 16) | 79.9 billion instructions | `measured` 2026-11-19 |
 | The compile of the same file for WebAssembly | 7.8 s user in the container; no instruction counter there | `measured` 2026-11-19 |
 | Node: compile 1.2 ms, instantiate 0.5 ms, run 0.5 ms when warm. The first run takes 6 ms. | `tools/wasm/run.mjs` | `measured` 2026-11-19 |
+
+### An interactive application (2026-11-19)
+
+The owner asked for an application that keeps running in the page, with pointer input.
+`examples/wasm/app.hpp` is written with lvgl26 only: a tree, states, bindings, handlers and a task.
+`examples/wasm/platform.cpp` gives it a clock, a pointer, a frame and one step.
+
+| Finding | Link or how checked | Mark |
+|---|---|---|
+| GCC ignores `__attribute__((export_name))` for this target. The linker exports work: `crt1-reactor.o`, `--no-entry`, `--export=name`. | `tools/wasm/link-demo.sh` | `measured` 2026-11-19 |
+| `lv::application::run()` blocks, so the page calls `step()` itself with an injected clock. No library change was needed. | `examples/wasm/platform.cpp` | `measured` 2026-11-19 |
+| lvgl26 has no input device type. The platform file calls LVGL's C functions for a pointer. A type `lv::pointer` would remove them. | `examples/wasm/platform.cpp` | `source` 2026-11-19 |
+| A scripted run gives one last frame of 691,200 bytes. The host build, the module under Node and the module in Chrome agree on its SHA-256. | `tools/wasm/replay.mjs`, `host_main.cpp`, `#selftest` | `measured` 2026-11-19 |
+| Real mouse events from the DevTools protocol move the dial, the slider and the switch. A task ticks on its own. | `tools/wasm/drive-chrome.mjs` | `measured` 2026-11-19 |
+| The page steps at 60 frames a second. A step with its canvas draw takes 0.06 to 0.07 ms. | headless Chrome | `measured` 2026-11-19 |
+| A press reaches a changed frame in 14.6 to 16.3 ms for four of five presses, and in 65.7 ms for the fifth. | headless Chrome | `measured` 2026-11-19 |
+| The module is 1,195,876 bytes, and 151,441 with Brotli. The frame buffer is stored as zeros in the data segment. | `wc`, `brotli -q 11` | `measured` 2026-11-19 |
+| LVGL samples input every 33 ms, so a press shorter than that can be missed. The page holds a press for 50 ms. | `tools/wasm/page/index.html` | `measured` 2026-11-19 |
+
+Not tried: keyboard, the wheel, high-DPI scaling, resizing, more than one display, and touch on a phone.
 
 What is not verified:
 
