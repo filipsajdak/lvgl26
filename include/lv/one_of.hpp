@@ -188,12 +188,26 @@ consteval std::meta::info one_result(const std::vector<std::meta::info>& results
   return results.front();
 }
 
+// Fails for a tree that a slot lists twice, and names it.
+template <const auto&... Trees>
+consteval bool trees_distinct() {
+  const std::array<std::meta::info, sizeof...(Trees)> trees{std::meta::reflect_object(Trees)...};
+  const std::array<std::string, sizeof...(Trees)> names{tree_name<Trees>()...};
+  for (std::size_t i = 0; i < trees.size(); ++i)
+    for (std::size_t j = 0; j < i; ++j)
+      if (trees[i] == trees[j])
+        fail("lv: the tree " + names[i] + " is listed twice in this lv::one_of. List each tree once.");
+  return true;
+}
+
 }  // namespace detail
 
 // One slot for one of the trees Trees, alive one at a time. See the top of this file.
 template <const auto&... Trees>
   requires(tree_node<decltype(Trees)> && ...)
 class one_of {
+  static_assert(detail::trees_distinct<Trees...>());
+
   detail::one_of_region<mounted<Trees>...> region_;
 
   static constexpr std::size_t count = sizeof...(Trees);
