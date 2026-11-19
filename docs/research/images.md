@@ -169,6 +169,10 @@ GCC 16.2.0, macOS arm64, 2026-11-16. Work of `cc1plus` in instructions (`/usr/bi
 | File to stored RGB565 with alpha: 8 billion for 48 x 48; 71 to 142 billion for 320 x 240. | With `std::define_static_array` | `measured` |
 | Returning the 230 KB as a `std::array` instead costs 200 to 400 billion more. | Three variants of the store | `measured` |
 | `std::define_static_array` puts the data into a symbol name. Apple's linker fails on 230 KB (`name.size() <= maxLength`); 48 KB links. | Linking the spike | `measured` |
+| Apple's linker links a symbol name of 1,048,575 characters and stops at 1,048,576 (`ld` 27106.1). | Assembler files that define one symbol of a given length | `measured` 2026-11-19 |
+| A name from `std::define_static_array` is about 6 characters for each byte: the 624 x 76 picture of the treadmill (189,696 bytes in XRGB8888) gave 1,144,735, and the window application did not link. | `nm -j` of `splash_page.cpp.o`, issue 140 | `measured` 2026-11-19 |
+| The fix: the pixels are a `std::array` in a variable template named by the file, filled from rows that another variable template holds. The longest symbol of that object is 256 characters. It costs 207 billion instructions against 225, and 1.5 GB against 1.8 GB. | `splash_page.cpp` at XRGB8888 | `measured` 2026-11-19 |
+| Decoding inside a lambda in a variable template ran twice, and copying the rows into a vector for each step took as much again: 307 billion for the same file. Taking the arguments as function parameters and reading the rows where they are gave back the 207. | The first forms of the fix | `measured` 2026-11-19 |
 | In the library: a 32 x 32 picture adds 1.3 billion to a file that includes `lv/lv.hpp` (33 billion), a 128 x 128 picture 13 to 14 billion. | `lv::image_file` | `measured` |
 
 ## Not confirmed

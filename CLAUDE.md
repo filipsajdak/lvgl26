@@ -98,12 +98,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Code that runs in the compiler is written for its interpreter: look codes up in tables, give a
   buffer its size once and write through pointers, avoid a call for each byte
   (`include/lv/detail/png_reader.hpp` needs an eighth of the work of its first form).
-- A large result of constant evaluation is stored with `std::define_static_array`: returning a
-  `std::array` of 200 KB costs several times the decoding. Its data becomes part of a symbol name,
-  and Apple's linker refuses a very long one, so sizes are limited (`compile_time_image_pixels`).
-  It costs about 130 operations a byte, in one loop that must stay under 262144 rounds. A font's
-  bitmap is therefore a `std::array` in a variable template of its own, filled through a pointer at
-  about 20 operations a byte, and named by its glyphs rather than its data (`bitmap` in `font.hpp`).
+- A large result of constant evaluation is named by what made it, never by its value. `std::define_static_array` makes an object whose bytes are part of its mangled name, six characters for each byte, and Apple's linker refuses a name of more than 1,048,575 characters. So the pixels of a picture are a `std::array` in a variable template named by the file (`stored_pixels` in `include/lv/image.hpp`), and so is a font's bitmap (`bitmap` in `font.hpp`). Each is filled through a pointer, from rows or glyphs that a variable template of its own holds, so the file is decoded once. `std::define_static_array` stays for small constants, such as the descriptor that points at the pixels. A call with constant arguments inside a template runs twice: each step takes its arguments as parameters of a consteval function, and the variable template only calls it. `tests/image_symbols.cpp` and `tools/check_symbols.py` keep every symbol of a large picture's object file under a budget, on every platform.
 - `docs/reference/lvgl-<version>.json` is the reference as data: widgets, properties, what each takes,
   enumerator names, style members. `tools/reference/reference.cpp` prints it by reflection, and the
   test `reference_data` fails when a committed file is stale. Write it again with the program the
