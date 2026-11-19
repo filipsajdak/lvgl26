@@ -9,8 +9,8 @@ import measure as m
 def with_root(command, repo, root, target):
     out = []
     for c in command:
-        if c == f"-I{repo}/include": c = f"-I{root}/include"
-        elif c.endswith("/" + sys.argv[3]) : c = target
+        if c.endswith("/" + sys.argv[3]): c = target
+        else: c = c.replace(f"{repo}/include", f"{root}/include")
         out.append(c)
     return out
 
@@ -24,9 +24,9 @@ def go(root, repo, build, probe, target):
     r = m.sh(["valgrind", "--tool=callgrind", "--callgrind-out-file=/dev/null"] + command, cwd=cwd)
     k = re.search(r"Collected\s*:\s*(\d+)", r.stderr)
     res["callgrind_Ir"] = int(k.group(1)) if k else r.stderr[-200:]
-    w = sorted(m.wall_runs(command, cwd, 5))
+    w = sorted(m.wall_runs(command, cwd, 3))
     res["wall_ms_min_med_max"] = [round(w[0]), round(w[2]), round(w[-1])]
-    res["ops_between"] = cr.ops_range(command, cwd)
+    res["includes_from"] = sorted({c for c in command if "include" in c and root in c})[:2]
     return res
 
 if __name__ == "__main__":
