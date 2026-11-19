@@ -6,6 +6,6 @@ target_compile_options(bounce_shot PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DI
 
 if(LVGL26_BUILD_WINDOW_EXAMPLES)
   add_executable(bounce window.cpp)
-  target_link_libraries(bounce PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  target_link_libraries(bounce PRIVATE lvgl26_sdl_window lvgl26_warnings)
   target_compile_options(bounce PRIVATE --embed-dir=${CMAKE_CURRENT_SOURCE_DIR})
 endif()

@@ -60,6 +60,10 @@ How it works:
   first, and `slot.visit(...)` calls the function whose parameter names the tree that is mounted:
   `lv::held<failed>`, a handle checked at each use, `auto` for the others, `lv::not_mounted` for the
   empty slot. The result is the arms' common type, or the `R` of `slot.visit<R>(...)`.
+- **A mouse or a touch panel without C** (`#include <lv/pointer.hpp>`). `lv::pointer mouse{display}` is fed
+  by the platform: `mouse.press(at)`, `mouse.move(to)`, `mouse.release()`. A queue inside the object keeps a
+  press shorter than LVGL's read period, and LVGL reads it at the next step. `lv::pointer panel{display, &read}`
+  is asked at each read instead. The window examples feed it from SDL. See [A pointer](docs/input.md).
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

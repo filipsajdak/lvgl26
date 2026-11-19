@@ -25,6 +25,7 @@
       "title": "Guides",
       "pages": [
         "mounting.md",
+        "input.md",
         "lists.md",
         "repetition.md",
         "options.md",

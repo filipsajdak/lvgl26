@@ -134,8 +134,8 @@ lv::task<> shape(lv::view<"obj"> box_view, lv::view<"obj"> body, lv::view<"obj">
     const int above = floor - y;
     const int shade = ball * 3 / 4 + ball * above / drop_height * 2 / 5;
     shadow.set({.x = (x + (box - shadow_box) / 2) * px});
-    oval.set({.style = {.bg_opa = lv::raw((55 - 30 * above / drop_height) * pct)}, .width = shade * px});
-    frost.set({.style = {.blur_radius = lv::raw((3 + 9 * above / drop_height) * px)}});
+    oval.set({.style = lv::style({.bg_opa = lv::raw((55 - 30 * above / drop_height) * pct)}), .width = shade * px});
+    frost.set({.style = lv::style({.blur_radius = lv::raw((3 + 9 * above / drop_height) * px)})});
     co_await lv::sleep(10 * ms);
   }
 }

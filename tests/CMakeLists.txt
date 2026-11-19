@@ -41,6 +41,13 @@ lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
+lvgl26_test(pointer)
+# The application of examples/window, fed by an lv::pointer as its window feeds it.
+lvgl26_test(window_app)
+# A polled pointer without a function ends the program.
+add_test(NAME pointer_violation_no_function
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:pointer> -DCASE=no_function
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
@@ -372,6 +379,10 @@ lvgl26_compile_fail(visit_named_no_conversion "arm 2 of visit returns std::basic
 lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
 lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
 lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")
+lvgl26_compile_fail(pointer_polled_press "this pointer is polled: LVGL asks its function. Use lv::pointer mouse\\{display\\} to feed one")
+lvgl26_compile_fail(pointer_temporary_display "the pointer keeps a pointer to its display: declare the display first, then the pointer")
+lvgl26_compile_fail(pointer_capturing_lambda "a polled pointer takes a function lv::pointer_sample\\(\\): LVGL calls it at each read")
+lvgl26_compile_fail(pointer_queue_too_large "Capacity <= .*most_pointer_samples")
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
 lvgl26_compile_fail(each_plain_key "a key names one row")

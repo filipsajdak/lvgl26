@@ -10,6 +10,7 @@
 #include <lv/mcp.hpp>
 #include <lv/one_of.hpp>
 #include <lv/png.hpp>
+#include <lv/pointer.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
 #include <lv/signal_type.hpp>

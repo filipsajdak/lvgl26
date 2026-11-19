@@ -23,6 +23,13 @@ struct area {
   friend constexpr bool operator==(area, area) = default;
 };
 
+/// A point of the screen, in pixels from its top left corner.
+struct point {
+  std::int32_t x = 0;
+  std::int32_t y = 0;
+  friend constexpr bool operator==(point, point) = default;
+};
+
 /// Memory for a whole screen of Width x Height pixels: constinit lv::frame<320, 240> frame;
 template <std::int32_t Width, std::int32_t Height>
 struct frame {

@@ -14,5 +14,5 @@ target_link_libraries(printer_shot PRIVATE printer_pages)
 # The window needs SDL2.
 if(LVGL26_BUILD_WINDOW_EXAMPLES)
   add_executable(printer window.cpp)
-  target_link_libraries(printer PRIVATE printer_pages)
+  target_link_libraries(printer PRIVATE printer_pages lvgl26_sdl_window)
 endif()
