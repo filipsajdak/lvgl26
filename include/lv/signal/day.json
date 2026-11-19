@@ -17,7 +17,9 @@
     "caution": {"$value": {"hex":"#ffc531","colorSpace":"srgb","components":[1,0.7725,0.1922]}},
     "on-caution": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
     "advice": {"$value": {"hex":"#1f3fbf","colorSpace":"srgb","components":[0.1216,0.2471,0.749]}},
-    "on-advice": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}}
+    "on-advice": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}},
+    "lamp-green": {"$value": {"hex":"#0b7a3e","colorSpace":"srgb","components":[0.0431,0.4784,0.2431]}},
+    "lamp-blue": {"$value": {"hex":"#1f3fbf","colorSpace":"srgb","components":[0.1216,0.2471,0.749]}}
   },
   "space": {
     "$type": "dimension",
