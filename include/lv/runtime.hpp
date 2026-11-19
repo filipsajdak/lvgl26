@@ -786,9 +786,10 @@ class runtime {
   static std::string_view widget_of(std::string_view type) {
     return (type == "column" || type == "row") ? "obj" : type;
   }
+  // Their start is the constant style of lv::row and lv::column: a property of the document beats it.
   static void lay_out(std::string_view type, lv_obj_t* o) {
-    if (type == "column") lv_obj_set_flex_flow(o, LV_FLEX_FLOW_COLUMN);
-    if (type == "row") lv_obj_set_flex_flow(o, LV_FLEX_FLOW_ROW);
+    if (type == "column") lv_obj_add_style(o, detail::start_style<detail::start::column>, LV_PART_MAIN);
+    if (type == "row") lv_obj_add_style(o, detail::start_style<detail::start::row>, LV_PART_MAIN);
   }
 
   static result build(json::value node, lv_obj_t* parent, lv_obj_t*& made, loaded& out) {

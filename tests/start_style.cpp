@@ -127,6 +127,21 @@ void the_start_costs_one_style_entry() {
   check(row <= box + style_entry);
 }
 
+// A row or a column read from a document at run time starts in the same way.
+using document = lv::runtime<"obj">;
+
+void a_document_row_starts_in_the_same_way() {
+  auto doc = document::load(R"({"type": "row", "id": "r", "children": [{"type": "column", "id": "c"}]})",
+                            lv::screen_active());
+  check(doc.has_value());
+  if (!doc) return;
+  lv_obj_t* r = doc->find("r").raw();
+  check(lv_obj_get_style_flex_flow(r, LV_PART_MAIN) == LV_FLEX_FLOW_ROW && layout_of(r) == LV_LAYOUT_FLEX);
+  check(lv_obj_get_style_flex_flow(doc->find("c").raw(), LV_PART_MAIN) == LV_FLEX_FLOW_COLUMN);
+  lv_style_value_t v{};
+  check(lv_obj_get_local_style_prop(r, LV_STYLE_FLEX_FLOW, &v, LV_PART_MAIN) != LV_STYLE_RES_FOUND);
+}
+
 }  // namespace
 
 int main() {
@@ -140,5 +155,6 @@ int main() {
   the_start_beats_a_theme();
   the_start_is_no_local_style();
   what_removes_the_start();
+  a_document_row_starts_in_the_same_way();
   return failures;
 }
