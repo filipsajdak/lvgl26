@@ -126,6 +126,20 @@ The tree, the tokens and the five coroutines are unchanged.
 | A resume is a call of `lv::detail::resume_task`. The counting build counts them with `-finstrument-functions`. Node counted 4,163 in 62 s of clock. | `tools/wasm/count-resumes.cpp` | `measured` 2026-11-19 |
 | A step with its draw takes 0.2 ms. A normal Chrome window on macOS also gave 60 frames a second. | headless and headed Chrome | `measured` 2026-11-19 |
 
+### The nightly check (2026-11-19)
+
+The nightly run builds the two applications for WebAssembly and checks them.
+It is an experimental target, and the pull request run does not touch it.
+
+| Finding | Link or how checked | Mark |
+|---|---|---|
+| The image `.github/ci-image/wasm/Dockerfile` fetches every input at a commit or against a SHA-256. Nothing of the compiler or the back end is in the repository. | the Dockerfile | `source` 2026-11-19 |
+| Pins: GCC trunk e632e263, the back end's recipe at 91e8e645, the back end as one patch with a SHA-256, WASI SDK 33, WABT, autoconf 2.69, Node 26.13.1, Ubuntu 24.04 by digest. | the Dockerfile | `source` 2026-11-19 |
+| The image builds in 9 min 41 s on an 8-core arm64 virtual machine, and is 1.8 GB. | `docker build` | `measured` 2026-11-19 |
+| In that image both applications build and give the host's frames. The check takes 1 min 16 s. | `docker run` of the steps of the job | `measured` 2026-11-19 |
+| The job compares the frames of each application with the host build, then runs the pages in Chrome: the counter with real clicks, the ball for a minute. | `.github/workflows/nightly.yml` | `source` 2026-11-19 |
+| The licences: the compiler is GPL-3.0-or-later with runtime exceptions, the SDK Apache-2.0 with LLVM exceptions, WABT Apache-2.0, the back end's project MIT. Nothing of them is shipped. | the Dockerfile header | `source` 2026-11-19 |
+
 What is not verified:
 
 - Whether the -Os error also occurs on a native build of the same trunk. It is in the front end.

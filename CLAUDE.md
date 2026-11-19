@@ -22,7 +22,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Where | What runs |
 |---|---|
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
-| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), the interactive example for WebAssembly (the experimental browser target, below), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
 
 - The analyzer build compiles three files at once (`LVGL26_ANALYZE_JOBS` in `cmake/quality.cmake`): a test file needs up to 2.4 GB under the analyzer, and four at once lost the CI runner. Raise it only with a measurement of peak memory.
 - The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
@@ -154,6 +154,17 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   several times longer. `/usr/bin/time -l` prints "instructions retired", but for the process it
   starts, so start `cc1plus` itself: `g++ -###` prints its command.
   `tools/compile_report.py <build dir> <file>...` does this and prints one JSON row per file (see `docs/research/compile-time.md`).
+
+## The experimental browser target
+
+`examples/wasm/` is an interactive application built for WebAssembly by GCC trunk with a third-party back end (`docs/research/web-target.md`). It is a nightly check, not part of the pull request run, and not a supported target.
+
+- The compiler is built by `.github/ci-image/wasm/Dockerfile` from commits and hashes that it names. Nothing of the compiler or of the back end is in this repository. Move a pin only with a measurement: the build of the image and the nightly run.
+- `-O2` only: GCC fails at `-Os` with "taking address of an immediate function" (`std::optional` of a type with a `consteval` constructor).
+- libstdc++'s `std::noop_coroutine` frame holds functions of the wrong type, and WebAssembly traps on the call. `tools/wasm/fix-coroutine.sh` patches the installed header. Drop it when libstdc++ is fixed.
+- `app.hpp` is written with lvgl26 only. `platform.cpp` is the one file with C API calls, each marked `// C API`, and holds what every host needs: a clock, a pointer, a frame, one step. The page and the host program call the same functions.
+- The host build of the example and the WebAssembly build replay `script.json`: the last frame must be equal byte for byte. Change the script and the page together, never the expected hash alone.
+- The module is a reactor. GCC ignores `export_name`, so the exports are linker options in `tools/wasm/link-demo.sh`: add a function to the list there.
 
 ## Test adequacy
 
