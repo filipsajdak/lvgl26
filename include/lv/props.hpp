@@ -37,12 +37,16 @@ namespace lv {
 
 namespace detail {
 
+// A literal compared with a string_view is written "..."sv: a view made from a pointer alone
+// counts its characters in a loop that costs the compiler about 25,000 instructions each.
+using namespace std::string_view_literals;
+
 // "LV_EVENT_CLICKED" -> "on_clicked". Empty for the entries that are not events.
 consteval std::string event_member(std::string_view enumerator) {
   constexpr std::string_view prefix = "LV_EVENT_";
   if (!enumerator.starts_with(prefix)) return {};
   auto rest = enumerator.substr(prefix.size());
-  if (is_one_of(rest, {"ALL", "LAST", "LAST_CUSTOM", "PREPROCESS", "MARKED_DELETING"})) return {};
+  if (is_one_of(rest, {"ALL"sv, "LAST"sv, "LAST_CUSTOM"sv, "PREPROCESS"sv, "MARKED_DELETING"sv})) return {};
   std::string out = "on_";
   for (char c : rest) out += (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
   return out;
@@ -54,17 +58,17 @@ consteval std::string event_member(std::string_view enumerator) {
 //   grep -rh -A2 "LV_DEPRECATED(" include/lvgl | grep -v '"' | grep -o "lv_[a-z0-9_]*_set_[a-z0-9_]*("
 // A setter that LVGL deprecates later shows up as a warning in our own build.
 consteval bool is_deprecated_setter(std::string_view name) {
-  return is_one_of(name, {"lv_file_explorer_set_quick_access_path", "lv_file_explorer_set_sort",
-                          "lv_gltf_set_env_brightness", "lv_image_buf_set_palette",
-                          "lv_list_set_button_text", "lv_list_set_button_translation_tag",
-                          "lv_menu_set_load_page_event", "lv_menu_set_mode_header",
-                          "lv_menu_set_mode_root_back_button", "lv_menu_set_page",
-                          "lv_menu_set_page_title", "lv_menu_set_page_title_static",
-                          "lv_menu_set_sidebar_page", "lv_obj_set_flag",
-                          "lv_obj_style_set_disabled", "lv_rlottie_set_current_frame",
-                          "lv_rlottie_set_play_mode", "lv_scale_section_set_style",
-                          "lv_spangroup_set_align", "lv_spangroup_set_mode",
-                          "lv_textarea_set_align"});
+  return is_one_of(name, {"lv_file_explorer_set_quick_access_path"sv, "lv_file_explorer_set_sort"sv,
+                          "lv_gltf_set_env_brightness"sv, "lv_image_buf_set_palette"sv,
+                          "lv_list_set_button_text"sv, "lv_list_set_button_translation_tag"sv,
+                          "lv_menu_set_load_page_event"sv, "lv_menu_set_mode_header"sv,
+                          "lv_menu_set_mode_root_back_button"sv, "lv_menu_set_page"sv,
+                          "lv_menu_set_page_title"sv, "lv_menu_set_page_title_static"sv,
+                          "lv_menu_set_sidebar_page"sv, "lv_obj_set_flag"sv,
+                          "lv_obj_style_set_disabled"sv, "lv_rlottie_set_current_frame"sv,
+                          "lv_rlottie_set_play_mode"sv, "lv_scale_section_set_style"sv,
+                          "lv_spangroup_set_align"sv, "lv_spangroup_set_mode"sv,
+                          "lv_textarea_set_align"sv});
 }
 
 // "LV_STATE_PRESSED" -> "style_pressed". Empty for the entries that select nothing
@@ -72,7 +76,7 @@ consteval bool is_deprecated_setter(std::string_view name) {
 consteval std::string style_member(std::string_view enumerator, std::string_view prefix) {
   if (!enumerator.starts_with(prefix)) return {};
   const auto rest = enumerator.substr(prefix.size());
-  if (is_one_of(rest, {"DEFAULT", "MAIN", "ANY", "CUSTOM_FIRST"}) || rest.starts_with("USER_"))
+  if (is_one_of(rest, {"DEFAULT"sv, "MAIN"sv, "ANY"sv, "CUSTOM_FIRST"sv}) || rest.starts_with("USER_"sv))
     return {};
   std::string out = "style_";
   for (char c : rest) out.push_back((c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c);
@@ -102,7 +106,7 @@ consteval bool takes_va_list(std::meta::info f) {
 // Whether the setter `f`, called <prefix><prop>, becomes a property.
 consteval bool is_usable_setter(std::meta::info f, std::string_view prop) {
   // Styles get their own typed API; they are not plain properties.
-  if (prop.starts_with("style_") || prop.starts_with("local_style_")) return false;
+  if (prop.starts_with("style_"sv) || prop.starts_with("local_style_"sv)) return false;
   if (is_keyword(prop) || is_deprecated_setter(std::meta::identifier_of(f))) return false;
   if (std::meta::is_vararg_function(f) || takes_va_list(f)) return false;
   return std::meta::parameters_of(f).size() >= 2;  // the widget and at least one value
@@ -135,7 +139,7 @@ consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
   std::vector<std::meta::info> types;
   // A setter called options may take a list: one comparison for each setter of every widget,
   // which every file pays.
-  const bool may_list = prop == "options";
+  const bool may_list = prop == "options"sv;
   for (std::size_t i = 1; i < params.size(); ++i) {
     auto type = value_type<D>(f, prop, params[i]);
     if (may_list && type == (^^const char*) && takes_option_list(f, parameter_name(params[i])))
@@ -204,7 +208,7 @@ inline constexpr std::span<const std::meta::info> base =
 template <class D>
 consteval std::vector<member_item> own_members(std::string_view widget) {
   std::vector<member_item> own;
-  if (widget == "obj") return own;
+  if (widget == "obj"sv) return own;
   const std::string prefix = "lv_" + str(widget) + "_set_";
   for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item<D>(f, prefix.size()));
   sort_by_name(own);
@@ -639,7 +643,7 @@ void bind_member(lv_obj_t* o, const A& a) {
 consteval std::meta::info static_text_of(std::meta::info setter) {
   if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
   const auto name = std::meta::identifier_of(setter);
-  if (!name.ends_with("_set_text")) return {};
+  if (!name.ends_with("_set_text"sv)) return {};
   const auto f = find(str(name) + "_static");
   if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
   return f;
@@ -652,7 +656,7 @@ void set_property(lv_obj_t* o, V... v) {
   if constexpr (Constant && kept_text != std::meta::info{}) {
     // LVGL shows static text uncut when the label cuts with dots, so that one is copied.
     bool cut = false;
-    if constexpr (W.sv() == "label") cut = lv_label_get_long_mode(o) == LV_LABEL_LONG_MODE_DOTS;
+    if constexpr (W.sv() == "label"sv) cut = lv_label_get_long_mode(o) == LV_LABEL_LONG_MODE_DOTS;
     if (cut)
       [:Target:](o, v...);
     else
@@ -666,7 +670,7 @@ void set_property(lv_obj_t* o, V... v) {
 consteval std::meta::info static_options_of(std::meta::info setter) {
   if (setter == std::meta::info{} || !std::meta::is_function(setter)) return {};
   const auto name = std::meta::identifier_of(setter);
-  if (!name.ends_with("_set_options")) return {};
+  if (!name.ends_with("_set_options"sv)) return {};
   const auto f = find(str(name) + "_static");
   if (f == std::meta::info{} || std::meta::parameters_of(f).size() != 2) return {};
   return f;
