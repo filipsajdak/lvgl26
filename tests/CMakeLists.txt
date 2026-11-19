@@ -853,6 +853,18 @@ add_test(NAME reference_data
                  -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
 
+# The settings as data: every key of a settings file, and its JSON Schema, by reflection.
+add_executable(lv_settings_reference ${PROJECT_SOURCE_DIR}/tools/reference/settings.cpp)
+target_link_libraries(lv_settings_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME settings_reference
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_settings_reference>
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/settings.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+add_test(NAME settings_schema
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_settings_reference> -DARGUMENT=schema
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/lvgl26-settings.schema.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+
 # The pages in docs/ show only code that these tests have built, and no C names.
 # The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
