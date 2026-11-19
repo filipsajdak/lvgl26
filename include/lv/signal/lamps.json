@@ -1,0 +1,14 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "Signal, tell-tale lamp colours. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
+  "dark": {
+    "$type": "color",
+    "green": {"$value": {"hex":"#3ddb84","colorSpace":"srgb","components":[0.2392,0.8588,0.5176]}},
+    "blue": {"$value": {"hex":"#4d8dff","colorSpace":"srgb","components":[0.302,0.5529,1]}}
+  },
+  "day": {
+    "$type": "color",
+    "green": {"$value": {"hex":"#0b7a3e","colorSpace":"srgb","components":[0.0431,0.4784,0.2431]}},
+    "blue": {"$value": {"hex":"#1f3fbf","colorSpace":"srgb","components":[0.1216,0.2471,0.749]}}
+  }
+}

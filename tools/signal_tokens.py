@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the token files of the built-in Signal theme from the design system.
 
-    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json and type.json
+    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json, lamps.json and type.json
     python3 tools/signal_tokens.py --check  fails when a written file is stale
 
 design/signal/tokens.design.json is the source. The written files are in the W3C Design
@@ -16,6 +16,13 @@ compile time in the header that reads it, and lv/signal.hpp makes no font. `font
 the two families, each as the first name of its stack. `text` holds a typography token
 for every style, with its line height as a multiple of the font size, as the format
 writes it.
+
+A colour whose name starts with `lamp-` (LAMP_PREFIX) is a tell-tale lamp colour. It is not in
+dark.json and day.json but in lamps.json, which include/lv/signal_lamps.hpp embeds: the file has
+one group for each theme, and a token loses its prefix, so `lamp-green` of the dark theme is
+`dark.green`. A cluster program that shows tell-tales pays for the file, and every other program
+that uses Signal does not. One file for both themes reads cheaper than one for each: every file
+costs a fixed amount of compile time before its first token.
 """
 
 import json
@@ -31,6 +38,7 @@ SOURCE = ROOT / "design" / "signal" / "tokens.design.json"
 OUT = ROOT / "include" / "lv" / "signal"
 LENGTHS = {"spacing": "space", "radius": "radius", "stroke": "stroke", "size": "size"}
 SCHEMA = "https://www.designtokens.org/schemas/2025.10/format.json"
+LAMP_PREFIX = "lamp-"
 WRITTEN = "Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit."
 
 
@@ -54,13 +62,32 @@ def lengths(design: dict, section: str, group: str) -> dict:
     return out
 
 
+def is_lamp(token: dict) -> bool:
+    return token["name"].startswith(LAMP_PREFIX)
+
+
+def colour_value(token: dict, theme: str) -> dict:
+    return {"$value": dtcg_fix.color_object(token["value"][theme].lower())}
+
+
 def document(design: dict, theme: str) -> str:
     colors = {"$type": "color"}
     for token in design["color"]["tokens"]:
-        colors[token["name"]] = {"$value": dtcg_fix.color_object(token["value"][theme].lower())}
+        if not is_lamp(token):
+            colors[token["name"]] = colour_value(token, theme)
     doc = {"$schema": SCHEMA, "$description": f"Signal, {theme} theme. {WRITTEN}", "color": colors}
     for section, group in LENGTHS.items():
         doc[group] = lengths(design, section, group)
+    return render(doc) + "\n"
+
+
+def lamps(design: dict) -> str:
+    """The lamp colours of every theme: a group for each theme, a token for each lamp."""
+    doc = {"$schema": SCHEMA, "$description": f"Signal, tell-tale lamp colours. {WRITTEN}"}
+    for theme in design["color"]["themes"]:
+        doc[theme["id"]] = {"$type": "color"} | {
+            token["name"].removeprefix(LAMP_PREFIX): colour_value(token, theme["id"])
+            for token in design["color"]["tokens"] if is_lamp(token)}
     return render(doc) + "\n"
 
 
@@ -102,6 +129,7 @@ def typography(design: dict) -> str:
 def documents(design: dict) -> dict:
     """Every written file: its name and its text."""
     out = {t["id"] + ".json": document(design, t["id"]) for t in design["color"]["themes"]}
+    out["lamps.json"] = lamps(design)
     out["type.json"] = typography(design)
     return out
 
