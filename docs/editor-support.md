@@ -75,10 +75,28 @@ Design tools open a token file only when it follows the Design Tokens Format 202
 The repository checks every token file with the official JSON Schemas of that version: `python3 tools/check_tokens.py`.
 It needs the Python package `jsonschema`, and it runs as the ctest test `tokens_check`.
 
-Most files of the repository still write a colour as `"#3366ff"` and a length as `"8px"`, which the standard does not allow.
-`tools/token_exceptions.json` counts these violations for each file and kind.
-The check fails on a violation that the list lacks, and on a listed one that has gone, so the list shrinks as the files convert.
+`tools/token_exceptions.json` lists the files that do not conform, with a count for each kind of violation.
+The check fails on a violation that the list lacks, and on a listed one that has gone, so the list shrinks as files convert.
 A file may name the schema in its first member: `"$schema": "https://www.designtokens.org/schemas/2025.10/format.json"`.
+
+### Convert a token file from the older forms
+
+Before the Design Tokens Format 2025.10, a colour was written `"#3366ff"`, a length `"8px"` and a duration `"200ms"`.
+The standard writes each as an object.
+`lv::tokens` refuses the old forms with a message that names the token, the form it found and the form it wants.
+Rewrite the file with the tool, which changes only those values and keeps the layout of the file:
+
+```sh
+python3 tools/dtcg_fix.py path/to/tokens.json
+```
+
+A colour becomes `{"hex": "#3366ff", "colorSpace": "srgb", "components": [0.2, 0.4, 1]}`, and `"8px"` becomes `{"value": 8, "unit": "px"}`.
+A colour with an alpha, `"#3366ff80"`, gets an `"alpha"` member, and its token still sets the opacity of its property.
+`--check` changes nothing and exits with 1 for a file that would change.
+A bare number for a length, a percentage written as a dimension and a `"$type": "string"` have no form in the standard: the tool leaves them, and `tools/check_tokens.py` names them.
+
+While a project converts, `lv::config::tokens_legacy_values` makes `lv::tokens` read the old forms again.
+It is off by default and goes in the next release.
 
 ## If you have a `.clangd` already
 

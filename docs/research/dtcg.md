@@ -473,3 +473,17 @@ Written 2026-11-19 while building `tools/check_tokens.py`.
   The reader skips every `$` member of a group, as it does the root `$description` of `day.json`. `source`
 - **Today.** 14 files hold 499 violations, nearly all a string where the standard wants an object: `"#rrggbb"`, `"8px"`, `"16px"` in composites, `"0ms"`.
   The exception is `somethingNew` as a `$type` in the two `tests/data/tokens*.json` files, which the schema's `$type` enumeration rejects. `measured` with `python3 tools/check_tokens.py --update`
+
+## Slice 2: the object forms, and what they cost to read
+
+Written 2026-11-19 while building `tools/dtcg_fix.py`.
+
+- **Result.** After `tools/dtcg_fix.py`, 18 token files hold 3 violations: `"50%"` and `"$type": "string"` in `tests/data/look_bad.json`, and `somethingNew` as a `$type` in `tests/data/tokens.json` and `tokens_light.json`. All are invalid on purpose. `measured` with `tools/check_tokens.py`
+- **Colours.** `hex` is 6 digits only in the schema, so an alpha goes in `"alpha"` and `#rrggbbaa` becomes `hex` plus `alpha`.
+  Components are the channel over 255, rounded to four decimals. The reader's rounding returns every one of the 256 channel values. `measured` in `tools/test_dtcg_fix.py`
+- **Cost of reading.** The same Signal tokens as object forms cost 3.3% more instructions in `tests/signal.cpp` than the string forms. `measured`, alternating runs against main.
+  The text grows by 24% (6.9 KB against 5.6 KB for the three files), but the larger cost is the number of walks over each token: a member lookup skips the whole `$value` object each time.
+  Reading each group's members with one iterator instead of `member_at(i)` (quadratic) and resolving each token once saved about 1.5 G of 86 G.
+  `hex` first in the colour object saved 0.25 G, and a text search for `"alpha"` instead of a key lookup 0.28 G. What remains is about 0.9% against main (84.2 G against 83.4 G).
+- **No help.** A bracket-counting skip in `json.hpp` for text that `parse` has accepted, a root object parsed once per document, one walk that finds `$value` and `$type` together, and a one-pass reader for `{"value", "unit"}` each cost the same or more. `measured`
+- **The check for older forms** costs nothing measurable: the same file with the check removed costs the same.
