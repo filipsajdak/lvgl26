@@ -243,6 +243,7 @@ lv::task<> open(lv::view<"arc"> arc) {
 - The result is `false` when something stopped the animation: a newer animation of the same
   property took over, or `lv_anim_delete()` removed it.
 - Cancelling the task, or losing in `lv::first`, deletes the animation.
+- [examples/bounce/scene.hpp](examples/bounce/scene.hpp) is a whole scene in motion: a ball that falls, bounces lower each time and squashes, with a shadow under it. `tests/example_bounce.cpp` steps its clock and pins the motion, and its pictures at fixed times.
 
 A program starts LVGL with two objects and calls no C function:
 

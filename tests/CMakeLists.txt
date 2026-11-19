@@ -674,6 +674,26 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_looks_picture PROPERTIES FIXTURES_REQUIRED example_looks_picture)
 endif()
 
+# The bouncing ball of examples/bounce: its motion on a stepped clock, and pictures at fixed times.
+add_executable(example_bounce example_bounce.cpp)
+target_include_directories(example_bounce PRIVATE ${PROJECT_SOURCE_DIR}/examples/bounce)
+target_compile_options(example_bounce PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/bounce)
+target_link_libraries(example_bounce PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_bounce COMMAND example_bounce)
+set(bounce_times 300 420 730 1500 3000)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out)
+add_test(NAME example_bounce_shot COMMAND bounce_shot ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out ${bounce_times})
+set_tests_properties(example_bounce_shot PROPERTIES FIXTURES_SETUP example_bounce_pictures)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  foreach(at IN LISTS bounce_times)
+    add_test(NAME example_bounce_picture_${at}
+             COMMAND ${CMAKE_COMMAND} -E compare_files
+                     ${CMAKE_CURRENT_BINARY_DIR}/example_bounce_out/bounce_${at}.png
+                     ${CMAKE_CURRENT_SOURCE_DIR}/ref/bounce_${at}.png)
+    set_tests_properties(example_bounce_picture_${at} PROPERTIES FIXTURES_REQUIRED example_bounce_pictures)
+  endforeach()
+endif()
+
 # The same screen with looks and with every value written out: the same pixels.
 add_executable(looks_example looks_example.cpp)
 target_compile_options(looks_example PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/looks

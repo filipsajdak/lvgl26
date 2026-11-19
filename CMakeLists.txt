@@ -52,6 +52,11 @@ if(LVGL26_BUILD_TESTS OR LVGL26_BUILD_WINDOW_EXAMPLES)
   lvgl26_skip_analyzer(examples/ports/slint/printer)
 endif()
 
+if(LVGL26_BUILD_TESTS OR LVGL26_BUILD_WINDOW_EXAMPLES)
+  add_subdirectory(examples/bounce)
+  lvgl26_skip_analyzer(examples/bounce)
+endif()
+
 # The Qt Design Studio port counts speeds with mp-units.
 if(TARGET mp-units::mp-units)
   add_subdirectory(examples/ports/qt/treadmill)
