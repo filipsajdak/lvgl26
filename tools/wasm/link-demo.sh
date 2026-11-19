@@ -12,6 +12,6 @@ sysroot=/work/wasi-sdk/share/wasi-sysroot/lib/wasm32-wasi
   -c "$repo/examples/wasm/platform.cpp" -o "$out.o"
 /work/bin/wg2++ -nostartfiles "$sysroot/crt1-reactor.o" "$out.o" "$lib/liblvgl.a" -o "$out" \
   -Wl,--gc-sections -Wl,--no-entry -Wl,--strip-all -Wl,-z,stack-size=1048576 \
-  -Wl,--export=_initialize -Wl,--export=web_init -Wl,--export=web_step -Wl,--export=web_frame \
+  -Wl,--export=_initialize -Wl,--export=web_init -Wl,--export=web_step -Wl,--export=web_pointer -Wl,--export=web_frame \
   -Wl,--export=web_stride -Wl,--export=web_width -Wl,--export=web_height -Wl,--export=web_take_dirty \
   -Wl,--export=web_dirty -Wl,--export=web_heap_used -Wl,--export=web_state -lstdc++ -lsupc++

@@ -298,6 +298,21 @@ static_assert(lv::storage_size<ui> == sizeof(lv::mounted<ui>));
 
 // ---- an application, a display, a mounted tree ------------------------------------
 
+// A window as a platform makes one: it joins the loop, shows the frame, feeds a pointer.
+struct editor_window {
+  lv::in_loop<editor_window> loop;
+  explicit editor_window(lv::application& app) : loop{app, *this} {}
+  void poll() {}
+  void wait(lv::duration) {}
+  void operator()(lv::area) {}
+  void attach(lv::display&) {}
+  void detach(lv::display&) {}
+  void attach(lv::pointer_feed) {}
+  void detach(lv::pointer_feed) {}
+  void hide() {}
+  void show() {}
+};
+
 constinit lv::mounted<ui> page;
 constexpr auto popup = lv::column[lv::label({.text = "Popup"})];
 constinit lv::one_of<ui, popup> slot;
@@ -345,6 +360,19 @@ int use_application() {
   static_cast<void>(all == lv::area{});
 
   lv::pointer mouse{plain};
+  editor_window window{app};
+  lv::display windowed{app, frame, window};
+  lv::pointer fed{windowed, window};
+  static_cast<void>(fed.handle());
+  const lv::pointer_feed feed = mouse.handle();
+  if (!feed || !(feed == feed) || !feed(lv::point{1, 1}, lv::released)) return 21;
+  windowed.hide();
+  windowed.show();
+  windowed.set_visible(windowed.visible());
+  static_cast<void>(lv::display_of(windowed.screen()).width());
+  static_assert(lv::loop_source<editor_window> && lv::waiting_loop_source<editor_window>);
+  static_assert(lv::attached_panel<editor_window> && lv::hideable_panel<editor_window> && lv::pointer_feeder<editor_window>);
+  if (!window.loop.joined()) return 22;
   const lv::point at{10, 20};
   if (!mouse.press(at) || !mouse.move({11, 20}) || !mouse.release() || !mouse.feed(at, lv::released)) return 20;
   static_assert(std::same_as<decltype(lv::pointer_sample{at, lv::pressed}.state), lv::contact>);

@@ -2,6 +2,7 @@
 // Nothing runs: it compiles or it does not.
 
 #include <lv/lv.hpp>
+#include <lv/pointer.hpp>
 
 #include <mp-units/systems/si.h>
 
@@ -24,6 +25,27 @@ struct callable_object {
 };
 
 // lv::event_handler: a function, a lambda or an object that takes an event or nothing.
+// What joins the application's loop, and what a window offers a display and a pointer.
+struct a_source {
+  void poll() {}
+};
+struct a_waiting_source {
+  void poll() {}
+  void wait(lv::duration) {}
+};
+struct a_window {
+  void attach(lv::display&) {}
+  void detach(lv::display&) {}
+  void attach(lv::pointer_feed) {}
+  void detach(lv::pointer_feed) {}
+  void hide() {}
+  void show() {}
+};
+static_assert(lv::loop_source<a_source> && !lv::waiting_loop_source<a_source>);
+static_assert(lv::waiting_loop_source<a_waiting_source> && !lv::loop_source<int>);
+static_assert(lv::attached_panel<a_window> && lv::hideable_panel<a_window> && lv::pointer_feeder<a_window>);
+static_assert(!lv::attached_panel<a_source> && !lv::hideable_panel<a_source> && !lv::pointer_feeder<a_source>);
+
 static_assert(lv::event_handler<void (*)()>);
 static_assert(lv::event_handler<void (*)(lv::event)>);
 static_assert(lv::event_handler<decltype(function)>);

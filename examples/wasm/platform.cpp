@@ -52,8 +52,8 @@ struct world {
     if (!application.ok()) std::abort();
   }
 
-  // The page's pointer in this step: a press, a release or a move becomes a sample, so a
-  // press shorter than LVGL's read period still reaches it.
+  // A press, a release or a move becomes a sample in the pointer's queue, so a press shorter
+  // than LVGL's read period, or than one frame of the page, still reaches it.
   void pointer_at(lv::pointer_sample now) {
     if (now == last) return;
     static_cast<void>(mouse.feed(now.at, now.state));
@@ -70,6 +70,12 @@ extern "C" {
 
 // Starts the application. Call once.
 void web_init() { the_world = new (world_storage) world; }
+
+// The pointer, as the page's event says it now is. The page calls it from its event handler,
+// between two steps; the sample waits in the queue for the next step.
+void web_pointer(std::int32_t x, std::int32_t y, std::int32_t down) {
+  the_world->pointer_at({{x, y}, down != 0 ? lv::pressed : lv::released});
+}
 
 // The time in milliseconds and the pointer, then one step of LVGL. Returns the milliseconds
 // until something is due.

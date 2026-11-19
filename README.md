@@ -64,6 +64,10 @@ How it works:
   by the platform: `mouse.press(at)`, `mouse.move(to)`, `mouse.release()`. A queue inside the object keeps a
   press shorter than LVGL's read period, and LVGL reads it at the next step. `lv::pointer panel{display, &read}`
   is asked at each read instead. The window examples feed it from SDL. See [A pointer](docs/input.md).
+- **The window joins the application's loop.** `main` ends with `return app.run();` on a device and in a
+  window alike: a platform object joins the loop with `lv::in_loop` and is polled before each step, and a
+  closed window ends `run()` unless the program takes the request. A hidden window keeps its trees and
+  draws nothing. A host that owns the loop, such as a browser page, calls `step()`.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

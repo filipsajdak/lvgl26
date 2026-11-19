@@ -53,6 +53,8 @@ bool start(lv::obj screen) {
   if (!window) return false;
   lv::spawn(follow_look(window->get<"main">()), window->get<"main">());
   lv::spawn(remove_splash(window->get<"splash">()), window->get<"splash">());
+  // The workout clock and the automatic mode belong to the program, not to a screen: they
+  // run as long as it does, so they have no owner.
   lv::spawn(run_clock());
   lv::spawn(run_auto());
   return start_readouts();

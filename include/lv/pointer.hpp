@@ -12,6 +12,9 @@
 //   lv::pointer panel{display, &read};   // or LVGL asks a function at each read:
 //                                        //   lv::pointer_sample read() { return {at, lv::pressed}; }
 //
+//   lv::pointer mouse{display, window};  // or a platform object feeds it, such as a window:
+//                                        // it gets an lv::pointer_feed and calls it
+//
 // LVGL reads an input device every 33 ms and sees the state at that moment, so a press and
 // a release between two reads would be lost. The queue keeps them, and LVGL takes them all
 // in one read. A sample makes LVGL read at its next step, without waiting for the period.
@@ -98,6 +101,37 @@ class pointer_device {
 
 }  // namespace detail
 
+// What a platform object keeps to feed a pointer: feed(at, state) as the pointer's own.
+// Copied freely; the pointer tells its feeder with detach() before it ends.
+class pointer_feed {
+  void* target_ = nullptr;
+  bool (*feed_)(void* target, point at, contact state) = nullptr;
+
+ public:
+  constexpr pointer_feed() = default;
+  constexpr pointer_feed(void* target, bool (*feed)(void*, point, contact)) noexcept : target_(target), feed_(feed) {}
+
+  // Whether it leads to a pointer.
+  explicit operator bool() const noexcept { return feed_ != nullptr; }
+
+  // Feeds the pointer, as lv::pointer::feed does. It must lead to one.
+  bool operator()(point at, contact state) const
+    pre(feed_ != nullptr)
+  {
+    return feed_(target_, at, state);
+  }
+
+  friend bool operator==(const pointer_feed& a, const pointer_feed& b) noexcept { return a.target_ == b.target_; }
+};
+
+// A platform object that feeds a pointer: lv::pointer mouse{display, window} calls
+// window.attach(feed), and window.detach(feed) when the pointer ends.
+template <class F>
+concept pointer_feeder = requires(F& f, pointer_feed feed) {
+  f.attach(feed);
+  f.detach(feed);
+};
+
 // The largest queue of a pointer: LVGL takes a queue in one read, sample after sample.
 inline constexpr std::size_t most_pointer_samples = 256;
 
@@ -108,6 +142,9 @@ class pointer : public detail::pointer_device {
   detail::input_queue<pointer_sample, Capacity, detail::merge_pointer_moves> queue_{};
   pointer_sample last_{};
 
+  void* feeder_ = nullptr;
+  void (*detach_)(void* feeder, pointer_feed) = nullptr;
+
   static void read(lv_indev_t* raw, lv_indev_data_t* data) {
     auto& self = self_of<pointer>(raw);
     if (auto next = self.queue_.pop()) self.last_ = *next;
@@ -115,9 +152,33 @@ class pointer : public detail::pointer_device {
     data->continue_reading = !self.queue_.empty();
   }
 
+  static bool feed_of(void* self, point at, contact state) { return static_cast<pointer*>(self)->feed(at, state); }
+
+  template <class F>
+  static void detach_from(void* feeder, pointer_feed feed) {
+    static_cast<F*>(feeder)->detach(feed);
+  }
+
  public:
   explicit pointer(display& screen) : pointer_device(screen, this, &read) {}
   pointer(display&&) = delete("the pointer keeps a pointer to its display: declare the display first, then the pointer");
+
+  // A pointer that `feeder`, a platform object such as a window, feeds.
+  template <pointer_feeder F>
+  pointer(display& screen, F& feeder) : pointer(screen) {
+    feeder_ = &feeder;
+    detach_ = &detach_from<F>;
+    feeder.attach(handle());
+  }
+
+  pointer(const pointer&) = delete;
+  pointer& operator=(const pointer&) = delete;
+  ~pointer() {
+    if (detach_ != nullptr) detach_(feeder_, handle());
+  }
+
+  // What a platform object keeps to feed this pointer.
+  pointer_feed handle() noexcept { return {this, &feed_of}; }
 
   // What happened, in order. False when the queue is full and could not merge the sample.
   bool feed(point at, contact state) {
@@ -170,7 +231,10 @@ class pointer<0> : public detail::pointer_device {
 };
 
 explicit pointer(display&) -> pointer<>;
+template <pointer_feeder F>
+pointer(display&, F&) -> pointer<>;
 template <class F>
+  requires(!pointer_feeder<std::remove_cvref_t<F>>)
 pointer(display&, F&&) -> pointer<0>;
 
 }  // namespace lv
