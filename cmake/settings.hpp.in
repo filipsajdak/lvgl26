@@ -1,0 +1,21 @@
+// Written by lvgl26_settings() from @LVGL26_SETTINGS_NAME@: change that file, not this one.
+// Every C++ file of the program is compiled with this header included first.
+#include <lv/config.hpp>
+
+constexpr char lvgl26_settings_json[] = {
+#embed "lvgl26.json"
+    , 0};
+
+template <>
+inline constexpr lv::settings_text lv::settings_file<lv::override>{
+    lvgl26_settings_json, sizeof lvgl26_settings_json - 1, "@LVGL26_SETTINGS_NAME@"};
+
+template <>
+inline constexpr lv::config lv::cfg<lv::override>{};  // lv: the settings of this project are in @LVGL26_SETTINGS_NAME@; use the file or a specialization of lv::cfg, not both
+
+// The mark of these settings in every object: a library compiled with other settings names
+// another symbol, which the program does not define.
+extern "C" const char lvgl26_settings_@LVGL26_SETTINGS_HASH@;
+[[gnu::used]] inline const void* lvgl26_settings_mark_@LVGL26_SETTINGS_HASH@() {
+  return &lvgl26_settings_@LVGL26_SETTINGS_HASH@;
+}

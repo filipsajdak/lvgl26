@@ -32,8 +32,27 @@ function(lvgl26_compile_fail name message)
 endfunction()
 
 lvgl26_test(smoke)
-# The settings reader.
+# The settings reader, and a program whose settings come from a file.
 lvgl26_test(settings)
+add_library(settings_library STATIC settings/library.cpp)
+target_link_libraries(settings_library PUBLIC lvgl26::lvgl26 PRIVATE lvgl26_warnings)
+add_executable(settings_file settings_file.cpp)
+target_link_libraries(settings_file PRIVATE settings_library lvgl26_warnings)
+lvgl26_settings(settings_file settings/project.json)
+add_test(NAME settings_file COMMAND settings_file)
+# The check before the link: an object with the mark of other settings stops it.
+add_library(settings_marks OBJECT settings/mark_a.cpp settings/mark_b.cpp)
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings_marks_all.txt
+     CONTENT "$<JOIN:$<TARGET_OBJECTS:settings_marks>,\n>\n")
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings_marks_own.txt
+     CONTENT "$<LIST:FILTER,$<TARGET_OBJECTS:settings_marks>,INCLUDE,mark_a>\n")
+foreach(case all own)
+  add_test(NAME settings_scan_${case}
+           COMMAND ${CMAKE_COMMAND} -DNM=${CMAKE_NM} -DHASH=aaaaaaaaaaaaaaaa -DNAME=lvgl26.json
+                   -DLIST=${CMAKE_CURRENT_BINARY_DIR}/settings_marks_${case}.txt -P ${PROJECT_SOURCE_DIR}/cmake/settings_scan.cmake)
+endforeach()
+set_tests_properties(settings_scan_all PROPERTIES PASS_REGULAR_EXPRESSION
+  "mark_b.cpp.o was compiled with other settings \\(lvgl26_settings_bbbbbbbbbbbbbbbb\\) than this program, whose settings file is lvgl26.json")
 # The library in a program without exceptions and run-time type information.
 lvgl26_test(no_exceptions)
 target_compile_options(no_exceptions PRIVATE -fno-exceptions -fno-rtti)
@@ -545,6 +564,12 @@ lvgl26_compile_fail(state_bad_type "a state holds a quantity")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
 lvgl26_compile_fail(config_too_late "specialization of .lv::cfg<lv::override>. after instantiation")
 # Each mistake in a settings file, with the message that names it.
+# A settings file and a specialization of lv::cfg at once: the compiler shows the line of the
+# file's header that says what to do.
+lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json; use the file or a specialization of lv::cfg, not both")
+lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/project.json settings/project.json
+                       ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail both_forms_hash)
+target_compile_options(fail_settings_both_forms PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail/settings.hpp)
 lvgl26_compile_fail(settings_unknown_key "lv: test\\.json: unknown key 'thread' in allow\\. Did you mean 'threads'\\? The keys of allow: allocation, threads, files, floating_point\\.")
 lvgl26_compile_fail(settings_unknown_section "lv: test\\.json: unknown key 'alow'\\. Did you mean 'allow'\\? The keys of the file: allow, rules, limits\\.")
 lvgl26_compile_fail(settings_not_bool "lv: test\\.json: allow\\.threads takes true or false, not \"no\"\\.")
