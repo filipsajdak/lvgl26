@@ -81,6 +81,14 @@ consteval std::meta::info find(std::string_view name) {
   return {};
 }
 
+// find(name), run only when D is known. A variable template that calls find(name) directly runs
+// the search where the header is read, in every file (0.9 G instructions for the three of
+// lv/scaled_font.hpp, measured 2026-11-19).
+template <class D>
+consteval std::meta::info find_later(std::string_view name) {
+  return find(name);
+}
+
 // The names that follow `prefix` in the API, comma separated.
 consteval std::string names_after(std::string_view prefix) {
   std::string out;
