@@ -68,6 +68,22 @@ concept frame_panel = std::is_class_v<P> && std::invocable<P&, area>;
 template <class P>
 concept band_panel = std::is_class_v<P> && std::invocable<P&, area, std::span<const std::byte>>;
 
+class display;
+
+/// A panel told which display shows it: attach(display&) and detach(display&).
+template <class P>
+concept attached_panel = requires(P& p, display& d) {
+  p.attach(d);
+  p.detach(d);
+};
+
+/// A panel that can hide and show itself, such as a window.
+template <class P>
+concept hideable_panel = requires(P& p) {
+  p.hide();
+  p.show();
+};
+
 /// A display. Declare it after the application; mount a tree on its screen().
 class display {
  public:
@@ -102,6 +118,16 @@ class display {
   std::int32_t height() const;
   /// The LVGL display, for code that still calls the C API.
   lv_display_t* raw() const;
+  /// Whether anyone can see the display. While it is not, LVGL draws nothing.
+  bool visible() const noexcept;
+  /// What the platform says: its window was hidden or minimised (false), shown or restored (true).
+  void set_visible(bool now);
+  /// Asks the panel to hide or show itself; a panel that cannot only changes visible().
+  void hide();
+  void show();
 };
+
+/// The display a widget is on. The widget must be on an lv::display.
+display& display_of(obj widget);
 
 }  // namespace lv

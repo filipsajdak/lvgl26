@@ -69,6 +69,10 @@ How it works:
   then `lv::ui_scheduler` is a compile error that names the key), relaxes the library's rules, and bounds the
   compiler (`"limits": {"compile_time_image": {"value": 4096, "unit": "px"}}`). A misspelled key is a compile
   error too. See [Project settings](docs/settings.md).
+- **The window joins the application's loop.** `main` ends with `return app.run();` on a device and in a
+  window alike: a platform object joins the loop with `lv::in_loop` and is polled before each step, and a
+  closed window ends `run()` unless the program takes the request. A hidden window keeps its trees and
+  draws nothing. A host that owns the loop, such as a browser page, calls `step()`.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

@@ -16,11 +16,10 @@ constinit lv::frame<treadmill::screen_width, treadmill::screen_height> frame;
 
 int main() {
   lv::application app{lv::host};
-  platform::sdl_window window{"treadmill", frame};
+  platform::sdl_window window{app, "treadmill", frame};
   if (!window) return 1;
   lv::display display{app, frame, window};
-  lv::pointer mouse{display};
+  lv::pointer mouse{display, window};
   if (!treadmill::start(display.screen())) return 2;
-  while (window.feed(mouse)) window.wait(app.step());
-  return 0;
+  return app.run();                         // until the window is closed
 }

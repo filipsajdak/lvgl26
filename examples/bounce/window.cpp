@@ -14,11 +14,10 @@ constinit lv::mounted<bounce::scene> page;
 
 int main() {
   lv::application app{lv::host};
-  platform::sdl_window window{"bounce", frame};
+  platform::sdl_window window{app, "bounce", frame};
   if (!window) return 1;
   lv::display display{app, frame, window};
-  lv::pointer mouse{display};
+  lv::pointer mouse{display, window};
   if (!bounce::start(page, display.screen())) return 2;
-  while (window.feed(mouse)) window.wait(app.step());
-  return 0;
+  return app.run();                         // until the window is closed
 }

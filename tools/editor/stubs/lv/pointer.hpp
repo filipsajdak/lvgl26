@@ -25,6 +25,22 @@ struct pointer_sample {
   friend constexpr bool operator==(pointer_sample, pointer_sample) = default;
 };
 
+/// What a platform object keeps to feed a pointer.
+class pointer_feed {
+ public:
+  constexpr pointer_feed() = default;
+  explicit operator bool() const noexcept { __builtin_unreachable(); }
+  bool operator()(point, contact) const { __builtin_unreachable(); }
+  friend bool operator==(const pointer_feed&, const pointer_feed&) noexcept { __builtin_unreachable(); }
+};
+
+/// A platform object that feeds a pointer: attach(feed) and detach(feed).
+template <class F>
+concept pointer_feeder = requires(F& f, pointer_feed feed) {
+  f.attach(feed);
+  f.detach(feed);
+};
+
 /// The largest queue of a pointer.
 inline constexpr std::size_t most_pointer_samples = 256;
 
@@ -34,6 +50,11 @@ template <std::size_t Capacity = 16>
 class pointer {
  public:
   explicit pointer(display&) {}
+  /// A pointer that `feeder`, a platform object such as a window, feeds.
+  template <pointer_feeder F>
+  pointer(display&, F&) {}
+  /// What a platform object keeps to feed this pointer.
+  pointer_feed handle() noexcept { __builtin_unreachable(); }
   pointer(const pointer&) = delete;
   pointer& operator=(const pointer&) = delete;
   /// What happened, in order. False when the queue is full and could not merge it.
@@ -58,7 +79,10 @@ class pointer<0> {
 };
 
 explicit pointer(display&) -> pointer<>;
+template <pointer_feeder F>
+pointer(display&, F&) -> pointer<>;
 template <class F>
+  requires(!pointer_feeder<std::remove_cvref_t<F>>)
 pointer(display&, F&&) -> pointer<0>;
 
 }  // namespace lv

@@ -65,7 +65,11 @@ inline constexpr std::int32_t height = demo::height;
 
 class running {
  public:
-  explicit running(lv::obj screen) : root_(lv::mount<demo::ui>(screen)) { lv::spawn(demo::tick()); }
+  // The task belongs to the screen: it ends when the tree is unmounted, so mounting it again
+  // starts exactly one.
+  explicit running(lv::obj screen) : root_(lv::mount<demo::ui>(screen)) {
+    if (root_) lv::spawn(demo::tick(), root_.root());
+  }
   bool ok() const { return root_.has_value(); }
 
  private:

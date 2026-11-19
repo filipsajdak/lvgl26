@@ -16,11 +16,10 @@ constinit lv::frame<printer::window_width, printer::window_height> frame;
 
 int main() {
   lv::application app{lv::host};
-  platform::sdl_window window{"printer", frame};
+  platform::sdl_window window{app, "printer", frame};
   if (!window) return 1;
   lv::display display{app, frame, window};
-  lv::pointer mouse{display};
+  lv::pointer mouse{display, window};
   if (!printer::start(display.screen())) return 2;
-  while (window.feed(mouse)) window.wait(app.step());
-  return 0;
+  return app.run();                         // until the window is closed
 }
