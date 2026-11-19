@@ -171,7 +171,7 @@ Each gain was measured on the probe or file named, against `perf/lazy-api`. "Our
 | 2 | A port draws the same fonts in every file | The Print page: 234 G of 335 G are five fonts | Draw them once: a port's precompiled header with the fonts | Print page 340.8 to 50.7 G (−85 %) | Ours |
 | 3 | The theme scans the global namespace twice | `theme_members` and `theme_classes` both call `theme_items<D>()`: 8 G for the second | One table, `theme_table<D>`, read by both | `signal.hpp` 81.6 to 71.0 G (−13 %) with fixes 4 to 7 in | Ours |
 | 4 | An insertion sort by name, on 139 to 164 items | Without the sort: −5.3 G | A merge sort of indices, stable as the old one | One label −4.0 G (−7 %); 10 kinds −4.1 G | Ours |
-| 5 | The API scan asks `identifier_of` of 3474 GCC builtins | `identifier_of` costs about 0.7 M instructions on its first call per declaration | Skip declarations at source line 0 or 1 first: `source_location_of(m).line() > 1` | −3.4 G a file (−6 %); the same 2026 functions | Ours to avoid; the price is GCC's |
+| 5 | The API scan asks `identifier_of` of 3474 GCC builtins | `identifier_of` costs 0.35 M to 1.4 M instructions a call, by the length of the name ("Inside GCC") | Skip declarations at source line 0 or 1 first: `source_location_of(m).line() > 1` | −3.4 G a file (−6 %); the same 2026 functions | Ours to avoid; the price is GCC's |
 | 6 | `str(it.name)` builds a `std::string` per member for `data_member_spec` | Ablation: −1.0 G for obj | Pass the `std::string_view` itself | One label −2.0 G (−4 %); about −1.1 G per further kind | Ours |
 | 7 | `starts_with` on every name of the API, three passes or more per widget kind | One pass over 2026 names: 1.0 G, of which `starts_with` is 0.75 G | Compare the size and one character before `starts_with` | One label −1.05 G (−2 %); −0.4 G per further kind | Ours to avoid; the price is GCC's and libstdc++'s |
 | 8 | A theme is a struct of 54 widgets × 16 slots × 139 style members | Value-initialising an empty one: 8 G. Four slots instead of 16: the first theme −6.9 G, the second −6.5 G | A theme that stores only what it sets | About −6.5 G per theme | Ours; an API choice |
@@ -357,7 +357,7 @@ It was built with the flags of the file and `-x c++-header`, and given to the fi
 
 | Behaviour | Measurement | Mark |
 |---|---|---|
-| `std::meta::identifier_of` costs about 0.7 M instructions the first time it is asked of a declaration; a second call is cheap | 7185 global functions: 5.0 G for the first calls, 0.5 G for the second | `measured` |
+| `std::meta::identifier_of` costs 0.35 M instructions for a name of 8 characters and 1.37 M for 40, on every call: see "Inside GCC" | 4000 generated functions, one and two passes. Corrected 2026-11-19: a second pass costs as much as the first; a second call in the same expression was cheap | `measured` |
 | `members_of(^^::)` lists 3474 builtins with the 2026 `lv_` functions | Counted by reflection; the builtins are at source line 0 or 1 | `measured` |
 | `source_location_of(m).file_name()` is as dear as `identifier_of`; `line()` is free | 5.4 G against 0.1 G for one pass | `measured` |
 | `std::string_view::starts_with` costs about 0.37 M instructions per call in constant evaluation | One pass over 2026 names: 1.0 G with it, 0.25 G without | `measured` |
@@ -365,6 +365,102 @@ It was built with the flags of the file and `-x c++-header`, and given to the fi
 | Value-initialising a constant aggregate of 120,000 members costs 8 G | An empty `theme_spec` as a `constexpr` variable | `measured` |
 | A low `-fconstexpr-ops-limit` made `large_tree` dearer, 81.5 G to 92.1 G; with fixes 3 to 7, 69.8 to 70.1 G | Same file, same tree, the option alone | `measured`; the cause is not known |
 | The back end is 2 to 11 G a file, 3 to 8 % | Full minus front end, every file above | `measured` |
+
+## Inside GCC
+
+Why GCC 16.2 charges what it charges: the tools that see below our functions, and what they show.
+Every row was measured on 2026-11-19 with the setup above. The source read is the tag `releases/gcc-16.2.0` ([constexpr.cc](https://github.com/gcc-mirror/gcc/blob/releases/gcc-16.2.0/gcc/cp/constexpr.cc), [reflect.cc](https://github.com/gcc-mirror/gcc/blob/releases/gcc-16.2.0/gcc/cp/reflect.cc)) with Homebrew's libstdc++ headers.
+
+### The tools, and what each answers
+
+Each was run on the one-label probe (`perf/lazy-api`, 52 G front end).
+
+| Tool | Question it answers | Output on one label | Mark |
+|---|---|---|---|
+| `sample` on `cc1plus` (Instruments works the same) | Which GCC function the time is in | 86 % of samples under `cxx_eval_constant_expression`; `process_metafunction` 15 %; `eval_identifier_of` 3.4 % | `measured` |
+| Homebrew's `cc1plus` | Can a profile name GCC's functions? | Yes: 45,710 text symbols. No DWARF, so no source lines and no frames for inlined functions | `measured` |
+| `-ftime-report-details` | Which phase, and which phase inside which | Constant evaluation 62 %, overload resolution 72 % (nested), instantiation 12 %; GC memory 989 MB | `measured` |
+| `-fstats` | How many specializations and types were made | 54,934 declaration and 14,709 type specializations; 43,010 types | `measured` |
+| `-fmem-report` | Where GC memory goes, by object size | 535 MB allocated, 233 MB in use at the end | `measured` |
+| `-fdump-lang-tinst-lineno` | Which instantiations, from where, in order | 59,642 lines; 6.6 MB. No times or counts | `measured` |
+| `-fdump-lang-raw`, `-fdump-tree-original`, `-fdump-lang-class` | The trees GCC holds | 102 MB, 3.6 MB, 3.4 MB; useful for one function, not for cost | `measured` |
+| `-fconstexpr-cache-depth=N` | What the call cache saves | 0: 63.5 G; 2: 63.3; 8 (default): 51.2; 16: 49.9; 64: 49.8 | `measured` |
+| `-fconstexpr-loop-limit`, `-fconstexpr-ops-limit` | Only where a limit stops a file | No change at 262,144 rounds or 4 billion operations | `measured` |
+| `-ftime-trace` | Not in GCC 16.2: `g++-16 --help=c++` and `--help=common` list no such option | | `source` |
+
+- No GCC 16.2 option counts operations per function. The operation count exists only per evaluation, and is printed only on overflow (`constexpr.cc`, `cxx_eval_constant_expression`).
+- A profile shows GCC's functions but never which of our functions is being interpreted. Our attribution came from probes that add one line at a time.
+- A GCC built from source with `-O2 -g` would add source lines and inlined frames to the same profile. A build with a counter in `cxx_eval_call_expression`, keyed by the function evaluated, would give operations per consteval function. That is the tool we lack. Building GCC takes about an hour of 12 cores and several GB (`recalled`); it was not done.
+
+### Where the cost comes from
+
+| Cost | Measurement | Cause | Mark |
+|---|---|---|---|
+| One operation of the interpreter | A bare loop: 7,300 instructions a round, about 19 operations | `cxx_eval_constant_expression` walks the tree of each expression | `measured` |
+| One call of a constexpr function | About 6,000 instructions more than the loop; a hit in the call cache saves about 2,500 | Every call with constant arguments is hashed (`iterative_hash_template_arg` over the bindings), looked up, and on a miss inserted with its arguments copied (`unshare_expr_without_location`) | `measured`, `source` |
+| `string_view(p)` on a 24-character string | 620,000 instructions; `string_view(p, 24)` 17,500 | In constant evaluation `char_traits<char>::length` is a loop of calls, about 25,000 instructions a character. `__builtin_strlen` is folded for free | `measured`, `source` (`bits/char_traits.h`) |
+| `identifier_of` | 0.35 M for 8 characters, 1.37 M for 40; the same on every pass | `eval_identifier_of` builds a string literal and calls the `string_view(const char*)` constructor (`build_special_member_call`), which the interpreter then runs: the loop above. The literal's length is known and not passed | `measured`, `source` (`reflect.cc`) |
+| `display_string_of` | 0.67 M a call | The same, with a longer string | `measured` |
+| `string_view::starts_with` | 285,000 instructions; `__builtin_memcmp` free; a pointer loop 50,000 | `starts_with` is `substr` and `operator==`, and `char_traits::compare` is a loop of two calls a character in constant evaluation | `measured`, `source` |
+| Why libstdc++ loops | `__builtin_memcmp` and `__builtin_strlen` fail on the constexpr heap ("is not a constant expression") | `cxx_eval_builtin_function_call` folds a string builtin only on a string literal or a constant array: "expand_builtin doesn't know how to look in the values table" | `measured`, `source` |
+| `std::vector<unsigned char>(n)` | 79,000 instructions an element; `new unsigned char[n]()` 17,000; `reserve` nothing per element | libstdc++ value-initialises each element through calls | `measured` |
+| A loop that fills a vector by `v[i]` | 139,000 instructions a round; through a pointer 112,000 | One more call a round | `measured` |
+| `std::define_static_array` | About 0.17 G for the call, and about 1,700 instructions a byte on top | Small next to making the data | `measured` |
+| `substitute` and `extract` | 0.84 M for a new specialization, 0.76 M for the same one again | A call that reaches a metafunction is never cached: `metafns_called` makes it uncacheable, "until we figure out which exact metafunctions need this" | `measured`, `source` |
+| Copying a struct of 1,000 `int` members | 750 instructions a member, a copy by value; by reference nothing | A copy is a `CONSTRUCTOR` of all elements; a value-initialised one is empty and cheap | `measured` |
+| `large_tree` under `-fconstexpr-ops-limit=6500000` | 92 G against 81 G; the extra samples are in `maybe_constant_init_1`, 557 to 1480 | GCC tries to constant-initialise variables it need not, and an attempt cut off at the limit is lost work. Why it repeats was not found | `measured`; the cause in part |
+
+### What to do with each
+
+| Finding | Kind | What follows |
+|---|---|---|
+| `string_view(const char*)`, `starts_with`, `compare`, `==` on long strings | Ours to avoid | Keep lengths with names; test the size and one character before a library comparison (fix 7 of this note) |
+| `std::vector(n)` for large data | Ours to avoid | `reserve` and write through a pointer, or `new[]`, as the font and picture readers do |
+| A big struct passed or returned by value | Ours to avoid | Pass by reference; keep `kept<W>` small, as `CLAUDE.md` says |
+| A call that names a metafunction is not cached | Ours to avoid | Store a scan's result in a variable template (`define_static_array`) and read the table, as `api_table` does |
+| `-fconstexpr-cache-depth=16` | A cheaper GCC setting | −2.6 % on one label, more memory; a project's choice, not a library rule |
+| `__builtin_strlen` and `__builtin_memcmp` | A cheaper facility, not for us | Free on constant data, but our rules allow no builtins, and they fail on the heap |
+| `identifier_of` runs a strlen loop for a length GCC knows | GCC inefficiency | Candidate report A |
+| String builtins cannot read the constexpr heap, so libstdc++ loops | GCC inefficiency | Candidate report B |
+| Metafunction calls are never cached | GCC inefficiency, known to its authors | Candidate C; the comment in `constexpr.cc` says it is deliberate for now |
+| `std::vector(n)` value-initialises element by element | libstdc++ inefficiency | Candidate D |
+| A low operation limit costs more | Not understood | Reduce it first; no report |
+
+### Candidate reports
+
+Nothing was filed; the owner decides.
+
+A. `identifier_of` constructs its `string_view` from a pointer alone.
+
+```cpp
+#include <meta>
+#include <string_view>
+namespace ns { void f0_long_name_of_forty_characters_xxxxx(); /* ... 4000 such */ }
+consteval std::size_t c() {
+  std::size_t s = 0;
+  for (auto m : std::meta::members_of(^^ns, std::meta::access_context::unchecked())) s += std::meta::identifier_of(m).size();
+  return s;
+}
+constexpr auto n = c();
+```
+
+4000 names of 40 characters: 5.5 G instructions more than asking `has_identifier`, 1.37 M a call. With 8 characters: 0.35 M. `reflect.cc` knows the length in `get_string_literal`. `measured`, `source`
+
+B. `__builtin_memcmp` and `__builtin_strlen` are not constant on constexpr-allocated storage.
+
+```cpp
+#include <string>
+consteval int a() { std::string s = "hello world, on the constexpr heap"; return __builtin_memcmp(s.data(), "hello", 5); }
+constexpr int x = a();  // error: '__builtin_memcmp(...)' is not a constant expression
+```
+
+On a constant array the same call costs nothing; libstdc++'s loop costs 285,000 instructions for one `starts_with`. Related reports exist for local arrays: [PR 70816](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70816) and [PR 80265](https://gcc.gnu.org/pipermail/gcc-bugs/2017-April/580741.html) (`summary`). None was found for the heap. `measured`
+
+C. Calls that reach a metafunction are never cached: the same `substitute` and `extract` again costs 0.76 M against 0.84 M the first time. `measured`, `source`
+
+D. `std::vector<unsigned char>(n)` costs 79,000 instructions an element in constant evaluation, 4.6 times `new unsigned char[n]()`. `measured`
+
+A search of GCC's Bugzilla found no report on the cost of reflection or of `identifier_of` (`summary`).
 
 ## Tried and ruled out
 
