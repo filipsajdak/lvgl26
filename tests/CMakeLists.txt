@@ -41,6 +41,7 @@ lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
+target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
@@ -56,6 +57,8 @@ foreach(case unmount_not_mounted mount_twice unmount_after_parent)
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
 lvgl26_test(look)
+lvgl26_test(start_style)
+lvgl26_test(style_add)
 target_link_libraries(look PRIVATE lvgl26_test_data)
 # Two files of one program name looks, with the registration in a header they share.
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)

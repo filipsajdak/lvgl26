@@ -51,7 +51,6 @@
         <p class="lede">lvgl26 is early: version 0.0.1. This page lists what is on the <code>main</code> branch, with the header and the test behind each row, then what is planned, then the limits you should know before you start.</p>
         <div class="actions">
           <a class="btn primary" href="#today">Works today</a>
-          <a class="btn" href="#targets">Where it runs</a>
           <a class="btn" href="#planned">Planned</a>
           <a class="btn" href="#limits">Known limits</a>
         </div>
@@ -63,34 +62,6 @@
       <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
       <div><dt>Tested on</dt><dd>Linux host, in CI</dd></div>
     </dl>
-  </div>
-</section>
-
-<!-- ======================================================================= -->
-
-<section class="band tint" id="targets">
-  <div class="wrap">
-    <div class="head">
-      <div class="no">Targets</div>
-      <div>
-        <h2>Where it runs.</h2>
-        <p>Only GCC 16 compiles lvgl26 today, so a target is reached when GCC 16 can build for it. Each row says how far that is.</p>
-      </div>
-    </div>
-
-    <div class="table">
-      <table>
-        <thead><tr><th>Target</th><th>State</th><th>How far</th><th>More</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">Linux</th><td><span class="pill ok">Works</span></td><td>Every push is built and tested here, on both LVGL versions</td><td></td></tr>
-          <tr><th scope="row">A low-cost microcontroller</th><td><span class="pill part">Partial</span></td><td>The slice is built for an Arm Cortex-M4, without exceptions and RTTI, and runs in an emulator every night. No real board yet</td><td><a href="#gap-real-board">A real board and a size budget</a></td></tr>
-          <tr><th scope="row">The browser, through WebAssembly</th><td><span class="pill plan">Planned</span></td><td>Needs a GCC that writes WebAssembly, or reflection in Clang. No GCC release has it yet</td><td><a href="#target-browser">The browser, through WebAssembly</a></td></tr>
-          <tr><th scope="row">Android Automotive OS and Android</th><td><span class="pill plan">Planned</span></td><td>Needs a GCC 16 cross compiler for Android. Not tried yet</td><td><a href="#target-android">Android Automotive OS and Android</a></td></tr>
-          <tr><th scope="row">iOS</th><td><span class="pill plan">Planned</span></td><td>Waits for reflection in Apple's compiler</td><td><a href="#target-ios">iOS</a></td></tr>
-          <tr><th scope="row">A product with a safety goal</th><td><span class="pill plan">Planned</span></td><td>No certificate. Two routes are studied</td><td><a href="#safety-route">A route for products with a safety goal</a></td></tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 </section>
 
@@ -205,10 +176,6 @@
       <li><strong>Components</strong> <span>Components that hold state and a view, used several times in a tree.</span> <small><a href="#gap-components">Migration gap</a>: unblocks Qt Component, Slint @children, TouchGFX containers</small></li>
       <li><strong>Long lists</strong> <span>A list that keeps the rows that fit and refills them as they scroll in, over a count and a function that gives a row. Views that sort or filter a list without copying a row.</span> <small>docs/research/lists.md</small></li>
       <li data-state="In development"><strong>Design showcase</strong> <span>One design system, Signal, for a family of eight devices: mood boards and the system are done (see <a href="design.html">Design</a>); the device screens and their lvgl26 firmware follow.</span> <small>design/signal</small></li>
-      <li id="target-browser"><strong>The browser, through WebAssembly</strong> <span>An lvgl26 application built for WebAssembly, running in the page itself. It needs a GCC that writes WebAssembly, which no GCC release has yet, or reflection in Clang.</span> <small>docs/research/targets-and-safety.md, docs/research/web-target.md</small></li>
-      <li id="target-android"><strong>Android Automotive OS and Android</strong> <span>A manufacturer's own screens as native code, built with a GCC 16 cross compiler for Android and drawn into the window of a native activity. Not tried yet.</span> <small>docs/research/targets-and-safety.md</small></li>
-      <li id="target-ios"><strong>iOS</strong> <span>Apple's compiler has no reflection yet, so there is no build.</span> <small>docs/research/targets-and-safety.md</small></li>
-      <li id="safety-route"><strong>A route for products with a safety goal</strong> <span>lvgl26 has no safety certificate, and its compiler is not qualified. Two routes are studied. One is the main UI beside a small certified renderer that draws the telltales. The other is a second back end over LVGL Safe, the library LVGL writes for certification.</span> <small>docs/research/targets-and-safety.md</small></li>
       <li><strong>Design tool adapters</strong> <span>Adapters that write <code>tokens.json</code> from a design tool, so that tokens are never copied by hand. Figma, Penpot and Claude Design, driven by agents.</span> <small><a href="#gap-design-tools">Migration gap</a></small></li>
     </ul>
   </div>

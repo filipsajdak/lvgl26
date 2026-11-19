@@ -64,11 +64,11 @@ static_assert(action("+").p.style_pressed.value.bg_color.set &&
 
 // lv::group fills its parent and starts without the theme's styles; lv::row and
 // lv::column lay their children out. What the node itself says comes first.
-static_assert(ui.bare && ui.p.size.v.v0 == LV_PCT(100) && ui.p.size.v.v1 == LV_PCT(100));
+static_assert(ui.how == lv::detail::start::group && !ui.p.size.set);
 static_assert(lv::group({.size = {10 * px, 20 * px}}).p.size.v.v0 == 10 &&
               lv::group({.size = {10 * px, 20 * px}}).p.size.v.v1 == 20);
-static_assert(!lv::row().bare && lv::row().p.flex_flow.v.v0 == LV_FLEX_FLOW_ROW &&
-              lv::column().p.flex_flow.v.v0 == LV_FLEX_FLOW_COLUMN);
+static_assert(lv::row().how == lv::detail::start::row && lv::column().how == lv::detail::start::column &&
+              !lv::row().p.flex_flow.set);
 static_assert(lv::column({.flex_flow = LV_FLEX_FLOW_ROW_WRAP}).p.flex_flow.v.v0 ==
               LV_FLEX_FLOW_ROW_WRAP);
 

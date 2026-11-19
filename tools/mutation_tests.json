@@ -17,12 +17,12 @@
       "targets": "concepts computed"
     },
     "include/lv/tree.hpp": {
-      "tests": "^concepts$|^handlers$|^l2_tree$|^mounted_storage$|mounted_storage_violation|fail_part_tree_node|fail_unknown_id|fail_duplicate_id|fail_mount|fail_place|fail_storage_kind|^look$",
-      "targets": "concepts handlers l2_tree mounted_storage look"
+      "tests": "^concepts$|^handlers$|^l2_tree$|^mounted_storage$|mounted_storage_violation|fail_part_tree_node|fail_unknown_id|fail_duplicate_id|fail_mount|fail_place|fail_storage_kind|^look$|^start_style$",
+      "targets": "concepts handlers l2_tree mounted_storage look start_style"
     },
     "include/lv/style.hpp": {
-      "tests": "^concepts$|^styles$|^style_selectors$|fail_part_style|fail_style",
-      "targets": "concepts styles style_selectors"
+      "tests": "^concepts$|^styles$|^style_selectors$|fail_part_style|fail_style|^start_style$|^style_add$|^mounted_storage$",
+      "targets": "concepts styles style_selectors start_style style_add mounted_storage"
     },
     "include/lv/state.hpp": {
       "tests": "^concepts$|^state$|^state_plain$|fail_bind|fail_state",
@@ -59,6 +59,10 @@
     "include/lv/detail/one_of_region.hpp": {
       "tests": "^one_of$|one_of_violation",
       "targets": "one_of"
+    },
+    "include/lv/detail/style_add.hpp": {
+      "tests": "^style_add$|^mounted_storage$|^start_style$",
+      "targets": "style_add mounted_storage start_style"
     }
   }
 }

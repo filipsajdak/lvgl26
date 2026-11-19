@@ -15,6 +15,8 @@ An `lv::mounted` is never copied or moved. LVGL's handler on the root widget poi
 
 `if (!shown)`, or `shown.has_value()`, tells whether LVGL had memory for the widgets, and `shown.error()` says why it had not. `shown->get<"id">()` reaches a widget by its id, as with `std::expected`. When the variable goes, the widgets go with it.
 
+A mount is also refused with `lv::mount_error::out_of_memory` when LVGL's heap has less room in one piece than the longest list of styles a widget can have: 1008 bytes on a 64-bit target, 504 on a 32-bit one. LVGL v9.6.0 and the v10 pin grow a widget's list of styles without checking the allocation (lvgl/lvgl#11014), so lvgl26 makes sure, before each style it adds, that the list could grow to its longest. A version of LVGL with the fix of lvgl/lvgl#11015 reports the failure itself; lvgl26 then uses LVGL's answer and checks nothing beforehand.
+
 A function may return `lv::mount<ui>(parent)`, and a struct may hold one as a member initialised from it: the result is built in place. A named `lv::mounted` cannot be returned, and a `std::vector` cannot hold one.
 
 ## In a global

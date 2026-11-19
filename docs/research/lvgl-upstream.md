@@ -53,6 +53,27 @@ What it means for us: the doc comments are the only place some semantics live, s
 - A const style has `prop_cnt == 255`. `LV_STYLE_CONST_INIT(name, arr)` builds one that can live in ROM. `source` 2026-11-13.
 - A style built with `lv_style_set_*` allocates at run time.
 
+### Where a widget's default can live, and what removes it
+
+Asked for the start style of `lv::group`, `lv::row` and `lv::column` (one constant style instead of local properties). Checked in `src/core/lv_obj_style.c`, `src/core/lv_obj.c`, `src/themes/lv_theme.c` of v9.6.0 and of the v10 pin. `source` 2026-11-18.
+
+- `lv_obj_add_style` puts a new style above the ones added before it, after the local and transition styles. It first removes the same style with the same selector, so a style is never in the list twice.
+- `lv_obj_remove_style_all(obj)` and `lv_obj_remove_style(obj, NULL, selector)` go through `remove_style_core` and remove every matching entry, the local style included (`is_local` entries are reset and freed). A local default of a factory is therefore removed exactly like a constant one: our earlier local defaults had the same exposure.
+- `lv_obj_remove_theme(obj, selector)` removes only the entries marked `is_theme`. `apply_theme` marks every style the object has when the theme callback has run, which is at creation, before lvgl26 adds anything. A style added after creation (the start style, a node's own style, a look) is not marked and survives it. The function exists on both versions.
+- `lv_theme_apply(obj)` calls `lv_obj_remove_style_all(obj)` and then applies the theme again. It drops everything lvgl26 added: the start style, the node's own constant style, its looks and its local properties. A theme swap in place built on it must add them back, in their order.
+- LVGL calls `lv_obj_remove_style_all` on a live object only from `lv_theme_apply`, from the display's own layers (`lv_display.c`, not our widgets) and from the destructor. No constructor, screen load or state change removes styles. `lv_obj_report_style_change` refreshes cached values and does not touch the list.
+- `lv_obj_get_local_style_prop` reads only the local style. LVGL's own defaults are not local either: a theme's are styles, and a widget's default size comes from `width_def` and `height_def` of its class, read by the cascade when no style sets them (`lv_obj_style.c`, the `else` branch for `LV_STYLE_WIDTH` and `LV_STYLE_HEIGHT`).
+- `lv_obj_class_create_obj` and `lv_obj_class_init_obj` are declared in no header of either version; the members of `lv_obj_class_t` are in `lv_obj_class_private.h`. Neither a "start style under the theme" made by splitting creation, nor a class of our own with `width_def`, uses the public API. A class default would also cover the size only, not a layout.
+- After `lv_obj_remove_style_all` an `lv::group` falls back to the default size of `lv_obj_class` and a row or column has no layout, so its children lie on each other. That is what a user sees, the same as before the start style. With LVGL's own widgets the same call drops the theme's look, which the LVGL documentation offers as the way to start from nothing.
+
+How other toolkits rank a container's default:
+
+- CSS: the cascade origins rank user-agent styles below user and author styles; a browser's defaults live in the user-agent origin ("User-agents, or browsers, have basic stylesheets that give default styles to any document"). `revert` rolls a property back to the user-agent default; `initial` gives the specification's initial value instead. https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_cascade/Cascade, https://developer.mozilla.org/en-US/docs/Web/CSS/revert `source` 2026-11-18 (the first part of each page was read).
+- Flutter: a `Row`'s defaults are parameters of its constructor (`mainAxisAlignment = MainAxisAlignment.start`, `mainAxisSize = MainAxisSize.max`), a property of the element with no cascade. https://api.flutter.dev/flutter/widgets/Row-class.html `source` 2026-11-18 (from a short quote).
+- Qt: the style sheet reference does not mention layouts; a layout is an object set in code. https://doc.qt.io/qt-6/stylesheet-reference.html `summary` 2026-11-18. Slint: a layout is an element with properties of its own. `recalled`.
+
+What it means for lvgl26: the start style ranks like a browser's user-agent style under the node's own styles and looks (the author's), and behaves like LVGL's own theme styles under the removal calls. It adds no exposure that the local defaults did not have, and removes one surprise: a style added later can now win.
+
 ## Assets
 
 - The image header is 12 bytes: magic `0x19`, then colour format, flags, width, height and stride. `source` 2026-11-13.
@@ -105,7 +126,7 @@ Name conflict: `pedapudi/lvgl_cpp` uses the name `lvgl_cpp` and `namespace lvgl`
 
 Found 2026-11-18 while sketching storage for lvgl26 (`docs/research/node-storage.md`, sketch (vii)).
 Marks are dated 2026-11-18.
-The report below is a draft for the owner to file; it was not filed.
+The report below was the draft. It is filed as issue https://github.com/lvgl/lvgl/issues/11014, with the fix in pull request https://github.com/lvgl/lvgl/pull/11015, under review on 2026-11-19. After the maintainer's review the fix makes `lv_obj_add_style` return `lv_result_t`: `LV_RESULT_INVALID` when the realloc fails, with the count restored and a warning logged. `summary` 2026-11-19: as the owner reported it, the pull request itself was not read here. Until a release has it, lvgl26 guards its own adds (`detail::add_style` in `include/lv/detail/style_add.hpp`).
 
 ### Findings
 
