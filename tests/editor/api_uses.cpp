@@ -43,8 +43,24 @@ using mp_units::si::unit_symbols::min;
 // ---- settings ---------------------------------------------------------------------
 
 constexpr lv::config settings = lv::cfg<lv::override>;
-static_assert(!settings.raw_style_values && !settings.raw_integer_state && !settings.tokens_legacy_values);
-static_assert(settings.compile_time_image_pixels == 128 * 128);
+static_assert(settings.allow.allocation && settings.allow.threads && settings.allow.files &&
+              settings.allow.floating_point);
+static_assert(!settings.rules.raw_style_values && !settings.rules.raw_integer_state);
+static_assert(settings.limits.compile_time_image.value == 128 * 128);
+static_assert(lv::settings_file<lv::override>.size == 0);
+constexpr lv::allow_settings no_threads{.threads = false};
+constexpr lv::rule_settings plain_styles{.raw_style_values = true};
+constexpr lv::limit_settings small_pictures{.compile_time_image = lv::pixel_count{64 * 64}};
+constexpr lv::byte_count stack{4096};
+constexpr lv::settings_unit kib = lv::byte_count::units[1];
+static_assert(!no_threads.threads && plain_styles.raw_style_values && stack.value == 4096 && kib.factor == 1024);
+static_assert(small_pictures.compile_time_image.value == 64 * 64);
+// Clang reads no annotation, so the description of a setting is used as a value here.
+constexpr lv::described setting_text{"A setting of a project."};
+static_assert(setting_text.text[0] == 'A');
+constexpr char settings_doc[] = "{}";
+constexpr lv::settings_text settings_doc_text{settings_doc, sizeof settings_doc - 1, "lvgl26.json"};
+static_assert(settings_doc_text.size == 2);
 
 // ---- units ------------------------------------------------------------------------
 
@@ -298,6 +314,21 @@ static_assert(lv::storage_size<ui> == sizeof(lv::mounted<ui>));
 
 // ---- an application, a display, a mounted tree ------------------------------------
 
+// A window as a platform makes one: it joins the loop, shows the frame, feeds a pointer.
+struct editor_window {
+  lv::in_loop<editor_window> loop;
+  explicit editor_window(lv::application& app) : loop{app, *this} {}
+  void poll() {}
+  void wait(lv::duration) {}
+  void operator()(lv::area) {}
+  void attach(lv::display&) {}
+  void detach(lv::display&) {}
+  void attach(lv::pointer_feed) {}
+  void detach(lv::pointer_feed) {}
+  void hide() {}
+  void show() {}
+};
+
 constinit lv::mounted<ui> page;
 constexpr auto popup = lv::column[lv::label({.text = "Popup"})];
 constinit lv::one_of<ui, popup> slot;
@@ -345,6 +376,19 @@ int use_application() {
   static_cast<void>(all == lv::area{});
 
   lv::pointer mouse{plain};
+  editor_window window{app};
+  lv::display windowed{app, frame, window};
+  lv::pointer fed{windowed, window};
+  static_cast<void>(fed.handle());
+  const lv::pointer_feed feed = mouse.handle();
+  if (!feed || !(feed == feed) || !feed(lv::point{1, 1}, lv::released)) return 21;
+  windowed.hide();
+  windowed.show();
+  windowed.set_visible(windowed.visible());
+  static_cast<void>(lv::display_of(windowed.screen()).width());
+  static_assert(lv::loop_source<editor_window> && lv::waiting_loop_source<editor_window>);
+  static_assert(lv::attached_panel<editor_window> && lv::hideable_panel<editor_window> && lv::pointer_feeder<editor_window>);
+  if (!window.loop.joined()) return 22;
   const lv::point at{10, 20};
   if (!mouse.press(at) || !mouse.move({11, 20}) || !mouse.release() || !mouse.feed(at, lv::released)) return 20;
   static_assert(std::same_as<decltype(lv::pointer_sample{at, lv::pressed}.state), lv::contact>);

@@ -64,6 +64,15 @@ How it works:
   by the platform: `mouse.press(at)`, `mouse.move(to)`, `mouse.release()`. A queue inside the object keeps a
   press shorter than LVGL's read period, and LVGL reads it at the next step. `lv::pointer panel{display, &read}`
   is asked at each read instead. The window examples feed it from SDL. See [A pointer](docs/input.md).
+- **One settings file for the whole program.** `lvgl26_settings(app lvgl26.json)` names it in CMake, and
+  every file of the program reads it. It forbids what the program may not use (`"allow": {"threads": false}`:
+  then `lv::ui_scheduler` is a compile error that names the key), relaxes the library's rules, and bounds the
+  compiler (`"limits": {"compile_time_image": {"value": 4096, "unit": "px"}}`). A misspelled key is a compile
+  error too. See [Project settings](docs/settings.md).
+- **The window joins the application's loop.** `main` ends with `return app.run();` on a device and in a
+  window alike: a platform object joins the loop with `lv::in_loop` and is polled before each step, and a
+  closed window ends `run()` unless the program takes the request. A hidden window keeps its trees and
+  draws nothing. A host that owns the loop, such as a browser page, calls `step()`.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
@@ -99,7 +108,7 @@ What a state can hold:
 - A bool, an enum, a color or a pointer (`const char*` for text).
 
 `lv::state<int>` is rejected, because a plain integer does not say what it is; the error shows these
-choices. `lv::config::raw_integer_state` allows it.
+choices. `rules.raw_integer_state` in the [settings](docs/settings.md) allows it.
 
 A state keeps its own list of watchers, so following it costs no LVGL subject and no observer.
 `speed.raw()` gives an `lv_subject_t`, made on first use, and C code can share it: a value C code writes reaches the widgets, and a value set from C++ reaches C observers.
@@ -332,11 +341,10 @@ token, a broken alias or an unreadable value is a compile error.
 ```
 
 Layout values (`.size`, `.range`, `.value`) and enums stay free. To accept plain values in styles,
-change the project setting. Settings are a C++ specialization, not a macro:
+change the project setting in the [settings file](docs/settings.md):
 
-```cpp
-template <>
-inline constexpr lv::config lv::cfg<lv::override>{.raw_style_values = true};
+```json
+{"rules": {"raw_style_values": true}}
 ```
 
 Keep tokens in three tiers: primitive values (`primitive.color.blue-500`), semantic roles that alias

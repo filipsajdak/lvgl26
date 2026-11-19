@@ -4,7 +4,9 @@
 
 #include <lv/units.hpp>
 
+#include <concepts>
 #include <cstddef>
+#include <type_traits>
 
 namespace lv {
 
@@ -14,6 +16,14 @@ struct heap_use {
   std::size_t used = 0;
   std::size_t largest_free = 0;  // the largest block that can still be allocated
 };
+
+/// Something an application's loop drives: it is polled before each step.
+template <class S>
+concept loop_source = std::is_class_v<S> && requires(S& s) { s.poll(); };
+
+/// A source that can also wait: until the next step is due, or an event arrives.
+template <class S>
+concept waiting_loop_source = loop_source<S> && requires(S& s, duration due) { s.wait(due); };
 
 /// LVGL starts when the application is made, and stops when it goes out of scope.
 /// Declare it first. There is one at a time.
@@ -46,6 +56,21 @@ class application {
   heap_use heap() const;
   /// Ends run() after the step that is running. Call it from a handler or a task.
   void quit(int result = 0);
+};
+
+/// The link that makes `Source` a part of the application's loop: a member of the source.
+/// It joins in its constructor and leaves in its destructor.
+template <class Source>
+class in_loop {
+ public:
+  in_loop(application&, Source&)
+    requires loop_source<Source>
+  {}
+  in_loop(application&&, Source&) = delete;
+  in_loop(const in_loop&) = delete;
+  in_loop& operator=(const in_loop&) = delete;
+  /// Whether the source is in a loop: false once its application has ended.
+  bool joined() const noexcept { __builtin_unreachable(); }
 };
 
 }  // namespace lv

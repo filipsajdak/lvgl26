@@ -16,10 +16,11 @@
 //   some pixels see-through   RGB565 with an alpha plane, or ARGB8888 at 32 bits
 //
 // Decoding costs compile time: under a second for an icon, seconds for a picture
-// of a whole screen. So a picture is at most lv::config::compile_time_image_pixels
+// of a whole screen. So a picture is at most limits.compile_time_image of the settings
 // pixels (128 x 128 by default); a larger one stops the build and names the setting.
 
 #include <lv/config.hpp>
+#include <lv/detail/settings.hpp>
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/png_reader.hpp>
 #include <lv/values.hpp>
@@ -172,7 +173,7 @@ consteval void check_size(std::uint32_t w, std::uint32_t h, std::uint32_t stride
          " bytes. LVGL holds a picture of at most 65535 pixels each way, and rows of at most 65535 bytes.");
   if (static_cast<std::size_t>(w) * h > most)
     fail("lv: this picture is " + decimal(w) + " x " + decimal(h) + " pixels, and the compiler decodes at most " + decimal(most) +
-         " (a large picture makes the build slow). To allow it, raise lv::config::compile_time_image_pixels.");
+         " (a large picture makes the build slow). To allow it, raise limits.compile_time_image in the settings.");
 }
 
 // The picture of the PNG file `file` as a constant LVGL image. `depth` is the
@@ -196,7 +197,7 @@ consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, st
 
 // O only delays reading the project's setting until an image is made.
 template <const auto& File, class O = override>
-inline constexpr const lv_image_dsc_t* image_of = make_image(File, LV_COLOR_DEPTH, cfg<O>.compile_time_image_pixels);
+inline constexpr const lv_image_dsc_t* image_of = make_image(File, LV_COLOR_DEPTH, detail::project<O>.limits.compile_time_image.value);
 
 }  // namespace detail
 

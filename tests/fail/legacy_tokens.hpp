@@ -6,4 +6,4 @@
 
 struct legacy_tokens {};
 template <>
-inline constexpr lv::config lv::cfg<legacy_tokens>{.tokens_legacy_values = true};
+inline constexpr lv::config lv::cfg<legacy_tokens>{.rules = {.tokens_legacy_values = true}};

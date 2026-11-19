@@ -4,7 +4,7 @@
 #include "check.hpp"
 
 template <>
-inline constexpr lv::config lv::cfg<lv::override>{.raw_integer_state = true};
+inline constexpr lv::config lv::cfg<lv::override>{.rules = {.raw_integer_state = true}};
 
 int main() {
   lv_init();

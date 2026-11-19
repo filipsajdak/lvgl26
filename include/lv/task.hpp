@@ -36,6 +36,7 @@
 // A coroutine frame is allocated with lv_malloc. If that fails, the task is empty
 // and lv::spawn returns false; no exception is thrown.
 
+#include <lv/detail/settings.hpp>
 #include <lv/events.hpp>
 #include <lv/state.hpp>
 #include <lv/units.hpp>
@@ -63,6 +64,13 @@ concept task_result = std::is_void_v<T> || (std::movable<T> && std::default_init
 
 template <detail::task_result T = void>
 class task;
+
+// Starting a task: see below. O only delays reading the project's settings until a task is
+// started, because a task's frame is taken from the heap.
+template <class O = override>
+bool spawn(task<void> work) noexcept;
+template <class O = override>
+bool spawn(task<void> work, obj owner);
 
 namespace detail {
 
@@ -298,7 +306,9 @@ class [[nodiscard]] task {
     frame_ = {};
   }
 
+  template <class O>
   friend bool spawn(task<void> work) noexcept;
+  template <class O>
   friend bool spawn(task<void> work, obj owner);
 };
 
@@ -325,9 +335,18 @@ inline task<void> task_promise<void>::get_return_object_on_allocation_failure() 
 
 }  // namespace detail
 
+namespace detail {
+// Why a task needs allocation, though its frame comes from LVGL's pool.
+inline constexpr fixed task_frame_reason{
+    " A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get "
+    "a fixed region of memory of their own, a program without allocation runs no task."};
+}  // namespace detail
+
 // Starts a task and lets it run on its own; its memory is freed when it finishes.
 // Returns false if the task is empty (no memory for its frame).
-inline bool spawn(task<void> work) noexcept {
+template <class O>
+bool spawn(task<void> work) noexcept {
+  detail::require<^^allow_settings::allocation, O, "lv::spawn", detail::task_frame_reason>();
   if (!work) return false;
   const auto frame = std::exchange(work.frame_, {});
   frame.promise().detached = true;
@@ -341,9 +360,11 @@ inline bool spawn(task<void> work) noexcept {
 // that part's events: a task that only sleeps, or only waits for a state.
 // Returns false if the task is empty, or if LVGL has no memory to tie it to the widget;
 // the task has not run then.
-inline bool spawn(task<void> work, obj owner) {
+template <class O>
+bool spawn(task<void> work, obj owner) {
   // A check in the body: GCC 16.2 reports a mismatch for pre() on a friend of a class template.
   contract_assert(owner.raw() != nullptr);
+  detail::require<^^allow_settings::allocation, O, "lv::spawn", detail::task_frame_reason>();
   if (!work) return false;
   const auto frame = std::exchange(work.frame_, {});
   frame.promise().detached = true;

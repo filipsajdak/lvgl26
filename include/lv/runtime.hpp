@@ -33,6 +33,7 @@
 // A table has at most 64 rows and columns, a chart 1024 points (detail::count_limits).
 
 #include <lv/detail/enum_names.hpp>
+#include <lv/detail/settings.hpp>
 #include <lv/dump.hpp>
 #include <lv/json.hpp>
 #include <lv/owned.hpp>
@@ -693,6 +694,8 @@ class runtime {
   static std::expected<loaded, load_failure> load(std::string_view document, obj parent)
     pre(parent.raw() != nullptr)
   {
+    detail::require<^^allow_settings::floating_point, typename detail::settings<decltype(Widgets)...>::tag,
+                    "lv::runtime", " It reads the numbers of a document as double.">();
     const auto parsed = json::value::parse(document);
     if (!parsed) return std::unexpected(load_failure{load_error::malformed, document});
 

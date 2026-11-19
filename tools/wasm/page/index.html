@@ -19,7 +19,6 @@ const EMBEDDED = null;       // base64 of the module
 const SCRIPT = null;         // examples/wasm/script.json, for the self test
 const EXPECTED_HASH = null;  // SHA-256 of the host build's last frame of that script
 
-const MIN_HOLD_MS = 50;      // a press lasts at least two samples of LVGL's input timer
 const bytes = EMBEDDED ? Uint8Array.from(atob(EMBEDDED), c => c.charCodeAt(0))
                        : new Uint8Array(await (await fetch('demo.wasm')).arrayBuffer());
 
@@ -82,8 +81,10 @@ function drawChanged() {
   return true;
 }
 
-// The pointer. A release that comes sooner than MIN_HOLD_MS after the press waits for it.
-const pointer = { x: 0, y: 0, down: false, pressedAt: 0, releaseAt: -1 };
+// The pointer. Each event goes to the module when it comes: it waits in the pointer's queue
+// for the next step, so a press and a release within one frame are both seen.
+const pointer = { x: 0, y: 0, down: false };
+const tell = () => x.web_pointer(pointer.x, pointer.y, pointer.down ? 1 : 0);
 function position(e) {
   const r = canvas.getBoundingClientRect();
   pointer.x = Math.round((e.clientX - r.left) * W / r.width);
@@ -91,14 +92,14 @@ function position(e) {
 }
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId); position(e);
-  pointer.down = true; pointer.pressedAt = performance.now(); pointer.releaseAt = -1;
-  stats.pressAt = pointer.pressedAt; stats.waitingForFrame = true;
+  pointer.down = true; tell();
+  stats.pressAt = performance.now(); stats.waitingForFrame = true;
 });
-canvas.addEventListener('pointermove', e => { if (pointer.down) position(e); });
+canvas.addEventListener('pointermove', e => { if (pointer.down) { position(e); tell(); } });
 const release = e => {
   if (!pointer.down) return;
   position(e);
-  pointer.releaseAt = Math.max(performance.now(), pointer.pressedAt + MIN_HOLD_MS);
+  pointer.down = false; tell();
 };
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
@@ -117,7 +118,6 @@ function frame(now) {
 }
 function step(now) {
   const ms = Math.round(now - t0);
-  if (pointer.releaseAt >= 0 && now >= pointer.releaseAt) { pointer.down = false; pointer.releaseAt = -1; }
   const s0 = performance.now();
   x.web_step(ms, pointer.x, pointer.y, pointer.down ? 1 : 0);
   const drew = drawChanged();

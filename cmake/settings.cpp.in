@@ -1,0 +1,3 @@
+// Written by lvgl26_settings() from @LVGL26_SETTINGS_NAME@: the one definition of the mark
+// that every object of the program names.
+extern "C" const char lvgl26_settings_@LVGL26_SETTINGS_HASH@ = 0;

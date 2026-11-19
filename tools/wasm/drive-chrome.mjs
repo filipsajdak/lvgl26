@@ -61,9 +61,11 @@ console.log('before:', JSON.stringify(await state()));
 
 const mouse = (type, px, py) => send('Input.dispatchMouseEvent', { type, x: rect.x + px, y: rect.y + py, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1 });
 async function click(px, py, holdMs = 80) { await mouse('mouseMoved', px, py); await mouse('mousePressed', px, py); await sleep(holdMs); await mouse('mouseReleased', px, py); await sleep(300); }
-await click(293, 225);  // the "+" button, three times
-await click(293, 225);
-await click(293, 225);
+// The "+" button, three times, with no time between press and release: both events come
+// within one frame of the page, and the pointer's queue keeps them for the next step.
+await click(293, 225, 0);
+await click(293, 225, 0);
+await click(293, 225, 0);
 // Drag the slider from its left end to the right
 await mouse('mouseMoved', 90, 305); await mouse('mousePressed', 90, 305);
 for (let px = 100; px <= 230; px += 10) { await mouse('mouseMoved', px, 305); await sleep(16); }
