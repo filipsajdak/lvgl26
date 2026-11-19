@@ -611,13 +611,12 @@ consteval const lv_style_t* stored_style(const S& s) {
   return stored_spelled_style<S, D>(s);
 }
 
-// The style of Where with its shorthands spelled out, worked out once.
-template <class Where, class D>
-inline constexpr auto spelled_style = with_long_forms<D>(Where::get());
-
-template <class Where, class D>
+// The style of Where with its shorthands spelled out, keyed by its value: nodes with equal styles
+// share one spelled-out style and one constant lv_style_t.
+template <auto Value, class D>
 struct spelled_out {
-  static constexpr const auto& get() { return spelled_style<Where, D>; }
+  static constexpr auto value = with_long_forms<D>(Value);
+  static constexpr const auto& get() { return value; }
 };
 
 // A node's own style follows the one rule for shorthands, as a theme, lv::on and a look do: its
@@ -625,7 +624,7 @@ struct spelled_out {
 template <class Where, lv_style_selector_t Selector, class D = void>
 void add_const_style(lv_obj_t* o) {
   if constexpr (sets_shorthand<D>(Where::get()))
-    add_style_of<spelled_out<Where, D>, Selector, D>(o);
+    add_style_of<spelled_out<Where::get(), D>, Selector, D>(o);
   else
     add_style_of<Where, Selector, D>(o);
 }
