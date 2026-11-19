@@ -34,6 +34,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |
 | [lvgl-safe.md](lvgl-safe.md) | Whether lvgl26 can get a second back end over LVGL Safe: its licence, its API in full, a mapping of our widgets and features, a layout computed by the compiler, and three shapes for a safety product compared. |
 | [dtcg.md](dtcg.md) | The Design Tokens Format 2025.10 against its draft of 2026-09-08, whether a percentage exists, what design tools read, `$extends` and variants, the resolver and colour modules, what our token files and reader do outside the standard, and a plan. |
+| [design-sync.md](design-sync.md) | Whether a tool can read Signal's design system from Claude Design without a login, which routes exist, and four options to check or sync it: a recorded hash, a manual target, a scheduled job, a build step. |
 
 ## How each claim is marked
 
