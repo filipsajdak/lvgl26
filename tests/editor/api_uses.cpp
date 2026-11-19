@@ -10,6 +10,7 @@
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
 #include <lv/png.hpp>
+#include <lv/pointer.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_type.hpp>
 #include <lv/ui_scheduler.hpp>
@@ -336,6 +337,14 @@ int use_application() {
   const lv::area all{0, 0, 320, 240};
   static_cast<void>(all == lv::area{});
 
+  lv::pointer mouse{plain};
+  const lv::point at{10, 20};
+  if (!mouse.press(at) || !mouse.move({11, 20}) || !mouse.release() || !mouse.feed(at, lv::released)) return 20;
+  static_assert(std::same_as<decltype(lv::pointer_sample{at, lv::pressed}.state), lv::contact>);
+  lv::pointer<4> small{plain};
+  lv::pointer panel{plain, [] { return lv::pointer_sample{{1, 2}, lv::pressed}; }};
+  static_cast<void>(small.raw() == panel.raw());
+  static_assert(lv::most_pointer_samples >= 16);
   auto root = lv::mount<ui>(plain.screen());
   if (!root) return root.error() == lv::mount_error::out_of_memory ? 1 : 2;
 

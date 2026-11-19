@@ -41,6 +41,11 @@ lvgl26_test(runtime_ui)
 lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
+lvgl26_test(pointer)
+# A polled pointer without a function ends the program.
+add_test(NAME pointer_violation_no_function
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:pointer> -DCASE=no_function
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 # unmount() of a tree that is not mounted, and mount() of one that is, end the program.
 foreach(case unmount_not_mounted mount_twice unmount_after_parent)
@@ -352,6 +357,10 @@ lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
 lvgl26_compile_fail(each_row_storage "a row of lv::each cannot hold a node that keeps run-time storage")
 lvgl26_compile_fail(mounted_detach_storage "keeps run-time storage inside its lv::mounted, so its widgets cannot")
 lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent, and this tree keeps run-time")
+lvgl26_compile_fail(pointer_polled_press "this pointer is polled: LVGL asks its function. Use lv::pointer mouse\\{display\\} to feed one")
+lvgl26_compile_fail(pointer_temporary_display "the pointer keeps a pointer to its display: declare the display first, then the pointer")
+lvgl26_compile_fail(pointer_capturing_lambda "a polled pointer takes a function lv::pointer_sample\\(\\): LVGL calls it at each read")
+lvgl26_compile_fail(pointer_queue_too_large "Capacity <= .*most_pointer_samples")
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
 lvgl26_compile_fail(each_plain_key "a key names one row")

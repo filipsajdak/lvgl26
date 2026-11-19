@@ -46,6 +46,13 @@ struct area {
   friend constexpr bool operator==(area, area) = default;
 };
 
+// A point of the screen, in pixels from its top left corner.
+struct point {
+  std::int32_t x = 0;
+  std::int32_t y = 0;
+  friend constexpr bool operator==(point, point) = default;
+};
+
 namespace detail {
 
 // The bytes of one line of `Width` pixels in the color format LVGL is built for.
