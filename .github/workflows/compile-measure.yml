@@ -1,0 +1,75 @@
+name: compile-measure
+
+# Throwaway, on a branch that is deleted afterwards: which measures of compile cost work on a
+# GitHub-hosted runner.
+on:
+  push:
+    branches: [tmp/compile-measure]
+
+jobs:
+  image:
+    uses: ./.github/workflows/image.yml
+    permissions:
+      contents: read
+      packages: write
+
+  vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The machine and the hardware counter, outside a container
+        run: |
+          uname -r; nproc; lscpu | grep -E "Model name|Hypervisor|Virtualization type"
+          cat /proc/sys/kernel/perf_event_paranoid
+          sudo apt-get update -qq && sudo apt-get install -y -qq linux-tools-common linux-tools-$(uname -r) 2>&1 | tail -2 || true
+          which perf || true
+          perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
+          sudo sysctl kernel.perf_event_paranoid=1 || true
+          perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
+          perf stat -e cycles:u,instructions:u -- true 2>&1 | tail -8 || true
+          echo '#include <ranges>
+          #include <algorithm>
+          #include <map>
+          int main(){}' > /tmp/t.cpp
+          for i in 1 2 3 4 5 6 7 8 9 10; do perf stat -e instructions:u -x, -- g++ -std=c++20 -fsyntax-only /tmp/t.cpp 2>&1 | grep instructions; done || true
+
+  container:
+    runs-on: ubuntu-latest
+    needs: image
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: --cap-add SYS_ADMIN --cap-add PERFMON --cap-add SYS_PTRACE --security-opt seccomp=unconfined
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tools
+        run: |
+          cat /proc/sys/kernel/perf_event_paranoid
+          apt-get update -qq && apt-get install -y -qq linux-perf valgrind qemu-user curl 2>&1 | tail -2
+          which perf valgrind qemu-x86_64 || true
+          find / -name 'libinsn*' 2>/dev/null | head -3 || true
+          perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
+      - name: DynamoRIO
+        continue-on-error: true
+        run: |
+          url=$(curl -s https://api.github.com/repos/DynamoRIO/dynamorio/releases/latest | grep browser_download_url | grep -E 'Linux-[0-9.]+\.tar\.gz' | head -1 | cut -d'"' -f4)
+          echo "$url"; curl -fsSL "$url" | tar -xz -C /opt; ls /opt | head
+          echo "DRRUN=$(ls -d /opt/DynamoRIO-*/bin64/drrun | head -1)" >> "$GITHUB_ENV"
+      - name: Configure
+        run: cmake --preset host-v96 > /dev/null && ls build/host-v96/compile_commands.json
+      - name: Measures on smoke.cpp
+        continue-on-error: true
+        run: |
+          cp tmp-measure/*.py tools/ 2>/dev/null; python3 tmp-measure/measure.py build/host-v96 tests/smoke.cpp 10 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Measures on large_tree.cpp, without the slow ones
+        continue-on-error: true
+        timeout-minutes: 120
+        run: |
+          python3 tmp-measure/measure.py build/host-v96 tests/large_tree.cpp 3 | tee -a "$GITHUB_STEP_SUMMARY"
