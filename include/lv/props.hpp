@@ -236,7 +236,7 @@ consteval std::vector<member_item> members(std::string_view widget) {
 consteval std::vector<std::meta::info> member_pairs(const std::vector<member_item>& items) {
   std::vector<std::meta::info> out;
   for (const auto& it : items) {
-    out.push_back(std::meta::data_member_spec(it.type, {.name = it.name}));
+    out.push_back(std::meta::data_member_spec(it.type, {.name = str(it.name)}));
     out.push_back(it.target);
   }
   return out;
