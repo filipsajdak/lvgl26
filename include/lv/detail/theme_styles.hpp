@@ -3,6 +3,7 @@
 // What lv::theme makes and lv::display takes. lv/theme.hpp builds it; this header is
 // all that a display needs to know.
 
+#include <lv/detail/style_add.hpp>
 #include <lvgl/lvgl.h>
 
 #include <cstddef>
@@ -20,11 +21,12 @@ struct theme_entry {
   const lv_style_t* style;  // null: the end of the theme
 };
 
-// LVGL calls this for every new widget.
+// LVGL calls this for every new widget, inside its creation, so a style without room in LVGL's
+// heap is left out rather than failing the widget: the next allocation of the mount fails it.
 inline void apply_theme(lv_theme_t* theme, lv_obj_t* o) {
   const lv_obj_class_t* widget = lv_obj_get_parent(o) != nullptr ? lv_obj_get_class(o) : nullptr;
   for (auto e = static_cast<const theme_entry*>(lv_theme_get_user_data(theme)); e->style != nullptr; ++e)
-    if (e->widget == widget) lv_obj_add_style(o, e->style, e->selector);
+    if (e->widget == widget) static_cast<void>(add_style(o, e->style, e->selector));
 }
 
 struct theme_access;
