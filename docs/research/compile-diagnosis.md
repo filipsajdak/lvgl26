@@ -131,8 +131,35 @@ The `host-v96` compile database has these translation units. The cost per file i
 | C files of LVGL | 563 | 0 | | | not measured |
 
 - A build of one preset is therefore about 30 T instructions of C++, before ccache.
-- The compile-fail tests run `${CMAKE_CXX_COMPILER}` from `add_test` (`tests/CMakeLists.txt`), so ccache never sees them. They cost about 6.6 T on every run of each LVGL version. `source`
+- The compile-fail tests run `${CMAKE_CXX_COMPILER}` from `add_test` (`tests/CMakeLists.txt`), so ccache never sees them, and it could not keep a failed compile anyway (see below). They cost about 6.6 T on every run of each LVGL version. `source`
 - The analyzer and the CI minutes are in [compile-time.md](compile-time.md). Its 16 port files took 657 s of CPU, 2224 s under the analyzer. They were not measured again.
+
+### The compile-fail tests in CI
+
+The six `compile-errors` jobs were timed over the last 10 green runs of main. `measured` 2026-11-19
+
+| What | Value |
+|---|---|
+| One job | 2.4 to 5.7 minutes, median 3.0 to 4.7 |
+| The six jobs together, median | 23.5 runner-minutes |
+| Their share of a pull request run (134.5 runner-minutes) | 19.5 % |
+| Start of the container in a job | about 23 s, a tenth of the job |
+
+The tests already compile with `-fsyntax-only`.
+
+A draft pull request ran the `host-v96` tests four ways, twice each. The second run had the cache of the first. `measured` 2026-11-19
+
+| Variant | Test steps, first run | Test steps, second run | Slowest job, both runs |
+|---|---|---|---|
+| 2 shards | 505 s | 484 s | 330 s |
+| 3 shards, as today | 495 s | 400 s | 239 s |
+| 6 shards | 380 s | 532 s | 126 s |
+| 3 shards, ccache in front of the compiler | 555 s | 348 s | 199 s |
+
+- ccache does not help. It called 101 of 105 compiles of a shard uncacheable, and its manual says a failed compile stores no result. `measured`, `source`
+- The number of shards does not change the sum. The same variant differs by a third between two runs, which is the spread of the runners.
+- More shards shorten the wait for the slowest job, and each one pays the start of a container again.
+- So nothing in the workflow is changed. What a test costs falls with the fixes below, by 12 % on average.
 
 ## Causes, ranked
 
