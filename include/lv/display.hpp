@@ -210,12 +210,7 @@ class display {
   void set_visible(bool now) {
     if (now == visible_) return;
     visible_ = now;
-    // Hidden: what was marked before is drawn now, then nothing new is marked, so LVGL
-    // draws nothing while hidden; a layout change still wakes the refresh, which finds
-    // nothing to draw. Shown: the whole screen is marked once.
-    if (!now) lv_refr_now(raw_);
-    lv_display_enable_invalidation(raw_, now);
-    if (now) lv_obj_invalidate(lv_display_get_screen_active(raw_));
+    draw_while(now);
     visible_watchers_.tell();
   }
 
@@ -225,6 +220,18 @@ class display {
 
  private:
   friend struct detail::display_access;
+
+  // How a hidden display stops drawing, and starts again when shown: the one place that
+  // chooses the method, so that a setting can select another later (hiding the screen
+  // object, docs/research/visibility.md). This one switches off marking. Hidden: what was
+  // marked before is drawn now, then nothing new is marked, so LVGL draws nothing; a layout
+  // change still wakes the refresh, which finds nothing to draw. Shown: the whole screen is
+  // marked once.
+  void draw_while(bool visible) {
+    if (!visible) lv_refr_now(raw_);
+    lv_display_enable_invalidation(raw_, visible);
+    if (visible) lv_obj_invalidate(lv_display_get_screen_active(raw_));
+  }
 
   template <class P>
   void adopt(P& panel) {

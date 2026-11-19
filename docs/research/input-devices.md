@@ -282,3 +282,14 @@ How it was built, and what was chosen where the decision left a choice, `measure
 - A hidden display draws what was marked before (`lv_refr_now`), then turns marking off (`lv_display_enable_invalidation`). Marking off alone was not enough: a layout change wakes the refresh, which then drew areas marked before the hide. While hidden the frame does not change; on show the whole screen is marked once. Of the visibility note's options this is "invalidation off", with one draw at the moment of hiding.
 - The visible state is observable without an allocation: a `detail::watch_list` in the display, told on each change, for the later pause of `lv::run` tasks.
 
+### The limits of the loop
+
+Decided 2026-11-19 by the owner, on the known limits of the `app.run()` pull request. Both are accepted as they are, and each stays open as a future improvement.
+
+| # | Decision | Open improvement, and what it would take |
+|---|---|---|
+| 12 | One source owns the wait between two steps: the first that joined and can wait. A second window's events are read at the next step, at most 10 ms late with the SDL adapter. Accepted. | A combined wait over all sources: each source gives what it waits on (a file descriptor, an SDL event queue, a semaphore), and the loop waits on all of them at once until the next step is due. |
+| 13 | The window's close decision is a function pointer, `window.on_close(&decide)`, returning `platform::close::quit`, `::ignore` or `::hide`. Left as it is for now. | A close request a task can await (`co_await` on the window), once the window becomes a type of `lv::` instead of example platform code. |
+
+How a hidden display stops drawing becomes a project setting, decided 2026-11-19 from the visibility note: the default switches off marking, what the `app.run()` pull request built; the other value hides the screen object (1.09 M against 15 M instructions a second on the probe, at the price of a redraw on hide and on show). The setting comes with the settings feature and the `lv::run` pull request; `display::draw_while` in `include/lv/display.hpp` is the one place that chooses the method.
+
