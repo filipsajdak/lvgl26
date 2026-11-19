@@ -12,6 +12,11 @@ on:
           good nightly run. The base of the nightly run does not move.
         required: false
         type: string
+      web_only:
+        description: Run only the experimental WebAssembly jobs (web-host, web, web-browser). A manual run opens no issue.
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
@@ -25,6 +30,7 @@ jobs:
   # The presets that the quick checks leave out, with every test that runs a program.
   # (A compile-fail test only compiles, so a sanitizer has nothing to check in it.)
   host:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     needs: image
     permissions:
@@ -63,6 +69,7 @@ jobs:
   # Half an hour of libFuzzer on the JSON reader. An input that crashes it is kept as
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,6 +96,7 @@ jobs:
   # The microcontroller check: the slice built for an Arm Cortex-M4 without exceptions
   # and run in QEMU. Its sizes go to the run's summary.
   image-arm:
+    if: ${{ !inputs.web_only }}
     uses: ./.github/workflows/image.yml
     with:
       name: ci-arm
@@ -259,6 +267,7 @@ jobs:
   # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
   # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
   mutation-plan:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -393,7 +402,7 @@ jobs:
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
     needs: [host, fuzz-json, arm, web-host, web, web-browser]
-    if: failure()
+    if: ${{ failure() && github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
