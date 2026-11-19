@@ -1,0 +1,84 @@
+{
+  "comment": "The probes of the nightly compile-cost run. One line adds a probe. kind compile: Valgrind's instruction total of one cc1plus on `file` (docs/research/compile-time.md, 'The nightly measure'). kind stack: bytes of stack of a function, read from the report of the Arm job. threshold_percent is the change in Ir that opens an issue; it is the default when a probe names none.",
+  "default_threshold_percent": 0.4,
+  "probes": [
+    {
+      "id": "include_lv",
+      "kind": "compile",
+      "file": "tools/probes/include_lv.cpp",
+      "stands_for": "every file of a user: the cost of including <lv/lv.hpp> and nothing else"
+    },
+    {
+      "id": "one_label",
+      "kind": "compile",
+      "file": "tools/probes/one_label.cpp",
+      "stands_for": "the first widget of a program: one label, mounted"
+    },
+    {
+      "id": "ten_kinds",
+      "kind": "compile",
+      "file": "tools/probes/ten_kinds.cpp",
+      "stands_for": "a screen with ten widget kinds: what each further kind costs"
+    },
+    {
+      "id": "large_tree",
+      "kind": "compile",
+      "file": "tests/large_tree.cpp",
+      "ops": true,
+      "stands_for": "a large screen: the cost per node of a big tree"
+    },
+    {
+      "id": "quick_start",
+      "kind": "compile",
+      "file": "examples/quick_start/main.cpp",
+      "stands_for": "the quick start of the documentation: a state, a tree, a display, a PNG"
+    },
+    {
+      "id": "signal",
+      "kind": "compile",
+      "file": "tests/signal.cpp",
+      "stands_for": "the Signal look: what <lv/signal.hpp> and its themes cost a file that uses them"
+    },
+    {
+      "id": "theme",
+      "kind": "compile",
+      "file": "tests/theme.cpp",
+      "stands_for": "a theme that styles every widget of a kind"
+    },
+    {
+      "id": "port_page",
+      "kind": "compile",
+      "file": "examples/ports/slint/printer/print_page.cpp",
+      "stands_for": "one page of a real port: the printer demo's print page"
+    },
+    {
+      "id": "visibility_visible",
+      "kind": "run",
+      "scenario": "visible",
+      "stands_for": "what 24 animated arcs cost a second when they are drawn",
+      "threshold_percent": 5
+    },
+    {
+      "id": "visibility_hidden",
+      "kind": "run",
+      "scenario": "hidden",
+      "stands_for": "what the same arcs cost a second when each has the hidden flag (about 0.14 percent of visible)",
+      "threshold_percent": 5
+    },
+    {
+      "id": "visibility_invalidation_off",
+      "kind": "run",
+      "scenario": "invalidation_off",
+      "stands_for": "what they cost a second when LVGL is told to mark nothing for redraw, as for a hidden window (about 3.4 percent of visible)",
+      "threshold_percent": 5
+    },
+    {
+      "id": "set_stack",
+      "kind": "stack",
+      "function": "set_value",
+      "unit": "bytes",
+      "stands_for": "the stack of one run-time set({...}) on a Cortex-M4 (the budget is in tools/stack_budget.py)",
+      "threshold_percent": 2
+    }
+  ]
+}
