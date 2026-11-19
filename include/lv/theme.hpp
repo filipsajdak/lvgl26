@@ -44,22 +44,28 @@ struct look_item {
   std::meta::info target;  // as in member_item
 };
 
+// The scans below are templates over D, the delay of the whole header: a call that depends on
+// nothing is run where the header is read, in every file, though no file names a theme
+// (14 G instructions in each, measured 2026-11-19).
+template <class D>
 consteval std::vector<look_item> look_items() {
   std::vector<look_item> items;
   for (const auto& slot : named_style_slots()) items.push_back({slot.name, slot.target});
   return items;
 }
 
+template <class D>
 consteval std::vector<std::meta::info> look_specs(std::meta::info style) {
   std::vector<std::meta::info> out;
-  for (const auto& item : look_items())
+  for (const auto& item : look_items<D>())
     out.push_back(std::meta::data_member_spec(style, {.name = str(item.name)}));
   return out;
 }
 
+template <class D>
 consteval std::vector<std::meta::info> look_targets() {
   std::vector<std::meta::info> out;
-  for (const auto& item : look_items()) out.push_back(item.target);
+  for (const auto& item : look_items<D>()) out.push_back(item.target);
   return out;
 }
 
@@ -67,7 +73,7 @@ consteval std::vector<std::meta::info> look_targets() {
 template <class D = void>
 struct look_of {
   struct type;
-  consteval { std::meta::define_aggregate(^^type, look_specs(^^style_t<D>)); }
+  consteval { std::meta::define_aggregate(^^type, look_specs<D>(^^style_t<D>)); }
 };
 
 template <class D = void>
@@ -75,7 +81,7 @@ inline constexpr auto look_members = std::define_static_array(
     std::meta::nonstatic_data_members_of(^^typename look_of<D>::type, std::meta::access_context::unchecked()));
 
 template <class D = void>
-inline constexpr std::span<const std::meta::info> look_selectors = std::define_static_array(look_targets());
+inline constexpr std::span<const std::meta::info> look_selectors = std::define_static_array(look_targets<D>());
 
 // "lv_arc_class" -> "arc"; empty when `variable` is not the class of a widget.
 consteval std::string_view widget_of_class(std::meta::info variable) {
@@ -100,6 +106,7 @@ consteval std::string theme_member(std::string_view widget) {
 
 // `screen` and a member for the class of each LVGL widget, in alphabetical order:
 // the order designated initializers must follow.
+template <class D>
 consteval std::vector<theme_item> theme_items() {
   std::vector<theme_item> items{{"screen", std::meta::info{}}};
   for (auto m : std::meta::members_of(^^::, std::meta::access_context::unchecked()))
@@ -112,14 +119,15 @@ consteval std::vector<theme_item> theme_items() {
 template <class D>
 consteval std::vector<std::meta::info> theme_specs() {
   std::vector<std::meta::info> out;
-  for (const auto& item : theme_items())
+  for (const auto& item : theme_items<D>())
     out.push_back(std::meta::data_member_spec(^^typename look_of<D>::type, {.name = item.name}));
   return out;
 }
 
+template <class D>
 consteval std::vector<std::meta::info> theme_widgets() {
   std::vector<std::meta::info> out;
-  for (const auto& item : theme_items()) out.push_back(item.widget);
+  for (const auto& item : theme_items<D>()) out.push_back(item.widget);
   return out;
 }
 
@@ -138,7 +146,7 @@ inline constexpr auto theme_members = std::define_static_array(
 
 // For each member of a theme: the class of its widgets, or null for `screen`.
 template <class D = void>
-inline constexpr std::span<const std::meta::info> theme_classes = std::define_static_array(theme_widgets());
+inline constexpr std::span<const std::meta::info> theme_classes = std::define_static_array(theme_widgets<D>());
 
 // The layers that lv::on added to a style of a theme, after the style itself.
 consteval void add_theme_layers(std::vector<theme_entry>& out, const lv_obj_class_t* widget,
