@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+args=()
+while [ $# -gt 0 ]; do if [ "$1" = -I ]; then shift 2; else args+=("$1"); shift; fi; done
+exec /work/gw/wabt-native/wat2wasm "${args[@]}"

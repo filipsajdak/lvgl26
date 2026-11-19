@@ -1,0 +1,12 @@
+{
+  "comment": "Pointer events of the scripted run: three clicks on +, a drag of the slider, a click on the switch. Positions are those of demo::ui at 480 x 360.",
+  "end": 1600,
+  "step": 16,
+  "events": [
+    [100, 293, 225, 1], [160, 293, 225, 0],
+    [300, 293, 225, 1], [360, 293, 225, 0],
+    [500, 293, 225, 1], [560, 293, 225, 0],
+    [700, 120, 305, 1], [740, 180, 305, 1], [780, 220, 305, 1], [820, 220, 305, 0],
+    [1000, 317, 304, 1], [1060, 317, 304, 0]
+  ]
+}
