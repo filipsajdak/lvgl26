@@ -1,24 +1,35 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>lvgl26 native WebAssembly</title>
-<style>body{font:14px sans-serif;margin:16px}canvas{border:1px solid #888;image-rendering:pixelated}</style>
-<h1>lvgl26 as native WebAssembly</h1>
-<canvas id="screen" width="320" height="240"></canvas>
-<p id="report">loading</p>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lvgl26 in the browser</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #222; }
+  canvas { display: block; border: 1px solid #888; touch-action: none; cursor: pointer; }
+  code { background: #eee; padding: 0 3px; }
+  #stats { font: 12px ui-monospace, monospace; margin-top: 8px; white-space: pre; }
+</style>
+<h1>lvgl26 in the browser</h1>
+<p>The unchanged lvgl26 program <code>examples/wasm/app.hpp</code>, compiled by GCC to WebAssembly and linked with LVGL v9.6.0.
+  This page calls <code>web_step</code> from <code>requestAnimationFrame</code> and passes the pointer in. Click the buttons, drag the slider.</p>
+<canvas id="screen"></canvas>
+<div id="stats">starting</div>
 <script type="module">
-// A minimal WASI Preview 1 host: the program writes its frame to standard output.
-const W = 320, H = 240;
-const out = [];
+// Set by tools/wasm/make-page.py for the self-contained page; that page needs no server.
+const EMBEDDED = null;       // base64 of the module
+const SCRIPT = null;         // examples/wasm/script.json, for the self test
+const EXPECTED_HASH = null;  // SHA-256 of the host build's last frame of that script
+
+const MIN_HOLD_MS = 50;      // a press lasts at least two samples of LVGL's input timer
+const bytes = EMBEDDED ? Uint8Array.from(atob(EMBEDDED), c => c.charCodeAt(0))
+                       : new Uint8Array(await (await fetch('demo.wasm')).arrayBuffer());
+
+// A minimal WASI Preview 1 host. The module reads no file and writes no stream.
 let memory;
 const view = () => new DataView(memory.buffer);
 const wasi = {
   fd_write(fd, iovs, count, written) {
     const dv = view(); let total = 0;
-    for (let i = 0; i < count; i++) {
-      const ptr = dv.getUint32(iovs + i * 8, true), len = dv.getUint32(iovs + i * 8 + 4, true);
-      if (fd === 1) out.push(new Uint8Array(memory.buffer, ptr, len).slice());
-      total += len;
-    }
+    for (let i = 0; i < count; i++) total += dv.getUint32(iovs + i * 8 + 4, true);
     dv.setUint32(written, total, true); return 0;
   },
   proc_exit(code) { throw new Error('exit ' + code); },
@@ -31,24 +42,117 @@ const wasi = {
   fd_close() { return 0; }, fd_seek() { return 70; }, fd_fdstat_get() { return 8; },
   fd_prestat_get() { return 8; }, fd_prestat_dir_name() { return 8; },
 };
+
 const t0 = performance.now();
-const { instance } = await WebAssembly.instantiateStreaming(fetch('frame.wasm'), { wasi_snapshot_preview1: wasi });
-memory = instance.exports.memory;
-try { instance.exports._start(); } catch (e) { if (!String(e).includes('exit 0')) throw e; }
-const t1 = performance.now();
-const bytes = new Uint8Array(out.reduce((n, c) => n + c.length, 0));
-let at = 0; for (const c of out) { bytes.set(c, at); at += c.length; }
-const image = new ImageData(W, H);
-for (let i = 0; i < W * H; i++) {
-  const v = bytes[i * 2] | (bytes[i * 2 + 1] << 8);   // RGB565, little endian
-  image.data[i * 4] = ((v >> 11) & 31) * 255 / 31;
-  image.data[i * 4 + 1] = ((v >> 5) & 63) * 255 / 63;
-  image.data[i * 4 + 2] = (v & 31) * 255 / 31;
-  image.data[i * 4 + 3] = 255;
+const { instance } = await WebAssembly.instantiate(bytes, { wasi_snapshot_preview1: wasi });
+const x = instance.exports;
+memory = x.memory;
+x._initialize();
+x.web_init();
+const startMs = performance.now() - t0;
+
+const W = x.web_width(), H = x.web_height(), STRIDE = x.web_stride();
+const canvas = document.getElementById('screen');
+canvas.width = W; canvas.height = H;
+canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+const ctx = canvas.getContext('2d');
+
+// The module's frame is XRGB8888: bytes B, G, R, X. ImageData wants R, G, B, A.
+function draw(rx, ry, rw, rh) {
+  rx = Math.max(0, rx); ry = Math.max(0, ry);
+  rw = Math.min(W - rx, rw); rh = Math.min(H - ry, rh);
+  if (rw <= 0 || rh <= 0) return;
+  const frame = new Uint32Array(memory.buffer, x.web_frame(), (STRIDE / 4) * H);
+  const image = new ImageData(rw, rh);
+  const out = new Uint32Array(image.data.buffer);
+  for (let row = 0; row < rh; row++) {
+    const from = (ry + row) * (STRIDE / 4) + rx, to = row * rw;
+    for (let i = 0; i < rw; i++) {
+      const v = frame[from + i];
+      out[to + i] = 0xff000000 | ((v & 0xff) << 16) | (v & 0xff00) | ((v >> 16) & 0xff);
+    }
+  }
+  ctx.putImageData(image, rx, ry);
 }
-document.getElementById('screen').getContext('2d').putImageData(image, 0, 0);
-const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
-document.getElementById('report').textContent =
-  `frame ${bytes.length} bytes, sha256 ${digest}, instantiate+run ${(t1 - t0).toFixed(1)} ms`;
-document.title = 'done ' + digest;
+let lastRect = null;
+function drawChanged() {
+  if (!x.web_take_dirty()) return false;
+  lastRect = [x.web_dirty(0), x.web_dirty(1), x.web_dirty(2), x.web_dirty(3)];
+  draw(...lastRect);
+  return true;
+}
+
+// The pointer. A release that comes sooner than MIN_HOLD_MS after the press waits for it.
+const pointer = { x: 0, y: 0, down: false, pressedAt: 0, releaseAt: -1 };
+function position(e) {
+  const r = canvas.getBoundingClientRect();
+  pointer.x = Math.round((e.clientX - r.left) * W / r.width);
+  pointer.y = Math.round((e.clientY - r.top) * H / r.height);
+}
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId); position(e);
+  pointer.down = true; pointer.pressedAt = performance.now(); pointer.releaseAt = -1;
+  stats.pressAt = pointer.pressedAt; stats.waitingForFrame = true;
+});
+canvas.addEventListener('pointermove', e => { if (pointer.down) position(e); });
+const release = e => {
+  if (!pointer.down) return;
+  position(e);
+  pointer.releaseAt = Math.max(performance.now(), pointer.pressedAt + MIN_HOLD_MS);
+};
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+
+// The loop. The time LVGL sees is the page's clock; one step per animation frame.
+const stats = { frames: 0, drawn: 0, stepMs: 0, window: [], latency: null, latencies: [], pressAt: 0, waitingForFrame: false };
+const report = document.getElementById('stats');
+function frame(now) {
+  const ms = Math.round(now - t0);
+  if (pointer.releaseAt >= 0 && now >= pointer.releaseAt) { pointer.down = false; pointer.releaseAt = -1; }
+  const s0 = performance.now();
+  x.web_step(ms, pointer.x, pointer.y, pointer.down ? 1 : 0);
+  const drew = drawChanged();
+  const s1 = performance.now();
+  stats.frames++; stats.stepMs += s1 - s0;
+  if (drew) {
+    stats.drawn++;
+    // The first changed frame that covers the pointer answers the press.
+    const [rx, ry, rw, rh] = lastRect;
+    if (stats.waitingForFrame && pointer.x >= rx && pointer.x < rx + rw && pointer.y >= ry && pointer.y < ry + rh) {
+      stats.latency = s1 - stats.pressAt; stats.latencies.push(stats.latency); stats.waitingForFrame = false;
+    }
+  }
+  stats.window.push(now); while (stats.window.length > 1 && now - stats.window[0] > 1000) stats.window.shift();
+  requestAnimationFrame(frame);
+}
+const timer = setInterval(() => {
+  const w = stats.window, fps = w.length > 1 ? (w.length - 1) * 1000 / (w[w.length - 1] - w[0]) : 0;
+  report.textContent =
+    `module ${(bytes.length / 1024).toFixed(0)} KiB, started in ${startMs.toFixed(0)} ms, LVGL heap ${(x.web_heap_used() / 1024).toFixed(1)} KiB, wasm memory ${(memory.buffer.byteLength / 1048576).toFixed(0)} MiB\n` +
+    `${fps.toFixed(0)} frames/s, step+draw ${(stats.stepMs / Math.max(1, stats.frames)).toFixed(2)} ms on average, ${stats.drawn} frames drawn\n` +
+    `press to the first changed frame at the pointer: ${stats.latency === null ? '-' : stats.latency.toFixed(1) + ' ms'} (mean of ${stats.latencies.length}: ${(stats.latencies.reduce((a, b) => a + b, 0) / Math.max(1, stats.latencies.length)).toFixed(1)} ms)`;
+}, 500);
+
+// A test hook for scripted runs.
+window.demo = { x, pointer, stats, draw: () => draw(0, 0, W, H) };
+
+async function selfTest() {
+  clearInterval(timer);
+  // Replays the script on a fresh instance would need a second module; the page instead
+  // checks the module it has, before the first live frame, by replaying the script on it.
+  const out = [];
+  let at = 0, px = 0, py = 0, down = 0;
+  for (let t = 0; t <= SCRIPT.end; t += SCRIPT.step) {
+    while (at < SCRIPT.events.length && SCRIPT.events[at][0] <= t) [, px, py, down] = SCRIPT.events[at++];
+    x.web_step(t, px, py, down);
+  }
+  const copy = new Uint8Array(memory.buffer, x.web_frame(), STRIDE * H).slice();
+  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', copy))].map(b => b.toString(16).padStart(2, '0')).join('');
+  draw(0, 0, W, H);
+  report.textContent = `self test: ${digest === EXPECTED_HASH ? 'OK, equal to the host build' : 'FAILED'}\n${digest}`;
+  document.title = (digest === EXPECTED_HASH ? 'ok ' : 'FAILED ') + digest;
+}
+
+if (SCRIPT && location.hash === '#selftest') selfTest();
+else { drawChanged() || draw(0, 0, W, H); requestAnimationFrame(frame); }
 </script>
