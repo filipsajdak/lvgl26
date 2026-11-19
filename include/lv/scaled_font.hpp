@@ -114,9 +114,14 @@ class scaled_font {
       if (font_ == nullptr) font_ = [:detail::tiny_ttf_create<D>:](file_.data(), file_.size(), px_);
     }
     if constexpr (detail::tiny_ttf_destroy<D> != std::meta::info{}) {
-      destroy_ = [](lv_font_t* font) { [:detail::tiny_ttf_destroy<D>:](font); };
+      destroy_ = &destroy_with<D>;
     }
     return font_;
+  }
+
+  template <class D>
+  static void destroy_with(lv_font_t* font) {
+    [:detail::tiny_ttf_destroy<D>:](font);
   }
 
   template <class D>
