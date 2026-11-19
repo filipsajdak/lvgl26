@@ -32,6 +32,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
 | [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |
 | [dtcg.md](dtcg.md) | The Design Tokens Format 2025.10 against its draft of 2026-09-08, whether a percentage exists, what design tools read, `$extends` and variants, the resolver and colour modules, what our token files and reader do outside the standard, and a plan. |
+| [input-devices.md](input-devices.md) | Input devices as objects of `lv::`: what LVGL reads and when, why a short press is missed and how a queue keeps it, pointer first, then keypad, encoder and focus, and an SDL window. Measured on both LVGL versions, decisions for the owner. |
 
 ## How each claim is marked
 
