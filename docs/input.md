@@ -15,9 +15,8 @@ int main() {
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
   lv::pointer mouse{display};               // the window's mouse feeds it
 
-  auto root = lv::mount<demo::ui>(display.screen());
-  if (!root) return 2;
-  lv::spawn(demo::tick());
+  app::running application{display.screen()};
+  if (!application.ok()) return 2;
   while (window.feed(mouse)) window.wait(app.step());
   return 0;
 }
@@ -40,26 +39,13 @@ A lambda without captures works as well. A lambda that captures is a compile err
 
 ## One application, three platforms
 
-The application of `examples/window/app.hpp` knows no platform: a tree, states, handlers and a task.
+The applications of `examples/wasm` (`counter/app.hpp`, `bounce/app.hpp`) know no platform: a tree, states, handlers and a task, and the three things a platform needs, `app::width`, `app::height` and `app::running`. Each platform gives them an `lv::display` and an `lv::pointer`:
 
-<!-- snippet: examples/window/app.hpp ui -->
-```cpp
-inline constexpr auto ui = lv::column(
-    {.flex_align = {"center", "center", "center"}, .size = {width * px, height * px}})[
-    lv::label({.text = "lvgl26 in a window"}),
-    lv::arc({.range = {0, most_of_dial}, .size = {130 * px, 130 * px}, .value = lv::bind(dial)})[
-        lv::label({.align = "center", .text = lv::bind(dial, "{}")})],
-    lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-        lv::button({.id = "fewer", .on_clicked = &fewer})[lv::label({.text = "-"})],
-        lv::label({.text = lv::bind(clicks, "{} clicks")}),
-        lv::button({.id = "more", .on_clicked = &more})[lv::label({.text = "+"})]],
-    lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-        lv::slider({.id = "volume", .range = {0, most_of_dial}, .size = {200 * px, 12 * px}, .value = lv::bind(volume)}),
-        lv::toggle({.checked = lv::bind(lamp)}),
-        lv::label({.text = lv::bind(ticks, "{} ticks")})]];
-```
+- The browser page: `examples/wasm/platform.cpp` feeds the pointer with what the page reports in each step, a press, a move or a release.
+- The desktop window: `examples/window/main.cpp`, shown above, through `examples/platform/sdl_window.hpp`, a window that shows the frame and a mouse that feeds the pointer. It is the one file that names SDL.
+- A test: `tests/window_app.cpp` gives the counter a frame and a pointer fed from a script, and checks the clicks and the slider.
 
-The desktop window of `examples/window/main.cpp` gives it an `lv::display` that shows the frame in an SDL window, and an `lv::pointer` fed by the window's mouse. `examples/platform/sdl_window.hpp` is that adapter: it names SDL, and the application does not. The test `window_app` gives the same application a frame and a pointer fed from a script, and a device gives it its panel and its touch controller. LVGL's own SDL driver is not used.
+LVGL's own SDL driver is not used, and no platform calls LVGL's input functions.
 
 ## The rules
 
