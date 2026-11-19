@@ -632,10 +632,10 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <figcaption>media/bounce.gif, 320 x 480, 6 seconds.</figcaption>
       </figure>
       <div class="prose">
-        <span class="tag">A demo in development</span>
+        <span class="tag">Example</span>
         <h2>Motion, written as a coroutine.</h2>
         <p class="mt-s">A ball bounces with gravity, squashes and stretches, and casts a blurred shadow. The screen is a compile-time tree with design tokens. The motion is a task that awaits one animation after another.</p>
-        <p>The demo program itself is on a development branch. What it uses is on <code>main</code>: the tree, the tokens, the tasks and the easing curves of <code>lv::animate</code>. The <a href="status.html">status page</a> lists what works today.</p>
+        <p>The scene is <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/bounce/scene.hpp"><code>examples/bounce/scene.hpp</code></a>: the tree, the tokens, the tasks and the easing curves of <code>lv::animate</code>, with no platform in it. <code>window.cpp</code> beside it opens a window, and a test steps its clock and checks the motion and the pictures at fixed times. The <a href="status.html">status page</a> lists what works today.</p>
       </div>
     </div>
   </div>
