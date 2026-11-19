@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+I=/work/gw2/libstdcxx/install/include/c++/17.0.0
+exec /work/gw2/gcc-native/gcc/xgcc -B/work/gw2/libstdcxx/driver/ -B/work/gw2/gcc-native/gcc/ -specs=/work/gw2/libstdcxx/driver/runtime.specs --sysroot=/work/wasi-sdk-33.0-arm64-linux/share/wasi-sysroot -D__GCC_WASI_SINGLE_THREAD__=1 -nostdinc++ -isystem $I -isystem $I/wasm32-wasi -isystem /work/gw2/libstdcxx/target-headers/include/wasm32-wasi -isystem /work/wasi-sdk-33.0-arm64-linux/share/wasi-sysroot/include/wasm32-wasi -isystem /work/gw2/libstdcxx/driver/include -L/work/gw2/libstdcxx/install/lib "$@"

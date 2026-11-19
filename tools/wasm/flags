@@ -1,0 +1,1 @@
+-std=c++26 -freflection -fno-exceptions -fno-rtti -Wno-missing-field-initializers -DLV_CONF_SKIP=1 -DLV_USE_SNAPSHOT=1 -I/work/lvgl26/include -isystem /work/lvgl-src -isystem /work/lvgl-src/include --embed-dir=/work/lvgl-src --embed-dir=/work/lvgl-src/include
