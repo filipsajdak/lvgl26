@@ -4,7 +4,7 @@
 //
 //   constinit lv::one_of<home, settings> window;
 //   window.mount<settings>(display.screen());
-//   window.visit([](lv::mounted<home>&) {}, [](auto&) {});
+//   window.visit([](lv::held<home> page) {}, [](auto) {});
 //
 // The editor does not check that a tree is one of the slot's, nor that every tree has an
 // arm; GCC does.
@@ -19,6 +19,21 @@ namespace lv {
 
 /// The arm of visit for a slot that holds no tree: [](lv::not_mounted) { ... }.
 struct not_mounted {};
+
+/// A handle to the tree Tree in an lv::one_of: what an arm of visit gets. It never owns; each use checks that the slot holds Tree.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+class held {
+ public:
+  /// A handle to no slot: false.
+  constexpr held() = default;
+  /// Whether the slot holds Tree now.
+  bool has_value() const noexcept { __builtin_unreachable(); }
+  explicit operator bool() const noexcept { __builtin_unreachable(); }
+  /// The tree, which the slot must hold now.
+  mounted<Tree>* operator->() const { __builtin_unreachable(); }
+  mounted<Tree>& operator*() const { __builtin_unreachable(); }
+};
 
 namespace stub {
 
@@ -35,6 +50,14 @@ struct first_result<A, X, Rest...> {
 
 template <class R, bool Empty>
 using visit_out = std::conditional_t<Empty || std::is_void_v<R>, R, std::optional<R>>;
+
+// A type that only a generic arm takes: an arm for the empty slot takes lv::not_mounted
+// and not this.
+struct any_probe {};
+
+template <class A>
+inline constexpr bool empty_arm = std::is_invocable_v<A&, not_mounted> && !std::is_invocable_v<A&, any_probe>;
+
 
 }  // namespace stub
 
@@ -70,14 +93,15 @@ class one_of {
     requires tree_node<decltype(T)>
   mounted<T>& get() { __builtin_unreachable(); }
 
-  /// Calls the arm whose parameter names the tree that is mounted: lv::mounted<home>&,
-  /// auto& for every other tree, lv::not_mounted for the empty slot. The result is the common
-  /// type of the arms' results, in a std::optional without the arm for the empty slot.
+  /// Calls the arm whose parameter names the tree that is mounted, with a handle:
+  /// lv::held<home>, auto for every other tree, lv::not_mounted for the empty slot. The
+  /// result is the common type of the arms' results; in a std::optional without the arm for
+  /// the empty slot.
   template <class... Arms>
   auto visit(Arms&&... arms)
-      -> stub::visit_out<std::common_type_t<typename stub::first_result<std::remove_cvref_t<Arms>, not_mounted,
-                                                                          mounted<Trees>&...>::type...>,
-                         (std::is_invocable_v<std::remove_cvref_t<Arms>&, not_mounted> || ...)> {
+      -> stub::visit_out<std::common_type_t<typename stub::first_result<
+                                                     std::remove_cvref_t<Arms>, held<Trees>..., not_mounted>::type...>,
+                         (stub::empty_arm<std::remove_cvref_t<Arms>> || ...)> {
     __builtin_unreachable();
   }
 };

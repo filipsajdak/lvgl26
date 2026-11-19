@@ -43,8 +43,8 @@ lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(one_of)
 # A wrong call on a slot ends the program: unmount() of an empty slot, get<T>() of a tree
-# that is not mounted, error() of a slot that holds one.
-foreach(case unmount_empty get_other error_of_mounted)
+# that is not mounted, a handle used after its arm switched the slot, error() of a full slot.
+foreach(case unmount_empty get_other held_after_remount error_of_mounted)
   add_test(NAME one_of_violation_${case}
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
@@ -360,6 +360,9 @@ lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent,
 lvgl26_compile_fail(one_of_unknown_tree "other is not a tree of this lv::one_of. Its trees: home, settings.")
 lvgl26_compile_fail(visit_no_arm_for_tree "no arm of visit takes the tree settings")
 lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*The slot's trees: home, settings.")
+lvgl26_compile_fail(visit_arm_takes_mounted "an arm of visit takes lv::held<home>, not lv::mounted<home>: write \\[\\]\\(lv::held<home> page\\)")
+lvgl26_compile_fail(visit_arm_takes_tree_by_value "an arm of visit takes lv::held<home>, not lv::mounted<home>")
+lvgl26_compile_fail(visit_arm_auto_reference "arm 2 of visit cannot take lv::held<settings>. Take the handle by value")
 lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
 lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
 lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")

@@ -7,8 +7,8 @@
 //
 //   constinit lv::one_of<home, settings> window;
 //   window.mount<settings>(display.screen());    // ends the tree that is there first
-//   window.visit([](lv::mounted<settings>& s) { s->get<"title">().set({.text = "Settings"}); },
-//                [](auto&) {});                  // every other tree
+//   window.visit([](lv::held<settings> s) { s->get<"title">().set({.text = "Settings"}); },
+//                [](auto) {});                   // every other tree
 //   window.unmount();
 //
 // It carries its own failure, as lv::mounted does: if (!window), window.has_value(),
@@ -32,6 +32,48 @@ namespace lv {
 
 // The arm of visit for a slot that holds no tree: [](lv::not_mounted) { ... }.
 struct not_mounted {};
+
+template <const auto&... Trees>
+  requires(tree_node<decltype(Trees)> && ...)
+class one_of;
+
+// A handle to the tree Tree in an lv::one_of: what an arm of visit gets. It is a small value that never owns, and may be copied and kept.
+// Every use checks that the slot holds Tree at that moment: page->get<"title">() and *page
+// break a precondition once the slot was unmounted or holds another tree, and hold again
+// when Tree is mounted again. if (page) and page.has_value() ask without breaking one.
+// A handle must not outlive its slot: a slot is a constinit global, or outlives its handles.
+template <const auto& Tree>
+  requires tree_node<decltype(Tree)>
+class held {
+  void* slot_ = nullptr;
+  mounted<Tree>* (*find_)(void* slot) = nullptr;  // the tree, if the slot holds it
+
+  template <const auto&... Trees>
+    requires(tree_node<decltype(Trees)> && ...)
+  friend class one_of;
+
+  constexpr held(void* slot, mounted<Tree>* (*find)(void*)) noexcept : slot_(slot), find_(find) {}
+
+ public:
+  // A handle to no slot: false.
+  constexpr held() = default;
+
+  // Whether the slot holds Tree now.
+  bool has_value() const noexcept { return find_ != nullptr && find_(slot_) != nullptr; }
+  explicit operator bool() const noexcept { return has_value(); }
+
+  // The tree, which the slot must hold now.
+  mounted<Tree>* operator->() const
+    pre(has_value())
+  {
+    return find_(slot_);
+  }
+  mounted<Tree>& operator*() const
+    pre(has_value())
+  {
+    return *find_(slot_);
+  }
+};
 
 namespace detail {
 
@@ -61,7 +103,7 @@ consteval std::size_t tree_index() {
 }
 
 // What an arm of visit takes, told by its parameter type. A number is the index of a tree.
-inline constexpr int arm_any = -1;    // auto&: every tree that no other arm names
+inline constexpr int arm_any = -1;    // auto: every tree that no other arm names
 inline constexpr int arm_empty = -2;  // lv::not_mounted: the slot holds no tree
 inline constexpr int arm_never = -3;  // anything else: it can never be called
 
@@ -101,15 +143,32 @@ consteval std::meta::info arm_signature() {
     return ^^void;
 }
 
-// The pattern of an arm whose one parameter is P.
+// Whether T is an lv::mounted, and of which tree.
+template <class T>
+struct mounted_tree {
+  static constexpr bool is = false;
+};
+template <const auto& T>
+  requires tree_node<decltype(T)>
+struct mounted_tree<mounted<T>> {
+  static constexpr bool is = true;
+  static consteval std::string name() { return tree_name<T>(); }
+};
+
+// The pattern of an arm whose one parameter is P. An arm takes a handle, never the tree.
 template <class P, const auto&... Trees>
 consteval int pattern_of() {
   using bare = std::remove_cvref_t<P>;
   if constexpr (std::same_as<bare, not_mounted>) {
     return arm_empty;
+  } else if constexpr (mounted_tree<bare>::is) {
+    const std::string name = mounted_tree<bare>::name();
+    fail("lv: an arm of visit takes lv::held<" + name + ">, not lv::mounted<" + name +
+         ">: write [](lv::held<" + name + "> page). The handle checks that the slot still holds " + name +
+         " each time it is used.");
   } else {
     int at = 0;
-    const bool found = ((std::same_as<bare, mounted<Trees>> || (++at, false)) || ...);
+    const bool found = ((std::same_as<bare, held<Trees>> || (++at, false)) || ...);
     return found ? at : arm_never;
   }
 }
@@ -153,8 +212,8 @@ consteval void every_arm_called(const visit_plan<Trees, Arms>& plan, std::string
     for (int chosen : plan.arm_of_tree) called = called || chosen == static_cast<int>(a);
     if (!called)
       fail("lv: arm " + decimal(a + 1) +
-           " of visit can never be called. An arm takes lv::mounted<tree>& for one tree of the "
-           "slot, auto& for every tree that no other arm names, or lv::not_mounted for the empty "
+           " of visit can never be called. An arm takes lv::held<tree> for one tree of the "
+           "slot, auto for every tree that no other arm names, or lv::not_mounted for the empty "
            "slot; each tree once. The slot's trees: " +
            str(trees) + ".");
   }
@@ -170,8 +229,8 @@ consteval visit_plan<Trees, Arms> plan_visit(const std::array<int, Arms>& patter
     const int named = first_arm(patterns, static_cast<int>(t));
     plan.arm_of_tree[t] = named >= 0 ? named : first_arm(patterns, arm_any);
     if (plan.arm_of_tree[t] < 0)
-      fail("lv: no arm of visit takes the tree " + str(names[t]) + ". Add an arm that takes lv::mounted<" +
-           str(names[t]) + ">&, or one that takes auto&.");
+      fail("lv: no arm of visit takes the tree " + str(names[t]) + ". Add an arm that takes lv::held<" +
+           str(names[t]) + ">, or one that takes auto.");
   }
   plan.empty_arm = first_arm(patterns, arm_empty);
   every_arm_called(plan, trees);
@@ -189,11 +248,25 @@ consteval std::meta::info common_of(std::meta::info a, std::meta::info b) {
   return std::meta::dealias(std::meta::substitute(^^std::common_type_t, {a, b}));
 }
 
+// What one arm returns.
+struct arm_result {
+  std::meta::info type;
+  std::size_t arm;
+};
+
 // What visit returns from the results of its arms: their common type, as std::visit allows.
-consteval std::meta::info one_result(const std::vector<std::meta::info>& results) {
-  std::meta::info common = results.front();
-  for (auto r : results) common = common_of(common, r);
+consteval std::meta::info one_result(const std::vector<arm_result>& results) {
+  std::meta::info common = results.front().type;
+  for (const arm_result& r : results) common = common_of(common, r.type);
   return common;
+}
+
+// Fails for an arm that cannot take the handle it was chosen for, such as auto&.
+template <class Arm, class Handle>
+consteval void takes_handle(std::size_t arm, std::string_view tree) {
+  if constexpr (!std::is_invocable_v<Arm&, Handle>)
+    fail("lv: arm " + decimal(arm + 1) + " of visit cannot take lv::held<" + str(tree) +
+         ">. Take the handle by value: [](auto page), or [](lv::held<" + str(tree) + "> page).");
 }
 
 // Fails for a tree that a slot lists twice, and names it.
@@ -243,15 +316,31 @@ class one_of {
     return e;
   }
 
+  // The tree number I, if the slot holds it: what a handle asks each time it is used.
+  template <std::size_t I>
+  static mounted<Trees...[I]>* find(void* self) noexcept {
+    auto& slot = *static_cast<one_of*>(self);
+    auto& tree = slot.region_.template get<I>();
+    return slot.region_.index() == I && tree.has_value() ? &tree : nullptr;
+  }
+
+  template <std::size_t I>
+  held<Trees...[I]> handle() noexcept {
+    return held<Trees...[I]>{this, &find<I>};
+  }
+
   template <auto Plan, class... Arms>
   static consteval std::meta::info result_of_arms() {
-    std::vector<std::meta::info> results;
+    std::vector<detail::arm_result> results;
     template for (constexpr auto t : detail::indices<count>) {
-      using arm = Arms...[static_cast<std::size_t>(Plan.arm_of_tree[t])];
-      results.push_back(^^std::invoke_result_t<arm&, mounted<Trees...[t]>&>);
+      constexpr auto a = static_cast<std::size_t>(Plan.arm_of_tree[t]);
+      detail::takes_handle<Arms...[a], held<Trees...[t]>>(a, names[t]);
+      results.push_back({^^std::invoke_result_t<Arms...[a]&, held<Trees...[t]>>, a});
     }
-    if constexpr (Plan.empty_arm >= 0)
-      results.push_back(^^std::invoke_result_t<Arms...[static_cast<std::size_t>(Plan.empty_arm)]&, not_mounted>);
+    if constexpr (Plan.empty_arm >= 0) {
+      constexpr auto a = static_cast<std::size_t>(Plan.empty_arm);
+      results.push_back({^^std::invoke_result_t<Arms...[a]&, not_mounted>, a});
+    }
     return detail::one_result(results);
   }
 
@@ -260,17 +349,26 @@ class one_of {
   template <auto Plan, class R>
   using visit_result = std::conditional_t<Plan.empty_arm >= 0 || std::is_void_v<R>, R, std::optional<R>>;
 
+  // Calls an arm; visit<void> discards what it returns.
+  template <class Out, class Arm, class X>
+  static Out call(Arm& arm, X x) {
+    if constexpr (std::is_void_v<Out>)
+      static_cast<void>(arm(x));
+    else
+      return arm(x);
+  }
+
   template <class Out, auto Plan, class... Arms>
   Out on_empty(Arms&... arms) {
     if constexpr (Plan.empty_arm >= 0)
-      return arms...[static_cast<std::size_t>(Plan.empty_arm)](not_mounted{});
+      return call<Out>(arms...[static_cast<std::size_t>(Plan.empty_arm)], not_mounted{});
     else if constexpr (!std::is_void_v<Out>)
       return std::nullopt;
   }
 
   template <class Out, auto Plan, std::size_t T, class... Arms>
   Out on_tree(Arms&... arms) {
-    return arms...[static_cast<std::size_t>(Plan.arm_of_tree[T])](region_.template get<T>());
+    return call<Out>(arms...[static_cast<std::size_t>(Plan.arm_of_tree[T])], handle<T>());
   }
 
  public:
@@ -323,10 +421,12 @@ class one_of {
     return region_.template get<detail::tree_index<T, Trees...>()>();
   }
 
-  // Calls the arm whose parameter names the tree that is mounted: lv::mounted<home>& for
-  // home, auto& for every tree no other arm names, lv::not_mounted for the empty slot.
-  // The result is the common type R of what the arms return, as std::visit allows. Without
-// the arm for the empty slot, an empty slot calls nothing, and the result is std::optional<R>.
+  // Calls the arm whose parameter names the tree that is mounted, with a handle to it:
+  // lv::held<home> for home, auto for every tree no other arm names, lv::not_mounted for the
+  // empty slot. The result is the common type R of what the arms return, as std::visit
+  // allows. Without the arm for the empty slot, an empty slot calls nothing, and the result
+  // is std::optional<R>.
+  // An arm may mount another tree into this slot: its handle then no longer holds.
   template <class... Arms>
   auto visit(Arms&&... arms) {
     static constexpr auto plan = detail::plan_visit<count, sizeof...(Arms)>(

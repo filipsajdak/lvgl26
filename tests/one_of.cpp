@@ -104,14 +104,14 @@ void to_settings() { static_cast<void>(window.mount<settings>(lv::screen_active(
 // What visit sees of an arm, by its parameter type.
 template <class A>
 constexpr int pattern = lv::detail::arm_pattern<A, home, settings, dialog>();
-void by_name(lv::mounted<dialog>&) {}
-constexpr auto by_const = [](const lv::mounted<settings>&) {};
-constexpr auto no_throw = [](lv::mounted<home>&) noexcept {};
-constexpr auto two = [](lv::mounted<home>&, int) {};
+void by_name(lv::held<dialog>) {}
+constexpr auto by_const = [](const lv::held<settings>&) {};
+constexpr auto no_throw = [](lv::held<home>) noexcept {};
+constexpr auto two = [](lv::held<home>, int) {};
 static_assert(pattern<decltype(by_name)> == 2 && pattern<decltype(&by_name)> == 2);
 static_assert(pattern<decltype(by_const)> == 1 && pattern<decltype(no_throw)> == 0);
-static_assert(pattern<decltype([n = 0](lv::mounted<dialog>&) mutable { ++n; })> == 2);
-static_assert(pattern<decltype([](auto&) {})> == lv::detail::arm_any);
+static_assert(pattern<decltype([n = 0](lv::held<dialog>) mutable { ++n; })> == 2);
+static_assert(pattern<decltype([](auto) {})> == lv::detail::arm_any);
 static_assert(pattern<decltype([](lv::not_mounted) {})> == lv::detail::arm_empty);
 static_assert(pattern<decltype(two)> == lv::detail::arm_never);
 static_assert(pattern<decltype([](int) {})> == lv::detail::arm_never);
@@ -173,6 +173,39 @@ void switches_without_heap(lv::obj screen) {
               with_settings.blocks - start.blocks, rounds);
 }
 
+// A handle kept after the visit holds while the slot holds its tree: false once the slot
+// changed, and true again when the same tree is mounted again. An arm may switch the slot.
+// A handle to home, taken in a visit.
+lv::held<home> handle_of_home() {
+  lv::held<home> kept{};
+  window.visit([&](lv::held<home> h) { kept = h; }, [](auto) {});
+  return kept;
+}
+
+// An arm that mounts settings into the slot it visits: allowed. Returns its own handle.
+lv::held<home> remount_in_arm(lv::obj screen) {
+  lv::held<home> kept{};
+  window.visit([&](lv::held<home> h) { static_cast<void>(window.mount<settings>(screen)); kept = h; },
+               [](auto) {});
+  return kept;
+}
+
+// After the slot changed, kept handles no longer hold; mounting home again, they do.
+void held_again(lv::obj screen, lv::held<home> kept, lv::held<home> in_arm) {
+  check(!kept && !in_arm && window.holds<settings>());
+  window.unmount();
+  check(!kept && !window.holds<settings>());
+  check(window.mount<home>(screen).has_value() && kept && in_arm);  // the same tree again
+  window.unmount();
+}
+
+void handles_follow_the_slot(lv::obj screen) {
+  check(!lv::held<home>{} && window.mount<home>(screen).has_value());
+  const lv::held<home> kept = handle_of_home();
+  check(kept.has_value() && kept->root() && (*kept).has_value());
+  held_again(screen, kept, remount_in_arm(screen));
+}
+
 // A click on a button of home switches the slot to settings, from inside home.
 void switches_from_inside(lv::obj screen) {
   lv_test_indev_create_all();
@@ -203,16 +236,16 @@ void fails_over_a_live_tree(lv::obj screen) {
 
 // The arms of visit, as an application writes them.
 int visits(slot_type& s) {
-  return s.visit([](lv::mounted<home>&) { return 1; }, [](lv::mounted<settings>&) { return 2; },
-                 [](auto&) { return 3; }, [](lv::not_mounted) { return 0; });
+  return s.visit([](lv::held<home>) { return 1; }, [](lv::held<settings>) { return 2; },
+                 [](auto) { return 3; }, [](lv::not_mounted) { return 0; });
 }
 
 std::optional<int> visits_without_empty(slot_type& s) {
-  return s.visit([](lv::mounted<home>& h) { return h.root() ? 10 : -1; }, [](auto&) { return 20; });
+  return s.visit([](lv::held<home> h) { return h->root() ? 10 : -1; }, [](auto) { return 20; });
 }
 
 int counted = 0;
-void count_dialog(lv::mounted<dialog>&) { ++counted; }
+void count_dialog(lv::held<dialog>) { ++counted; }
 
 void visit_calls_the_arm_of_the_tree(lv::obj screen) {
   check(visits(window) == 0 && !visits_without_empty(window).has_value());
@@ -220,18 +253,18 @@ void visit_calls_the_arm_of_the_tree(lv::obj screen) {
   check(window.mount<settings>(screen).has_value() && visits(window) == 2 && visits_without_empty(window) == 20);
   check(window.mount<dialog>(screen).has_value() && visits(window) == 3);
   // Arms that return nothing are skipped on an empty slot; a function is an arm too.
-  window.visit(&count_dialog, [](auto&) { counted += 100; });
+  window.visit(&count_dialog, [](auto) { counted += 100; });
   window.unmount();
-  window.visit(&count_dialog, [](auto&) { counted += 100; });
+  window.visit(&count_dialog, [](auto) { counted += 100; });
   check(counted == 1);
   static_assert(std::is_same_v<decltype(visits_without_empty(window)), std::optional<int>>);
   // An int arm and a double arm give their common type, double, as std::visit allows.
   check(window.mount<settings>(screen).has_value());
-  const auto common = window.visit([](lv::mounted<settings>&) { return 2; }, [](auto&) { return 0.5; });
+  const auto common = window.visit([](lv::held<settings>) { return 2; }, [](auto) { return 0.5; });
   static_assert(std::is_same_v<decltype(common), const std::optional<double>>);
   check(common == 2.0);
   window.unmount();
-  static_assert(std::is_void_v<decltype(window.visit(&count_dialog, [](auto&) {}))>);
+  static_assert(std::is_void_v<decltype(window.visit(&count_dialog, [](auto) {}))>);
 }
 
 // The heap runs out at every point of a mount: the slot is empty with the error, nothing
@@ -308,6 +341,16 @@ constexpr violation violations[] = {
        static_cast<void>(misused.mount<home>(screen));
        return misused.get<settings>().root() ? 1 : 0;
      }},
+    {"held_after_remount",
+     [](lv::obj screen) {
+       static_cast<void>(misused.mount<home>(screen));
+       return misused.visit([&](lv::held<home> h) {
+         static_cast<void>(misused.mount<settings>(screen));  // allowed: the slot changes
+         return h->root() ? 1 : 0;                            // the handle no longer holds
+       },
+                            [](auto) { return 0; })
+           .value_or(0);
+     }},
     {"error_of_mounted",
      [](lv::obj screen) {
        static_cast<void>(misused.mount<home>(screen));
@@ -339,6 +382,7 @@ int main(int argc, char** argv) {
   switches_without_heap(screen);
   visit_calls_the_arm_of_the_tree(screen);
   switches_from_inside(screen);
+  handles_follow_the_slot(screen);
   fails_over_a_live_tree(screen);
   out_of_memory_leaves_the_slot_empty(screen);
   check(window.mount<dialog>(screen).has_value());  // the global outlives LVGL

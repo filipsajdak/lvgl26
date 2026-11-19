@@ -394,13 +394,13 @@ int use_application() {
   if (!slot.mount<popup>(plain.screen())) return 11;
   if (!slot.has_value() || !slot || !slot.holds<popup>()) return 12;
   static_cast<void>(slot.get<popup>().root());
-  const std::optional<int> which = slot.visit([](lv::mounted<ui>&) { return 1; }, [](auto&) { return 2; });
-  const int or_empty = slot.visit([](auto&) { return 1; }, [](lv::not_mounted) { return 0; });
-  slot.visit([](lv::mounted<popup>&) {}, [](auto&) {});
-  static_assert(std::same_as<decltype(slot.visit([](auto&) { return 1; })), std::optional<int>>);
-  static_assert(std::same_as<decltype(slot.visit([](auto&) { return 1; }, [](lv::not_mounted) { return 0; })), int>);
-  static_assert(std::same_as<decltype(slot.visit([](auto&) {})), void>);
-  static_assert(std::same_as<decltype(slot.visit([](lv::mounted<ui>&) { return 1; }, [](auto&) { return 2.5; },
+  const std::optional<int> which = slot.visit([](lv::held<ui>) { return 1; }, [](auto) { return 2; });
+  const int or_empty = slot.visit([](auto) { return 1; }, [](lv::not_mounted) { return 0; });
+  slot.visit([](lv::held<popup>) {}, [](auto) {});
+  static_assert(std::same_as<decltype(slot.visit([](auto) { return 1; })), std::optional<int>>);
+  static_assert(std::same_as<decltype(slot.visit([](auto) { return 1; }, [](lv::not_mounted) { return 0; })), int>);
+  static_assert(std::same_as<decltype(slot.visit([](auto) {})), void>);
+  static_assert(std::same_as<decltype(slot.visit([](lv::held<ui>) { return 1; }, [](auto) { return 2.5; },
                                                  [](lv::not_mounted) { return 0; })),
                              double>);
   slot.unmount();
