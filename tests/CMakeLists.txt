@@ -42,6 +42,11 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+# The application's loop: sources, a window that feeds a pointer and closes, a hidden display.
+lvgl26_test(app_loop)
+add_test(NAME app_loop_violation_display_of_c_display
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:app_loop> -DCASE=display_of_c_display
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # The application of examples/window, fed by an lv::pointer as its window feeds it.
 lvgl26_test(window_app)
 # A polled pointer without a function ends the program.
@@ -379,6 +384,8 @@ lvgl26_compile_fail(visit_named_no_conversion "arm 2 of visit returns std::basic
 lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
 lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
 lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")
+lvgl26_compile_fail(loop_not_a_source "a source of the application's loop has a member function poll\\(\\)")
+lvgl26_compile_fail(loop_temporary_application "a source joins an application that outlives it: declare the application first, then the source")
 lvgl26_compile_fail(pointer_polled_press "this pointer is polled: LVGL asks its function. Use lv::pointer mouse\\{display\\} to feed one")
 lvgl26_compile_fail(pointer_temporary_display "the pointer keeps a pointer to its display: declare the display first, then the pointer")
 lvgl26_compile_fail(pointer_capturing_lambda "a polled pointer takes a function lv::pointer_sample\\(\\): LVGL calls it at each read")

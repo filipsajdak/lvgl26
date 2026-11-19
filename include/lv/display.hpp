@@ -22,9 +22,17 @@
 //
 // display.screen() is the screen that is shown: mount a tree on it. The display is
 // deleted when the object ends, so declare it after the application.
+//
+// Visible. A platform tells the display when its window is hidden, minimised, shown or
+// restored: display.set_visible(false). A display that is not visible draws nothing, and
+// draws its whole screen once when it is visible again. display.hide() and display.show()
+// ask the panel to hide or show itself when it can (a window); a panel that cannot, such
+// as a function, only changes the display's own state. lv::display_of(widget) is the
+// display a widget is on.
 
 #include <lv/application.hpp>
 #include <lv/detail/theme_styles.hpp>
+#include <lv/detail/watch.hpp>
 #include <lv/view.hpp>
 
 #include <lvgl/lvgl.h>
@@ -102,6 +110,27 @@ concept frame_panel = std::is_class_v<P> && std::invocable<P&, area>;
 template <class P>
 concept band_panel = std::is_class_v<P> && std::invocable<P&, area, std::span<const std::byte>>;
 
+class display;
+
+// A panel that can be told which display shows it, such as a window that reports when it
+// is hidden: the display calls attach(*this) when it is made and detach(*this) when it ends.
+template <class P>
+concept attached_panel = requires(P& p, display& d) {
+  p.attach(d);
+  p.detach(d);
+};
+
+// A panel that can hide and show itself, such as a window.
+template <class P>
+concept hideable_panel = requires(P& p) {
+  p.hide();
+  p.show();
+};
+
+namespace detail {
+struct display_access;
+}
+
 class display {
  public:
   template <std::int32_t W, std::int32_t H>
@@ -121,6 +150,7 @@ class display {
   display(application& app, frame<W, H>& memory, P& panel, theme_styles look = {}) : display(app, memory, look) {
     object_ = &panel;
     call_ = &frame_object<P>;
+    adopt(panel);
   }
 
   template <std::int32_t W, std::int32_t H, class P>
@@ -144,6 +174,7 @@ class display {
     use(look);
     object_ = &panel;
     call_ = &band_object<P>;
+    adopt(panel);
   }
 
   template <std::int32_t W, std::int32_t H, std::int32_t L, class P>
@@ -156,6 +187,8 @@ class display {
   display& operator=(const display&) = delete;
 
   ~display() {
+    if (detach_ != nullptr) detach_(object_, *this);
+    visible_watchers_.detach_all();
     lv_display_delete(raw_);
     if (theme_ != nullptr) lv_theme_delete(theme_);
   }
@@ -169,7 +202,42 @@ class display {
   // The LVGL display, for code that still calls the C API.
   lv_display_t* raw() const { return raw_; }
 
+  // Whether anyone can see the display. While it is not, LVGL draws nothing.
+  bool visible() const noexcept { return visible_; }
+
+  // What the platform says: its window was hidden or minimised (false), shown or restored
+  // (true). Becoming visible draws the whole screen once.
+  void set_visible(bool now) {
+    if (now == visible_) return;
+    visible_ = now;
+    // Hidden: what was marked before is drawn now, then nothing new is marked, so LVGL
+    // draws nothing while hidden; a layout change still wakes the refresh, which finds
+    // nothing to draw. Shown: the whole screen is marked once.
+    if (!now) lv_refr_now(raw_);
+    lv_display_enable_invalidation(raw_, now);
+    if (now) lv_obj_invalidate(lv_display_get_screen_active(raw_));
+    visible_watchers_.tell();
+  }
+
+  // Asks the panel to hide or show itself. A panel that cannot only changes visible().
+  void hide() { hide_ != nullptr ? hide_(object_) : set_visible(false); }
+  void show() { show_ != nullptr ? show_(object_) : set_visible(true); }
+
  private:
+  friend struct detail::display_access;
+
+  template <class P>
+  void adopt(P& panel) {
+    if constexpr (hideable_panel<P>) {
+      hide_ = &hide_panel<P>;
+      show_ = &show_panel<P>;
+    }
+    if constexpr (attached_panel<P>) {
+      detach_ = &detach_panel<P>;
+      panel.attach(*this);
+    }
+  }
+
   display(std::int32_t width, std::int32_t height, std::span<std::byte> memory, lv_display_render_mode_t mode)
       : raw_(lv_display_create(width, height)) {
     contract_assert(raw_ != nullptr);  // LVGL's heap is too small for a display
@@ -180,6 +248,18 @@ class display {
 
   // How the display reaches each kind of panel. They are functions, not lambdas: GCC's
   // analyzer reports a null `this` in the function a lambda converts to.
+  template <class P>
+  static void hide_panel(void* p) {
+    static_cast<P*>(p)->hide();
+  }
+  template <class P>
+  static void show_panel(void* p) {
+    static_cast<P*>(p)->show();
+  }
+  template <class P>
+  static void detach_panel(void* p, display& d) {
+    static_cast<P*>(p)->detach(d);
+  }
   static void frame_function(const display& self, area where, std::span<const std::byte>) {
     reinterpret_cast<void (*)(area)>(self.function_)(where);
   }
@@ -233,6 +313,33 @@ class display {
   void* object_ = nullptr;
   void (*function_)() = nullptr;
   void (*call_)(const display&, area, std::span<const std::byte>) = nullptr;
+  void (*hide_)(void*) = nullptr;
+  void (*show_)(void*) = nullptr;
+  void (*detach_)(void*, display&) = nullptr;
+  bool visible_ = true;
+  detail::watch_list visible_watchers_;  // told when visible() changes; nothing is allocated
 };
+
+namespace detail {
+
+// What lvgl26 itself follows of a display, such as a task that pauses while it is hidden.
+struct display_access {
+  static watch_list& visible_watchers(display& d) noexcept { return d.visible_watchers_; }
+};
+
+// The lvgl26 display that `raw` belongs to, or null for a display made through the C API.
+inline display* display_of_raw(lv_display_t* raw) noexcept {
+  return raw == nullptr ? nullptr : static_cast<display*>(lv_display_get_driver_data(raw));
+}
+
+}  // namespace detail
+
+// The display a widget is on. The widget must be on a display made as an lv::display.
+inline display& display_of(obj widget)
+  pre(widget.raw() != nullptr)
+  pre(detail::display_of_raw(lv_obj_get_display(widget.raw())) != nullptr)
+{
+  return *detail::display_of_raw(lv_obj_get_display(widget.raw()));
+}
 
 }  // namespace lv
