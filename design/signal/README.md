@@ -21,6 +21,7 @@ Signal is the look of one family of eight devices. They are a thermostat, a smar
 - Draw tracks, separators and the normal band of a gauge in `line`. `line` is decoration: a control without a fill gets a `line-strong` border.
 - Fill the primary action and the selected mode with `active` and set their text in `on-active`.
 - Do not use `active` for a state of the machine, the vehicle or the patient. States use the alarm colours below.
+- `lamp-green` and `lamp-blue` are for a tell-tale lamp that the law defines as green or blue (direction indicators, lights on, main beam). They are never a value, a state or a control, so the rule that normal has no colour stands.
 
 ## Alarms and states
 
