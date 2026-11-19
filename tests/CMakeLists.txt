@@ -896,6 +896,9 @@ if(Python3_FOUND)
                    --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE})
   add_test(NAME look_groups_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_look_groups.py)
   add_test(NAME stack_budget_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_stack_budget.py)
+  # No header does compile-time work where it is read (CLAUDE.md, the two rules on namespace scope).
+  add_test(NAME eager_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_eager.py)
+  add_test(NAME eager_check_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_eager.py)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
