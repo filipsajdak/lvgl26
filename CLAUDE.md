@@ -99,6 +99,8 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - Code that runs in the compiler is written for its interpreter: look codes up in tables, give a
   buffer its size once and write through pointers, avoid a call for each byte
   (`include/lv/detail/png_reader.hpp` needs an eighth of the work of its first form).
+- In constant evaluation GCC 16.2 charges about 0.7 M instructions for the first `std::meta::identifier_of` of a declaration and about 0.37 M for each `string_view::starts_with`. A scan of the global namespace asks the line first (`detail::declared_in_a_file`: GCC's builtins, half of the functions there, are at line 0 or 1), and a loop over names tests a prefix with `detail::has_prefix` (`include/lv/detail/api.hpp`). `tests/api_table.cpp` checks that the line filter loses no `lv_` function.
+- Names are sorted with `detail::sort_by_name`, a stable merge sort of indices: the cost is the comparisons, and an insertion sort did n * n / 4 of them. Two tables made from one scan read one static table (`theme_table` in `theme.hpp`, `member_table` in `props.hpp`), never the scan function twice.
 - A large result of constant evaluation is stored with `std::define_static_array`: returning a
   `std::array` of 200 KB costs several times the decoding. Its data becomes part of a symbol name,
   and Apple's linker refuses a very long one, so sizes are limited (`compile_time_image_pixels`).
