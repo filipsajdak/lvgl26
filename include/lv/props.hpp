@@ -891,15 +891,6 @@ constexpr kept<W, D> keep(const lazy_props<W, D>& p) {
   return out;
 }
 
-// Applies every set member of `p`, read at run time.
-template <fixed W>
-void apply_props(lv_obj_t* o, const props<W>& p) {
-  template for (constexpr auto i : indices<members_of_props<W>.size()>) {
-    constexpr auto m = members_of_props<W>[i];
-    if (is_set(p.[:m:])) apply_member<W, i>(o, p.[:m:]);
-  }
-}
-
 // ---- the properties of a run-time set ----------------------------------------
 
 // A style given to view.set(): it points at a style that lives until the end of the call, which
