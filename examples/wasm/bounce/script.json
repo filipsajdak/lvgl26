@@ -1,0 +1,6 @@
+{
+  "comment": "No pointer input. The clock steps by 16 ms for 8 s, the frame is captured at fourteen times spread over the first fall, the bounces that follow, and the rest.",
+  "end": 8000,
+  "step": 16,
+  "capture": [304, 608, 912, 1216, 1520, 1824, 2128, 2432, 2736, 3040, 3600, 4496, 6000, 8000]
+}

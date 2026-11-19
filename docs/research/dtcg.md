@@ -487,3 +487,33 @@ Written 2026-11-19 while building `tools/dtcg_fix.py`.
   `hex` first in the colour object saved 0.25 G, and a text search for `"alpha"` instead of a key lookup 0.28 G. What remains is about 0.9% against main (84.2 G against 83.4 G).
 - **No help.** A bracket-counting skip in `json.hpp` for text that `parse` has accepted, a root object parsed once per document, one walk that finds `$value` and `$type` together, and a one-pass reader for `{"value", "unit"}` each cost the same or more. `measured`
 - **The check for older forms** costs nothing measurable: the same file with the check removed costs the same.
+
+## Open: the cost of a token, and where a saving would come from
+
+Written 2026-11-19, after the object forms were merged.
+Status: open. The owner chose to note it and skip it for now.
+
+Instructions retired, minimum of three runs, `tools/compile_report.py`.
+The probe is a file that only embeds Signal's `day.json` (29 tokens) and reads one token, compared with a file that only includes `<lv/lv.hpp>`.
+
+| What | Cost | Mark |
+|---|---|---|
+| The file with 29 tokens | +3.3 G over a file with no tokens | `measured` |
+| The same file with the string forms | +2.4 G | `measured` |
+| One token, 15 tokens, 29 tokens | +0.29 G, +1.40 G, +3.3 G: about 80 M for each token | `measured` |
+| Building the struct (member specs, `define_aggregate`, the group types), no values read | 3.0 G of the 3.3 G | `measured` |
+| Reading the values (the fill pass) | about 0.3 G | `measured` |
+
+What was tried to cut it, and what it bought:
+
+- **Lazy reading of values.** Reading 1 token of 29 instead of all saved 0.12 G, under 4% of the cost of the tokens. On `tests/signal.cpp`, skipping the 14 tokens its sources do not name saved nothing measurable. On the slint printer the sources name 60 of 62 tokens.
+- **Parsing the root object once** for the document, with a variable template: no change.
+- **Removing the check for two tokens with one name** in a group: under 0.06 G.
+- **A minified token file, a bracket-counting skip, a reader that finds `$value` and `$type` in one walk, a text search for the members of a length:** the same or more.
+
+The conclusion: reading values lazily cannot buy much, because the work is in making one struct member for each token, which a typo's compile error needs.
+A real saving needs the type pass cheaper for each token, or fewer members built.
+
+The step that was not taken: a profile of the type pass with a GCC plugin on `PLUGIN_FINISH_DECL`, as in [compile-time.md](compile-time.md), to see which of the member specs, `define_aggregate` and the group instantiations dominates.
+
+Come back to it for a project with several hundred tokens: at 80 M each, 500 tokens cost about 40 G, over a third of `tests/large_tree.cpp`.

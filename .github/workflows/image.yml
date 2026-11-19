@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       name:
-        description: "Which image: ci (the build tools), ci-arm (the microcontroller toolchain) or ci-editor (the build tools and Clang)."
+        description: "Which image: ci (the build tools), ci-arm (the microcontroller toolchain), ci-wasm (GCC trunk with a WebAssembly back end) or ci-editor (the build tools and Clang)."
         type: string
         default: ci
     outputs:
@@ -31,6 +31,10 @@ jobs:
           if [ "${{ inputs.name }}" = "ci-arm" ]; then
             dockerfile=.github/ci-image/arm/Dockerfile
             tag="$(cat "$dockerfile" tools/arm-toolchain.sh | sha256sum | cut -c1-16)"
+          elif [ "${{ inputs.name }}" = "ci-wasm" ]; then
+            dockerfile=.github/ci-image/wasm/Dockerfile
+            tag="$(cat "$dockerfile" tools/wasm/fetch-gcc.sh tools/wasm/build-gcc.sh tools/wasm/build-libstdcxx.sh \
+              tools/wasm/fix-coroutine.sh tools/wasm/wasm-as tools/wasm/wasm-g++ | sha256sum | cut -c1-16)"
           elif [ "${{ inputs.name }}" = "ci-editor" ]; then
             dockerfile=.github/ci-image/editor/Dockerfile
             tag="$(sha256sum "$dockerfile" | cut -c1-16)"
