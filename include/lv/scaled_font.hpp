@@ -71,7 +71,7 @@ class scaled_font {
 
   scaled_font(const scaled_font&) = delete;
   scaled_font& operator=(const scaled_font&) = delete;
-  ~scaled_font() { reset<>(); }
+  ~scaled_font() { reset(); }
 
   length size() const { return length::px(px_); }
 
@@ -94,15 +94,15 @@ class scaled_font {
   }
 
   // Gives the font back to LVGL. Widgets bound to it must be gone. Called by the destructor.
-  template <class D = void>
+  // The function that gives it back is kept when the font is made: the destructor is no
+  // template, and naming TinyTTF's function there would search LVGL's functions in every file.
   void reset() {
-    if constexpr (detail::tiny_ttf_destroy<D> != std::meta::info{}) {
-      if (font_ != nullptr && lv_is_initialized()) [:detail::tiny_ttf_destroy<D>:](font_);
-    }
+    if (font_ != nullptr && destroy_ != nullptr && lv_is_initialized()) destroy_(font_);
     font_ = nullptr;
   }
 
  private:
+  template <class D>
   friend const lv_font_t* detail::bound_font(const void*);
 
   // The font, made on first use; null in a build without TinyTTF. A style's code is
@@ -112,6 +112,9 @@ class scaled_font {
   const lv_font_t* made() const {
     if constexpr (detail::tiny_ttf_create<D> != std::meta::info{}) {
       if (font_ == nullptr) font_ = [:detail::tiny_ttf_create<D>:](file_.data(), file_.size(), px_);
+    }
+    if constexpr (detail::tiny_ttf_destroy<D> != std::meta::info{}) {
+      destroy_ = [](lv_font_t* font) { [:detail::tiny_ttf_destroy<D>:](font); };
     }
     return font_;
   }
@@ -132,6 +135,7 @@ class scaled_font {
   std::span<const unsigned char> file_;
   std::int32_t px_;
   mutable lv_font_t* font_ = nullptr;
+  mutable void (*destroy_)(lv_font_t*) = nullptr;  // set with font_
 };
 
 // Binds a font property of a style to a font: .text_font = lv::bind(title).
@@ -144,7 +148,10 @@ constexpr font_binding bind(const scaled_font& font) {
 
 namespace detail {
 
-inline const lv_font_t* bound_font(const void* source) { return static_cast<const scaled_font*>(source)->made<>(); }
+template <class D>
+const lv_font_t* bound_font(const void* source) {
+  return static_cast<const scaled_font*>(source)->made<D>();
+}
 
 }  // namespace detail
 
