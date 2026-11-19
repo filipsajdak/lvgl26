@@ -264,7 +264,7 @@ struct picture {
   const unsigned char* shared = nullptr;  // rows that someone else holds: they are not copied (see picture_from)
 
   // The rows: for each its filter byte, then its pixels.
-  consteval const unsigned char* bits() const { return shared != nullptr ? shared : rows.data(); }
+  consteval const unsigned char* bits() const { return rows.empty() ? shared : rows.data(); }
   std::vector<unsigned char> palette;    // three bytes for each colour
   // The tRNS chunk. For a palette: the alpha of each colour. For grey and RGB: the one
   // colour that is see-through, each sample in two bytes.
