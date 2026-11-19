@@ -5,6 +5,13 @@
 #   tools/arm-run.sh            prints what the program printed, and its sizes
 set -eu
 cd "$(dirname "$0")/.."
+# GCC bug 128870 fails at random with -Os unless -fno-declone-ctor-dtor: 20 compiles of its
+# reproducer must all pass (the flag is in cmake/arm/toolchain.cmake).
+sysroot="${LVGL26_ARM_SYSROOT:-build/_tools/arm/arm-none-eabi}"
+seq 20 | xargs -P 4 -I{} arm-none-eabi-g++ -std=gnu++26 -Os -mcpu=cortex-m4 -mthumb -fno-exceptions -fno-rtti \
+    -fno-declone-ctor-dtor -isystem "${sysroot}/include/c++/16.2.0" \
+    -isystem "${sysroot}/include/c++/16.2.0/arm-none-eabi" -isystem "${sysroot}/include" \
+    -c tools/arm_gcc_128870.cpp -o /dev/null
 cmake --preset arm-m4 "$@" > /dev/null
 cmake --build --preset arm-m4 > /dev/null
 # One run-time set must stay within its stack budget (tools/stack_budget.py).
