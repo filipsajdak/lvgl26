@@ -908,10 +908,12 @@ if(Python3_FOUND)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema" RESULT_VARIABLE lvgl26_jsonschema_missing OUTPUT_QUIET ERROR_QUIET)
   if(lvgl26_jsonschema_missing)
-    message(STATUS "tests: tokens_check and tokens_tools are skipped: the Python package jsonschema is missing")
+    message(STATUS "tests: tokens_check, tokens_tools and settings_check are skipped: the Python package jsonschema is missing")
   else()
     add_test(NAME tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_tokens.py)
     add_test(NAME tokens_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_tokens.py)
+    # The settings files against their schema, and the keys the setup skill names.
+    add_test(NAME settings_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_settings.py)
   endif()
 endif()
 
