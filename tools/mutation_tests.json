@@ -52,6 +52,14 @@
       "tests": "^look$|^looks_example$|fail_look_",
       "targets": "look looks_example"
     },
+    "include/lv/one_of.hpp": {
+      "tests": "^one_of$|one_of_violation|fail_one_of|fail_visit",
+      "targets": "one_of"
+    },
+    "include/lv/detail/one_of_region.hpp": {
+      "tests": "^one_of$|one_of_violation",
+      "targets": "one_of"
+    },
     "include/lv/detail/style_add.hpp": {
       "tests": "^style_add$|^mounted_storage$|^start_style$",
       "targets": "style_add mounted_storage start_style"

@@ -2,6 +2,8 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
+One UI framework, from a low-cost microcontroller up. lvgl26 and LVGL are both MIT: no royalty per device and no licence per developer seat. It is designed for AI agents as much as for people, to speed up migration, development, testing and verification.
+
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
 Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists, concepts for reusable parts and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
@@ -53,6 +55,11 @@ How it works:
   carries its own failure: `if (!root) return root.error();`. It lives in a variable, in a `constinit`
   global with `page.mount(parent)` and `page.unmount()`, for a window that opens and closes in the
   same memory. See [Where a tree lives](docs/mounting.md).
+- **One slot for one of several trees** (`#include <lv/one_of.hpp>`). `lv::one_of<saving, failed>` holds one tree at a time in the
+  memory of the largest, as `std::variant` does. `slot.mount<failed>(parent)` ends the tree that is there
+  first, and `slot.visit(...)` calls the function whose parameter names the tree that is mounted:
+  `lv::held<failed>`, a handle checked at each use, `auto` for the others, `lv::not_mounted` for the
+  empty slot. The result is the arms' common type, or the `R` of `slot.visit<R>(...)`.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

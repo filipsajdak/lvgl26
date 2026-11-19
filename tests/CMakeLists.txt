@@ -42,6 +42,14 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
+lvgl26_test(one_of)
+# A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
+# that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
+foreach(case unmount_empty get_other held_after_remount error_of_mounted)
+  add_test(NAME one_of_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # unmount() of a tree that is not mounted, and mount() of one that is, end the program.
 foreach(case unmount_not_mounted mount_twice unmount_after_parent)
   add_test(NAME mounted_storage_violation_${case}
@@ -352,6 +360,16 @@ lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
 lvgl26_compile_fail(each_row_storage "a row of lv::each cannot hold a node that keeps run-time storage")
 lvgl26_compile_fail(mounted_detach_storage "keeps run-time storage inside its lv::mounted, so its widgets cannot")
 lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent, and this tree keeps run-time")
+lvgl26_compile_fail(one_of_unknown_tree "other is not a tree of this lv::one_of. Its trees: home, settings.")
+lvgl26_compile_fail(visit_no_arm_for_tree "no arm of visit takes the tree settings")
+lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*The slot's trees: home, settings.")
+lvgl26_compile_fail(visit_arm_takes_mounted "an arm of visit takes lv::held<home>, not lv::mounted<home>: write \\[\\]\\(lv::held<home> page\\)")
+lvgl26_compile_fail(visit_arm_takes_tree_by_value "an arm of visit takes lv::held<home>, not lv::mounted<home>")
+lvgl26_compile_fail(visit_arm_auto_reference "arm 2 of visit cannot take lv::held<settings>. Take the handle by value")
+lvgl26_compile_fail(visit_named_no_conversion "arm 2 of visit returns std::basic_string_view<char>, which does not convert to int, the result that visit<R> names")
+lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
+lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
+lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
 lvgl26_compile_fail(each_plain_key "a key names one row")
