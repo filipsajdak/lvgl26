@@ -99,6 +99,20 @@ Sizes of our objects on the same target: `mounted<ui>` with three ids 20, the `s
 | A `const` struct with a pointer in a named section | Stays read-only (flags `A`), with a relocation. | `probe/sec3.cpp` |
 | `[[gnu::section(name)]]` with a `constexpr const char*` | Error: "section attribute argument not a string constant". | `probe/lit.cpp` |
 
+### The stack of a run-time `set`
+
+`measured` 2026-11-19, with `-fstack-usage` on a probe compiled with the flags of each build, a function that does one `arc.set({.value = v})`.
+
+| | Cortex-M4, v9.6.0 | Cortex-M4, v10 pin | 64-bit host, v9.6.0 | 64-bit host, v10 pin |
+|---|---|---|---|---|
+| `sizeof(lv::props<"obj">)` | 44,992 | 45,016 | 79,376 | 79,424 |
+| `sizeof(lv::detail::style_t<>)` | 2,616 | 2,616 | 4,576 | 4,576 |
+| stack of one `set`, `-Os` | 45,296 | 45,320 | 79,888 (`-O2`) | 79,936 (`-O2`) |
+
+`-O0`, `-O2` and `-Os` give the same stack within 16 bytes: the argument is the temporary itself. Since `set` takes `detail::set_props<W>`, whose style slots point at a style, one `set({.value = v})` takes 3,504 bytes on the Cortex-M4 (3,528 with the v10 pin) and 6,800 on the host (6,848); with a style made by `lv::style({...})` inside it 6,120 and 11,376; with a look 3,504 and 6,800, since a look is a constant. `measured` 2026-11-19, same probe. Of the 164 members of `props<"obj">`, 16 are full styles (41,856 bytes on the Cortex-M4); the other 148 take about 3.1 KB.
+
+An open optimisation, observed and not built: an `lv::arg` on the Cortex-M4 is 20 bytes for one whole number, and 12 of them are the binding fields (`bound`, `bound_ops`, `bound_format`). In the 148 plain members of a `set` argument they cost about 1.8 KB of the 3.1 KB. Without them `set` could no longer take `lv::bind(...)`, and the repository does bind through `set` at run time: in tests only (`state.cpp`, `computed.cpp`, `options.cpp`, `scaled_font.cpp` with a font in a style, and the contract case of `lists.cpp`), in no example, port or doc page. Decided 2026-11-19 by the owner: keep it as an opportunity, and decide when a port or a device needs less than the budget of a run-time `set`. It would be the first case of switching a feature off at compile time.
+
 ### Spike: a per-screen arena for LVGL's own allocations
 
 The linker wraps `lv_malloc_core`, `lv_realloc_core` and `lv_free_core` (`-Wl,--wrap`). During `lv::mount` every allocation comes from a bump arena. LVGL is unchanged.

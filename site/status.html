@@ -354,7 +354,7 @@
           <li><strong>CMake 3.30 or newer</strong> and Ninja.</li>
           <li><strong>Headers only.</strong> There is no <code>import lv;</code> yet.</li>
           <li><strong>One microcontroller is proven, in an emulator.</strong> The slice runs on a Cortex-M4 in QEMU. No real board, no display driver and no other processor family has been tried, and there is no size budget yet.</li>
-          <li><strong>A run-time <code>.set({...})</code> needs a large stack.</strong> Its argument is a whole <code>lv::props&lt;W&gt;</code>, with a full style for every part and state: one <code>.set({.value = 60})</code> takes about 45 KB of stack on a Cortex-M4 and about 80 KB on a 64-bit host, at <code>-O0</code>, <code>-O2</code> and <code>-Os</code> alike (LVGL v9.6.0, measured with <code>-fstack-usage</code>). A tree built by the compiler and a property bound to a state are not affected. A fix is being worked on.</li>
+          <li><strong>A run-time <code>.set({...})</code> needs about 3.5 KB of stack on a Cortex-M4.</strong> One <code>.set({.value = 60})</code> takes 3,504 bytes at <code>-Os</code> (LVGL v9.6.0; 3,528 with the v10 pin), and a style made with <code>lv::style({...})</code> inside it adds about 2.6 KB. The budget is 4 KB, checked every night with <code>-fstack-usage</code> (<code>tools/stack_budget.py</code>). A tree built by the compiler and a property bound to a state are not affected.</li>
           <li><strong>ThreadSanitizer runs on Linux only.</strong></li>
           <li><strong>The v10 line is a pinned commit.</strong> LVGL v10 has no release yet and keeps moving.</li>
           <li><strong>Early.</strong> Version 0.0.1. Names and signatures can still change.</li>
