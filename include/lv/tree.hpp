@@ -122,7 +122,7 @@ constexpr auto splice(const Node& self, const K&... k) {
                       "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
                       "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
         return node<Node::kind, std::remove_cvref_t<decltype(flat)>...>{
-            self.p, kids<std::remove_cvref_t<decltype(flat)>...>{flat...}, self.bare};
+            self.p, kids<std::remove_cvref_t<decltype(flat)>...>{flat...}, self.how};
       },
       std::tuple_cat(kid_refs(k)...));
 }
@@ -135,7 +135,7 @@ struct node {
   static constexpr auto kind = W;
   detail::kept<W> p{};  // what props<W> gave it: see detail::kept_of
   detail::kids<Kids...> kids{};
-  bool bare = false;  // start without the theme's styles: see lv::group
+  detail::start how{};  // what the factory starts it with: see lv::group
 
   // The children: lv::column()[lv::label(...), lv::arc(...)].
   template <detail::tree_child... K>
@@ -145,7 +145,7 @@ struct node {
     static_assert((std::size_t{0} + ... + std::size_t{detail::is_structural<K>}) <= 1,
                   "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
                   "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
-    return {p, {k...}, bare};
+    return {p, {k...}, how};
   }
 
   // The same with lv::for_each among the children: its widgets become children of this one,
@@ -170,118 +170,6 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
-// The node's own style (an lv::look, say) sets the width, the height or the flex flow. What a
-// factory sets by default gives way to it: a local style beats an added one in LVGL, so a
-// default written as a property would beat the look that says what the element is.
-template <class Kept>
-constexpr bool style_sets_width(const Kept& p) {
-  return p.style.has && p.style.value.width.set;
-}
-template <class Kept>
-constexpr bool style_sets_height(const Kept& p) {
-  return p.style.has && p.style.value.height.set;
-}
-template <class Kept>
-constexpr bool style_sets_flex_flow(const Kept& p) {
-  return p.style.has && p.style.value.flex_flow.set;
-}
-template <class Kept>
-constexpr bool style_sets_layout(const Kept& p) {
-  return p.style.has && p.style.value.layout.set;
-}
-
-// These run in the compiler only, so they have no run-time coverage: each stays at complexity 2,
-// the most that CRAP 8 allows without any.
-template <class Kept>
-constexpr bool node_sets_width(const Kept& p) {
-  return p.size.set || p.width.set;
-}
-template <class Kept>
-constexpr bool node_sets_height(const Kept& p) {
-  return p.size.set || p.height.set;
-}
-template <class Kept>
-constexpr bool flow_is_free(const Kept& p) {
-  return !p.flex_flow.set && !style_sets_flex_flow(p);
-}
-// LVGL's setter of the flow sets the flex layout too; a style's flow sets the flow only.
-template <class Kept>
-constexpr bool flow_comes_from_style(const Kept& p) {
-  return !p.flex_flow.set && style_sets_flex_flow(p);
-}
-template <class Kept>
-constexpr bool layout_is_free(const Kept& p) {
-  return !p.layout.set && !style_sets_layout(p);
-}
-template <class Kept>
-constexpr bool needs_flex_layout(const Kept& p) {
-  return flow_comes_from_style(p) && layout_is_free(p);
-}
-template <class Kept>
-constexpr bool width_is_free(const Kept& p) {
-  return !node_sets_width(p) && !style_sets_width(p);
-}
-template <class Kept>
-constexpr bool height_is_free(const Kept& p) {
-  return !node_sets_height(p) && !style_sets_height(p);
-}
-template <class Kept>
-constexpr bool both_sides_are_free(const Kept& p) {
-  return width_is_free(p) && height_is_free(p);
-}
-template <class Kept>
-constexpr bool only_width_is_free(const Kept& p) {
-  return width_is_free(p) && !height_is_free(p);
-}
-template <class Kept>
-constexpr bool only_height_is_free(const Kept& p) {
-  return height_is_free(p) && !width_is_free(p);
-}
-
-// A group fills its parent. The node's own .width or .height, or a look, that sets one side leaves
-// the other to fill; one that sets both, or a .size, leaves none.
-template <class Kept>
-constexpr void fill_both_sides(Kept& p) {
-  if (both_sides_are_free(p)) p.size = {percent{100}, percent{100}};
-}
-template <class Kept>
-constexpr void fill_width(Kept& p) {
-  if (only_width_is_free(p)) p.width = percent{100};
-}
-template <class Kept>
-constexpr void fill_height(Kept& p) {
-  if (only_height_is_free(p)) p.height = percent{100};
-}
-template <class Kept>
-constexpr void fill_free_sides(Kept& p) {
-  fill_both_sides(p);
-  fill_width(p);
-  fill_height(p);
-}
-
-// A row or a column is a flex container: the factory's flow, or the look's flow with a flex layout
-// unless the node or the look sets a layout.
-template <class Kept>
-constexpr void default_flow(Kept& p, lv_flex_flow_t flow) {
-  if (flow_is_free(p)) p.flex_flow = flow;
-}
-template <class Kept>
-constexpr void default_layout(Kept& p) {
-  if (needs_flex_layout(p)) p.layout = static_cast<std::uint32_t>(LV_LAYOUT_FLEX);
-}
-
-template <class D>
-constexpr auto make_flex(const lazy_props<"obj", D>& p, lv_flex_flow_t flow) {
-  auto n = make_node<"obj", D>(p);
-  default_flow(n.p, flow);
-  default_layout(n.p);
-  return n;
-}
-
-}  // namespace detail
-
-namespace detail {
-
 // What lv::arc is: call it with properties, index it with children.
 //   lv::arc({.value = 1})      lv::button({...})[lv::label({...})]      lv::box[...]
 template <fixed W>
@@ -297,15 +185,16 @@ struct factory {
   }
 };
 
-// lv::group: a box with none of the theme's styles (no background, border, padding
-// or scrollbars) that fills its parent, unless .size or its look says otherwise. It groups
-// widgets without drawing anything itself.
-struct group_factory {
+// lv::group, lv::row and lv::column: a box that starts with the start style of S.
+// lv::group has none of the theme's styles (no background, border, padding or scrollbars) and
+// fills its parent; it groups widgets without drawing anything itself. lv::row and lv::column are
+// flex containers. The node's own properties and its looks beat the start: see start_style.
+template <start S>
+struct start_factory {
   template <class D = void>
   constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
     auto n = make_node<"obj", D>(p);
-    fill_free_sides(n.p);
-    n.bare = true;
+    n.how = S;
     return n;
   }
 
@@ -315,22 +204,6 @@ struct group_factory {
   template <tree_kid... Kids>
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];
-  }
-};
-
-// lv::column and lv::row: a box laid out as a flex container, unless .flex_flow
-// says otherwise.
-struct flex_factory {
-  lv_flex_flow_t flow;
-
-  template <class D = void>
-  constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
-    return make_flex<D>(p, flow);
-  }
-
-  template <tree_kid... Kids>
-  constexpr auto operator[](const Kids&... kids) const {
-    return this->operator()<std::void_t<Kids...>>()[kids...];  // see group_factory
   }
 };
 
@@ -355,9 +228,9 @@ inline constexpr detail::factory<"textarea"> textarea{};
 inline constexpr detail::factory<"dropdown"> dropdown{};
 inline constexpr detail::factory<"roller"> roller{};
 inline constexpr detail::factory<"spinner"> spinner{};
-inline constexpr detail::group_factory group{};
-inline constexpr detail::flex_factory column{LV_FLEX_FLOW_COLUMN};
-inline constexpr detail::flex_factory row{LV_FLEX_FLOW_ROW};
+inline constexpr detail::start_factory<detail::start::group> group{};
+inline constexpr detail::start_factory<detail::start::column> column{};
+inline constexpr detail::start_factory<detail::start::row> row{};
 
 // ---- compile-time facts about a tree ----------------------------------------
 
@@ -666,6 +539,13 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
     return build_widget<Tree, Path...>(parent, st);
 }
 
+// Gives a widget what its factory starts it with: lv::group drops the theme's styles first.
+template <start S>
+void start_widget(lv_obj_t* o) {
+  if constexpr (S == start::group) lv_obj_remove_style_all(o);
+  if constexpr (S != start::plain) lv_obj_add_style(o, start_style<S>, LV_PART_MAIN);
+}
+
 template <const auto& Tree, std::size_t... Path>
 lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
   constexpr const auto& N = descend<Path...>(Tree);
@@ -677,7 +557,7 @@ lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
     return nullptr;
   }
   if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
-  if constexpr (N.bare) lv_obj_remove_style_all(w.raw());
+  start_widget<N.how>(w.raw());
   apply_node<Tree, Path...>(w.raw());
 
   template for (constexpr auto i : indices<kid_count<node_type>>) {

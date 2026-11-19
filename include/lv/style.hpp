@@ -629,6 +629,41 @@ void add_const_style(lv_obj_t* o) {
     add_style_of<Where, Selector, D>(o);
 }
 
+// What a factory starts a widget with: lv::group fills its parent without the theme's styles,
+// lv::row and lv::column are flex containers. A document read at run time starts its rows and
+// columns in the same way.
+enum class start : unsigned char { plain, group, row, column };
+
+// The start of lv::group, lv::row and lv::column is one constant style, shared by every widget of
+// the kind and added right after the widget is made: after the theme's styles, before the node's
+// own style and its looks. LVGL's cascade then decides, as for a browser's default style under the
+// page's own: the node's own properties, its looks, a look's state layer and a style added later
+// all beat the start, and it beats the theme. It is no local style: lv_obj_get_local_style_prop
+// does not find it, and lv_obj_remove_style_all removes it, as it removes a local one.
+// The properties of the start of S: two, written as LVGL's own property list, since a pass
+// through the members of lv::style would cost every file that builds a tree.
+template <start S>
+consteval std::array<lv_style_const_prop_t, 3> start_props() {
+  std::array<lv_style_const_prop_t, 3> p{};
+  if constexpr (S == start::group) {
+    p[0].prop = LV_STYLE_WIDTH;
+    p[0].value = lvgl_style_value(lower(length{percent{100}}));
+    p[1].prop = LV_STYLE_HEIGHT;
+    p[1].value = p[0].value;
+  } else {
+    p[0].prop = LV_STYLE_LAYOUT;
+    p[0].value = lvgl_style_value(LV_LAYOUT_FLEX);
+    p[1].prop = LV_STYLE_FLEX_FLOW;
+    p[1].value = lvgl_style_value(S == start::row ? LV_FLEX_FLOW_ROW : LV_FLEX_FLOW_COLUMN);
+  }
+  p[2].prop = LV_STYLE_PROP_INV;
+  return p;
+}
+
+template <start S>
+inline constexpr const lv_style_t* start_style =
+    std::define_static_object(const_style(std::define_static_array(start_props<S>()).data()));
+
 // ---- parts and states by name, for lv::on ------------------------------------
 
 // The value of the enumerator of E that user code names `text`, or nothing. `any`

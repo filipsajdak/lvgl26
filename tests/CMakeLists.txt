@@ -48,6 +48,7 @@ foreach(case unmount_not_mounted mount_twice unmount_after_parent)
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
 lvgl26_test(look)
+lvgl26_test(start_style)
 target_link_libraries(look PRIVATE lvgl26_test_data)
 # Two files of one program name looks, with the registration in a header they share.
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)
