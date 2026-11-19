@@ -3,104 +3,46 @@
   "$description": "Signal, dark theme. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
   "color": {
     "$type": "color",
-    "ground": {
-      "$value": "#0a0a0c"
-    },
-    "surface": {
-      "$value": "#1b1c22"
-    },
-    "surface-raised": {
-      "$value": "#26272f"
-    },
-    "line": {
-      "$value": "#34353d"
-    },
-    "line-strong": {
-      "$value": "#7b7e8a"
-    },
-    "reading": {
-      "$value": "#ffffff"
-    },
-    "muted": {
-      "$value": "#b4b7c0"
-    },
-    "active": {
-      "$value": "#d4ff3a"
-    },
-    "on-active": {
-      "$value": "#0a0a0c"
-    },
-    "alarm": {
-      "$value": "#ff4438"
-    },
-    "on-alarm": {
-      "$value": "#0a0a0c"
-    },
-    "caution": {
-      "$value": "#ffc531"
-    },
-    "on-caution": {
-      "$value": "#0a0a0c"
-    },
-    "advice": {
-      "$value": "#9db4ff"
-    },
-    "on-advice": {
-      "$value": "#0a0a0c"
-    }
+    "ground": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "surface": {"$value": {"hex":"#1b1c22","colorSpace":"srgb","components":[0.1059,0.1098,0.1333]}},
+    "surface-raised": {"$value": {"hex":"#26272f","colorSpace":"srgb","components":[0.149,0.1529,0.1843]}},
+    "line": {"$value": {"hex":"#34353d","colorSpace":"srgb","components":[0.2039,0.2078,0.2392]}},
+    "line-strong": {"$value": {"hex":"#7b7e8a","colorSpace":"srgb","components":[0.4824,0.4941,0.5412]}},
+    "reading": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}},
+    "muted": {"$value": {"hex":"#b4b7c0","colorSpace":"srgb","components":[0.7059,0.7176,0.7529]}},
+    "active": {"$value": {"hex":"#d4ff3a","colorSpace":"srgb","components":[0.8314,1,0.2275]}},
+    "on-active": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "alarm": {"$value": {"hex":"#ff4438","colorSpace":"srgb","components":[1,0.2667,0.2196]}},
+    "on-alarm": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "caution": {"$value": {"hex":"#ffc531","colorSpace":"srgb","components":[1,0.7725,0.1922]}},
+    "on-caution": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "advice": {"$value": {"hex":"#9db4ff","colorSpace":"srgb","components":[0.6157,0.7059,1]}},
+    "on-advice": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}}
   },
   "space": {
     "$type": "dimension",
-    "1": {
-      "$value": "4px"
-    },
-    "2": {
-      "$value": "8px"
-    },
-    "3": {
-      "$value": "12px"
-    },
-    "4": {
-      "$value": "16px"
-    },
-    "6": {
-      "$value": "24px"
-    },
-    "8": {
-      "$value": "32px"
-    },
-    "12": {
-      "$value": "48px"
-    }
+    "1": {"$value": {"value":4,"unit":"px"}},
+    "2": {"$value": {"value":8,"unit":"px"}},
+    "3": {"$value": {"value":12,"unit":"px"}},
+    "4": {"$value": {"value":16,"unit":"px"}},
+    "6": {"$value": {"value":24,"unit":"px"}},
+    "8": {"$value": {"value":32,"unit":"px"}},
+    "12": {"$value": {"value":48,"unit":"px"}}
   },
   "radius": {
     "$type": "dimension",
-    "0": {
-      "$value": "0px"
-    }
+    "0": {"$value": {"value":0,"unit":"px"}}
   },
   "stroke": {
     "$type": "dimension",
-    "bar": {
-      "$value": "4px"
-    },
-    "track": {
-      "$value": "8px"
-    },
-    "ring": {
-      "$value": "16px"
-    }
+    "bar": {"$value": {"value":4,"unit":"px"}},
+    "track": {"$value": {"value":8,"unit":"px"}},
+    "ring": {"$value": {"value":16,"unit":"px"}}
   },
   "size": {
     "$type": "dimension",
-    "target": {
-      "$value": "48px"
-    },
-    "target-glove": {
-      "$value": "80px"
-    },
-    "chip": {
-      "$value": "32px"
-    }
+    "target": {"$value": {"value":48,"unit":"px"}},
+    "target-glove": {"$value": {"value":80,"unit":"px"}},
+    "chip": {"$value": {"value":32,"unit":"px"}}
   }
 }
