@@ -9,6 +9,8 @@ The owner's question: when a widget runs an animation and is hidden, nobody sees
 The saving is rendering time. The situation changes when audio is attached: a podcast video need not be visible to be useful.
 This note widens the question from "a window is hidden" to "something is not visible", at every level, and asks what must keep going anyway.
 
+The owner decided all eight points on 2026-11-19. See "What the owner decided" at the end, and "The order of the work".
+
 It builds on `docs/research/task-handles.md`. Decided there: `lv::run<fn>` pauses while its display is hidden, `lv::run<fn, lv::always>` keeps running, time keeps counting, a task "wakes once, at once", and `lv::display` carries a visible state.
 
 ## Short answers
@@ -180,12 +182,13 @@ What the measurements say about the levels:
 
 | What | Pauses when | How | Saved |
 |---|---|---|---|
-| Drawing | Levels 2 to 5: by LVGL. Level 1: by lvgl26 | `lv_display_enable_invalidation(disp, false)` while the display is hidden, then an invalidation of the screen when it is shown | 96.6% of the visible cost for arcs; 99.8% if the screen object is hidden instead |
+| Drawing | Levels 2 to 5: by LVGL. Level 1: by lvgl26, by the setting `hidden_display` | `stop_marking` (the default): `lv_display_enable_invalidation(disp, false)` while hidden, and an invalidation of the screen on show. `hide_screen`: the screen object's hidden flag | 96.6% of the visible cost for arcs with `stop_marking`; 99.8% with `hide_screen` |
 | `lv::run<fn>` tasks | The display is hidden (decided) | The gate in `resume_task`, "wakes once, at once" | The coroutine steps |
 | `lv::run<fn, lv::always>` | Never | | |
 | `lv::animate` of a paused task | With its task | An animation follows its task, see below | |
 | Free `lv::animate`, not awaited by a task | Nothing, in the first build | They keep their clock; invalidation is off, so nothing is drawn | The rest is 0.39 M a second for 24 animations. Not worth the machinery |
-| Bindings of a tree on a hidden display | The tree's display is hidden | The binding sets nothing and marks itself dirty. On show it applies the state's latest value | 4,000 instructions a text set. Needs a dirty bit and a walk on show |
+| A binding that sets a widget's property | Its display is hidden | It sets nothing and marks itself dirty. On show it applies the state's latest value. See "The rule for followers of a state" | 4,000 instructions a text set. Needs a dirty mark and a walk on show |
+| An effect, `lv::changed`, and a computed that one of them reads | Never | They may change something outside the screen | |
 | Tasks under a `lv::run` deeper than the root | The display is hidden. Not the node's own parent | The gate follows the display only | See the question below |
 | List rows off screen | Not built, by the list design | | All of it |
 
@@ -209,6 +212,39 @@ The rule: **work whose only effect is pixels may pause. Work with an effect outs
 - So the rule "split the task: one for the sound with `lv::always`, one for the picture without" is enough, and the state is what joins them.
 
 The decided rule for tasks makes the split natural: logic writes an `lv::state`, and the pixels follow the state. A hidden tree's bindings catch up when it is shown, at the latest value.
+
+### The rule for followers of a state
+
+The owner's rule: code that sets only pixels may skip while its display is hidden. Code that may change something outside the screen is never skipped.
+The skipped code applies the latest value on show.
+A state's list holds `detail::watch_node`s, and the kinds below are all of what follows a state in the headers. `source` (`watch.hpp`, `props.hpp`, `computed.hpp`, `task.hpp`, `state.hpp`)
+
+| Follower | What its watcher does | Side | Why |
+|---|---|---|---|
+| A binding of a property, `lv::bind(state)`, and of a text, `lv::bind(state, "{} rpm")` (`bound_node`, `show_value`, `show_text` in `props.hpp`) | Sets one property of one widget | Pixels. **Skips** | It reads the state when it shows, so the latest value is what it sets. A hidden `.hidden` or `.checked` is also a property of a widget |
+| A style value that follows a state (`docs/research/node-storage.md`) | Sets a style property of a widget | Pixels. **Skips** | The same |
+| The write-back of a bound widget the user changes (`write_back`) | Writes the widget's value to the state, on a widget event | Not a follower | A hidden window gets no input. It is not changed |
+| `lv::computed` bound by a widget (`dependency_node`) | Runs its function and tells the bound widgets if the result changed | Follows its followers: skips only if every follower of it skips | `get()` always evaluates and never needs the watcher, so a read by an effect or a task is right either way. An effect that depends on a computed makes it follow, so the computed must run |
+| `lv::effect` | Runs its body on each change | Outside. **Never skips** | The body is any code: it can write a file or a database, or call a service |
+| `lv::changed(state)`, the wait of a task (`change_source` in `task.hpp`) | Wakes the task | The watcher never skips. The task decides | A paused `lv::run` task holds the wake-up and reads the latest value on resume (decided). An `lv::always` task, a `lv::start` job and a `lv::spawn` task run |
+| LVGL's own binder, kept where `keeps_lvgl_binder` says (`checked`, an animation started after the first draw) | An LVGL observer of the state's subject | LVGL's. Not gated | It is not a watcher of ours, and it costs little |
+| An observer of `raw()`, the subject for C code | The program's callback | The program's | The program may do anything in it |
+| `lv::shown` and `lv::one_of`, which choose a tree by a state (planned) | Mounts and unmounts a tree | Outside. **Never skips** | A tree may hold `lv::run` tasks, which start and end with it, and a storage that holds effects. Skipping would start the sound of a page late |
+| Rows of `lv::each` | Follow a list model, not a state | Not read for this note | Treat as a binding when the list is built |
+
+What the table settles:
+
+- **A binding is pixels only by what it is.** The state is the carrier. The widget is where it ends. So a binding needs no mark.
+- **`lv::effect` is the safe default, and stays always on.** The cost is that an effect that only sets a widget is not skipped.
+  The way to write a pixel-only reaction to a state is a binding, with a `lv::computed` for the function: `.text = lv::bind(label_of_speed)`.
+  So there is no marker on `lv::effect`. Add one (`lv::effect` with `lv::while_hidden::skip`) only for a use that a binding cannot say, such as a chart that takes a point for each change.
+- **A computed's side is the AND of its followers.** A counter of followers that do not skip gives it in one read.
+  The counter changes as followers are added and removed. If it is 0, the computed does not run while the display is hidden.
+- **A property set can send a widget event.** A handler on `LV_EVENT_VALUE_CHANGED` runs when the binding applies.
+  It runs once with the latest value, not for each change that was skipped.
+  A program must not carry an outside effect in a handler that only a binding triggers. That is what `lv::effect` is for.
+- **What the skip costs.** A hidden label's text set costs about 4,000 instructions. A skipped binding costs the visibility check at the notification, and on show a walk over the dirty bindings.
+  Each bound node needs a pointer to its display and a link for the dirty list: about 16 bytes on LVGL's heap. Measure it in the build. `reasoned`
 
 ### The podcast video, under this proposal
 
@@ -263,9 +299,29 @@ When the display is shown again, what should an animation do?
 
 ### Defaults and the opt-out
 
-- Pausing invisible work is on by default. The owner decided it for `lv::run`, and it saves the most where nothing is lost.
-- A project may switch it off. `docs/research/settings.md` was not on `main` or on any branch of the remote on 2026-11-19, so this follows `CLAUDE.md`: "Settings go in `lv::config`".
-  The proposal is one field, `pause_when_hidden`, default true. With it off, `lv::run<fn>` means `lv::run<fn, lv::always>`, and a hidden display keeps its invalidation. If the settings design puts switches in `lvgl26.json`, the key is the same.
+Decided: two settings in the project settings.
+
+- **Where.** `docs/research/settings.md` was not on `main` or on any remote branch on 2026-11-19.
+  The place and the names are proposals to align with it.
+  A section for behaviour in `lvgl26.json`, read into `lv::config` as `CLAUDE.md` asks:
+
+```json
+{
+  "behaviour": {
+    "hidden_display": "stop_marking",
+    "pause_when_hidden": true
+  }
+}
+```
+
+- **`pause_when_hidden`**: a bool, default true. With it false, `lv::run<fn>` means `lv::run<fn, lv::always>`, bindings never skip, and `hidden_display` still decides drawing.
+- **`hidden_display`**: how a hidden display stops drawing. It has two values.
+
+| Value | What it does | Cost a second, 24 arcs | Other costs |
+|---|---|---|---|
+| `"stop_marking"` (the default) | `lv_display_enable_invalidation(disp, false)` while hidden. On show, invalidate the screen | 15.0 M | No widget state is touched. One full redraw on show |
+| `"hide_screen"` | The screen object gets the hidden flag. On show, clear it | 1.09 M | One full redraw when hiding (4 flushes, 153,600 pixels, measured) and one on show. The screen's flag is changed, which a program that reads it sees. `lv_layer_top` and `lv_layer_sys` are separate objects and keep drawing |
+
 - A per-task opt-out already exists: `lv::always`. There is no per-display opt-out. Add it only for a use.
 
 ### A check that it works
@@ -276,8 +332,10 @@ A hidden widget costs nothing only if a test says so, or the saving will regress
   Assert that the loop's counter did not move and the `always` task's did.
   Assert that the label's text is the latest on show.
   It needs no instruction counter, so it runs under every preset. `reasoned`
-- **A run-time probe for the nightly metrics job.** The probe of this note is 150 lines. It prints one row for each scenario: `exec_cb`, flushes, pixels and instructions a second.
-  The job being designed for compile time can carry it, with a threshold on the ratio of hidden to visible: today 0.2% for a hidden widget and 3.4% for invalidation off. The ratio is stable to 0.3%, so a regression of 10% in the hidden cost shows. `reasoned`
+- **A run-time probe for the nightly metrics job.** The probe is 150 lines of C against LVGL's C API, with no lvgl26.
+  Where it lives: `tools/probes/visibility.cpp`, built by CMake against the LVGL of each preset, and not part of the library. Its first form was thrown away with this note.
+  What it reports: one JSON row for each pin, kind and scenario, with `exec_cb` calls, flushes, pixels and instructions a second.
+  The nightly metrics job can carry it. Another agent is designing that job, and its note is not on `main`, with a threshold on the ratio of hidden to visible: today 0.2% for a hidden widget and 3.4% for invalidation off. The ratio is stable to 0.3%, so a regression of 10% in the hidden cost shows. `reasoned`
 - The same probe on the Cortex-M4 nightly would give the numbers this note could not. `reasoned`
 
 ## Options for the owner
@@ -301,7 +359,8 @@ Level 6 costs 10% to 17% of the visible cost and all the flush.
 | Hide the screen object | 1.09 M, and one redraw when hiding | The screen's flag, which the program may also set |
 | Invalidation off and lvgl26's animations paused | 0.24 M | The pointers of running animations |
 
-**Recommendation: invalidation off.** One call, and it touches no widget state. If the tail of 15 M proves too large in the nightly numbers, hide the screen object instead. It is 14 times cheaper for animations that lvgl26 does not own.
+**Decided: a setting, `hidden_display`.** The default is `"stop_marking"` (invalidation off): one call, and it touches no widget state.
+`"hide_screen"` is the other value. It is 14 times cheaper for animations that lvgl26 does not own, and it costs one redraw when hiding and one when showing.
 
 ### 3. Pausing animations
 
@@ -309,7 +368,10 @@ Level 6 costs 10% to 17% of the visible cost and all the flush.
 
 ### 4. Bindings of a hidden tree
 
-**Recommendation: skip and mark dirty, apply the latest value on show.** It is the rule the task design already gives for state changes. Cost: a dirty bit in each tree's storage and a walk of its bound nodes on show.
+**Decided: skip and apply the latest on show, for a binding that sets a widget's property.**
+Code that may change something outside the screen is never skipped.
+The rule and every kind of follower are in "The rule for followers of a state".
+Cost: a mark and a link for each binding, and a walk of the marked ones on show.
 Measure it before building: the 4,000 instructions a set are small beside the walk if few bindings change. `reasoned`
 
 ## Not confirmed
@@ -357,3 +419,25 @@ Measure it before building: the 4,000 instructions a set are small beside the wa
    Options: a ctest test with counters; the probe in the nightly job; both.
    Recommendation: both. The test guards the logic and the probe guards the saving.
    Cost: the test is small, and the probe is 150 lines already written.
+
+## The order of the work
+
+- **Being built now**, in the `app.run()` pull request (branch `feat/app-run`): the display's visible state, and stopping the marking while it is hidden.
+- **With the `lv::run` pull request**, after `lv::start` and `lv::job`: the pause of `lv::run`, the rule for bindings, and the settings.
+- **Later**: the ctest test with counters comes with the first of these, and the probe in the nightly job when that job exists.
+
+## What the owner decided
+
+Decided 2026-11-19, on this note.
+
+| # | Decision |
+|---|---|
+| 1 | The unit of visibility is the display only. |
+| 2 | How a hidden display stops drawing is a setting, `hidden_display`. The first value, and the default, switches off marking (`"stop_marking"`). Hiding the screen object (`"hide_screen"`) is the other value. The place and the names are proposals, to align with `docs/research/settings.md`. |
+| 3 | Animations keep the clock, so tasks and animations follow one rule. |
+| 4 | Bindings: skip and apply the latest, unless the code changes external state, such as a file, a database or an external service. A binding that sets a widget's property is pixels only and skips while its display is hidden. `lv::effect`, `lv::changed`, and a computed that an effect or an always-running task reads, are never skipped. The table "The rule for followers of a state" applies this to every kind of follower. |
+| 5 | A `lv::run` under a hidden widget pauses with the display only. `lv::is_visible(view)` is for a task that wants to ask. |
+| 6 | A screen that is not active is left to LVGL. |
+| 7 | The opt-out is the setting `pause_when_hidden`, default true. |
+| 8 | The check is both: a ctest test with counters, and the probe in the nightly job. The probe is proposed at `tools/probes/visibility.cpp`, and reports one row for each pin, kind and scenario. |
+| 9 | The order: the display's visible state and the stop of marking come with the `app.run()` pull request. The pause of `lv::run`, the bindings rule and the settings come with the `lv::run` pull request, after `lv::start` and `lv::job`. |
