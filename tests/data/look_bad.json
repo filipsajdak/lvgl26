@@ -3,25 +3,25 @@
  "color": {
   "$type": "color",
   "red": {
-   "$value": "#ff0000"
+   "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}
   }
  },
  "typo": {
   "colour": {
    "$type": "color",
-   "$value": "#ff0000"
+   "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}
   }
  },
  "wrongtype": {
   "radius": {
    "$type": "color",
-   "$value": "#ff0000"
+   "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}
   }
  },
  "sizeone": {
   "size": {
    "$type": "dimension",
-   "$value": "20px"
+   "$value": {"value": 20, "unit": "px"}
   }
  },
  "font_for_color": {
@@ -29,9 +29,9 @@
    "$type": "typography",
    "$value": {
     "fontFamily": "Barlow",
-    "fontSize": "12px",
+    "fontSize": {"value": 12, "unit": "px"},
     "fontWeight": 500,
-    "letterSpacing": "0px",
+    "letterSpacing": {"value": 0, "unit": "px"},
     "lineHeight": 1
    }
   }
@@ -44,14 +44,14 @@
   "cheked": {
    "bg_color": {
     "$type": "color",
-    "$value": "#00ff00"
+    "$value": {"colorSpace": "srgb", "components": [0, 1, 0], "hex": "#00ff00"}
    }
   }
  },
  "fine": {
   "radius": {
    "$type": "dimension",
-   "$value": "4px"
+   "$value": {"value": 4, "unit": "px"}
   }
  },
  "stringtoken": {
@@ -105,13 +105,13 @@
   "$extends": "{fine}",
   "radius": {
    "$type": "dimension",
-   "$value": "3px"
+   "$value": {"value": 3, "unit": "px"}
   }
  },
  "alpharadius": {
   "radius": {
    "$type": "color",
-   "$value": "#ff000080"
+   "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "alpha": 0.502, "hex": "#ff0000"}
   }
  },
  "layeredin": {
@@ -119,7 +119,7 @@
    "extra": {
     "bg_color": {
      "$type": "color",
-     "$value": "#0000ff"
+     "$value": {"colorSpace": "srgb", "components": [0, 0, 1], "hex": "#0000ff"}
     }
    }
   }
@@ -128,13 +128,13 @@
   "card": {
    "radius": {
     "$type": "dimension",
-    "$value": "4px"
+    "$value": {"value": 4, "unit": "px"}
    }
   },
   "details": {
    "radius": {
     "$type": "dimension",
-    "$value": "2px"
+    "$value": {"value": 2, "unit": "px"}
    }
   }
  }

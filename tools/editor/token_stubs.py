@@ -112,8 +112,21 @@ def is_token_file(document: object) -> bool:
     return "$value" in document or any(is_token_file(child) for child in document.values())
 
 
+def shown(value: object) -> str:
+    """A value as an editor shows it: the object forms of the standard as the text a designer writes.
+
+    {"value": 8, "unit": "px"} is 8px, and a color object is its hex (with alpha, as a percentage).
+    """
+    if isinstance(value, dict) and set(value) >= {"value", "unit"}:
+        return f"{value['value']}{value['unit']}"
+    if isinstance(value, dict) and "hex" in value:
+        alpha = value.get("alpha")
+        return value["hex"] if alpha is None else f"{value['hex']} at alpha {alpha}"
+    return json.dumps(value, ensure_ascii=True)
+
+
 def comment_of(token: dict) -> str:
-    value = json.dumps(token["$value"], ensure_ascii=True)
+    value = shown(token["$value"])
     if len(value) > LONGEST_VALUE_IN_A_COMMENT:
         value = value[:LONGEST_VALUE_IN_A_COMMENT] + " ..."
     said = str(token.get("$description", "")).replace("\n", " ").strip()

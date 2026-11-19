@@ -3,86 +3,18 @@
   "$description": "Signal, typography. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
   "font": {
     "$type": "fontFamily",
-    "display": {
-      "$value": "Barlow Condensed"
-    },
-    "text": {
-      "$value": "Barlow"
-    }
+    "display": {"$value": "Barlow Condensed"},
+    "text": {"$value": "Barlow"}
   },
   "text": {
     "$type": "typography",
-    "numeral-2xl": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "208px",
-        "fontWeight": 700,
-        "letterSpacing": "0px",
-        "lineHeight": 0.8462
-      }
-    },
-    "numeral-xl": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "104px",
-        "fontWeight": 700,
-        "letterSpacing": "0px",
-        "lineHeight": 0.9038
-      }
-    },
-    "numeral-l": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "72px",
-        "fontWeight": 700,
-        "letterSpacing": "0px",
-        "lineHeight": 0.9167
-      }
-    },
-    "numeral-m": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "40px",
-        "fontWeight": 700,
-        "letterSpacing": "0px",
-        "lineHeight": 1
-      }
-    },
-    "title": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "24px",
-        "fontWeight": 600,
-        "letterSpacing": "2px",
-        "lineHeight": 1.1667
-      }
-    },
-    "label": {
-      "$value": {
-        "fontFamily": "{font.display}",
-        "fontSize": "16px",
-        "fontWeight": 700,
-        "letterSpacing": "1px",
-        "lineHeight": 1.25
-      }
-    },
-    "body": {
-      "$value": {
-        "fontFamily": "{font.text}",
-        "fontSize": "16px",
-        "fontWeight": 500,
-        "letterSpacing": "0px",
-        "lineHeight": 1.375
-      }
-    },
-    "caption": {
-      "$value": {
-        "fontFamily": "{font.text}",
-        "fontSize": "13px",
-        "fontWeight": 500,
-        "letterSpacing": "0px",
-        "lineHeight": 1.3846
-      }
-    }
+    "numeral-2xl": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":208,"unit":"px"},"fontWeight":700,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":0.8462}},
+    "numeral-xl": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":104,"unit":"px"},"fontWeight":700,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":0.9038}},
+    "numeral-l": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":72,"unit":"px"},"fontWeight":700,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":0.9167}},
+    "numeral-m": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":40,"unit":"px"},"fontWeight":700,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":1}},
+    "title": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":24,"unit":"px"},"fontWeight":600,"letterSpacing":{"value":2,"unit":"px"},"lineHeight":1.1667}},
+    "label": {"$value": {"fontFamily":"{font.display}","fontSize":{"value":16,"unit":"px"},"fontWeight":700,"letterSpacing":{"value":1,"unit":"px"},"lineHeight":1.25}},
+    "body": {"$value": {"fontFamily":"{font.text}","fontSize":{"value":16,"unit":"px"},"fontWeight":500,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":1.375}},
+    "caption": {"$value": {"fontFamily":"{font.text}","fontSize":{"value":13,"unit":"px"},"fontWeight":500,"letterSpacing":{"value":0,"unit":"px"},"lineHeight":1.3846}}
   }
 }
