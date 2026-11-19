@@ -43,35 +43,18 @@ jobs:
           echo "DRRUN=$(ls -d /opt/DynamoRIO-*/bin64/drrun | head -1)" >> "$GITHUB_ENV"
       - name: Configure
         run: cmake --preset host-v96 > /dev/null && ls build/host-v96/compile_commands.json
-      - name: DynamoRIO inscount on smoke.cpp
-        continue-on-error: true
+      - name: The text of -fmem-report and -fstats
         run: |
-          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import glob, os, subprocess, sys, time
+          python3 - <<'PY'
+          import sys
           sys.path.insert(0, "tools"); sys.path.insert(0, "tmp-measure")
           import measure as m
           mode, cmd, cwd = m.cc1_for("build/host-v96", "tests/smoke.cpp", ".")
-          dr = os.environ["DRRUN"]; root = os.path.dirname(os.path.dirname(dr))
-          print("clients:", glob.glob(root + "/**/libinscount*", recursive=True)[:3])
-          client = (glob.glob(root + "/**/libinscount.so", recursive=True) or [None])[0]
-          t = time.perf_counter()
-          r = m.sh([dr, "-c", client, "--"] + cmd, cwd=cwd)
-          print("DynamoRIO inscount smoke:", (r.stderr + r.stdout).strip()[-300:], f"{time.perf_counter() - t:.0f} s")
+          for i in (1, 2):
+              r = m.sh(cmd + ["-fmem-report"], cwd=cwd)
+              open(f"/tmp/mem{i}.txt", "w").write(r.stderr)
+          r = m.sh(cmd + ["-fstats"], cwd=cwd); open("/tmp/stats.txt", "w").write(r.stderr)
           PY
-      - name: Pairs of commits, to see what each counter would have caught
-        continue-on-error: true
-        timeout-minutes: 90
-        run: |
-          git config --global --add safe.directory "$PWD"
-          git fetch -q --unshallow || true
-          printf '#include <lv/lv.hpp>\nint main() {}\n' > /tmp/inc.cpp
-          pair() {  # name, commit, file to compile (tests/ probe name is smoke)
-            echo "### $1 ($2)" | tee -a "$GITHUB_STEP_SUMMARY"
-            rm -rf /tmp/b /tmp/a; git worktree add -q --detach /tmp/b "$2^"; git worktree add -q --detach /tmp/a "$2"
-            python3 tmp-measure/pair.py "$PWD" build/host-v96 smoke.cpp "$3" /tmp/b /tmp/a 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
-            git worktree remove --force /tmp/b; git worktree remove --force /tmp/a
-          }
-          pair "include-only: no props struct" 794b6ca /tmp/inc.cpp
-          pair "smoke: option lists off the path" 9299d42 "$PWD/tests/smoke.cpp"
-          pair "include-only: one_of out of lv.hpp" 15101c0 /tmp/inc.cpp
-          pair "include-only: theme feature" ce5557e /tmp/inc.cpp
+          echo '### mem-report, run 1' >> "$GITHUB_STEP_SUMMARY"; grep -n -i -E "total|allocated|still" /tmp/mem1.txt | head -40 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### equal between runs?' >> "$GITHUB_STEP_SUMMARY"; (diff -q /tmp/mem1.txt /tmp/mem2.txt && echo identical) | tee -a "$GITHUB_STEP_SUMMARY"; diff /tmp/mem1.txt /tmp/mem2.txt | head -10 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### stats' >> "$GITHUB_STEP_SUMMARY"; head -60 /tmp/stats.txt | tee -a "$GITHUB_STEP_SUMMARY"
