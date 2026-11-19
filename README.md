@@ -2,6 +2,8 @@
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl). Namespace `lv`. MIT.
 
+One UI framework, from a low-cost microcontroller up. lvgl26 and LVGL are both MIT: no royalty per device and no licence per developer seat. It is designed for AI agents as much as for people, to speed up migration, development, testing and verification.
+
 Documentation: start with the [quick start](docs/quick-start.md). The site is at <https://filipsajdak.github.io/lvgl26/>.
 
 Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists, concepts for reusable parts and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
