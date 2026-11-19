@@ -12,6 +12,11 @@ on:
           good nightly run. The base of the nightly run does not move.
         required: false
         type: string
+      web_only:
+        description: Run only the experimental WebAssembly jobs (web-host, web, web-browser). A manual run opens no issue.
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
@@ -25,6 +30,7 @@ jobs:
   # The presets that the quick checks leave out, with every test that runs a program.
   # (A compile-fail test only compiles, so a sanitizer has nothing to check in it.)
   host:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     needs: image
     permissions:
@@ -63,6 +69,7 @@ jobs:
   # Half an hour of libFuzzer on the JSON reader. An input that crashes it is kept as
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,6 +96,7 @@ jobs:
   # The microcontroller check: the slice built for an Arm Cortex-M4 without exceptions
   # and run in QEMU. Its sizes go to the run's summary.
   image-arm:
+    if: ${{ !inputs.web_only }}
     uses: ./.github/workflows/image.yml
     with:
       name: ci-arm
@@ -124,10 +132,142 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # The experimental browser target: the two applications of examples/wasm (a counter that takes
+  # pointer input, and the bouncing ball, which is a test of coroutines) built for WebAssembly by
+  # GCC trunk with a third-party back end, in the image of its own. The host build of the same files
+  # gives the frames to match; a headless Chrome then runs the pages. Limits are in
+  # docs/research/web-target.md. Failures open the issue of the night, like the rest.
+  web-host:
+    runs-on: ubuntu-latest
+    needs: image
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      counter: ${{ steps.run.outputs.counter }}
+      bounce: ${{ steps.run.outputs.bounce }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build both applications for the host and replay their scripts
+        id: run
+        shell: bash
+        run: |
+          tools/wasm/fetch-lvgl.sh /tmp/lvgl
+          tools/wasm/host-demo.sh /tmp/lvgl/src /tmp/host-counter "$PWD" counter
+          mkdir -p /tmp/host-bounce && ln -s /tmp/host-counter/obj /tmp/host-bounce/obj
+          tools/wasm/host-rebuild.sh /tmp/lvgl/src /tmp/host-bounce "$PWD" bounce
+          for app in counter bounce; do
+            /tmp/host-$app/demo-host > /tmp/host-$app/frames.raw
+            echo "$app=$(sha256sum /tmp/host-$app/frames.raw | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          done
+
+  image-wasm:
+    uses: ./.github/workflows/image.yml
+    with:
+      name: ci-wasm
+    permissions:
+      contents: read
+      packages: write
+
+  web:
+    runs-on: ubuntu-latest
+    needs: [image-wasm, web-host]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image-wasm.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build both applications for WebAssembly
+        shell: bash
+        run: |
+          set -o pipefail
+          tools/wasm/fetch-lvgl.sh /tmp/lvgl
+          tools/wasm/build-lvgl.sh /tmp/lvgl/src /tmp/lvgl-wasm
+          for app in counter bounce; do
+            tools/wasm/link-demo.sh "$PWD" /tmp/lvgl/src /tmp/lvgl-wasm "$app.wasm" "$app" 2>&1 | tee "build-$app.txt"
+          done
+      - name: Replay the scripts and compare the frames with the host build
+        shell: bash
+        env:
+          HOST_COUNTER: ${{ needs.web-host.outputs.counter }}
+          HOST_BOUNCE: ${{ needs.web-host.outputs.bounce }}
+        run: |
+          echo '### The applications as WebAssembly' >> "$GITHUB_STEP_SUMMARY"
+          failed=0
+          for app in counter bounce; do
+            node tools/wasm/replay.mjs "$app.wasm" "examples/wasm/$app/script.json" > "$app.raw"
+            wasm_frames="$(sha256sum "$app.raw" | cut -d' ' -f1)"
+            host_var="HOST_${app^^}"; host_frames="${!host_var}"
+            {
+              echo "- ${app}: module $(wc -c < "$app.wasm") bytes, $(brotli -c -q 11 "$app.wasm" | wc -c) with Brotli"
+              echo "  - frames, host (GCC 16):  \`${host_frames}\`"
+              echo "  - frames, WebAssembly:    \`${wasm_frames}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            test "${wasm_frames}" = "${host_frames}" || failed=1
+          done
+          exit "$failed"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: web-modules
+          path: |
+            counter.wasm
+            bounce.wasm
+            build-*.txt
+
+  # Chrome is on the runner, not in the image: the pages are checked in a browser.
+  web-browser:
+    runs-on: ubuntu-latest
+    needs: [web, web-host]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: web-modules
+      - name: Run the pages
+        shell: bash
+        env:
+          HOST_COUNTER: ${{ needs.web-host.outputs.counter }}
+          HOST_BOUNCE: ${{ needs.web-host.outputs.bounce }}
+        run: |
+          set -o pipefail
+          chrome=/usr/bin/google-chrome
+          python3 tools/wasm/make-page.py tools/wasm/page/index.html counter.wasm examples/wasm/counter/script.json "$HOST_COUNTER" > counter.html
+          python3 tools/wasm/make-page.py tools/wasm/page/index.html bounce.wasm examples/wasm/bounce/script.json "$HOST_BOUNCE" "The bouncing ball" "The bouncing ball of the motion demo." > bounce.html
+          # The script of each application, run inside Chrome, must give the host's frames.
+          node tools/wasm/drive-chrome.mjs "file://$PWD/counter.html#selftest" counter-self "$chrome" --expect-title ok
+          node tools/wasm/drive-chrome.mjs "file://$PWD/bounce.html#selftest" bounce-self "$chrome" --expect-title ok
+          # Real mouse events on the counter: three clicks, a drag, a click.
+          node tools/wasm/drive-chrome.mjs "file://$PWD/counter.html" counter-click "$chrome" 2>&1 | tee counter-click.txt
+          # The ball runs for a minute, and a trap in a coroutine shows in the title.
+          node tools/wasm/drive-chrome.mjs "file://$PWD/bounce.html" bounce-run "$chrome" --run 60 2>&1 | tee bounce-run.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: web-screenshots
+          path: |
+            *.png
+            counter-click.txt
+            bounce-run.txt
+
   # Mutation testing of the lines of include/lv that changed since the last good run: one
   # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
   # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
   mutation-plan:
+    if: ${{ !inputs.web_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -261,8 +401,8 @@ jobs:
 
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
-    needs: [host, fuzz-json, arm]
-    if: failure()
+    needs: [host, fuzz-json, arm, web-host, web, web-browser]
+    if: ${{ failure() && github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
