@@ -301,8 +301,10 @@ std::vector<void*> take_heap_but(std::size_t budget) {
   for (;;) {
     lv_mem_monitor_t m;
     lv_mem_monitor(&m);
-    if (m.free_size <= budget || m.free_biggest_size == 0) return taken;
-    void* p = take_block(m.free_biggest_size > budget ? m.free_biggest_size - budget : m.free_biggest_size);
+    // Only the blocks larger than the budget: a fragmented heap keeps its small blocks, and the
+    // largest that is left is the budget (lv::detail::add_style probes for one block).
+    if (m.free_biggest_size <= budget) return taken;
+    void* p = take_block(m.free_biggest_size - budget);
     if (p == nullptr) return taken;
     taken.push_back(p);
   }
