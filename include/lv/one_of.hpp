@@ -178,14 +178,22 @@ consteval visit_plan<Trees, Arms> plan_visit(const std::array<int, Arms>& patter
   return plan;
 }
 
-// Fails unless every arm returns the same type.
+// The common type of `a` and `b`, as std::common_type gives it, or a compile error that
+// names both.
+consteval std::meta::info common_of(std::meta::info a, std::meta::info b) {
+  if (!std::meta::can_substitute(^^std::common_type_t, {a, b}))
+    fail("lv: the arms of visit return types with no common type: " +
+         str(std::meta::display_string_of(std::meta::dealias(a))) + " and " +
+         str(std::meta::display_string_of(std::meta::dealias(b))) +
+         ". Make the arms return types that convert to one type, as std::visit needs.");
+  return std::meta::dealias(std::meta::substitute(^^std::common_type_t, {a, b}));
+}
+
+// What visit returns from the results of its arms: their common type, as std::visit allows.
 consteval std::meta::info one_result(const std::vector<std::meta::info>& results) {
-  for (auto r : results)
-    if (std::meta::dealias(r) != std::meta::dealias(results.front()))
-      fail("lv: the arms of visit return different types: " +
-           str(std::meta::display_string_of(std::meta::dealias(results.front()))) + " and " +
-           str(std::meta::display_string_of(std::meta::dealias(r))) + ". Make every arm return one type.");
-  return results.front();
+  std::meta::info common = results.front();
+  for (auto r : results) common = common_of(common, r);
+  return common;
 }
 
 // Fails for a tree that a slot lists twice, and names it.
@@ -317,7 +325,8 @@ class one_of {
 
   // Calls the arm whose parameter names the tree that is mounted: lv::mounted<home>& for
   // home, auto& for every tree no other arm names, lv::not_mounted for the empty slot.
-  // Without that arm an empty slot calls nothing, and the result is std::optional<R>.
+  // The result is the common type R of what the arms return, as std::visit allows. Without
+// the arm for the empty slot, an empty slot calls nothing, and the result is std::optional<R>.
   template <class... Arms>
   auto visit(Arms&&... arms) {
     static constexpr auto plan = detail::plan_visit<count, sizeof...(Arms)>(

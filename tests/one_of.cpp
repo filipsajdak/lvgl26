@@ -225,6 +225,12 @@ void visit_calls_the_arm_of_the_tree(lv::obj screen) {
   window.visit(&count_dialog, [](auto&) { counted += 100; });
   check(counted == 1);
   static_assert(std::is_same_v<decltype(visits_without_empty(window)), std::optional<int>>);
+  // An int arm and a double arm give their common type, double, as std::visit allows.
+  check(window.mount<settings>(screen).has_value());
+  const auto common = window.visit([](lv::mounted<settings>&) { return 2; }, [](auto&) { return 0.5; });
+  static_assert(std::is_same_v<decltype(common), const std::optional<double>>);
+  check(common == 2.0);
+  window.unmount();
   static_assert(std::is_void_v<decltype(window.visit(&count_dialog, [](auto&) {}))>);
 }
 

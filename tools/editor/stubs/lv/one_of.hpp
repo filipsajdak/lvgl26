@@ -71,11 +71,12 @@ class one_of {
   mounted<T>& get() { __builtin_unreachable(); }
 
   /// Calls the arm whose parameter names the tree that is mounted: lv::mounted<home>&,
-  /// auto& for every other tree, lv::not_mounted for the empty slot.
+  /// auto& for every other tree, lv::not_mounted for the empty slot. The result is the common
+  /// type of the arms' results, in a std::optional without the arm for the empty slot.
   template <class... Arms>
   auto visit(Arms&&... arms)
-      -> stub::visit_out<typename stub::first_result<std::remove_cvref_t<Arms...[0]>, not_mounted,
-                                                     mounted<Trees>&...>::type,
+      -> stub::visit_out<std::common_type_t<typename stub::first_result<std::remove_cvref_t<Arms>, not_mounted,
+                                                                          mounted<Trees>&...>::type...>,
                          (std::is_invocable_v<std::remove_cvref_t<Arms>&, not_mounted> || ...)> {
     __builtin_unreachable();
   }

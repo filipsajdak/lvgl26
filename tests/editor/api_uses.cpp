@@ -400,6 +400,9 @@ int use_application() {
   static_assert(std::same_as<decltype(slot.visit([](auto&) { return 1; })), std::optional<int>>);
   static_assert(std::same_as<decltype(slot.visit([](auto&) { return 1; }, [](lv::not_mounted) { return 0; })), int>);
   static_assert(std::same_as<decltype(slot.visit([](auto&) {})), void>);
+  static_assert(std::same_as<decltype(slot.visit([](lv::mounted<ui>&) { return 1; }, [](auto&) { return 2.5; },
+                                                 [](lv::not_mounted) { return 0; })),
+                             double>);
   slot.unmount();
   if (slot.error() != lv::mount_error::not_mounted || which.value_or(0) + or_empty < 0) return 13;
   static_cast<void>(direct.root());

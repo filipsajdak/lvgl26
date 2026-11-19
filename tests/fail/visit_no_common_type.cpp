@@ -3,4 +3,4 @@ constexpr auto home = lv::column[lv::label({.text = "Home"})];
 constexpr auto settings = lv::column[lv::label({.text = "Settings"})];
 constexpr auto other = lv::column[lv::label({.text = "Other"})];
 constinit lv::one_of<home, settings> slot;
-int show() { return *slot.visit([](lv::mounted<home>&) { return 1; }, [](auto&) { return 2.5; }); }
+void show() { slot.visit([](lv::mounted<home>&) { return 1; }, [](auto&) { return "two"; }); }

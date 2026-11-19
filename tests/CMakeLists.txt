@@ -361,7 +361,7 @@ lvgl26_compile_fail(one_of_unknown_tree "other is not a tree of this lv::one_of.
 lvgl26_compile_fail(visit_no_arm_for_tree "no arm of visit takes the tree settings")
 lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*The slot's trees: home, settings.")
 lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
-lvgl26_compile_fail(visit_different_results "the arms of visit return different types: int and double")
+lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
 lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail(each_without_row "lv::each needs a row template")
