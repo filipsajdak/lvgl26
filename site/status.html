@@ -51,6 +51,7 @@
         <p class="lede">lvgl26 is early: version 0.0.1. This page lists what is on the <code>main</code> branch, with the header and the test behind each row, then what is planned, then the limits you should know before you start.</p>
         <div class="actions">
           <a class="btn primary" href="#today">Works today</a>
+          <a class="btn" href="#targets">Where it runs</a>
           <a class="btn" href="#planned">Planned</a>
           <a class="btn" href="#limits">Known limits</a>
         </div>
@@ -62,6 +63,34 @@
       <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
       <div><dt>Tested on</dt><dd>Linux host, in CI</dd></div>
     </dl>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+
+<section class="band tint" id="targets">
+  <div class="wrap">
+    <div class="head">
+      <div class="no">Targets</div>
+      <div>
+        <h2>Where it runs.</h2>
+        <p>Only GCC 16 compiles lvgl26 today, so a target is reached when GCC 16 can build for it. Each row says how far that is.</p>
+      </div>
+    </div>
+
+    <div class="table">
+      <table>
+        <thead><tr><th>Target</th><th>State</th><th>How far</th><th>More</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Linux</th><td><span class="pill ok">Works</span></td><td>Every push is built and tested here, on both LVGL versions</td><td></td></tr>
+          <tr><th scope="row">A low-cost microcontroller</th><td><span class="pill part">Partial</span></td><td>The slice is built for an Arm Cortex-M4, without exceptions and RTTI, and runs in an emulator every night. No real board yet</td><td><a href="#gap-real-board">A real board and a size budget</a></td></tr>
+          <tr><th scope="row">The browser, through WebAssembly</th><td><span class="pill plan">Planned</span></td><td>Needs a GCC that writes WebAssembly, or reflection in Clang. No GCC release has it yet</td><td><a href="#target-browser">The browser, through WebAssembly</a></td></tr>
+          <tr><th scope="row">Android Automotive OS and Android</th><td><span class="pill plan">Planned</span></td><td>Needs a GCC 16 cross compiler for Android. Not tried yet</td><td><a href="#target-android">Android Automotive OS and Android</a></td></tr>
+          <tr><th scope="row">iOS</th><td><span class="pill plan">Planned</span></td><td>Waits for reflection in Apple's compiler</td><td><a href="#target-ios">iOS</a></td></tr>
+          <tr><th scope="row">A product with a safety goal</th><td><span class="pill plan">Planned</span></td><td>No certificate. Two routes are studied</td><td><a href="#safety-route">A route for products with a safety goal</a></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
@@ -87,6 +116,7 @@
       <li><strong>Generated properties</strong> <span><code>lv::props&lt;"arc"&gt;</code>: one member per <code>lv_arc_set_*</code> and <code>lv_obj_set_*</code> function and one per event, built by reflection from LVGL's headers.</span> <small>props.hpp, events.hpp; l1_views.cpp, l2_tree.cpp</small></li>
       <li><strong>Compile-time tree</strong> <span><code>lv::column</code>, <code>lv::row</code>, <code>lv::group</code> and 13 widgets by short name. <code>lv::widget&lt;"spinbox"&gt;</code> reaches every other widget. Ids, <code>lv::mount</code>, typed <code>get&lt;"id"&gt;</code>.</span> <small>tree.hpp; l2_tree.cpp, ref/slice.png</small></li>
       <li><strong>A mounted tree where the program puts it</strong> <span><code>lv::mounted</code> owns the widgets and holds what the tree's nodes keep at run time, sized by the compiler: lvgl26 allocates nothing for it. It never moves. It lives in a variable, or in a <code>constinit</code> global with <code>mount(parent)</code> and <code>unmount()</code>, for a window that opens and closes in the same memory; <code>lv::mount_in</code> takes a slice of a region. It carries its own failure: <code>if (!root)</code>, <code>root.error()</code>. See <a href="docs/mounting.html">Where a tree lives</a>.</span> <small>tree.hpp; mounted_storage.cpp, fail/*_storage.cpp, examples/mounting</small></li>
+      <li><strong>One slot for one of several trees</strong> <span><code>lv::one_of&lt;saving, failed&gt;</code> holds one tree at a time in the memory of the largest, as <code>std::variant</code> does, and carries its failure as <code>lv::mounted</code> does. <code>mount&lt;T&gt;(parent)</code> ends the tree that is there first; switching allocates nothing. <code>visit</code> takes functions whose parameter type is the pattern: <code>lv::held&lt;failed&gt;</code>, a handle checked at each use, <code>auto</code> for the other trees, <code>lv::not_mounted</code> for the empty slot. For a root: pages inside a tree are <code>lv::shown</code>, planned. See <a href="docs/mounting.html">Where a tree lives</a>.</span> <small>one_of.hpp, detail/one_of_region.hpp; one_of.cpp, fail/one_of_*.cpp, fail/visit_*.cpp, examples/mounting</small></li>
       <li><strong>A pointer without C</strong> <span><code>lv::pointer mouse{display}</code> is a mouse or a touch panel fed by the platform: <code>press</code>, <code>move</code>, <code>release</code>. A queue in the object keeps a press shorter than LVGL's read period, and LVGL reads it at the next step; <code>lv::pointer panel{display, &amp;read}</code> is asked instead. The window examples feed it from SDL through <code>examples/platform/sdl_window.hpp</code>, with no C call. See <a href="docs/input.html">A pointer</a>.</span> <small>pointer.hpp, detail/input_queue.hpp; pointer.cpp, window_app.cpp, fail/pointer_*.cpp, examples/window</small></li>
       <li><strong>Units and values</strong> <span><code>px</code>, <code>pct</code>, <code>deg</code>, <code>ms</code>, <code>sec</code>, <code>lv::size_content</code>. Horizontal and vertical lengths are different kinds. Integers reject <code>bool</code>, floating point and values that do not fit.</span> <small>units.hpp, values.hpp; units.cpp, values.cpp</small></li>
       <li><strong>Angles in the unit LVGL means</strong> <span>Whole degrees are an <code>lv::angle</code>; the few values LVGL takes in tenths of a degree (an image's rotation, a style's transform rotation and skew) are <code>lv::decidegrees</code>. <code>90 * deg</code> works for both, <code>22.5 * deg</code> only where tenths are taken. Which is which is read from LVGL's doc comments at compile time, and a test checks it against the pixels.</span> <small>units.hpp, detail/angle_docs.hpp; angle_units.cpp</small></li>
@@ -140,8 +170,8 @@
         <tbody>
           <tr><th scope="row">LVGL versions</th><td class="num">2</td><td>v9.6.0 and a pinned commit of the v10 development line. One reference picture serves both, because they render the same pixels.</td></tr>
           <tr><th scope="row">Build presets</th><td class="num">7</td><td><span class="path">host-v96, host-v10, host-v96-asan, host-v10-asan, host-v96-tsan, host-v96-analyze, host-v96-coverage</span>. All with warnings as errors.</td></tr>
-          <tr><th scope="row">Compile-fail tests</th><td class="num">251</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
-          <tr><th scope="row">Test programs</th><td class="num">48</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
+          <tr><th scope="row">Compile-fail tests</th><td class="num">271</td><td>Each is a file in <code>tests/fail/</code> that must not compile, with the text its error must contain.</td></tr>
+          <tr><th scope="row">Test programs</th><td class="num">51</td><td>Run-time tests of the library, the agent kit and the examples, and the programs that replay the fuzz corpora.</td></tr>
           <tr><th scope="row">Reference pictures</th><td class="num">9</td><td><span class="path">tests/ref/slice.png, styled.png, tokens_dark.png, tokens_light.png, font.png, image.png, encoded_image.png, signal_type_dark.png, signal_type_day.png</span></td></tr>
           <tr><th scope="row">Fuzz targets</th><td class="num">3</td><td>The JSON reader (libFuzzer, one minute on every push), runtime documents and MCP messages (AFL++).</td></tr>
           <tr><th scope="row">Corpus inputs replayed</th><td class="num">13</td><td>7 for JSON, 2 for documents, 4 for MCP messages. They run as tests under every preset, sanitizers included.</td></tr>
@@ -176,6 +206,10 @@
       <li><strong>Components</strong> <span>Components that hold state and a view, used several times in a tree.</span> <small><a href="#gap-components">Migration gap</a>: unblocks Qt Component, Slint @children, TouchGFX containers</small></li>
       <li><strong>Long lists</strong> <span>A list that keeps the rows that fit and refills them as they scroll in, over a count and a function that gives a row. Views that sort or filter a list without copying a row.</span> <small>docs/research/lists.md</small></li>
       <li data-state="In development"><strong>Design showcase</strong> <span>One design system, Signal, for a family of eight devices: mood boards and the system are done (see <a href="design.html">Design</a>); the device screens and their lvgl26 firmware follow.</span> <small>design/signal</small></li>
+      <li id="target-browser"><strong>The browser, through WebAssembly</strong> <span>An lvgl26 application built for WebAssembly, running in the page itself. It needs a GCC that writes WebAssembly, which no GCC release has yet, or reflection in Clang.</span> <small>docs/research/targets-and-safety.md, docs/research/web-target.md</small></li>
+      <li id="target-android"><strong>Android Automotive OS and Android</strong> <span>A manufacturer's own screens as native code, built with a GCC 16 cross compiler for Android and drawn into the window of a native activity. Not tried yet.</span> <small>docs/research/targets-and-safety.md</small></li>
+      <li id="target-ios"><strong>iOS</strong> <span>Apple's compiler has no reflection yet, so there is no build.</span> <small>docs/research/targets-and-safety.md</small></li>
+      <li id="safety-route"><strong>A route for products with a safety goal</strong> <span>lvgl26 has no safety certificate, and its compiler is not qualified. Two routes are studied. One is the main UI beside a small certified renderer that draws the telltales. The other is a second back end over LVGL Safe, the library LVGL writes for certification.</span> <small>docs/research/targets-and-safety.md</small></li>
       <li><strong>Design tool adapters</strong> <span>Adapters that write <code>tokens.json</code> from a design tool, so that tokens are never copied by hand. Figma, Penpot and Claude Design, driven by agents.</span> <small><a href="#gap-design-tools">Migration gap</a></small></li>
     </ul>
   </div>

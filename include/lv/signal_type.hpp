@@ -57,7 +57,7 @@ constexpr unsigned char barlow_condensed_bold_ttf[] = {
 
 // Signal's typography: `type_tokens.font.display`, `type_tokens.text.title` and so on.
 // It is the same in both themes.
-inline constexpr auto type_tokens = lv::tokens<detail::type_json>;
+inline constexpr auto type_tokens = lv::tokens<detail::type_json, detail::signal_settings>;
 
 // Signal's typeface: the file of every family and weight that the tokens name.
 // `type(type_tokens.text.title)` is the font of that style.

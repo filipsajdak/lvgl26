@@ -49,6 +49,14 @@ add_test(NAME pointer_violation_no_function
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:pointer> -DCASE=no_function
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
+lvgl26_test(one_of)
+# A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
+# that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
+foreach(case unmount_empty get_other held_after_remount error_of_mounted)
+  add_test(NAME one_of_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # unmount() of a tree that is not mounted, and mount() of one that is, end the program.
 foreach(case unmount_not_mounted mount_twice unmount_after_parent)
   add_test(NAME mounted_storage_violation_${case}
@@ -359,6 +367,16 @@ lvgl26_compile_fail(each_two_rows "lv::each takes one row template")
 lvgl26_compile_fail(each_row_storage "a row of lv::each cannot hold a node that keeps run-time storage")
 lvgl26_compile_fail(mounted_detach_storage "keeps run-time storage inside its lv::mounted, so its widgets cannot")
 lvgl26_compile_fail(place_storage "lv::place leaves the widgets to their parent, and this tree keeps run-time")
+lvgl26_compile_fail(one_of_unknown_tree "other is not a tree of this lv::one_of. Its trees: home, settings.")
+lvgl26_compile_fail(visit_no_arm_for_tree "no arm of visit takes the tree settings")
+lvgl26_compile_fail(visit_arm_never_called "arm 2 of visit can never be called.*The slot's trees: home, settings.")
+lvgl26_compile_fail(visit_arm_takes_mounted "an arm of visit takes lv::held<home>, not lv::mounted<home>: write \\[\\]\\(lv::held<home> page\\)")
+lvgl26_compile_fail(visit_arm_takes_tree_by_value "an arm of visit takes lv::held<home>, not lv::mounted<home>")
+lvgl26_compile_fail(visit_arm_auto_reference "arm 2 of visit cannot take lv::held<settings>. Take the handle by value")
+lvgl26_compile_fail(visit_named_no_conversion "arm 2 of visit returns std::basic_string_view<char>, which does not convert to int, the result that visit<R> names")
+lvgl26_compile_fail(visit_tree_twice "arm 2 of visit can never be called.*each tree once")
+lvgl26_compile_fail(visit_no_common_type "the arms of visit return types with no common type: int and const char\\*")
+lvgl26_compile_fail(one_of_tree_twice "the tree home is listed twice in this lv::one_of")
 lvgl26_compile_fail(pointer_polled_press "this pointer is polled: LVGL asks its function. Use lv::pointer mouse\\{display\\} to feed one")
 lvgl26_compile_fail(pointer_temporary_display "the pointer keeps a pointer to its display: declare the display first, then the pointer")
 lvgl26_compile_fail(pointer_capturing_lambda "a polled pointer takes a function lv::pointer_sample\\(\\): LVGL calls it at each read")
@@ -473,6 +491,13 @@ lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a lengt
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
 lvgl26_compile_fail(token_color_alpha "design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
+# The forms from before the Design Tokens Format 2025.10 are errors unless lv::config::tokens_legacy_values is set.
+lvgl26_compile_fail(token_legacy_color "'ink' is written .*#3366ff.*a form from before the Design Tokens Format 2025.10.*colorSpace.*tools/dtcg_fix.py.*tokens_legacy_values")
+lvgl26_compile_fail(token_legacy_dimension "'gap' is written .*8px.*a form from before the Design Tokens Format 2025.10.*value.*unit.*tools/dtcg_fix.py")
+lvgl26_compile_fail(token_legacy_duration "'fast' is written .*200ms.*a form from before the Design Tokens Format 2025.10.*tools/dtcg_fix.py")
+lvgl26_compile_fail(token_legacy_number "'gap' is written 8, a form from before the Design Tokens Format 2025.10")
+lvgl26_compile_fail(token_legacy_member "'body' member 'fontSize' is written .*16px.*a form from before the Design Tokens Format 2025.10")
+lvgl26_compile_fail(token_legacy_in_list "'lift' member 'offsetX' is written .*0px.*a form from before the Design Tokens Format 2025.10")
 lvgl26_compile_fail(token_color_no_hash "design tokens: the color 'x123456' is not #rgb or #rrggbb")
 lvgl26_compile_fail(token_color_too_long "design tokens: the color '#1122334455' is not #rgb or #rrggbb")
 lvgl26_compile_fail(token_color_too_short "design tokens: the color '#' is not #rgb or #rrggbb")
@@ -765,6 +790,8 @@ if(Python3_FOUND)
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
+  # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
+  add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema" RESULT_VARIABLE lvgl26_jsonschema_missing OUTPUT_QUIET ERROR_QUIET)
   if(lvgl26_jsonschema_missing)

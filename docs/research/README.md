@@ -13,6 +13,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [instrument-cluster.md](instrument-cluster.md) | The information hierarchy of a cluster, glance limits, what the steering wheel hides, telltales, warning priority, tyre pressure, speedometer studies. |
 | [3d-and-effects.md](3d-and-effects.md) | 3D in LVGL, the plan for microcontrollers, generating 3D models, shadows and blur. |
 | [web-target.md](web-target.md) | Whether an lvgl26 application can run in a browser, and by which route. |
+| [targets-and-safety.md](targets-and-safety.md) | Where lvgl26 can run beyond a GCC host: a browser, Android, Android Automotive OS and iOS, each against the one compiler. Whether a product with a functional safety goal can use it, LVGL Safe, and what the site may say. |
 | [agent-docs.md](agent-docs.md) | How a library gives its documentation to AI coding agents: measurements, formats, what other projects ship. |
 | [components.md](components.md) | Components: reusable behaviour and its lifetime, dynamic content on small devices, slots, parameters and invariants, in other frameworks and for our trees. |
 | [lists.md](lists.md) | Lists whose rows change: a fixed-capacity model, keyed rows, bindings to a row's fields, the selected row, the heap and code a row costs, and the API of recycling and sorted views. |
@@ -31,6 +32,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 | [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
 | [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |
+| [lvgl-safe.md](lvgl-safe.md) | Whether lvgl26 can get a second back end over LVGL Safe: its licence, its API in full, a mapping of our widgets and features, a layout computed by the compiler, and three shapes for a safety product compared. |
 | [dtcg.md](dtcg.md) | The Design Tokens Format 2025.10 against its draft of 2026-09-08, whether a percentage exists, what design tools read, `$extends` and variants, the resolver and colour modules, what our token files and reader do outside the standard, and a plan. |
 | [input-devices.md](input-devices.md) | Input devices as objects of `lv::`: what LVGL reads and when, why a short press is missed and how a queue keeps it, pointer first, then keypad, encoder and focus, and an SDL window. Measured on both LVGL versions, decisions for the owner. |
 

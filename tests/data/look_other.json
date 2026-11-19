@@ -1,8 +1,8 @@
 {
-  "color": {"$type": "color", "teal": {"$value": "#009688"}},
+  "color": {"$type": "color", "teal": {"$value": {"colorSpace": "srgb", "components": [0, 0.5882, 0.5333], "hex": "#009688"}}},
   "chip": {
     "bg_color": {"$value": "{color.teal}"},
     "bg_opa": {"$type": "number", "$value": 1},
-    "radius": {"$type": "dimension", "$value": "4px"}
+    "radius": {"$type": "dimension", "$value": {"value": 4, "unit": "px"}}
   }
 }

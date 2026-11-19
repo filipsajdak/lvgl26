@@ -11,49 +11,49 @@
   "label": {
    "$value": {
     "fontFamily": "{font.text}",
-    "fontSize": "18px",
+    "fontSize": {"value": 18, "unit": "px"},
     "fontWeight": 500,
     "lineHeight": 1.2,
-    "letterSpacing": "0px"
+    "letterSpacing": {"value": 0, "unit": "px"}
    }
   },
   "small": {
    "$value": {
     "fontFamily": "{font.text}",
-    "fontSize": "12px",
+    "fontSize": {"value": 12, "unit": "px"},
     "fontWeight": 500,
     "lineHeight": 1.2,
-    "letterSpacing": "1px"
+    "letterSpacing": {"value": 1, "unit": "px"}
    }
   }
  },
  "color": {
   "$type": "color",
   "white": {
-   "$value": "#ffffff"
+   "$value": {"colorSpace": "srgb", "components": [1, 1, 1], "hex": "#ffffff"}
   },
   "blue": {
-   "$value": "#155dfc"
+   "$value": {"colorSpace": "srgb", "components": [0.0824, 0.3647, 0.9882], "hex": "#155dfc"}
   },
   "gray": {
-   "$value": "#62748e"
+   "$value": {"colorSpace": "srgb", "components": [0.3843, 0.4549, 0.5569], "hex": "#62748e"}
   },
   "red": {
-   "$value": "#ff2056"
+   "$value": {"colorSpace": "srgb", "components": [1, 0.1255, 0.3373], "hex": "#ff2056"}
   },
   "ink": {
-   "$value": "#1d293d"
+   "$value": {"colorSpace": "srgb", "components": [0.1137, 0.1608, 0.2392], "hex": "#1d293d"}
   }
  },
  "elevation": {
   "card": {
    "$type": "shadow",
    "$value": {
-    "color": "#000000",
-    "offsetX": "0px",
-    "offsetY": "4px",
-    "blur": "12px",
-    "spread": "2px"
+    "color": {"colorSpace": "srgb", "components": [0, 0, 0], "hex": "#000000"},
+    "offsetX": {"value": 0, "unit": "px"},
+    "offsetY": {"value": 4, "unit": "px"},
+    "blur": {"value": 12, "unit": "px"},
+    "spread": {"value": 2, "unit": "px"}
    }
   }
  },
@@ -62,7 +62,7 @@
    "$type": "border",
    "$value": {
     "color": "{color.ink}",
-    "width": "3px",
+    "width": {"value": 3, "unit": "px"},
     "style": "solid"
    }
   }
@@ -71,8 +71,8 @@
   "quick": {
    "$type": "transition",
    "$value": {
-    "duration": "150ms",
-    "delay": "0ms",
+    "duration": {"value": 150, "unit": "ms"},
+    "delay": {"value": 0, "unit": "ms"},
     "timingFunction": [
      0.4,
      0,
@@ -89,19 +89,19 @@
   },
   "radius": {
    "$type": "dimension",
-   "$value": "24px"
+   "$value": {"value": 24, "unit": "px"}
   },
   "width": {
    "$type": "dimension",
-   "$value": "162px"
+   "$value": {"value": 162, "unit": "px"}
   },
   "height": {
    "$type": "dimension",
-   "$value": "192px"
+   "$value": {"value": 192, "unit": "px"}
   },
   "pad_row": {
    "$type": "dimension",
-   "$value": "10px"
+   "$value": {"value": 10, "unit": "px"}
   },
   "text_color": {
    "$value": "{color.white}"
@@ -133,23 +133,23 @@
  "padded": {
   "pad_all": {
    "$type": "dimension",
-   "$value": "7px"
+   "$value": {"value": 7, "unit": "px"}
   },
   "pad_gap": {
    "$type": "dimension",
-   "$value": "5px"
+   "$value": {"value": 5, "unit": "px"}
   },
   "checked": {
    "pad_top": {
     "$type": "dimension",
-    "$value": "3px"
+    "$value": {"value": 3, "unit": "px"}
    }
   }
  },
  "wide": {
   "width": {
    "$type": "dimension",
-   "$value": "100px"
+   "$value": {"value": 100, "unit": "px"}
   }
  },
  "plain": {
@@ -170,11 +170,11 @@
   },
   "radius": {
    "$type": "dimension",
-   "$value": "12px"
+   "$value": {"value": 12, "unit": "px"}
   },
   "width": {
    "$type": "dimension",
-   "$value": "140px"
+   "$value": {"value": 140, "unit": "px"}
   },
   "elevation": {
    "$value": "{elevation.card}"
@@ -217,25 +217,25 @@
  "flat": {
   "pad_all": {
    "$type": "dimension",
-   "$value": "7px"
+   "$value": {"value": 7, "unit": "px"}
   },
   "anim_duration": {
    "$type": "duration",
-   "$value": "200ms"
+   "$value": {"value": 200, "unit": "ms"}
   }
  },
  "tile-inner": {
   "width": {
    "$type": "dimension",
-   "$value": "64px"
+   "$value": {"value": 64, "unit": "px"}
   },
   "height": {
    "$type": "dimension",
-   "$value": "64px"
+   "$value": {"value": 64, "unit": "px"}
   },
   "radius": {
    "$type": "dimension",
-   "$value": "16px"
+   "$value": {"value": 16, "unit": "px"}
   },
   "bg_color": {
    "$value": "{color.white}"
@@ -248,21 +248,21 @@
  "tile-print": {
   "bg_color": {
    "$type": "color",
-   "$value": "#2b7fff"
+   "$value": {"colorSpace": "srgb", "components": [0.1686, 0.498, 1], "hex": "#2b7fff"}
   },
   "bg_grad_color": {
    "$type": "color",
-   "$value": "#155dfc"
+   "$value": {"colorSpace": "srgb", "components": [0.0824, 0.3647, 0.9882], "hex": "#155dfc"}
   }
  },
  "tile-scan": {
   "bg_color": {
    "$type": "color",
-   "$value": "#00bc7d"
+   "$value": {"colorSpace": "srgb", "components": [0, 0.7373, 0.4902], "hex": "#00bc7d"}
   },
   "bg_grad_color": {
    "$type": "color",
-   "$value": "#009966"
+   "$value": {"colorSpace": "srgb", "components": [0, 0.6, 0.4], "hex": "#009966"}
   }
  },
  "status-loud": {
@@ -275,11 +275,11 @@
  "pct": {
   "width": {
    "$type": "dimension",
-   "$value": "100px"
+   "$value": {"value": 100, "unit": "px"}
   },
   "height": {
    "$type": "dimension",
-   "$value": "20px"
+   "$value": {"value": 20, "unit": "px"}
   },
   "$extensions": {
    "io.github.filipsajdak.lvgl26": {
@@ -291,17 +291,17 @@
  "alpha": {
   "bg_color": {
    "$type": "color",
-   "$value": "#2b7fff80"
+   "$value": {"colorSpace": "srgb", "components": [0.1686, 0.498, 1], "alpha": 0.502, "hex": "#2b7fff"}
   },
   "text_color": {
    "$type": "color",
-   "$value": "#ffffffff"
+   "$value": {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1, "hex": "#ffffff"}
   }
  },
  "alpha-explicit": {
   "bg_color": {
    "$type": "color",
-   "$value": "#2b7fff80"
+   "$value": {"colorSpace": "srgb", "components": [0.1686, 0.498, 1], "alpha": 0.502, "hex": "#2b7fff"}
   },
   "bg_opa": {
    "$type": "number",
@@ -326,49 +326,49 @@
  "lit": {
   "radius": {
    "$type": "dimension",
-   "$value": "4px"
+   "$value": {"value": 4, "unit": "px"}
   },
   "default": {
    "radius": {
     "$type": "dimension",
-    "$value": "9px"
+    "$value": {"value": 9, "unit": "px"}
    }
   }
  },
  "pad-order": {
   "pad_top": {
    "$type": "dimension",
-   "$value": "3px"
+   "$value": {"value": 3, "unit": "px"}
   },
   "pad_all": {
    "$type": "dimension",
-   "$value": "7px"
+   "$value": {"value": 7, "unit": "px"}
   }
  },
  "pad-narrow": {
   "pad_hor": {
    "$type": "dimension",
-   "$value": "2px"
+   "$value": {"value": 2, "unit": "px"}
   },
   "pad_all": {
    "$type": "dimension",
-   "$value": "7px"
+   "$value": {"value": 7, "unit": "px"}
   }
  },
  "pad-narrow-after": {
   "pad_all": {
    "$type": "dimension",
-   "$value": "7px"
+   "$value": {"value": 7, "unit": "px"}
   },
   "pad_hor": {
    "$type": "dimension",
-   "$value": "2px"
+   "$value": {"value": 2, "unit": "px"}
   }
  },
  "tall": {
   "height": {
    "$type": "dimension",
-   "$value": "50px"
+   "$value": {"value": 50, "unit": "px"}
   }
  },
  "flow-only": {
@@ -390,7 +390,7 @@
   "main": {
    "width": {
     "$type": "dimension",
-    "$value": "40px"
+    "$value": {"value": 40, "unit": "px"}
    }
   }
  },
@@ -407,7 +407,7 @@
   "checked": {
    "width": {
     "$type": "dimension",
-    "$value": "40px"
+    "$value": {"value": 40, "unit": "px"}
    }
   }
  }

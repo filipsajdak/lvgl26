@@ -3,104 +3,46 @@
   "$description": "Signal, day theme. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
   "color": {
     "$type": "color",
-    "ground": {
-      "$value": "#ffffff"
-    },
-    "surface": {
-      "$value": "#ecedf0"
-    },
-    "surface-raised": {
-      "$value": "#dcdee3"
-    },
-    "line": {
-      "$value": "#c4c7cf"
-    },
-    "line-strong": {
-      "$value": "#5f626c"
-    },
-    "reading": {
-      "$value": "#0a0a0c"
-    },
-    "muted": {
-      "$value": "#4a4d57"
-    },
-    "active": {
-      "$value": "#0a0a0c"
-    },
-    "on-active": {
-      "$value": "#d4ff3a"
-    },
-    "alarm": {
-      "$value": "#c4161c"
-    },
-    "on-alarm": {
-      "$value": "#ffffff"
-    },
-    "caution": {
-      "$value": "#ffc531"
-    },
-    "on-caution": {
-      "$value": "#0a0a0c"
-    },
-    "advice": {
-      "$value": "#1f3fbf"
-    },
-    "on-advice": {
-      "$value": "#ffffff"
-    }
+    "ground": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}},
+    "surface": {"$value": {"hex":"#ecedf0","colorSpace":"srgb","components":[0.9255,0.9294,0.9412]}},
+    "surface-raised": {"$value": {"hex":"#dcdee3","colorSpace":"srgb","components":[0.8627,0.8706,0.8902]}},
+    "line": {"$value": {"hex":"#c4c7cf","colorSpace":"srgb","components":[0.7686,0.7804,0.8118]}},
+    "line-strong": {"$value": {"hex":"#5f626c","colorSpace":"srgb","components":[0.3725,0.3843,0.4235]}},
+    "reading": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "muted": {"$value": {"hex":"#4a4d57","colorSpace":"srgb","components":[0.2902,0.302,0.3412]}},
+    "active": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "on-active": {"$value": {"hex":"#d4ff3a","colorSpace":"srgb","components":[0.8314,1,0.2275]}},
+    "alarm": {"$value": {"hex":"#c4161c","colorSpace":"srgb","components":[0.7686,0.0863,0.1098]}},
+    "on-alarm": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}},
+    "caution": {"$value": {"hex":"#ffc531","colorSpace":"srgb","components":[1,0.7725,0.1922]}},
+    "on-caution": {"$value": {"hex":"#0a0a0c","colorSpace":"srgb","components":[0.0392,0.0392,0.0471]}},
+    "advice": {"$value": {"hex":"#1f3fbf","colorSpace":"srgb","components":[0.1216,0.2471,0.749]}},
+    "on-advice": {"$value": {"hex":"#ffffff","colorSpace":"srgb","components":[1,1,1]}}
   },
   "space": {
     "$type": "dimension",
-    "1": {
-      "$value": "4px"
-    },
-    "2": {
-      "$value": "8px"
-    },
-    "3": {
-      "$value": "12px"
-    },
-    "4": {
-      "$value": "16px"
-    },
-    "6": {
-      "$value": "24px"
-    },
-    "8": {
-      "$value": "32px"
-    },
-    "12": {
-      "$value": "48px"
-    }
+    "1": {"$value": {"value":4,"unit":"px"}},
+    "2": {"$value": {"value":8,"unit":"px"}},
+    "3": {"$value": {"value":12,"unit":"px"}},
+    "4": {"$value": {"value":16,"unit":"px"}},
+    "6": {"$value": {"value":24,"unit":"px"}},
+    "8": {"$value": {"value":32,"unit":"px"}},
+    "12": {"$value": {"value":48,"unit":"px"}}
   },
   "radius": {
     "$type": "dimension",
-    "0": {
-      "$value": "0px"
-    }
+    "0": {"$value": {"value":0,"unit":"px"}}
   },
   "stroke": {
     "$type": "dimension",
-    "bar": {
-      "$value": "4px"
-    },
-    "track": {
-      "$value": "8px"
-    },
-    "ring": {
-      "$value": "16px"
-    }
+    "bar": {"$value": {"value":4,"unit":"px"}},
+    "track": {"$value": {"value":8,"unit":"px"}},
+    "ring": {"$value": {"value":16,"unit":"px"}}
   },
   "size": {
     "$type": "dimension",
-    "target": {
-      "$value": "48px"
-    },
-    "target-glove": {
-      "$value": "80px"
-    },
-    "chip": {
-      "$value": "32px"
-    }
+    "target": {"$value": {"value":48,"unit":"px"}},
+    "target-glove": {"$value": {"value":80,"unit":"px"}},
+    "chip": {"$value": {"value":32,"unit":"px"}}
   }
 }

@@ -8,6 +8,7 @@
 
 #include <lv/host.hpp>
 #include <lv/lv.hpp>
+#include <lv/one_of.hpp>
 #include <lv/mcp.hpp>
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
@@ -24,6 +25,7 @@
 #include <cstdio>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -40,7 +42,7 @@ using mp_units::si::unit_symbols::min;
 // ---- settings ---------------------------------------------------------------------
 
 constexpr lv::config settings = lv::cfg<lv::override>;
-static_assert(!settings.raw_style_values && !settings.raw_integer_state);
+static_assert(!settings.raw_style_values && !settings.raw_integer_state && !settings.tokens_legacy_values);
 static_assert(settings.compile_time_image_pixels == 128 * 128);
 
 // ---- units ------------------------------------------------------------------------
@@ -294,6 +296,8 @@ static_assert(lv::storage_size<ui> == sizeof(lv::mounted<ui>));
 // ---- an application, a display, a mounted tree ------------------------------------
 
 constinit lv::mounted<ui> page;
+constexpr auto popup = lv::column[lv::label({.text = "Popup"})];
+constinit lv::one_of<ui, popup> slot;
 
 constinit lv::frame<320, 240> frame;
 constinit lv::band<320, 240, 10> band;
@@ -397,6 +401,23 @@ int use_application() {
   lv::mounted<ui>& in_memory = lv::mount_in<ui>(memory, plain.screen());
   std::destroy_at(&in_memory);
   lv::mounted<ui> direct{plain.screen()};
+  if (!slot.mount<popup>(plain.screen())) return 11;
+  if (!slot.has_value() || !slot || !slot.holds<popup>()) return 12;
+  const lv::held<popup> handle = slot.get<popup>();
+  if (!handle || !handle.has_value() || !handle->root() || !(*handle).root()) return 14;
+  const std::optional<int> which = slot.visit([](lv::held<ui>) { return 1; }, [](auto) { return 2; });
+  const int or_empty = slot.visit([](auto) { return 1; }, [](lv::not_mounted) { return 0; });
+  slot.visit([](lv::held<popup>) {}, [](auto) {});
+  static_assert(std::same_as<decltype(slot.visit([](auto) { return 1; })), std::optional<int>>);
+  static_assert(std::same_as<decltype(slot.visit([](auto) { return 1; }, [](lv::not_mounted) { return 0; })), int>);
+  static_assert(std::same_as<decltype(slot.visit([](auto) {})), void>);
+  static_assert(std::same_as<decltype(slot.visit([](lv::held<ui>) { return 1; }, [](auto) { return 2.5; },
+                                                 [](lv::not_mounted) { return 0; })),
+                             double>);
+  static_assert(std::same_as<decltype(slot.visit<long>([](auto) { return 1; })), std::optional<long>>);
+  slot.visit<void>([](auto) { return 1; });
+  slot.unmount();
+  if (slot.error() != lv::mount_error::not_mounted || which.value_or(0) + or_empty < 0) return 13;
   static_cast<void>(direct.root());
   lv::application::options none{};
   static_cast<void>(none.clock == lv::host.clock);
