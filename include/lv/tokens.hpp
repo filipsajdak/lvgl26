@@ -559,6 +559,13 @@ consteval bool is_named(std::meta::info member, std::string_view name) {
   return std::meta::identifier_of(member) == name;
 }
 
+// One token: its value is checked for a form from before the standard (unless the settings allow it) and read.
+template <class M, bool Legacy>
+consteval M fill_leaf(json::value root, std::string_view key, const resolved_token& resolved) {
+  if constexpr (!Legacy) check_forms(key, resolved.type, resolved.value);
+  return M{read_token(read_as<typename token_payload<M>::type>{}, root, resolved.value), from_design_tokens{}};
+}
+
 // Fills the generated struct G from its group. Struct members and used JSON
 // members are in the same order, so they are walked together; the members that
 // hold vendor data and "$extends" come last and have no JSON member of their own.
@@ -582,9 +589,7 @@ consteval G fill_tokens(json::value group, token_type inherited) {
       const json::value child{member.text};
       ++walk;
       if constexpr (is_token_leaf<M>) {
-        const auto resolved = resolve_token(root, child, inherited);
-        if constexpr (!Legacy) check_forms(member.key, resolved.type, resolved.value);
-        out.[:m:] = M{read_token(read_as<typename token_payload<M>::type>{}, root, resolved.value), from_design_tokens{}};
+        out.[:m:] = fill_leaf<M, Legacy>(root, member.key, resolve_token(root, child, inherited));
       } else {
         out.[:m:] = fill_tokens<M, Doc, Legacy>(child, inherited);
       }
