@@ -126,7 +126,7 @@ Name conflict: `pedapudi/lvgl_cpp` uses the name `lvgl_cpp` and `namespace lvgl`
 
 Found 2026-11-18 while sketching storage for lvgl26 (`docs/research/node-storage.md`, sketch (vii)).
 Marks are dated 2026-11-18.
-The report below is a draft for the owner to file; it was not filed.
+The report below was the draft. It is filed as issue https://github.com/lvgl/lvgl/issues/11014, with the fix in pull request https://github.com/lvgl/lvgl/pull/11015, under review on 2026-11-19. After the maintainer's review the fix makes `lv_obj_add_style` return `lv_result_t`: `LV_RESULT_INVALID` when the realloc fails, with the count restored and a warning logged. `summary` 2026-11-19: as the owner reported it, the pull request itself was not read here. Until a release has it, lvgl26 guards its own adds (`detail::add_style` in `include/lv/detail/style_add.hpp`).
 
 ### Findings
 
