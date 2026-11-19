@@ -14,6 +14,11 @@ add_library(lvgl26_sdl_window INTERFACE)
 target_include_directories(lvgl26_sdl_window INTERFACE ${PROJECT_SOURCE_DIR}/examples/platform)
 target_link_libraries(lvgl26_sdl_window INTERFACE lvgl26::lvgl26 SDL2::SDL2)
 
-# The application of app.hpp in a window; tests/window_app.cpp drives the same application.
-add_executable(window_demo main.cpp)
-target_link_libraries(window_demo PRIVATE lvgl26_sdl_window lvgl26_warnings)
+# The applications of examples/wasm in a window, the same sources as in the browser;
+# tests/window_app.cpp drives the counter with the same pointer.
+foreach(application counter bounce)
+  add_executable(window_${application} main.cpp)
+  target_include_directories(window_${application} PRIVATE ${PROJECT_SOURCE_DIR}/examples/wasm/${application})
+  target_compile_options(window_${application} PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/wasm/${application})
+  target_link_libraries(window_${application} PRIVATE lvgl26_sdl_window lvgl26_warnings)
+endforeach()
