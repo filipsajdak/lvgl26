@@ -97,7 +97,7 @@ if __name__ == "__main__":
     def run(extra):
         return sh(command + extra, cwd=cwd).stderr
     mem = run(["-fmem-report"])
-    tot = re.findall(r"^(Total|Total Allocated|Peak.*?)\s+(\d+)\w*", mem, re.M)
+    tot = re.findall(r"^(Total\S*(?: Allocated)?)\s+(\d+\S*)", mem, re.M)
     print("-fmem-report:", "; ".join(f"{a} {b}" for a, b in tot[:6]) or mem[-300:].replace("\n", " | "))
     st = run(["-fstats"])
     print("\n-fstats lines:", len(st.splitlines()), "; sample:", " | ".join(st.splitlines()[:6]))

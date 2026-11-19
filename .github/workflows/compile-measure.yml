@@ -24,6 +24,7 @@ jobs:
           cat /proc/sys/kernel/perf_event_paranoid
           sudo apt-get update -qq && sudo apt-get install -y -qq linux-tools-common linux-tools-$(uname -r) 2>&1 | tail -2 || true
           which perf || true
+          sudo apt-get install -y -qq qemu-user 2>&1 | tail -1; dpkg -L qemu-user | grep -i -E "plugin|\.so" | head -3; find / -name 'libinsn*' 2>/dev/null | head -3
           perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
           sudo sysctl kernel.perf_event_paranoid=1 || true
           perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
@@ -52,14 +53,14 @@ jobs:
       - name: Tools
         run: |
           cat /proc/sys/kernel/perf_event_paranoid
-          apt-get update -qq && apt-get install -y -qq linux-perf valgrind qemu-user curl 2>&1 | tail -2
+          apt-get update -qq && apt-get install -y linux-perf valgrind qemu-user curl 2>&1 | tail -4; valgrind --version
           which perf valgrind qemu-x86_64 || true
           find / -name 'libinsn*' 2>/dev/null | head -3 || true
           perf stat -e instructions:u -x, -- true 2>&1 | tail -3 || true
       - name: DynamoRIO
         continue-on-error: true
         run: |
-          url=$(curl -s https://api.github.com/repos/DynamoRIO/dynamorio/releases/latest | grep browser_download_url | grep -E 'Linux-[0-9.]+\.tar\.gz' | head -1 | cut -d'"' -f4)
+          url=$(curl -s https://api.github.com/repos/DynamoRIO/dynamorio/releases/latest | grep browser_download_url | grep -E '/DynamoRIO-Linux-[0-9.]+\.tar\.gz' | head -1 | cut -d'"' -f4)
           echo "$url"; curl -fsSL "$url" | tar -xz -C /opt; ls /opt | head
           echo "DRRUN=$(ls -d /opt/DynamoRIO-*/bin64/drrun | head -1)" >> "$GITHUB_ENV"
       - name: Configure
@@ -68,6 +69,23 @@ jobs:
         continue-on-error: true
         run: |
           cp tmp-measure/*.py tools/ 2>/dev/null; python3 tmp-measure/measure.py build/host-v96 tests/smoke.cpp 10 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pairs of commits, to see what each counter would have caught
+        continue-on-error: true
+        timeout-minutes: 90
+        run: |
+          git config --global --add safe.directory "$PWD"
+          git fetch -q --unshallow || true
+          printf '#include <lv/lv.hpp>\nint main() {}\n' > /tmp/inc.cpp
+          pair() {  # name, commit, file to compile (tests/ probe name is smoke)
+            echo "### $1 ($2)" | tee -a "$GITHUB_STEP_SUMMARY"
+            rm -rf /tmp/b /tmp/a; git worktree add -q --detach /tmp/b "$2^"; git worktree add -q --detach /tmp/a "$2"
+            python3 tmp-measure/pair.py "$PWD" build/host-v96 smoke.cpp "$3" /tmp/b /tmp/a 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+            git worktree remove --force /tmp/b; git worktree remove --force /tmp/a
+          }
+          pair "include-only: no props struct" 794b6ca /tmp/inc.cpp
+          pair "smoke: option lists off the path" 9299d42 "$PWD/tests/smoke.cpp"
+          pair "include-only: one_of out of lv.hpp" 15101c0 /tmp/inc.cpp
+          pair "include-only: theme feature" ce5557e /tmp/inc.cpp
       - name: Measures on large_tree.cpp, without the slow ones
         continue-on-error: true
         timeout-minutes: 120
