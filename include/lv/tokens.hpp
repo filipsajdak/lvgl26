@@ -19,6 +19,7 @@
 
 #include <lv/config.hpp>
 #include <lv/detail/api.hpp>
+#include <lv/detail/settings.hpp>
 #include <lv/json.hpp>
 #include <lv/token_types.hpp>
 #include <lv/units.hpp>
@@ -504,7 +505,7 @@ consteval std::string_view standard_form(token_type kind) {
 consteval void fail_legacy(std::string_view where, token_type kind, json::value v) {
   token_fail("'" + str(where) + "' is written " + str(v.text()) + ", a form from before the Design Tokens Format 2025.10. "
              "The standard writes it as " + str(standard_form(kind)) + ". Run python3 tools/dtcg_fix.py on the token file, "
-             "or set lv::config::tokens_legacy_values while the files convert");
+             "or set rules.tokens_legacy_values in the settings while the files convert");
 }
 
 // The members of a composite token that hold a color, a dimension or a duration.
@@ -621,9 +622,9 @@ concept embedded_text = std::is_bounded_array_v<std::remove_cvref_t<T>> &&
 // The design tokens of the embedded DTCG document `Doc`, as a typed constant.
 //
 // A value in a form from before the Design Tokens Format 2025.10 ("#3366ff", "8px") is a compile error,
-// unless the settings `O` name lv::config::tokens_legacy_values. tools/dtcg_fix.py rewrites a file.
+// unless the settings `O` set rules.tokens_legacy_values. tools/dtcg_fix.py rewrites a file.
 template <const auto& Doc, class O = override>
   requires detail::embedded_text<decltype(Doc)>
-inline constexpr auto tokens = detail::load_tokens<Doc, cfg<O>.tokens_legacy_values>();
+inline constexpr auto tokens = detail::load_tokens<Doc, detail::project<O>.rules.tokens_legacy_values>();
 
 }  // namespace lv

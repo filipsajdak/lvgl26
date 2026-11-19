@@ -456,6 +456,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Exhaustive matching</strong> with <code>lv::match</code></li>
         <li><strong>Runtime JSON screens</strong> and patches by id</li>
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
+        <li><strong>Project settings</strong> in one JSON file for the whole program: <code>"allow": {"threads": false}</code> makes every part of lvgl26 that needs threads a compile error that names the key</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
         <li><strong>Example ports</strong>: 73 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
         <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>

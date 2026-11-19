@@ -71,6 +71,14 @@
     "include/lv/detail/input_queue.hpp": {
       "tests": "^pointer$|^window_app$",
       "targets": "pointer window_app"
+    },
+    "include/lv/image.hpp": {
+      "tests": "^image$|^image_alone$|fail_image",
+      "targets": "image image_alone"
+    },
+    "include/lv/detail/png_reader.hpp": {
+      "tests": "^image$|^image_alone$|fail_image",
+      "targets": "image image_alone"
     }
   }
 }

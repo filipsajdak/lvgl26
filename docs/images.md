@@ -57,14 +57,13 @@ A picture is at most 128 x 128 pixels, because a large one makes the build slow.
 
 ```text
 error: lv: this picture is 200 x 100 pixels, and the compiler decodes at most 16384 (a large
-picture makes the build slow). To allow it, raise lv::config::compile_time_image_pixels.
+picture makes the build slow). To allow it, raise limits.compile_time_image in the settings.
 ```
 
-The limit is a project setting:
+The limit is a project setting, in the [settings file](settings.md):
 
-```cpp
-template <>
-inline constexpr lv::config lv::cfg<lv::override>{.compile_time_image_pixels = 320 * 240};
+```json
+{"limits": {"compile_time_image": {"value": 76800, "unit": "px"}}}
 ```
 
 ## A picture kept as its file

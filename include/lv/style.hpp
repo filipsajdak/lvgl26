@@ -17,7 +17,7 @@
 // `layers`: a pointer and a count, null for a style without selectors.
 //
 // Design values must be design tokens (see lv/tokens.hpp) or lv::raw(...).
-// Set lv::config::raw_style_values (see lv/config.hpp) to accept plain values such as 8 * lv::px.
+// Set rules.raw_style_values in the settings (see lv/config.hpp) to accept plain values such as 8 * lv::px.
 
 #include <lv/detail/style_add.hpp>
 #include <lv/token_types.hpp>

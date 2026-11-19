@@ -32,6 +32,47 @@ function(lvgl26_compile_fail name message)
 endfunction()
 
 lvgl26_test(smoke)
+# The settings reader, and a program whose settings come from a file.
+lvgl26_test(settings)
+add_library(settings_library STATIC settings/library.cpp)
+target_link_libraries(settings_library PUBLIC lvgl26::lvgl26 PRIVATE lvgl26_warnings)
+add_executable(settings_file settings_file.cpp)
+target_link_libraries(settings_file PRIVATE settings_library lvgl26_warnings)
+lvgl26_settings(settings_file settings/project.json)
+add_test(NAME settings_file COMMAND settings_file)
+# The check before the link: an object with the mark of other settings stops it.
+add_library(settings_marks OBJECT settings/mark_a.cpp settings/mark_b.cpp)
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings_marks_all.txt
+     CONTENT "$<JOIN:$<TARGET_OBJECTS:settings_marks>,\n>\n")
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings_marks_own.txt
+     CONTENT "$<LIST:FILTER,$<TARGET_OBJECTS:settings_marks>,INCLUDE,mark_a>\n")
+foreach(case all own)
+  add_test(NAME settings_scan_${case}
+           COMMAND ${CMAKE_COMMAND} -DNM=${CMAKE_NM} -DHASH=aaaaaaaaaaaaaaaa -DNAME=lvgl26.json
+                   -DLIST=${CMAKE_CURRENT_BINARY_DIR}/settings_marks_${case}.txt -P ${PROJECT_SOURCE_DIR}/cmake/settings_scan.cmake)
+endforeach()
+set_tests_properties(settings_scan_all PROPERTIES PASS_REGULAR_EXPRESSION
+  "mark_b.cpp.o was compiled with other settings \\(lvgl26_settings_bbbbbbbbbbbbbbbb\\) than this program, whose settings file is lvgl26.json")
+# The presets of the setup skill (skills/settings): each builds and runs the example.
+set(LVGL26_SETTINGS_EXAMPLE ${CMAKE_CURRENT_SOURCE_DIR}/../examples/settings)
+foreach(preset desktop microcontroller browser)
+  add_executable(settings_${preset} ${LVGL26_SETTINGS_EXAMPLE}/main.cpp)
+  target_link_libraries(settings_${preset} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  lvgl26_settings(settings_${preset} ${LVGL26_SETTINGS_EXAMPLE}/presets/${preset}.json)
+  add_test(NAME examples_settings_${preset} COMMAND settings_${preset})
+endforeach()
+# The restrictions change no code: one file with none and with all four.
+add_library(settings_cost_open OBJECT settings_zero_cost.cpp)
+add_library(settings_cost_closed OBJECT settings_zero_cost.cpp)
+target_compile_options(settings_cost_closed PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/settings/all_forbidden.hpp)
+foreach(target settings_cost_open settings_cost_closed)
+  target_link_libraries(${target} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  target_compile_options(${target} PRIVATE -O2 -g0)
+endforeach()
+add_test(NAME settings_zero_cost
+         COMMAND ${CMAKE_COMMAND} -DOBJDUMP=${CMAKE_OBJDUMP} -DNM=${CMAKE_NM}
+                 "-DOPEN=$<TARGET_OBJECTS:settings_cost_open>" "-DCLOSED=$<TARGET_OBJECTS:settings_cost_closed>"
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/settings_same_objects.cmake)
 # The library in a program without exceptions and run-time type information.
 lvgl26_test(no_exceptions)
 target_compile_options(no_exceptions PRIVATE -fno-exceptions -fno-rtti)
@@ -334,6 +375,11 @@ add_executable(image image.cpp)
 target_link_libraries(image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME image COMMAND image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/image.png)
 lvgl26_test(image_alone)
+# A picture made by the compiler is named by its file, not by its pixels: a name of a million characters
+# stops Apple's linker (tools/check_symbols.py). The object file of a large picture in the 32-bit form
+# is read by the test image_symbols.
+add_library(image_symbols OBJECT image_symbols.cpp)
+target_link_libraries(image_symbols PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_executable(encoded_image encoded_image.cpp)
 target_link_libraries(encoded_image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME encoded_image COMMAND encoded_image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/encoded_image.png)
@@ -495,7 +541,7 @@ target_compile_options(fail_encoded_image_needs_png PRIVATE -ULV_USE_LODEPNG)  #
 lvgl26_compile_fail(encoded_image_needs_jpeg "LVGL is built without its JPEG decoder. Turn it on in CMake, before lvgl26 is added: set\\(LVGL26_JPEG ON\\)")
 target_compile_options(fail_encoded_image_needs_jpeg PRIVATE -ULV_USE_TJPGD)
 lvgl26_compile_fail(image_not_a_png "this is not a PNG file. Embed one")
-lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise lv::config::compile_time_image_pixels")
+lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise limits.compile_time_image in the settings")
 lvgl26_compile_fail(image_row_too_long "this picture is 16384 x 1 pixels, with rows of 65536 bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_too_wide "this picture is 70000 x 1 pixels, with rows of [0-9]+ bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_deep "this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced")
@@ -537,7 +583,7 @@ lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a lengt
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
 lvgl26_compile_fail(token_color_alpha "design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
-# The forms from before the Design Tokens Format 2025.10 are errors unless lv::config::tokens_legacy_values is set.
+# The forms from before the Design Tokens Format 2025.10 are errors unless rules.tokens_legacy_values is set.
 lvgl26_compile_fail(token_legacy_color "'ink' is written .*#3366ff.*a form from before the Design Tokens Format 2025.10.*colorSpace.*tools/dtcg_fix.py.*tokens_legacy_values")
 lvgl26_compile_fail(token_legacy_dimension "'gap' is written .*8px.*a form from before the Design Tokens Format 2025.10.*value.*unit.*tools/dtcg_fix.py")
 lvgl26_compile_fail(token_legacy_duration "'fast' is written .*200ms.*a form from before the Design Tokens Format 2025.10.*tools/dtcg_fix.py")
@@ -582,7 +628,38 @@ lvgl26_compile_fail(bind_wrong_type "this property cannot be bound to a state of
 lvgl26_compile_fail(bind_format_not_text "is for text properties only")
 lvgl26_compile_fail(state_bad_type "a state holds a quantity")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
-lvgl26_compile_fail(config_too_late "redefinition of .*lv::cfg<lv::override>")
+lvgl26_compile_fail(config_too_late "specialization of .lv::cfg<lv::override>. after instantiation")
+# Each part of lvgl26 that a project can forbid, with the message that names the setting.
+lvgl26_compile_fail(restrict_ui_scheduler "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow\\.threads\\)\\.")
+lvgl26_compile_fail(restrict_post "lv: lv::ui_scheduler::post needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. It keeps each piece of posted work on the heap until the UI thread runs it\\.")
+lvgl26_compile_fail(restrict_encode_png "lv: lv::encode_png needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. The bytes of the file are a std::vector\\.")
+lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this project does not allow them \\(allow\\.files\\)\\.")
+lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
+lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
+lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
+lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
+lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
+                       ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
+target_compile_options(fail_restrict_from_file PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted/settings.hpp)
+# Each mistake in a settings file, with the message that names it.
+# A settings file and a specialization of lv::cfg at once: the compiler shows the line of the
+# file's header that says what to do.
+lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json; use the file or a specialization of lv::cfg, not both")
+lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/project.json settings/project.json
+                       ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail both_forms_hash)
+target_compile_options(fail_settings_both_forms PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail/settings.hpp)
+lvgl26_compile_fail(settings_unknown_key "lv: test\\.json: unknown key 'thread' in allow\\. Did you mean 'threads'\\? The keys of allow: allocation, threads, files, floating_point\\.")
+lvgl26_compile_fail(settings_unknown_section "lv: test\\.json: unknown key 'alow'\\. Did you mean 'allow'\\? The keys of the file: allow, rules, limits\\.")
+lvgl26_compile_fail(settings_not_bool "lv: test\\.json: allow\\.threads takes true or false, not \"no\"\\.")
+lvgl26_compile_fail(settings_section_not_object "lv: test\\.json: rules takes an object of settings, not true\\. Its keys: raw_style_values, raw_integer_state, tokens_legacy_values\\.")
+lvgl26_compile_fail(settings_not_json "lv: test\\.json: the file is no well-formed JSON\\.")
+lvgl26_compile_fail(settings_not_object "lv: test\\.json: the file takes an object of settings, not \\[1, 2\\]\\. Its keys: allow, rules, limits\\.")
+lvgl26_compile_fail(settings_amount_plain "lv: test\\.json: limits\\.compile_time_image takes a value and a unit, as \\{\"value\": 4, \"unit\": \"px\"\\}, not 16384\\. Its units: px\\.")
+lvgl26_compile_fail(settings_unknown_unit "lv: test\\.json: limits\\.compile_time_image has the unit 'pix'\\. Did you mean 'px'\\? Its units: px\\.")
+lvgl26_compile_fail(settings_negative "lv: test\\.json: limits\\.compile_time_image is -1 px, and a limit cannot be negative\\.")
+lvgl26_compile_fail(settings_too_large "lv: test\\.json: limits\\.compile_time_image is 1e300 px, more than a limit can hold\\.")
+lvgl26_compile_fail(settings_fraction "lv: test\\.json: limits\\.compile_time_image is 0\\.5 px, which is no whole number of px\\.")
 lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h.;.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")
@@ -830,6 +907,18 @@ add_test(NAME reference_data
                  -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
 
+# The settings as data: every key of a settings file, and its JSON Schema, by reflection.
+add_executable(lv_settings_reference ${PROJECT_SOURCE_DIR}/tools/reference/settings.cpp)
+target_link_libraries(lv_settings_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME settings_reference
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_settings_reference>
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/settings.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+add_test(NAME settings_schema
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_settings_reference> -DARGUMENT=schema
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/lvgl26-settings.schema.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+
 # The pages in docs/ show only code that these tests have built, and no C names.
 # The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
@@ -863,15 +952,22 @@ if(Python3_FOUND)
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
+  # The longest symbol of that object file stays under a budget that no picture's pixels could fit in.
+  set(LVGL26_SYMBOL_BUDGET 4096)
+  add_test(NAME image_symbols COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_symbols.py
+                                      --budget ${LVGL26_SYMBOL_BUDGET} $<TARGET_OBJECTS:image_symbols>)
+  add_test(NAME symbols_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_symbols.py)
   # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
   add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema" RESULT_VARIABLE lvgl26_jsonschema_missing OUTPUT_QUIET ERROR_QUIET)
   if(lvgl26_jsonschema_missing)
-    message(STATUS "tests: tokens_check and tokens_tools are skipped: the Python package jsonschema is missing")
+    message(STATUS "tests: tokens_check, tokens_tools and settings_check are skipped: the Python package jsonschema is missing")
   else()
     add_test(NAME tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_tokens.py)
     add_test(NAME tokens_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_tokens.py)
+    # The settings files against their schema, and the keys the setup skill names.
+    add_test(NAME settings_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_settings.py)
   endif()
 endif()
 

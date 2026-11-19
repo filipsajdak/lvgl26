@@ -17,11 +17,17 @@ on:
         required: false
         type: boolean
         default: false
+      arm_only:
+        description: Run only the Arm Cortex-M4 jobs (image-arm, arm). A manual run opens no issue.
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
   # The container the jobs below run in. It is built only when its Dockerfile changed.
   image:
+    if: ${{ !inputs.arm_only }}
     uses: ./.github/workflows/image.yml
     permissions:
       contents: read
@@ -30,7 +36,7 @@ jobs:
   # The presets that the quick checks leave out, with every test that runs a program.
   # (A compile-fail test only compiles, so a sanitizer has nothing to check in it.)
   host:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     needs: image
     permissions:
@@ -69,7 +75,7 @@ jobs:
   # Half an hour of libFuzzer on the JSON reader. An input that crashes it is kept as
   # an artifact, to be added to fuzz/corpus/json with the fix.
   fuzz-json:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -167,6 +173,7 @@ jobs:
           done
 
   image-wasm:
+    if: ${{ !inputs.arm_only }}
     uses: ./.github/workflows/image.yml
     with:
       name: ci-wasm
@@ -188,6 +195,15 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The image still patches std::noop_coroutine (tools/wasm/fix-coroutine.sh). Undo it, so
+      # that this job proves the tasks need no patched header.
+      - name: Give libstdc++ its own coroutine header back
+        shell: bash
+        run: |
+          header=/work/gw2/libstdcxx/install/include/c++/17.0.0/coroutine
+          sed -i 's/__dummy_resume_destroy(void\*) { }/__dummy_resume_destroy() { }/; s/void (\*__r)(void\*) = /void (*__r)() = /; s/void (\*__d)(void\*) = /void (*__d)() = /' "$header"
+          grep -q '__dummy_resume_destroy() { }' "$header"
+          grep -q 'void (\*__r)() = ' "$header"
       - name: Build both applications for WebAssembly
         shell: bash
         run: |
@@ -267,7 +283,7 @@ jobs:
   # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
   # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
   mutation-plan:
-    if: ${{ !inputs.web_only }}
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

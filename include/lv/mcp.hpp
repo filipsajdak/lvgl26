@@ -446,7 +446,10 @@ class server {
   // The server shows documents under `parent`, and dumps and draws `parent`.
   explicit server(obj parent, options o = {})
     pre(parent.raw() != nullptr)
-      : parent_(parent), options_(o) {}
+      : parent_(parent), options_(o) {
+    lv::detail::require<^^allow_settings::allocation, typename lv::detail::settings<decltype(Widgets)...>::tag,
+                        "lv::mcp::server", " Its answers are std::string.">();
+  }
 
   // The answer to one message, or an empty text if it needs none.
   std::string handle(std::string_view message) {
@@ -463,6 +466,8 @@ class server {
     pre(in != nullptr)
     pre(out != nullptr)
   {
+    lv::detail::require<^^allow_settings::files, typename lv::detail::settings<decltype(Widgets)...>::tag,
+                        "lv::mcp::server::serve", " It reads and writes standard streams.">();
     auto next = [in] { return std::fgetc(in); };
     auto write = [out](std::string_view reply) { detail::write_line(out, reply); };
     auto answer = [this](std::string_view message) { return handle(message); };

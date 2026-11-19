@@ -1,0 +1,33 @@
+{
+  "file": "lvgl26.json",
+  "sections": [
+    {"key": "allow",
+     "description": "What the program may use. Everything is allowed by default.",
+     "settings": [
+       {"key": "allocation", "type": "boolean", "default": true,
+        "description": "Memory from the system heap while the program runs: new, malloc, a standard container that grows, the frame of a task. LVGL's own fixed pool is not the system heap."},
+       {"key": "threads", "type": "boolean", "default": true,
+        "description": "Threads, and the locks between them."},
+       {"key": "files", "type": "boolean", "default": true,
+        "description": "Files and the standard streams: fopen, stdin, stdout."},
+       {"key": "floating_point", "type": "boolean", "default": true,
+        "description": "Floating-point arithmetic while the program runs. The compiler still uses it to make fonts, pictures and tokens."}
+     ]},
+    {"key": "rules",
+     "description": "The library's own strictness. Everything is strict by default.",
+     "settings": [
+       {"key": "raw_style_values", "type": "boolean", "default": false,
+        "description": "Plain values such as 8 * lv::px in styles, beside design tokens."},
+       {"key": "raw_integer_state", "type": "boolean", "default": false,
+        "description": "A state, a computed value or a row field of a plain integer, beside a quantity, an lv::counter or a named type."},
+       {"key": "tokens_legacy_values", "type": "boolean", "default": false,
+        "description": "The forms of a token value from before the Design Tokens Format 2025.10: \"#3366ff\" for a color, \"8px\" or a bare number for a dimension, \"200ms\" for a duration. Only for the time a project's files convert: tools/dtcg_fix.py rewrites a token file."}
+     ]},
+    {"key": "limits",
+     "description": "What the compiler may do.",
+     "settings": [
+       {"key": "compile_time_image", "type": "amount", "default": {"value": 16384, "unit": "px"}, "units": ["px"],
+        "description": "The largest picture that the compiler decodes. Decoding costs compile time: about a second for 48 x 48, many for a whole screen."}
+     ]}
+  ]
+}

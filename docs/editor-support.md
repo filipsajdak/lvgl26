@@ -49,7 +49,7 @@ Measured once on one machine, with clangd 23 and the quick start. Opening the fi
 - **Completion inside quotes.** clangd offers nothing inside `"cen`. The hover on the member lists the names.
 - **lvgl26's own error text.** The editor's message for a wrong name is Clang's: "call to consteval function ... is not a constant expression". GCC prints the full message, with the list of names, when you build.
 - **Checks that need the values.** The editor does not see a missing arm of `lv::match`, an id that is used twice, or a number that does not fit. GCC does.
-- **The setting `raw_style_values`.** The editor marks a plain value in a style even when your project allows it.
+- **The setting `rules.raw_style_values`.** The editor marks a plain value in a style even when your project allows it.
 - **CLion, Visual Studio and cpptools.** They do not use clangd by default. CLion 2026.2 says it reads reflection with GCC 16; that has not been tried with lvgl26.
 - **Zed, Helix, Neovim and VS Code with the clangd extension** use clangd, so they read the `.clangd`. Only clangd itself is tested, not each editor.
 
@@ -95,7 +95,7 @@ A colour with an alpha, `"#3366ff80"`, gets an `"alpha"` member, and its token s
 `--check` changes nothing and exits with 1 for a file that would change.
 A bare number for a length, a percentage written as a dimension and a `"$type": "string"` have no form in the standard: the tool leaves them, and `tools/check_tokens.py` names them.
 
-While a project converts, `lv::config::tokens_legacy_values` makes `lv::tokens` read the old forms again.
+While a project converts, `rules.tokens_legacy_values` in the [settings](settings.md) makes `lv::tokens` read the old forms again.
 It is off by default and goes in the next release.
 
 ## If you have a `.clangd` already
