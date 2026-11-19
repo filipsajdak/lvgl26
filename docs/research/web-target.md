@@ -56,3 +56,46 @@ What a two-stage build can mean:
 4. **The firmware in an emulator.** The route that works today: see [web-emulator.md](web-emulator.md).
 
 A Rust binding of lvgl26 itself is not possible: the library is header-only templates and constant evaluation, with no stable ABI to bind to. The Rust binding of LVGL is a separate note: `docs/research/rust-binding.md`, in its own pull request.
+
+## The native WebAssembly spike (2026-11-19)
+
+The question: can an lvgl26 application run in a browser as WebAssembly that GCC wrote, linked with LVGL that Clang built?
+The scripts are in `tools/wasm/`, the program in `examples/wasm/frame.cpp`, on the branch `spike/wasm-native`.
+Marks follow [README.md](README.md).
+
+| Finding | Link or how checked | Mark |
+|---|---|---|
+| The project seo-rii/wasm-llvm pins an experimental GCC 17.0.0, commit ac20dcd5 of 2026-05-28, plus 11 patches. Its licence is MIT. | [pull request 57](https://github.com/seo-rii/wasm-llvm/pull/57) | `source` 2026-11-19 |
+| That GCC builds on aarch64 Linux in a container as a plain cross compiler for wasm32-wasi. It needs the arm64 WASI SDK 33 and a WABT fork. | `tools/wasm/build-gcc.sh` | `measured` 2026-11-19 |
+| With that commit, `#include <lv/lv.hpp>` fails. Reflection of the global namespace and splices in templates are bugs of that snapshot. | `members_of(^^::)`: "use of built-in parameter pack '__integer_pack' outside of a template" | `measured` 2026-11-19 |
+| The back end and its patches add about 3,900 lines, about 60 of them in core files of GCC. It applies to GCC trunk of 2026-11-19 (e632e263) with no rejects. | `tools/wasm/fetch-gcc.sh` | `measured` 2026-11-19 |
+| On that trunk `#include <lv/lv.hpp>` compiles to a wasm object in 2.9 s. The slice compiles at -O1 and -O2. | `tools/wasm/wasm-g++` | `measured` 2026-11-19 |
+| At -Os the front end stops: "taking address of an immediate function" in `std::optional<std::meta::data_member_options::_Name>`. | `examples/mcu/slice.cpp` with -Os | `measured` 2026-11-19 |
+| libstdc++'s `noop_coroutine` frame holds `void(*)()` pointers and calls them as `void(*)(void*)`. WebAssembly traps on that call. | `tools/wasm/fix-coroutine.sh` | `measured` 2026-11-19 |
+| LVGL v9.6.0 compiled by the WASI SDK's Clang links with the GCC objects through `wasm-ld --fatal-warnings`. The linker reports no signature or layout problem. | `tools/wasm/build-lvgl.sh` | `measured` 2026-11-19 |
+| The unchanged slice runs under Node's WASI and prints `ok`. | `tools/wasm/run.mjs` | `measured` 2026-11-19 |
+| The frame of the slice screen is 153,600 bytes. The WebAssembly build and the host build (GCC 16) write the same bytes. | `cmp`, SHA-256 4b0fac4a | `measured` 2026-11-19 |
+| Headless Chrome runs the module in a page, draws the frame on a canvas, and computes the same SHA-256. | `tools/wasm/page/index.html` | `measured` 2026-11-19 |
+
+Sizes and times, for `examples/wasm/frame.cpp` with GCC at -O2 and LVGL at -Os:
+
+| What | Value | Mark |
+|---|---|---|
+| The module, with names | 765,723 bytes raw, 182,974 bytes with Brotli | `measured` 2026-11-19 |
+| The module, stripped | 630,901 bytes raw, 142,761 bytes with Brotli | `measured` 2026-11-19 |
+| The compile of the file by `cc1plus` on the host (GCC 16) | 79.9 billion instructions | `measured` 2026-11-19 |
+| The compile of the same file for WebAssembly | 7.8 s user in the container; no instruction counter there | `measured` 2026-11-19 |
+| Node: compile 1.2 ms, instantiate 0.5 ms, run 0.5 ms when warm. The first run takes 6 ms. | `tools/wasm/run.mjs` | `measured` 2026-11-19 |
+
+What is not verified:
+
+- Whether the -Os error also occurs on a native build of the same trunk. It is in the front end.
+- Anything with threads, exceptions or RTTI. The target does not support them, and lvgl26 uses none.
+- Tests beyond one frame. The test suite of lvgl26 was not run on this target.
+- The patches of the project are under GPL as part of GCC. The WABT fork and the scripts are separate.
+
+What it means:
+
+1. **The idea works.** Native lvgl26 code runs in a browser, with no emulator and no second compiler for our code.
+2. **The compiler is the risk.** It is a patch set on GCC trunk, not a release. It needs a rebase on every GCC change.
+3. **Wait or adopt.** Upstream support in GCC 17 would remove the patch set. Until then the target is experimental.
