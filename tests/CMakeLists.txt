@@ -17,12 +17,14 @@ endfunction()
 # as far as the errors (-fsyntax-only). It does not go through `cmake --build`: two of
 # those cannot run in one build directory at once, and these tests are most of the
 # suite, so ctest must be able to run them side by side.
+# Experiment: a program to put before the compiler of the compile-fail tests (ccache).
+set(LVGL26_COMPILE_FAIL_LAUNCHER "" CACHE STRING "Put before the compiler of the compile-fail tests")
 function(lvgl26_compile_fail name message)
   set(target fail_${name})
   add_library(${target} OBJECT EXCLUDE_FROM_ALL fail/${name}.cpp)
   target_link_libraries(${target} PRIVATE lvgl26::lvgl26 lvgl26_test_data)
   add_test(NAME ${target}
-           COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX26_EXTENSION_COMPILE_OPTION} -fsyntax-only
+           COMMAND ${LVGL26_COMPILE_FAIL_LAUNCHER} ${CMAKE_CXX_COMPILER} ${CMAKE_CXX26_EXTENSION_COMPILE_OPTION} -fsyntax-only
                    "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>,PREPEND,-I>"
                    "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${target},COMPILE_DEFINITIONS>,PREPEND,-D>"
                    "$<TARGET_PROPERTY:${target},COMPILE_OPTIONS>"

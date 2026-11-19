@@ -1,0 +1,67 @@
+name: cf-experiment
+
+# Experiment, not for merge: the wall time of the compile-fail tests under variants.
+on:
+  pull_request:
+    paths: ['.github/workflows/cf-experiment.yml', 'tests/CMakeLists.txt']
+
+jobs:
+  image:
+    uses: ./.github/workflows/image.yml
+    permissions:
+      contents: read
+      packages: write
+
+  variant:
+    needs: image
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    name: ${{ matrix.variant }} ${{ matrix.part }}/${{ matrix.shards }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {variant: base-2, part: 1, shards: 2, ccache: false}
+          - {variant: base-2, part: 2, shards: 2, ccache: false}
+          - {variant: base-3, part: 1, shards: 3, ccache: false}
+          - {variant: base-3, part: 2, shards: 3, ccache: false}
+          - {variant: base-3, part: 3, shards: 3, ccache: false}
+          - {variant: base-6, part: 1, shards: 6, ccache: false}
+          - {variant: base-6, part: 2, shards: 6, ccache: false}
+          - {variant: base-6, part: 3, shards: 6, ccache: false}
+          - {variant: base-6, part: 4, shards: 6, ccache: false}
+          - {variant: base-6, part: 5, shards: 6, ccache: false}
+          - {variant: base-6, part: 6, shards: 6, ccache: false}
+          - {variant: ccache-3, part: 1, shards: 3, ccache: true}
+          - {variant: ccache-3, part: 2, shards: 3, ccache: true}
+          - {variant: ccache-3, part: 3, shards: 3, ccache: true}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Machine
+        run: nproc; ccache --version | head -n 1; g++ --version | head -n 1
+      - uses: ./.github/actions/setup
+        if: ${{ matrix.ccache }}
+        with:
+          cache-key: cf-${{ matrix.variant }}
+      - name: Configure
+        run: |
+          if [ "${{ matrix.ccache }}" = "true" ]; then
+            cmake --preset host-v96 -DLVGL26_COMPILE_FAIL_LAUNCHER=ccache
+          else
+            cmake --preset host-v96
+          fi
+      - name: Test
+        run: |
+          start=$(date +%s)
+          ctest --preset host-v96 -L compile-fail -I ${{ matrix.part }},,${{ matrix.shards }} -j "$(nproc)" | tail -n 6
+          echo "ctest wall seconds: $(( $(date +%s) - start ))"
+      - name: Compiler cache statistics
+        if: ${{ matrix.ccache }}
+        run: ccache --show-stats --verbose
