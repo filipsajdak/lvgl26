@@ -188,6 +188,18 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The image still patches std::noop_coroutine (tools/wasm/fix-coroutine.sh). Undo it, so
+      # that this job proves the tasks need no patched header.
+      - name: Give libstdc++ its own coroutine header back
+        shell: bash
+        run: |
+          found=0
+          while read -r header; do
+            sed -i 's/__dummy_resume_destroy(void\*) { }/__dummy_resume_destroy() { }/; s/void (\*__r)(void\*) = /void (*__r)() = /; s/void (\*__d)(void\*) = /void (*__d)() = /' "$header"
+            grep -q '__dummy_resume_destroy() { }' "$header"
+            found=1
+          done < <(find / -xdev -type f -path '*/c++/*/coroutine' 2>/dev/null)
+          test "$found" = 1
       - name: Build both applications for WebAssembly
         shell: bash
         run: |
