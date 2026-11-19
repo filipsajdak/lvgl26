@@ -71,7 +71,7 @@ Marks follow [README.md](README.md).
 | The back end and its patches add about 3,900 lines, about 60 of them in core files of GCC. It applies to GCC trunk of 2026-11-19 (e632e263) with no rejects. | `tools/wasm/fetch-gcc.sh` | `measured` 2026-11-19 |
 | On that trunk `#include <lv/lv.hpp>` compiles to a wasm object in 2.9 s. The slice compiles at -O1 and -O2. | `tools/wasm/wasm-g++` | `measured` 2026-11-19 |
 | At -Os the front end stops: "taking address of an immediate function" in `std::optional<std::meta::data_member_options::_Name>`. | `examples/mcu/slice.cpp` with -Os | `measured` 2026-11-19 |
-| libstdc++'s `noop_coroutine` frame holds `void(*)()` pointers and calls them as `void(*)(void*)`. WebAssembly traps on that call. | `tools/wasm/fix-coroutine.sh` | `measured` 2026-11-19 |
+| libstdc++'s `noop_coroutine` frame holds `void(*)()` pointers and calls them as `void(*)(void*)`. WebAssembly traps on that call. GCC 16.2.0 has the same lines (GCC bug 128871). | `detail::idle()` in `lv/task.hpp`: an own frame with functions of the right type. The header patch `tools/wasm/fix-coroutine.sh` is no longer needed. | `measured` 2026-11-19 |
 | LVGL v9.6.0 compiled by the WASI SDK's Clang links with the GCC objects through `wasm-ld --fatal-warnings`. The linker reports no signature or layout problem. | `tools/wasm/build-lvgl.sh` | `measured` 2026-11-19 |
 | The unchanged slice runs under Node's WASI and prints `ok`. | `tools/wasm/run.mjs` | `measured` 2026-11-19 |
 | The frame of the slice screen is 153,600 bytes. The WebAssembly build and the host build (GCC 16) write the same bytes. | `cmp`, SHA-256 4b0fac4a | `measured` 2026-11-19 |

@@ -165,7 +165,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 
 - The compiler is built by `.github/ci-image/wasm/Dockerfile` from commits and hashes that it names. Nothing of the compiler or of the back end is in this repository. Move a pin only with a measurement: the build of the image and the nightly run.
 - `-O2` only: GCC fails at `-Os` with "taking address of an immediate function" (`std::optional` of a type with a `consteval` constructor).
-- libstdc++'s `std::noop_coroutine` frame holds functions of the wrong type, and WebAssembly traps on the call. `tools/wasm/fix-coroutine.sh` patches the installed header. Drop it when libstdc++ is fixed.
+- A task hands control to `detail::idle()`, never to `std::noop_coroutine()`: libstdc++'s frame holds functions of the wrong type, and WebAssembly traps on the call (GCC bug 128871). The nightly job `web` puts the unpatched header back before it builds. `tools/wasm/fix-coroutine.sh` leaves with the next rebuild of the WebAssembly image.
 - `app.hpp` is written with lvgl26 only. `platform.cpp` holds what every host needs: a clock, an `lv::pointer` fed with each event of the page as it comes (`web_pointer`), with no hold of a short press, a frame, one step. The page and the host program call the same functions, and the desktop window (`examples/window/main.cpp`) runs the same `app.hpp`.
 - The host build of the example and the WebAssembly build replay `script.json`: the last frame must be equal byte for byte. Change the script and the page together, never the expected hash alone.
 - The module is a reactor. GCC ignores `export_name`, so the exports are linker options in `tools/wasm/link-demo.sh`: add a function to the list there.
