@@ -160,10 +160,10 @@ Cost: none. A task that must wait inside its cleanup starts a new task from the 
 
 ### 5. Pause and resume
 
-LVGL has `lv_timer_pause` and `lv_timer_resume`, but a task also waits for events and states, which have no pause. Pausing a sleep alone would be a wrong promise.
-For a hidden window the better answer is the owner's: a task tied to a tree ends when the tree is unmounted, and the window builds again when shown, which `unmount()` and `mount(parent)` already allow. State lives in `lv::state`, not in the task.
-
-**Recommendation: no pause.** If a use appears, it is `job.pause()` for sleeps only, named so.
+LVGL has `lv_timer_pause` and `lv_timer_resume`, but a task also waits for events and states, which have no pause.
+`lv_timer_resume` does not change the timer's last run: the time spent paused still counts, and the timer fires at once if its period passed. `source` (`lv_timer.c`)
+`lv_anim_pause` and `lv_anim_resume` exist and freeze an animation's clock, but they take the animation's pointer. `source` (`lv_anim.h`)
+The owner chose to pause the tasks of a tree while its display is hidden, and not on the handle. See "A tree's tasks and the visibility of its display".
 
 ### 6. How it composes
 
@@ -211,6 +211,173 @@ inline constexpr auto ui = lv::column({...})[
 
 **Recommendation:** build the handle first, then the node. The node is the declarative answer, and it needs the handle. `reasoned`
 
+## A tree's tasks and the visibility of its display
+
+This section is a proposal for the second pull request. The owner has not decided it.
+
+The owner's decision 3 below says that a task declared with `lv::run` pauses while the display of its tree is hidden.
+It also says that a tree can declare a task that keeps running whether the display is shown or not.
+An example is a task that watches for a message and shows the window.
+
+What it rests on, and what is assumed:
+
+- `lv::display` has no notion of being hidden today. `source` (`include/lv/display.hpp`)
+- The branch `feat/pointer` of pull request #132 holds the SDL adapter and `lv::pointer`. It has no commit with `hide()` or `show()` yet. `source` (read 2026-11-19)
+- Assumed: the window adapter gets `window.hide()`, `window.show()` and a close request.
+  The program passes the window to `lv::display` as its panel, as it does now.
+  What follows must be read again against those commits.
+
+### How the display tells that it is hidden
+
+The smallest notion is one observable flag on the display, written by the platform.
+
+```cpp
+class display {
+ public:
+  // True while the screen can be seen. Starts true. The platform writes it.
+  bool visible() const;
+  void set_visible(bool visible);   // from the platform: the window was hidden or shown
+  // A request from the program: forwarded to the panel if it can do it. False if it cannot.
+  bool show();
+  bool hide();
+  // ...
+};
+```
+
+- The flag is read like a state: it has a `detail::watch_list`, so a tree follows it with a `detail::watch_node` in its storage and allocates nothing. `source` (`include/lv/detail/watch.hpp`, `CLAUDE.md`: follow a state through a node in its list)
+- `set_visible(false)` also turns off LVGL's invalidation of that display (`lv_display_enable_invalidation(display, false)`), and `set_visible(true)` turns it on and invalidates the screen.
+  A hidden display then draws nothing. The function exists in LVGL v9.6 and in the v10 pin. `source`
+- The platform window calls `set_visible` when the window really changes: its own `hide()` and `show()`, a minimize, a restore.
+  On a device the same pair can mean the backlight or the display sleep. The display does not know which.
+- A tree finds its display from its root widget: `lv_obj_get_display` and then the display's driver data, where `lv::display` already stores its own address. `source` (`display.hpp`, line 169)
+
+### How a task asks for the window
+
+An always-running task has no SDL and must not name it. The request goes through the display.
+
+- `display.show()` and `display.hide()` call the panel's `show()` and `hide()` when the panel has them, found by a `requires` expression like `frame_panel`. Otherwise they return false.
+- The window adapter of #132 would give its `show()` and `hide()`. It calls `set_visible` itself once the window is shown, so the flag follows what happened, not what was asked.
+- A task reaches its display with `lv::display_of(view)`.
+
+```cpp
+lv::task<> watch_messages(lv::view<"panel"> panel) {
+  for (;;) {
+    const auto message = co_await lv::changed(inbox);
+    if (message.urgent) lv::display_of(panel).show();
+  }
+}
+```
+
+A close request of the window stays the program's. The loop of #132 returns false on it today. A program that keeps a tray-like window calls `hide()` instead of ending, and the always-running task shows it again. `reasoned`
+
+### What "paused" means
+
+A paused task is not resumed. Its code does not run, and it holds its place at the `co_await` where it is.
+There is one gate, in `resume_task`: every wake-up of a task goes through it, from an event, a timer, a state, an animation or `lv::first`. `source` (`task.hpp`, the two `done` functions and the two `spawn`s)
+
+| What happens while paused | Proposal | Why |
+|---|---|---|
+| A task started while the display is hidden | The body does not run until the display is shown | Nothing is shown to start for. `measured` |
+| `lv::sleep` | The time keeps counting. The first wake-up is held, and the task goes on at once when shown | The gate is one place and needs no memory per source. A 5 second timeout that ran out while hidden has run out |
+| A loop that sleeps and counts | One step after the display is shown, not one for each period that passed | The source is disarmed after its first wake-up, so nothing piles up. `measured` |
+| An event that arrives | The first one is held and delivered on resume. Events after it are not heard, as the wait is over | A hidden window gets no pointer input from the platform, so this is a program's own event |
+| A state the task waits for | The wake-up is held, and the task reads the state's value when it resumes: the latest, not the first | `await_resume` of `lv::changed` reads the state when it runs. `measured`: three changes while paused gave the value of the third |
+| An animation the task started | It runs to its end inside LVGL, and the task goes on at once when shown | With invalidation off nothing is drawn, so it costs property writes only |
+| `lv::first(a, b)` | The first of them to be done is held | `lv::first` has already cancelled the others |
+| The task is cancelled while paused (its owner or tree is deleted) | It ends as usual, its destructors run, and the held wake-up is dropped | Ending is not running its code. The gate must be cleared by the promise's destructor |
+| A job kept by the program (`lv::start`) | Not paused. Only the tasks a tree declares are | The owner did not ask to pause them |
+| A `lv::start` task that waits on the tree's widgets | Not paused | The same |
+
+Two alternatives were weighed.
+
+- **The remaining time of a sleep freezes.** The task would see time pass only while shown. It needs the start tick in each sleep (4 bytes).
+  It stops and restarts the LVGL timer on each pause, and needs one such hook for every kind of wait.
+  Cost: about 40 lines and 4 bytes a sleep. Recommendation: not now. Add it for sleeps alone if a timeout that spans a hidden period turns out to matter.
+- **Events are not delivered while paused.** The task would disarm every wait on pause and arm it again on resume. It needs a pause and a resume hook on every source and loses the first change of a state.
+  Recommendation: no. The gate gives the same result for states with less code.
+
+A pause is a property of the task, not of the handle: the gate pauses the task that the tree runs, and `job` has no `pause()`.
+
+### How a tree declares a task that runs hidden
+
+The common case stays the shortest, and the other is readable where it is used.
+
+**Option A: a tag in the template arguments.**
+
+```cpp
+lv::run<demo::tick>                         // pauses while the display is hidden
+lv::run<watch_messages, lv::always>         // runs whether the display is shown or not
+lv::run<follow_runner, "runner">            // a task of one widget, paused
+lv::run<follow_runner, "runner", lv::always>
+```
+
+**Option B: a second name.**
+
+```cpp
+lv::run<demo::tick>
+lv::run_always<watch_messages>
+```
+
+**Option C: a property in the node, as the other nodes take them.**
+
+```cpp
+lv::run<watch_messages>({.hidden = "run"})  // "pause" is the default
+```
+
+| | A: `lv::always` | B: `lv::run_always` | C: a property |
+|---|---|---|---|
+| Common case | `lv::run<fn>` | `lv::run<fn>` | `lv::run<fn>` |
+| The other case reads | "run it always" | "run always" | "when hidden, run" |
+| New names | `lv::always` | `lv::run_always` | none, a property of the node |
+| Where it is checked | A concept on the pack of template arguments | Two nodes to keep alike | The existing property checks |
+| Fits `lv::look`, which reads names | Yes | Yes | Yes, the enumerator in quotes follows `CLAUDE.md` |
+
+**Recommendation: A.** One node name, and the tag is visible beside the function it changes.
+A tag can later be joined by others without a new node name.
+  A concept on the pack names a wrong argument in a compile error.
+Option C reads as well but puts a run-time looking property on a node whose function is a template argument.
+Cost of A: a node with a pack of template arguments, one concept, and a compile-fail test for each wrong argument.
+
+### What it costs
+
+The gate was probed in the same scratch header. The compile cost of the gate was not measured separately.
+
+| What | Result |
+|---|---|
+| A task of a tree: pointer to its gate | 8 bytes in the frame, on top of the 8 of the job's back-link |
+| The gate: `paused` and the held handle | 16 bytes in the node's storage |
+| The watcher of the display's flag | A `detail::watch_node`, 32 bytes on a 64-bit target, in the node's storage |
+| Allocations | None |
+
+What the probe showed with a sleeping loop of 10 ms, a state and a task:
+
+- Running 35 ms gave 3 steps. Paused for 100 ms it gave no step and held one wake-up. Resumed it gave one step, not ten.
+- A state set to 2, 3 and 4 while paused: the task saw 4 when resumed, and 5 for the next change.
+- A task cancelled while paused ended, ran its destructor, and was not resumed.
+- A task started paused did not run its body until the gate was opened.
+- The probe also showed a defect to avoid: the first version left the held handle in the gate after a cancel, so a later resume would have touched a destroyed frame.
+  The promise's destructor must clear the gate's held handle, and the job must be destroyed before the gate in the storage.
+
+### Errors
+
+| Mistake | Becomes |
+|---|---|
+| `lv::run<fn, lv::always, lv::always>` or an argument that is neither an id nor `lv::always` | A compile error by the concept, with the list of what is valid |
+| `lv::run<fn, "id">` where the tree has no widget with that id | A compile error that lists the ids, as `get<"id">` does |
+| `lv::run<fn>` of a function that is not `lv::task<>()` or `lv::task<>(view)` | A compile error by a concept on the function |
+| `display.show()` on a display whose panel cannot show | Returns false. It is a run-time fact of the platform, not a bug |
+| A tree mounted on a display that is hidden | Not an error: its tasks start paused |
+
+## The order of the work
+
+The owner decided two pull requests, after the open work lands.
+
+1. `lv::start` and `lv::job`: the back-link, the owning handle, `[[nodiscard]]`, `detach()`, the tests, the stubs and `api_uses.cpp`, the docs.
+2. `lv::run` with the pause: the display's visible flag and `show()` and `hide()`, the gate, the node with its storage, the tag `lv::always`, and the example moved to `lv::run<demo::tick>`.
+
+The second pull request reads the commits of #132 first.
+The pause and always-running part goes back to the owner before it is built.
+
 ## What was probed
 
 A scratch copy of `task.hpp` outside the tree got a back-link and a class `lv::job`: `start`, `running`, `cancel`, `detach`-less, move and a destructor that only unlinks (the non-owning kind).
@@ -250,8 +417,9 @@ Every new message gets a test in `tests/fail/`, as `CLAUDE.md` asks.
 2. Keep `lv::spawn` and its tests unchanged.
 3. Use a back-link of 8 bytes in the promise. No allocation.
 4. Cancel as today: destructors only.
-5. Add `co_await job.done()` when a use appears. Add no result value, no pause and no automatic children.
-6. After that, add the node `lv::run<fn>` for a task that lives with a tree, and change the example to it.
+5. Add `co_await job.done()` when a use appears. Add no result value, no `job.pause()` and no automatic children.
+6. After that, add the node `lv::run<fn>` for a task that lives with a tree, with the pause of a later section.
+   Change the example to it.
 
 ## Not confirmed
 
@@ -265,7 +433,11 @@ Every new message gets a test in `tests/fail/`, as `CLAUDE.md` asks.
 - tokio: that an aborted task gets no cleanup beyond the destructors of its state. `summary`
 - LVGL: `LV_EVENT_DELETE` order against other handlers, and deleting a timer inside its own callback; `task.hpp` relies on `lv_timer_set_repeat_count(timer, 1)` for that.
 - The probe ran on the host only. The 32-bit size is reasoned. The owning job, `done()`, the `run` node and the tests were not built.
-- Nothing here was checked against LVGL v10 beyond the names of the timer and animation functions.
+- Nothing here was checked against LVGL v10 beyond the names of the timer, animation and display functions.
+- The pause: what #132 builds for `hide()` and `show()`, which is not pushed. The names `visible`, `set_visible`, `show` and `hide` of the display are proposals.
+- The compile cost of the gate and of the `run` node, and the size of the gate on a 32-bit target. Only the host probe ran.
+- Whether a platform window reports hide, minimize and restore to the adapter in the way `set_visible` needs. SDL's events were not read.
+- How a device maps `hide()` and `show()` (a backlight, a sleep mode): not studied.
 
 ## Decisions for the owner
 
@@ -285,10 +457,8 @@ Every new message gets a test in `tests/fail/`, as `CLAUDE.md` asks.
    Options: none; `done()` only; a result for `task<T>`.
    Recommendation: `done()` when a use appears; no result.
    Cost: values travel through `lv::state`.
-5. **Pause.**
-   Options: none; `pause()` for sleeps.
-   Recommendation: none; a tree's task ends with the tree.
-   Cost: a task that must keep its place keeps it in a state.
+5. **Pause.** Superseded by the owner's decision 3 below: the tasks of a tree pause while its display is hidden.
+   Options were: none; `pause()` for sleeps.
 6. **Parent and child.**
    Options: independent; a parent cancels its children.
    Recommendation: independent; a job in a local gives the structure.
@@ -301,3 +471,20 @@ Every new message gets a test in `tests/fail/`, as `CLAUDE.md` asks.
    Options: `lv::job` and `lv::start`; `lv::running` and `lv::run`; `lv::handle` and `lv::launch`.
    Recommendation: `lv::job` and `lv::start`, with `lv::run<fn>` for the node.
    Cost: `run` and `start` are near each other in meaning, and the docs must say which is which.
+
+## What the owner decided
+
+Decided 2026-11-19, on this note.
+Where the owner did not decide, the recommendation of this note stands, and he was told so.
+
+| # | Decision |
+|---|---|
+| 1 | The handle: `lv::spawn` stays as it is. `lv::start(task)`, and with an owner, returns a move-only, owning `lv::job`. Destroying it ends the task. `[[nodiscard]]` catches an accidental drop, and `job.detach()` lets go on purpose. It has `if (job)`, `job.running()` and an idempotent `job.cancel()`. A job kept as a local of a task ends with that task. |
+| 2 | A tree declares its tasks: `lv::run<task>` is a tree node. It starts the task on mount and ends it on unmount, with the job in the tree's storage, so `main` needs no `lv::spawn`. It is built after the handle. |
+| 3 | Pause: a task declared with `lv::run` pauses while the display of its tree is hidden, and goes on when it is shown. A tree can declare a task that keeps running whatever the display shows, for example one that watches for a message that shows the window. There is no `job.pause()` for now. The spelling, the meaning of "paused", how the tree learns that its display is hidden and how a task asks for the window are proposals in "A tree's tasks and the visibility of its display", and come back to the owner before they are built. |
+| 4 | The order: two pull requests, after the open work lands. First `lv::start` and `lv::job`, then `lv::run` with the pause. |
+| 5 | Not decided, so the recommendation stands: validity of the handle by a back-link from the frame, with no allocation and with the later task region. |
+| 6 | Not decided, so the recommendation stands: cancellation as today, destructors only. |
+| 7 | Not decided, so the recommendation stands: no result value from a detached task and no `co_await job.done()` yet. |
+| 8 | Not decided, so the recommendation stands: no automatic cancelling of children beyond what a job held in a parent's local gives. |
+| 9 | Not decided: the names `lv::job` and `lv::start`, and `lv::run`. They stand unless he says otherwise. |
