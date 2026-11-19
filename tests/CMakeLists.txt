@@ -754,6 +754,8 @@ if(Python3_FOUND)
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
+  # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
+  add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema" RESULT_VARIABLE lvgl26_jsonschema_missing OUTPUT_QUIET ERROR_QUIET)
   if(lvgl26_jsonschema_missing)
