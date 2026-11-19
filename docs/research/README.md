@@ -35,6 +35,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [lvgl-safe.md](lvgl-safe.md) | Whether lvgl26 can get a second back end over LVGL Safe: its licence, its API in full, a mapping of our widgets and features, a layout computed by the compiler, and three shapes for a safety product compared. |
 | [dtcg.md](dtcg.md) | The Design Tokens Format 2025.10 against its draft of 2026-09-08, whether a percentage exists, what design tools read, `$extends` and variants, the resolver and colour modules, what our token files and reader do outside the standard, and a plan. |
 | [design-sync.md](design-sync.md) | Whether a tool can read Signal's design system from Claude Design without a login, which routes exist, and four options to check or sync it: a recorded hash, a manual target, a scheduled job, a build step. |
+| [task-handles.md](task-handles.md) | A handle that controls the lifetime of a spawned task: what jthread, std::execution, Trio, Kotlin, Swift, tokio, Qt and Slint do, the options for lvgl26 with a measured probe, and a recommendation. |
 
 ## How each claim is marked
 
