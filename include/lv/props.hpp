@@ -111,7 +111,7 @@ consteval bool is_usable_setter(std::meta::info f, std::string_view prop) {
 // The usable lv_<...>_set_* functions with this prefix.
 consteval std::vector<std::meta::info> setters_with_prefix(std::string_view prefix) {
   std::vector<std::meta::info> out;
-  for (auto f : api) {
+  for (auto f : api(prefix)) {
     const auto id = std::meta::identifier_of(f);
     if (id.starts_with(prefix) && is_usable_setter(f, id.substr(prefix.size()))) out.push_back(f);
   }
@@ -367,7 +367,7 @@ consteval bool sets_and_gets_integer(std::meta::info setter) {
 // whose name matches no setter, such as lv_roller_bind_value; or a null reflection.
 consteval std::meta::info unmatched_binder(std::string_view widget) {
   const std::string prefix = str(widget) + "bind_";
-  for (auto f : api) {
+  for (auto f : api(widget)) {
     const auto id = std::meta::identifier_of(f);
     if (!id.starts_with(prefix) || std::meta::parameters_of(f).size() != 2) continue;
     if (find(str(widget) + "set_" + str(id.substr(prefix.size()))) == std::meta::info{}) return f;
@@ -380,7 +380,7 @@ consteval std::meta::info unmatched_binder(std::string_view widget) {
 consteval std::meta::info only_integer_setter(std::string_view widget) {
   const std::string prefix = str(widget) + "set_";
   std::meta::info found{};
-  for (auto f : api) {
+  for (auto f : api(widget)) {
     if (!std::meta::identifier_of(f).starts_with(prefix) || !sets_and_gets_integer(f)) continue;
     if (found != std::meta::info{}) return {};
     found = f;
