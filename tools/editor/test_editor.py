@@ -109,6 +109,9 @@ class Tokens(unittest.TestCase):
         "alias": {"far": {"$value": "{color.accent}"}, "nowhere": {"$value": "{no.such}"}, "odd": {"$type": "new", "$value": 1}},
         "class": {"int": {"$type": "number", "$value": 1}},
         "nest": {"nest_tokens": {"$type": "number", "$value": 1}, "nest": {"deep": {"$type": "duration", "$value": "1ms"}}},
+        "forms": {"$type": "color", "paper": {"$value": {"hex": "#f4efe6", "colorSpace": "srgb", "components": [0.9569, 0.9373, 0.902]}},
+                  "glass": {"$value": {"hex": "#000000", "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.5}},
+                  "gap": {"$type": "dimension", "$value": {"value": 8, "unit": "px"}}},
     }
 
     def test_member_names(self):
@@ -125,6 +128,12 @@ class Tokens(unittest.TestCase):
             self.assertIn(part, text)
         self.assertNotIn("nowhere", text)
         self.assertNotIn("odd", text)
+
+    def test_the_object_forms_are_typed_and_shown_as_a_designer_writes_them(self):
+        text = token_stubs.file_struct(json.dumps(self.document).encode(), "a test")
+        for part in ["token<lv_color_t> paper{};", "/// Value: #f4efe6", "/// Value: #000000 at alpha 0.5",
+                     "token<length> gap{};", "/// Value: 8px"]:
+            self.assertIn(part, text)
 
     def test_a_group_struct_never_has_the_name_of_a_member(self):
         text = token_stubs.file_struct(json.dumps(self.document).encode(), "a test")

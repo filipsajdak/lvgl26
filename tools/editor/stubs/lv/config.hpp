@@ -18,6 +18,10 @@ struct config {
   /// Accept lv::state<int> and other plain integers, instead of a named type.
   bool raw_integer_state = false;
 
+  /// Read the forms of a token value from before the Design Tokens Format 2025.10: "#3366ff", "8px", "200ms".
+  /// The editor does not read this setting.
+  bool tokens_legacy_values = false;
+
   /// The largest picture, in pixels, that the compiler decodes (see lv/image.hpp).
   std::size_t compile_time_image_pixels = 128 * 128;
 };
