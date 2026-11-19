@@ -348,6 +348,9 @@ How it is tested.
    The compile-time match uses the macro's value in an expression, as `image.hpp` reads `LV_COLOR_DEPTH`; no `#if`.
 3. **The task region**: when `lv::memory` and `lv::tasks` exist, tasks work under `allocation: false`.
 4. **Variants**: bindings in `set()` first, each with both states in the tests.
+   `docs/research/visibility.md` names two more, `hidden_display` (`"stop_marking"` or `"hide_screen"`) and `pause_when_hidden` (a bool, default true).
+   They go into a fourth section, `behaviour`, as that note proposes: neither is a permission (`allow`), a strictness (`rules`) or a bound (`limits`).
+   `hidden_display` needs the reader to take an enum by its enumerators' names, found by reflection, with "did you mean" as for keys.
 5. **The wizard**, driven through the MCP server.
 
 Nothing in this slice blocks them: the sections are nested structs, and the reader walks any struct.
