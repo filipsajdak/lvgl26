@@ -42,6 +42,8 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+# The application of examples/window, fed by an lv::pointer as its window feeds it.
+lvgl26_test(window_app)
 # A polled pointer without a function ends the program.
 add_test(NAME pointer_violation_no_function
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:pointer> -DCASE=no_function

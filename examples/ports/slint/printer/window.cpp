@@ -1,14 +1,26 @@
 // printer: the printer panel in a window. It needs SDL2 (cmake -DLVGL26_BUILD_WINDOW_EXAMPLES=ON).
-// editor-check: skip, it calls LVGL's SDL driver, which exists only when the window option is on
+// editor-check: skip, it needs SDL2, which the window examples find in CMake
 
 #include "shell.hpp"
+#include "sizes.hpp"
 
 #include <lv/host.hpp>
+#include <lv/pointer.hpp>
+#include <sdl_window.hpp>
+
+namespace {
+
+constinit lv::frame<printer::window_width, printer::window_height> frame;
+
+}  // namespace
 
 int main() {
   lv::application app{lv::host};
-  lv_sdl_window_create(printer::window_width, printer::window_height);  // C API: no window display in lv:: yet
-  lv_sdl_mouse_create();                                                // C API
-  if (!printer::start(lv::screen_active())) return 1;
-  return app.run();
+  platform::sdl_window window{"printer", frame};
+  if (!window) return 1;
+  lv::display display{app, frame, window};
+  lv::pointer mouse{display};
+  if (!printer::start(display.screen())) return 2;
+  while (window.feed(mouse)) window.wait(app.step());
+  return 0;
 }

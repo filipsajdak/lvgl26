@@ -17,5 +17,5 @@ target_link_libraries(treadmill_shot PRIVATE treadmill_pages)
 # The window needs SDL2.
 if(LVGL26_BUILD_WINDOW_EXAMPLES)
   add_executable(treadmill window.cpp)
-  target_link_libraries(treadmill PRIVATE treadmill_pages)
+  target_link_libraries(treadmill PRIVATE treadmill_pages lvgl26_sdl_window)
 endif()
