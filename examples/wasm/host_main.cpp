@@ -29,6 +29,8 @@ int main() {
   web_init();
   std::int32_t x = 0, y = 0, down = 0;
   std::size_t next = 0;
+  std::size_t capture = 0;
+  const auto size = static_cast<std::size_t>(web_stride()) * static_cast<std::size_t>(web_height());
   for (std::uint32_t t = 0; t <= script_end; t += script_step) {
     while (next < sizeof(script) / sizeof(script[0]) && script[next].at <= t) {
       x = script[next].x;
@@ -37,7 +39,11 @@ int main() {
       ++next;
     }
     web_step(t, x, y, down);
+    // The frame at each capture time of the script, one after the other.
+    while (capture < sizeof(script_capture) / sizeof(script_capture[0]) && script_capture[capture] <= t) {
+      if (std::fwrite(web_frame(), 1, size, stdout) != size) return 1;
+      ++capture;
+    }
   }
-  const auto size = static_cast<std::size_t>(web_stride()) * static_cast<std::size_t>(web_height());
-  return std::fwrite(web_frame(), 1, size, stdout) == size ? 0 : 1;
+  return 0;
 }

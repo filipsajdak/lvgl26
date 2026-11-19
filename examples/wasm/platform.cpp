@@ -1,6 +1,6 @@
-// What a host needs to drive demo::ui: a clock, a pointer, a frame and one step. The browser
+// What a host needs to drive an application: a clock, a pointer, a frame and one step. The browser
 // (page.html) and the host program (host_main.cpp) call the same functions, in the same order.
-#include "app.hpp"
+#include "app.hpp"  // the application: counter/app.hpp or bounce/app.hpp, by the include path
 
 #include <contracts>
 #include <cstdio>
@@ -49,18 +49,18 @@ void read_pointer(lv_indev_t*, lv_indev_data_t* data) {  // C API
   data->state = pointer.down ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;  // C API
 }
 
-constinit lv::frame<demo::width, demo::height> picture;
+constinit lv::frame<app::width, app::height> picture;
 
 struct world {
   lv::application app{{.clock = &clock}};
   lv::display display{app, picture, &changed};
-  decltype(lv::mount<demo::ui>(display.screen())) root{lv::mount<demo::ui>(display.screen())};
+  app::running application{display.screen()};
 
   world() {
+    if (!application.ok()) std::abort();
     lv_indev_t* in = lv_indev_create();                // C API
     lv_indev_set_type(in, LV_INDEV_TYPE_POINTER);      // C API
     lv_indev_set_read_cb(in, &read_pointer);           // C API
-    lv::spawn(demo::tick());
   }
 };
 
@@ -84,8 +84,8 @@ std::uint32_t web_step(std::uint32_t now, std::int32_t x, std::int32_t y, std::i
 
 const std::uint8_t* web_frame() { return reinterpret_cast<const std::uint8_t*>(picture.bytes().data()); }
 std::int32_t web_stride() { return static_cast<std::int32_t>(picture.stride); }
-std::int32_t web_width() { return demo::width; }
-std::int32_t web_height() { return demo::height; }
+std::int32_t web_width() { return app::width; }
+std::int32_t web_height() { return app::height; }
 
 // Whether something changed since the last call. If so, web_dirty(0..3) is its x, y, width and
 // height, until the next call.
@@ -100,6 +100,9 @@ std::int32_t web_dirty(std::int32_t which) {
   const std::int32_t parts[] = {taken.x, taken.y, taken.width, taken.height};
   return parts[which & 3];
 }
+
+// The values of the states of the application, for a test of the page.
+std::int32_t web_state(std::int32_t which) { return app::state(which); }
 
 // For measurement: the heap that LVGL uses, in bytes.
 std::uint32_t web_heap_used() { return static_cast<std::uint32_t>(the_world->app.heap().used); }

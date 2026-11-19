@@ -3,7 +3,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 src=$1; out=$2; shift 2
-sdk=${WASI_SDK_PATH:-/work/wasi-sdk-33.0-arm64-linux}
+sdk=${WASI_SDK_PATH:-/work/wasi-sdk}
 mkdir -p "$out/obj"
 cd "$src"
 find src -name '*.c' | sort > "$out/files.txt"

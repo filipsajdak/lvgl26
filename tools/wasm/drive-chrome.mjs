@@ -1,16 +1,22 @@
 // Drives headless Chrome over the DevTools protocol: opens the page, waits, takes a screenshot,
 // clicks with real input events, takes another, and prints what the page reports.
-//   node drive-chrome.mjs <page.html> <out-prefix> [chrome]
+//   node drive-chrome.mjs <page.html> <out-prefix> [chrome] [--expect-title <start>] [--run <seconds>]
+// With --expect-title it only loads the page, and exits 0 if the title starts with the text.
 import { spawn } from 'node:child_process';
 import { writeFile, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [page, prefix, chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const expectAt = args.indexOf('--expect-title');
+const expected = expectAt >= 0 ? args.splice(expectAt, 2)[1] : null;
+const runAt = args.indexOf('--run');
+const runSeconds = runAt >= 0 ? +args.splice(runAt, 2)[1] : 0;
+const [page, prefix, chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] = args;
 const port = 9333 + Math.floor(Math.random() * 500);
 const profile = await mkdtemp(join(tmpdir(), 'chrome-'));
-const proc = spawn(chrome, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-  '--window-size=700,800', 'about:blank'], { stdio: 'ignore' });
+const proc = spawn(chrome, [...(process.env.HEADED ? [] : ['--headless=new', '--disable-gpu']), `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+  '--window-size=700,800', ...(process.env.CI ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let targets;
@@ -30,6 +36,26 @@ await send('Page.navigate', { url: page.startsWith('http') || page.startsWith('f
 await sleep(1500);
 const rect = await evaluate(`(() => { const r = document.getElementById('screen').getBoundingClientRect(); return {x: r.left, y: r.top}; })()`);
 const state = () => evaluate(`document.getElementById('stats').textContent`);
+if (expected !== null) {
+  const title = await evaluate('document.title');
+  await shot('title');
+  console.log('title:', title);
+  ws.close(); proc.kill();
+  process.exit(title.startsWith(expected) ? 0 : 1);
+}
+if (runSeconds > 0) {
+  // No clicks: let the page run, sample its report each ten seconds, and look for a trap.
+  await shot('start');
+  for (let t = 0; t < runSeconds; t += 10) {
+    await sleep(Math.min(10, runSeconds - t) * 1000);
+    console.log(`${String(t + 10).padStart(3)} s:`, JSON.stringify(await state()));
+  }
+  await shot('end');
+  const title = await evaluate('document.title');
+  ws.close(); proc.kill();
+  console.log('title:', title);
+  process.exit(title.startsWith('TRAP') ? 1 : 0);
+}
 await shot('before');
 console.log('before:', JSON.stringify(await state()));
 
@@ -49,4 +75,11 @@ console.log('after: ', JSON.stringify(await state()));
 const frames = await evaluate(`window.demo ? window.demo.stats.frames : -1`);
 console.log('frames stepped:', frames);
 console.log('latencies (ms):', JSON.stringify(await evaluate(`window.demo.stats.latencies.map(v => +v.toFixed(1))`)));
+const states = await evaluate(`[0, 1, 2, 3, 4].map(i => window.demo.x.web_state(i))`);
+console.log('states (dial, clicks, ticks, slider, switch):', JSON.stringify(states));
 ws.close(); proc.kill();
+// Three clicks on "+" make 30, the drag moved the slider, the switch is on, the task ticked.
+const [dial, clicks, ticks, slider, lamp] = states;
+const ok = dial === 30 && clicks === 3 && ticks > 0 && slider > 0 && lamp === 1;
+console.log(ok ? 'interactive check: OK' : 'interactive check: FAILED');
+process.exit(ok ? 0 : 1);

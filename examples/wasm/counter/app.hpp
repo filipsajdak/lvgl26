@@ -55,3 +55,33 @@ inline lv::task<> tick() {
 }
 
 }  // namespace demo
+
+// What platform.cpp needs of an application: its size, a way to start it on a screen, and the
+// values of its states for a test. The other application, bounce/, gives the same three.
+namespace app {
+
+inline constexpr std::int32_t width = demo::width;
+inline constexpr std::int32_t height = demo::height;
+
+class running {
+ public:
+  explicit running(lv::obj screen) : root_(lv::mount<demo::ui>(screen)) { lv::spawn(demo::tick()); }
+  bool ok() const { return root_.has_value(); }
+
+ private:
+  decltype(lv::mount<demo::ui>(lv::obj{})) root_;
+};
+
+// 0 the dial, 1 the clicks, 2 the ticks, 3 the slider, 4 the switch (1 when on). Else -1.
+inline std::int32_t state(std::int32_t which) {
+  switch (which) {
+    case 0: return demo::dial.get().value;
+    case 1: return demo::clicks.get().value;
+    case 2: return demo::ticks.get().value;
+    case 3: return demo::volume.get().value;
+    case 4: return demo::lamp.get() ? 1 : 0;
+    default: return -1;
+  }
+}
+
+}  // namespace app

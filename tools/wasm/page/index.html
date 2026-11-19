@@ -1,16 +1,16 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>lvgl26 in the browser</title>
+<title>@TITLE@</title>
 <style>
   body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #222; }
   canvas { display: block; border: 1px solid #888; touch-action: none; cursor: pointer; }
   code { background: #eee; padding: 0 3px; }
   #stats { font: 12px ui-monospace, monospace; margin-top: 8px; white-space: pre; }
 </style>
-<h1>lvgl26 in the browser</h1>
-<p>The unchanged lvgl26 program <code>examples/wasm/app.hpp</code>, compiled by GCC to WebAssembly and linked with LVGL v9.6.0.
-  This page calls <code>web_step</code> from <code>requestAnimationFrame</code> and passes the pointer in. Click the buttons, drag the slider.</p>
+<h1>@TITLE@</h1>
+<p>@BLURB@ Compiled by GCC to WebAssembly and linked with LVGL v9.6.0.
+  This page calls <code>web_step</code> from <code>requestAnimationFrame</code> and passes the pointer in.</p>
 <canvas id="screen"></canvas>
 <div id="stats">starting</div>
 <script type="module">
@@ -107,6 +107,15 @@ canvas.addEventListener('pointercancel', release);
 const stats = { frames: 0, drawn: 0, stepMs: 0, window: [], latency: null, latencies: [], pressAt: 0, waitingForFrame: false };
 const report = document.getElementById('stats');
 function frame(now) {
+  try { step(now); } catch (e) {
+    clearInterval(timer);
+    report.textContent = 'TRAPPED after ' + stats.frames + ' frames: ' + e;
+    document.title = 'TRAP ' + e;
+    return;
+  }
+  requestAnimationFrame(frame);
+}
+function step(now) {
   const ms = Math.round(now - t0);
   if (pointer.releaseAt >= 0 && now >= pointer.releaseAt) { pointer.down = false; pointer.releaseAt = -1; }
   const s0 = performance.now();
@@ -123,13 +132,13 @@ function frame(now) {
     }
   }
   stats.window.push(now); while (stats.window.length > 1 && now - stats.window[0] > 1000) stats.window.shift();
-  requestAnimationFrame(frame);
 }
 const timer = setInterval(() => {
   const w = stats.window, fps = w.length > 1 ? (w.length - 1) * 1000 / (w[w.length - 1] - w[0]) : 0;
   report.textContent =
     `module ${(bytes.length / 1024).toFixed(0)} KiB, started in ${startMs.toFixed(0)} ms, LVGL heap ${(x.web_heap_used() / 1024).toFixed(1)} KiB, wasm memory ${(memory.buffer.byteLength / 1048576).toFixed(0)} MiB\n` +
     `${fps.toFixed(0)} frames/s, step+draw ${(stats.stepMs / Math.max(1, stats.frames)).toFixed(2)} ms on average, ${stats.drawn} frames drawn\n` +
+    (x.web_resumes_low ? `coroutine resumes: ${x.web_resumes_low() + x.web_resumes_high() * 2 ** 32}\n` : '') +
     `press to the first changed frame at the pointer: ${stats.latency === null ? '-' : stats.latency.toFixed(1) + ' ms'} (mean of ${stats.latencies.length}: ${(stats.latencies.reduce((a, b) => a + b, 0) / Math.max(1, stats.latencies.length)).toFixed(1)} ms)`;
 }, 500);
 
@@ -138,18 +147,23 @@ window.demo = { x, pointer, stats, draw: () => draw(0, 0, W, H) };
 
 async function selfTest() {
   clearInterval(timer);
-  // Replays the script on a fresh instance would need a second module; the page instead
-  // checks the module it has, before the first live frame, by replaying the script on it.
-  const out = [];
-  let at = 0, px = 0, py = 0, down = 0;
+  // The script of the host build, on this module: the frames at the capture times, one after the other.
+  const events = SCRIPT.events ?? [], captures = SCRIPT.capture ?? [SCRIPT.end];
+  const frames = [];
+  let at = 0, px = 0, py = 0, down = 0, capture = 0;
   for (let t = 0; t <= SCRIPT.end; t += SCRIPT.step) {
-    while (at < SCRIPT.events.length && SCRIPT.events[at][0] <= t) [, px, py, down] = SCRIPT.events[at++];
+    while (at < events.length && events[at][0] <= t) [, px, py, down] = events[at++];
     x.web_step(t, px, py, down);
+    while (capture < captures.length && captures[capture] <= t) {
+      frames.push(new Uint8Array(memory.buffer, x.web_frame(), STRIDE * H).slice());
+      capture++;
+    }
   }
-  const copy = new Uint8Array(memory.buffer, x.web_frame(), STRIDE * H).slice();
-  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', copy))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const all = new Uint8Array(frames.reduce((n, f) => n + f.length, 0));
+  let offset = 0; for (const f of frames) { all.set(f, offset); offset += f.length; }
+  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', all))].map(b => b.toString(16).padStart(2, '0')).join('');
   draw(0, 0, W, H);
-  report.textContent = `self test: ${digest === EXPECTED_HASH ? 'OK, equal to the host build' : 'FAILED'}\n${digest}`;
+  report.textContent = `self test: ${frames.length} frames, ${digest === EXPECTED_HASH ? 'OK, equal to the host build' : 'FAILED'}\n${digest}`;
   document.title = (digest === EXPECTED_HASH ? 'ok ' : 'FAILED ') + digest;
 }
 
