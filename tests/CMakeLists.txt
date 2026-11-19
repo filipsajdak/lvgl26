@@ -128,6 +128,8 @@ add_executable(signal_type signal_type.cpp)
 target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
                                               A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# Signal's tell-tale lamp colours, a header of its own.
+lvgl26_test(signal_lamps)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
