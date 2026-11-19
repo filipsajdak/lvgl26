@@ -16,6 +16,18 @@
 
 namespace {
 
+constexpr char tokens_json[] = {
+#embed "look_tokens.json"
+    , 0};
+constexpr auto tok = lv::tokens<tokens_json>;
+
+}  // namespace
+
+template <>
+inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};
+
+namespace {
+
 // A node kind that keeps storage: it counts the storages alive, and writes where it was
 // built into its storage. It adds no widget.
 int alive = 0;
@@ -371,9 +383,10 @@ std::vector<void*> take_heap_but(std::size_t budget) {
   }
 }
 
-// Mounts `page` once, again after each failure; a failure must leave no storage and no
+// Mounts `again` once, again after each failure; a failure must leave no storage and no
 // widget. Whether it succeeded: then it is unmounted at once.
-bool mount_once(lv::mounted<ui>& again, lv::obj screen, std::size_t children) {
+template <const auto& Tree>
+bool mount_once(lv::mounted<Tree>& again, lv::obj screen, std::size_t children) {
   if (again.mount(screen)) {
     again.unmount();
     return true;
@@ -383,15 +396,20 @@ bool mount_once(lv::mounted<ui>& again, lv::obj screen, std::size_t children) {
   return false;
 }
 
-// The heap runs out at every point of the mount: nothing is left behind, neither storage
+// Rounds of the heap running out, each with a little more room, before the mount must succeed.
+// The guard of a style add needs room for the longest list of styles LVGL allows
+// (lv::detail::style_list_bound), so a tree with styles needs more rounds than one without.
+constexpr int most_rounds = 4000;
+
+// The heap runs out at every point of the mount of Tree: nothing is left behind, neither storage
 // nor widgets nor heap. LVGL's theme is off: it crashes when its own realloc fails.
+template <const auto& Tree>
 void out_of_memory_leaves_nothing(lv::obj screen) {
-  constexpr int most_rounds = 2000;
   const std::size_t children = lv_obj_get_child_count(screen.raw());
   const std::size_t start = heap_used();
   const std::size_t start_blocks = heap_blocks();
   lv_log_register_print_cb([](lv_log_level_t, const char*) {});  // a thousand expected failures
-  static constinit lv::mounted<ui> page_again;  // one object, mounted again after each failure
+  static constinit lv::mounted<Tree> page_again;  // one object, mounted again after each failure
   int failed = 0;
   bool mounted = false;
   for (int round = 0; round < most_rounds && !mounted; ++round) {
@@ -406,6 +424,11 @@ void out_of_memory_leaves_nothing(lv::obj screen) {
   check(mounted && failed > 0 && heap_used() == start);
   std::printf("out of memory at %d points\n", failed);
 }
+
+// A tree whose widgets add styles: the start of a group and of a row, a node's own style, and a
+// look with a layer. Each add can find the heap empty.
+constexpr auto styled = lv::group[lv::row({.style = {.pad_left = tok.flat.pad_all}})[
+    lv::box({.style = lv::look<"padded">}), stamp{}]];
 
 // A call that breaks a contract ends the program with a contract violation. Each case is
 // run as a test of its own, which expects that.
@@ -459,7 +482,8 @@ int main(int argc, char** argv) {
   a_tree_without_storage(screen);
   unmount_and_mount_again(screen);
   mount_after_the_parent_went(screen);
-  out_of_memory_leaves_nothing(screen);
+  out_of_memory_leaves_nothing<ui>(screen);
+  out_of_memory_leaves_nothing<styled>(screen);
   a_global_page(screen);  // last: the global outlives LVGL
 
   lv_deinit();

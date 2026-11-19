@@ -493,18 +493,20 @@ void follow_enum_choice(lv_obj_t* w) {
   }
 }
 
-// Applies the properties of one node of `Tree` to its widget `w`.
+// Applies the properties of one node of `Tree` to its widget `w`. False when LVGL's heap had no
+// room for one of its styles.
 // A node is named by the root and an index path, never by a reference to the node
 // itself: see the note above const_count in style.hpp.
 template <const auto& Tree, std::size_t... Path>
-void apply_node(lv_obj_t* w) {
+bool apply_node(lv_obj_t* w) {
   constexpr const auto& N = descend<Path...>(Tree);
   [[maybe_unused]] constexpr auto W = std::remove_cvref_t<decltype(N)>::kind;
+  bool styled = true;
 
   template for (constexpr auto i : set_members<Tree, Path...>) {
     constexpr auto m = members_of_kept<W>[i];
     if constexpr (is_maybe<std::remove_cvref_t<decltype(N.p.[:m:])>>) {
-      add_const_style<style_at<Tree, i, Path...>, selector_of<targets<W>[i]>()>(w);
+      styled = add_const_style<style_at<Tree, i, Path...>, selector_of<targets<W>[i]>()>(w) && styled;
     } else {
       constexpr auto a = N.p.[:m:];  // a constant: the tree itself is not kept
       if constexpr (a.follows == follows_row_field) {
@@ -523,6 +525,7 @@ void apply_node(lv_obj_t* w) {
       }
     }
   }
+  return styled;
 }
 
 template <const auto& Tree, std::size_t... Path>
@@ -540,10 +543,21 @@ lv_obj_t* build(lv_obj_t* parent, build_state& st) {
 }
 
 // Gives a widget what its factory starts it with: lv::group drops the theme's styles first.
+// False when LVGL's heap had no room for the start.
 template <start S>
-void start_widget(lv_obj_t* o) {
+bool start_widget(lv_obj_t* o) {
   if constexpr (S == start::group) lv_obj_remove_style_all(o);
-  if constexpr (S != start::plain) lv_obj_add_style(o, start_style<S>, LV_PART_MAIN);
+  if constexpr (S == start::plain)
+    return true;
+  else
+    return add_style(o, start_style<S>, LV_PART_MAIN);
+}
+
+// The start of a node's widget, then its own properties. False when LVGL's heap had no room for
+// a style.
+template <const auto& Tree, std::size_t... Path>
+bool style_widget(lv_obj_t* o) {
+  return start_widget<descend<Path...>(Tree).how>(o) && apply_node<Tree, Path...>(o);
 }
 
 template <const auto& Tree, std::size_t... Path>
@@ -557,8 +571,9 @@ lv_obj_t* build_widget(lv_obj_t* parent, build_state& st) {
     return nullptr;
   }
   if constexpr (!N.id().empty()) *st.next_id++ = w.raw();
-  start_widget<N.how>(w.raw());
-  apply_node<Tree, Path...>(w.raw());
+  // A widget without room for its styles is not built on: the mount fails, and its root takes
+  // the widget along.
+  st.ok = style_widget<Tree, Path...>(w.raw());
 
   template for (constexpr auto i : indices<kid_count<node_type>>) {
     if constexpr (any_storage<std::remove_cvref_t<decltype(descend<Path..., i>(Tree))>>) {

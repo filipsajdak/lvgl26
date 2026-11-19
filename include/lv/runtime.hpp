@@ -787,9 +787,11 @@ class runtime {
     return (type == "column" || type == "row") ? "obj" : type;
   }
   // Their start is the constant style of lv::row and lv::column: a property of the document beats it.
-  static void lay_out(std::string_view type, lv_obj_t* o) {
-    if (type == "column") lv_obj_add_style(o, detail::start_style<detail::start::column>, LV_PART_MAIN);
-    if (type == "row") lv_obj_add_style(o, detail::start_style<detail::start::row>, LV_PART_MAIN);
+  // False when LVGL's heap had no room for it.
+  static bool lay_out(std::string_view type, lv_obj_t* o) {
+    if (type == "column") return detail::add_style(o, detail::start_style<detail::start::column>, LV_PART_MAIN);
+    if (type == "row") return detail::add_style(o, detail::start_style<detail::start::row>, LV_PART_MAIN);
+    return true;
   }
 
   static result build(json::value node, lv_obj_t* parent, lv_obj_t*& made, loaded& out) {
@@ -803,7 +805,7 @@ class runtime {
     made = m.object;
 
     if (auto r = record_id(node["id"], m, out); !r) return r;
-    lay_out(type.string(), m.object);
+    if (!lay_out(type.string(), m.object)) return fail(load_error::out_of_memory, node.text());
     if (auto r = apply_to(m.kind, m.object, node["props"]); !r) return r;
     return build_children(node["children"], m.object, out);
   }

@@ -19,6 +19,7 @@
 // Design values must be design tokens (see lv/tokens.hpp) or lv::raw(...).
 // Set lv::config::raw_style_values (see lv/config.hpp) to accept plain values such as 8 * lv::px.
 
+#include <lv/detail/style_add.hpp>
 #include <lv/token_types.hpp>
 #include <lv/values.hpp>
 
@@ -270,12 +271,12 @@ constexpr bool is_set(const S& s) {
 }
 
 // Adds the layers of a style. A layer is already on the widget when the same style is
-// applied again, so it is taken off first: the widget's list of styles does not grow.
-inline void add_layers(lv_obj_t* o, style_layers layers) {
-  for (const style_layer& l : layers.list()) {
-    lv_obj_remove_style(o, l.style, l.selector);
-    lv_obj_add_style(o, l.style, l.selector);
-  }
+// applied again: LVGL takes it off first, so the widget's list of styles does not grow. False
+// when LVGL's heap had no room for one; the others are still added.
+inline bool add_layers(lv_obj_t* o, style_layers layers) {
+  bool all = true;
+  for (const style_layer& l : layers.list()) all = add_style(o, l.style, l.selector) && all;
+  return all;
 }
 
 // Applies a style with LVGL's local style setters. Used at run time. A layer names its
@@ -393,12 +394,11 @@ consteval const lv_style_t* shared_const_style() {
 // read-only memory; a shorthand that follows a state and a font that follows an
 // lv::scaled_font are set as local styles. The layers that lv::on made follow, each
 // with its own selector.
+// False when LVGL's heap had no room for one of the styles.
 template <class Where, lv_style_selector_t Selector, class D = void>
-void add_style_of(lv_obj_t* o) {
-  if constexpr (const_count<Where, D> > 0) {
-    constexpr const lv_style_t* st = shared_const_style<Where, D>();
-    lv_obj_add_style(o, st, Selector);
-  }
+bool add_style_of(lv_obj_t* o) {
+  bool all = true;
+  if constexpr (const_count<Where, D> > 0) all = add_style(o, shared_const_style<Where, D>(), Selector);
   template for (constexpr auto i : set_in<Where, D>) {
     if constexpr (!is_const_member<Where, i, D>) {
       constexpr auto a = Where::get().[:style_members<D>[i]:];
@@ -409,8 +409,9 @@ void add_style_of(lv_obj_t* o) {
     static_assert(Selector == LV_PART_MAIN,
                   "lv: lv::on goes in .style, because it names its own part and state. Write "
                   ".style = base | lv::on(\"knob\", \"pressed\", {...}) instead of .style_knob = lv::on(...).");
-    for (const style_layer& l : Where::get().layers.list()) lv_obj_add_style(o, l.style, l.selector);
+    all = add_layers(o, Where::get().layers) && all;
   }
+  return all;
 }
 
 // ---- constant styles worked out whole: for a theme and for lv::on ----------------
@@ -622,11 +623,11 @@ struct spelled_out {
 // A node's own style follows the one rule for shorthands, as a theme, lv::on and a look do: its
 // shorthands are spelled out into long forms, which go to the constant style with the others.
 template <class Where, lv_style_selector_t Selector, class D = void>
-void add_const_style(lv_obj_t* o) {
+bool add_const_style(lv_obj_t* o) {
   if constexpr (sets_shorthand<D>(Where::get()))
-    add_style_of<spelled_out<Where::get(), D>, Selector, D>(o);
+    return add_style_of<spelled_out<Where::get(), D>, Selector, D>(o);
   else
-    add_style_of<Where, Selector, D>(o);
+    return add_style_of<Where, Selector, D>(o);
 }
 
 // What a factory starts a widget with: lv::group fills its parent without the theme's styles,
