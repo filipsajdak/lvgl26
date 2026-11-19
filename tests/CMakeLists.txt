@@ -219,6 +219,16 @@ add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.pn
 # props struct, as they first did, it needed more than 170 million, and a tree of 100
 # widgets took the compiler 8 GB of memory. The limit leaves room for LVGL to grow,
 # not for that to come back.
+# A file that includes <lv/lv.hpp> and names nothing, under a fixed operation limit: a header
+# that does a scan where it is read, in every file, stops it compiling. The largest evaluation
+# of such a file needed 25,000 to 26,000 operations on 2026-11-19, after the API scan became
+# lazy; the limit is about twice that, as large_tree's. Raise it only with a measurement:
+# python3 tools/compile_report.py --ops build/host-v96 tests/include_only.cpp.
+set(lvgl26_include_only_ops 50000)
+lvgl26_test(include_only)
+set_source_files_properties(include_only.cpp PROPERTIES
+  COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=${lvgl26_include_only_ops}")
+
 add_executable(large_tree large_tree.cpp)
 target_link_libraries(large_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 # Not for the analyzer: it follows every path through the 112 functions that build this
@@ -439,6 +449,9 @@ lvgl26_compile_fail(like_missing_member "finds no member named 'scan'")
 lvgl26_compile_fail(each_selected_wrong_type ".selected follows the key of the selected row. Bind a state of the key's type")
 lvgl26_compile_fail(each_selected_and_checked ".selected gives the selected row the checked state, and this row template sets .checked itself")
 lvgl26_compile_fail(props_without_braces "made_with_braces")
+# The guard of include_only fails on an eager scan of the global namespace.
+lvgl26_compile_fail(eager_scan "evaluation operation count exceeds limit of ${lvgl26_include_only_ops}")
+target_compile_options(fail_eager_scan PRIVATE -fconstexpr-ops-limit=${lvgl26_include_only_ops})
 lvgl26_compile_fail(set_inline_style "lv: a style in set\\(\\) is made with lv::style\\(\\{...\\}\\)")
 lvgl26_compile_fail(set_named_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
 lvgl26_compile_fail(set_constexpr_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
