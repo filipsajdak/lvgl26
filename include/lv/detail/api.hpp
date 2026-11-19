@@ -33,12 +33,17 @@ consteval bool is_name_char(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
+// Whether `m` is declared on a line of a file: GCC's builtins are at line 0 or 1, and about
+// half of the functions in the global namespace. The line is free to ask for; the first
+// identifier_of of a declaration is not. tests/api_table.cpp checks that no lv_ function is lost.
+consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }
+
 // A template on D so that the scan is not run where this header is read.
 template <class D>
 consteval std::vector<std::meta::info> scan_api() {
   std::vector<std::meta::info> v;
   for (auto m : std::meta::members_of(^^::, std::meta::access_context::unchecked()))
-    if (std::meta::is_function(m) && std::meta::has_identifier(m) &&
+    if (std::meta::is_function(m) && declared_in_a_file(m) && std::meta::has_identifier(m) &&
         std::meta::identifier_of(m).starts_with("lv_"))
       v.push_back(m);
   return v;
