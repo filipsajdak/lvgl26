@@ -20,14 +20,13 @@ constinit lv::frame<app::width, app::height> frame;
 //! [main]
 int main() {
   lv::application app{lv::host};
-  platform::sdl_window window{"lvgl26", frame};
+  platform::sdl_window window{app, "lvgl26", frame};
   if (!window) return 1;
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
-  lv::pointer mouse{display};               // the window's mouse feeds it
+  lv::pointer mouse{display, window};       // the window's mouse feeds it
 
   app::running application{display.screen()};
   if (!application.ok()) return 2;
-  while (window.feed(mouse)) window.wait(app.step());
-  return 0;
+  return app.run();                         // until the window is closed
 }
 //! [main]

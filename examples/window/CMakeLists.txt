@@ -22,3 +22,11 @@ foreach(application counter bounce)
   target_compile_options(window_${application} PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/wasm/${application})
   target_link_libraries(window_${application} PRIVATE lvgl26_sdl_window lvgl26_warnings)
 endforeach()
+
+# What the window does when it is closed, hidden and shown, with SDL's dummy video driver.
+add_executable(window_behaviour behaviour.cpp)
+target_link_libraries(window_behaviour PRIVATE lvgl26_sdl_window lvgl26_warnings)
+if(LVGL26_BUILD_TESTS)
+  add_test(NAME window_behaviour COMMAND window_behaviour)
+  set_tests_properties(window_behaviour PROPERTIES ENVIRONMENT SDL_VIDEODRIVER=dummy)
+endif()
