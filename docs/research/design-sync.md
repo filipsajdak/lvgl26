@@ -62,10 +62,9 @@ The letter spacings of `title` and `label` are an example: they exist only in th
 
 ## Standalone Claude Design closes
 
-The task brief says the standalone tool closes on 2026-12-14 and moves into Claude, and attributes this to the Design System type's own instructions. `recalled`
-That text was read through an Artifact tool in this session, not from a page of the product.
-The six reference files of the type that were read here (`SKILL.md`, `format.md`, `craft.md`, `cover.md`, `from-code.md`, `from-design-tool.md`) do not contain the date.
-It may be in a file that was not read, so the date is unconfirmed.
+Standalone Claude Design (claude.ai/design) closes by 2026-12-14, and Claude Design then lives in Claude. `recalled`
+The date is quoted from the description of the design-system sync tool, as shown to an agent in Claude Code on 2026-11-19.
+No public page was found that confirms it.
 The link is an artifact, and an artifact is a claude.ai object, so it should outlive the standalone page.
 Nothing found says whether the address, the shared-with-link setting or the file layout stays.
 Before the date, record the version and hash (option a) and keep the repository's copy as the one that builds, which it already is.
