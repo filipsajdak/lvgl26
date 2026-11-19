@@ -121,14 +121,29 @@ class view {
     return view<C>::create(view<"obj">{p_});
   }
 
-  // set({.value = 0}) applies typed properties: see lv::props.
+  // set({.value = 0}) applies typed properties, written in place: see lv::props. A style
+  // in it is a named style, a look, or lv::style({...}): set() holds styles by reference, so
+  // that its argument stays small on the stack (detail::set_props).
   template <class Self, class D = void>
-  Self set(this Self self, const detail::lazy_props<W, D>& p)
+  Self set(this Self self, detail::set_props<W, D>&& p)
     pre(self.raw() != nullptr)
   {
-    detail::apply_props<W>(self.raw(), p);
+    detail::apply_set_props<W, D>(self.raw(), p);
     return self;
   }
+  template <class Self, class D = void>
+  Self set(this Self self, const detail::set_props<W, D>& p) = delete(
+      "lv: pass the properties in place: view.set({...}). A prepared set of properties is a "
+      "function that calls set().");
+  // Chosen only when the properties above do not fit: an inline style, or a named lv::props.
+  // The pack makes these less specialized, so the overloads above win whenever they fit.
+  template <class Self, class D = void, class... None>
+  Self set(this Self self, detail::lazy_props<W, D>&& p, None...) = delete(
+      "lv: a style in set() is made with lv::style({...}): view.set({.style = lv::style({.radius = ...})}).");
+  template <class Self, class D = void, class... None>
+  Self set(this Self self, const detail::lazy_props<W, D>& p, None...) = delete(
+      "lv: pass the properties in place: view.set({...}). A prepared set of properties is a "
+      "function that calls set().");
 
   // The untyped escape hatch, for anything props does not cover:
   // set<"text">("Speed") calls lv_label_set_text, or lv_obj_set_* as a fallback.

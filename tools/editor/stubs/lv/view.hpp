@@ -100,8 +100,12 @@ class view {
   template <detail::fixed C>
   view<C> add() const;
 
-  /// Applies typed properties: set({.value = 0}).
-  view set(const props<W>& p) const;
+  /// Applies typed properties, written in place: set({.value = 0}). A style in it is a named
+  /// style, a look, or lv::style({...}); GCC refuses a style written out inline.
+  view set(props<W>&& p) const;
+  view set(const props<W>& p) const = delete(
+      "lv: pass the properties in place: view.set({...}). A prepared set of properties is a "
+      "function that calls set().");
 
   /// The untyped escape hatch: set<"text">("Speed") calls lv_label_set_text, or
   /// lv_obj_set_* as a fallback. The editor does not check the arguments.
