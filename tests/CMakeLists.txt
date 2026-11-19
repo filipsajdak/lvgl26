@@ -298,6 +298,11 @@ add_executable(image image.cpp)
 target_link_libraries(image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME image COMMAND image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/image.png)
 lvgl26_test(image_alone)
+# A picture made by the compiler is named by its file, not by its pixels: a name of a million characters
+# stops Apple's linker (tools/check_symbols.py). The object file of a large picture in the 32-bit form
+# is read by the test image_symbols.
+add_library(image_symbols OBJECT image_symbols.cpp)
+target_link_libraries(image_symbols PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_executable(encoded_image encoded_image.cpp)
 target_link_libraries(encoded_image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME encoded_image COMMAND encoded_image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/encoded_image.png)
@@ -819,6 +824,11 @@ if(Python3_FOUND)
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
+  # The longest symbol of that object file stays under a budget that no picture's pixels could fit in.
+  set(LVGL26_SYMBOL_BUDGET 4096)
+  add_test(NAME image_symbols COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_symbols.py
+                                      --budget ${LVGL26_SYMBOL_BUDGET} $<TARGET_OBJECTS:image_symbols>)
+  add_test(NAME symbols_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_symbols.py)
   # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
   add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
