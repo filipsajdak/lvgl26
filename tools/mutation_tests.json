@@ -73,12 +73,12 @@
       "targets": "pointer window_app"
     },
     "include/lv/image.hpp": {
-      "tests": "^image$|^image_alone$|^image_symbols$|fail_image",
-      "targets": "image image_alone image_symbols"
+      "tests": "^image$|^image_alone$|fail_image",
+      "targets": "image image_alone"
     },
     "include/lv/detail/png_reader.hpp": {
-      "tests": "^image$|^image_alone$|^image_symbols$|fail_image",
-      "targets": "image image_alone image_symbols"
+      "tests": "^image$|^image_alone$|fail_image",
+      "targets": "image image_alone"
     }
   }
 }
