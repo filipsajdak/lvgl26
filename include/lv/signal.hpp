@@ -23,6 +23,9 @@ namespace lv::signal {
 
 namespace detail {
 
+// The settings of Signal's own token files, which are in the standard's forms whatever the project sets.
+struct signal_settings {};
+
 constexpr char dark_json[] = {
 #embed "signal/dark.json"
     , 0};
@@ -85,8 +88,8 @@ consteval lv::theme_styles themed(font body = {}, font label = {}, spacing label
 
 }  // namespace detail
 
-inline constexpr auto dark_tokens = lv::tokens<detail::dark_json>;
-inline constexpr auto day_tokens = lv::tokens<detail::day_json>;
+inline constexpr auto dark_tokens = lv::tokens<detail::dark_json, detail::signal_settings>;
+inline constexpr auto day_tokens = lv::tokens<detail::day_json, detail::signal_settings>;
 
 inline constexpr lv::theme_styles dark = detail::themed<dark_tokens>();
 inline constexpr lv::theme_styles day = detail::themed<day_tokens>();

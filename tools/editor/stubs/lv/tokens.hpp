@@ -11,6 +11,7 @@
 // The editor embeds a marker file in place of the token file (see overlay.yaml next to
 // the stubs): it holds the key. Without the marker the key is worked out from the bytes.
 
+#include <lv/config.hpp>
 #include <lv/token_files.hpp>
 #include <lv/token_types.hpp>
 #include <lv/values.hpp>
@@ -68,8 +69,10 @@ concept embedded_text = std::is_bounded_array_v<std::remove_cvref_t<T>> &&
 }  // namespace detail
 
 /// The design tokens of the embedded DTCG document `Doc`, as a typed constant: a
-/// struct for each group, an lv::token<T> for each token.
-template <const auto& Doc>
+/// struct for each group, an lv::token<T> for each token. A value in a form from before the Design Tokens
+/// Format 2025.10 ("#3366ff", "8px") is an error in a build, unless the settings `O` allow it.
+/// The editor does not read the setting.
+template <const auto& Doc, class O = override>
   requires detail::embedded_text<decltype(Doc)>
 inline constexpr typename stub::token_file<stub::token_key(Doc)>::type tokens{};
 

@@ -25,6 +25,11 @@ struct config {
   // such as `struct kmh { int value; };`.
   bool raw_integer_state = false;
 
+  // Read the forms of a token value from before the Design Tokens Format 2025.10: "#3366ff" for a color,
+  // "8px" or a bare number for a dimension, "200ms" for a duration. Off, such a value is a compile error that
+  // names tools/dtcg_fix.py, which rewrites a token file. Only for the time a project's files convert.
+  bool tokens_legacy_values = false;
+
   // The largest picture, in pixels, that the compiler decodes (see lv/image.hpp).
   // Decoding costs compile time: about a second for 48 x 48, many for a whole screen.
   std::size_t compile_time_image_pixels = 128 * 128;

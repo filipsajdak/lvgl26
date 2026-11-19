@@ -22,6 +22,10 @@ import json
 import pathlib
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import dtcg_fix  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "design" / "signal" / "tokens.design.json"
 OUT = ROOT / "include" / "lv" / "signal"
@@ -30,23 +34,34 @@ SCHEMA = "https://www.designtokens.org/schemas/2025.10/format.json"
 WRITTEN = "Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit."
 
 
+def render(node: dict, level: int = 0) -> str:
+    """The document with two spaces of indent for groups; a token is one line, so that its text stays short."""
+    if "$value" in node:
+        return "{" + ", ".join(
+            f"{json.dumps(key)}: {json.dumps(value, separators=(',', ':'))}" for key, value in node.items()) + "}"
+    pad = "  " * (level + 1)
+    members = [f"{pad}{json.dumps(key)}: {render(value, level + 1) if isinstance(value, dict) else json.dumps(value)}"
+               for key, value in node.items()]
+    return "{\n" + ",\n".join(members) + "\n" + "  " * level + "}"
+
+
 def lengths(design: dict, section: str, group: str) -> dict:
     """One group of dimension tokens, without the group's name in each token's name."""
     out = {"$type": "dimension"}
     for token in design[section]["tokens"]:
         if token["value"].endswith("px"):
-            out[token["name"].removeprefix(group + "-")] = {"$value": token["value"]}
+            out[token["name"].removeprefix(group + "-")] = {"$value": dtcg_fix.quantity_object(token["value"], dtcg_fix.LENGTH_UNITS)}
     return out
 
 
 def document(design: dict, theme: str) -> str:
     colors = {"$type": "color"}
     for token in design["color"]["tokens"]:
-        colors[token["name"]] = {"$value": token["value"][theme].lower()}
+        colors[token["name"]] = {"$value": dtcg_fix.color_object(token["value"][theme].lower())}
     doc = {"$schema": SCHEMA, "$description": f"Signal, {theme} theme. {WRITTEN}", "color": colors}
     for section, group in LENGTHS.items():
         doc[group] = lengths(design, section, group)
-    return json.dumps(doc, indent=2) + "\n"
+    return render(doc) + "\n"
 
 
 def families(design: dict) -> dict:
@@ -72,16 +87,16 @@ def styles(design: dict) -> dict:
     for group in design["type"]["groups"]:
         for style in group["styles"]:
             out[style["name"]] = {"$value": {"fontFamily": "{font." + group["family"] + "}",
-                                             "fontSize": style["fontSize"],
+                                             "fontSize": dtcg_fix.quantity_object(style["fontSize"], dtcg_fix.LENGTH_UNITS),
                                              "fontWeight": style["fontWeight"],
-                                             "letterSpacing": style.get("letterSpacing", "0px"),
+                                             "letterSpacing": dtcg_fix.quantity_object(style.get("letterSpacing", "0px"), dtcg_fix.LENGTH_UNITS),
                                              "lineHeight": line_height(style)}}
     return out
 
 
 def typography(design: dict) -> str:
     doc = {"$schema": SCHEMA, "$description": f"Signal, typography. {WRITTEN}", "font": families(design), "text": styles(design)}
-    return json.dumps(doc, indent=2) + "\n"
+    return render(doc) + "\n"
 
 
 def documents(design: dict) -> dict:

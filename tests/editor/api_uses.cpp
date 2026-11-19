@@ -41,7 +41,7 @@ using mp_units::si::unit_symbols::min;
 // ---- settings ---------------------------------------------------------------------
 
 constexpr lv::config settings = lv::cfg<lv::override>;
-static_assert(!settings.raw_style_values && !settings.raw_integer_state);
+static_assert(!settings.raw_style_values && !settings.raw_integer_state && !settings.tokens_legacy_values);
 static_assert(settings.compile_time_image_pixels == 128 * 128);
 
 // ---- units ------------------------------------------------------------------------
