@@ -8,7 +8,7 @@
 
 // This file turns the token rule off, to test styles on their own and the setting itself.
 template <>
-inline constexpr lv::config lv::cfg<lv::override>{.raw_style_values = true};
+inline constexpr lv::config lv::cfg<lv::override>{.rules = {.raw_style_values = true}};
 
 namespace {
 

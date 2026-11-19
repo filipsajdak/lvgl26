@@ -32,6 +32,8 @@ function(lvgl26_compile_fail name message)
 endfunction()
 
 lvgl26_test(smoke)
+# The settings reader.
+lvgl26_test(settings)
 # The library in a program without exceptions and run-time type information.
 lvgl26_test(no_exceptions)
 target_compile_options(no_exceptions PRIVATE -fno-exceptions -fno-rtti)
@@ -454,7 +456,7 @@ target_compile_options(fail_encoded_image_needs_png PRIVATE -ULV_USE_LODEPNG)  #
 lvgl26_compile_fail(encoded_image_needs_jpeg "LVGL is built without its JPEG decoder. Turn it on in CMake, before lvgl26 is added: set\\(LVGL26_JPEG ON\\)")
 target_compile_options(fail_encoded_image_needs_jpeg PRIVATE -ULV_USE_TJPGD)
 lvgl26_compile_fail(image_not_a_png "this is not a PNG file. Embed one")
-lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise lv::config::compile_time_image_pixels")
+lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise limits.compile_time_image in the settings")
 lvgl26_compile_fail(image_row_too_long "this picture is 16384 x 1 pixels, with rows of 65536 bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_too_wide "this picture is 70000 x 1 pixels, with rows of [0-9]+ bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_deep "this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced")
@@ -496,7 +498,7 @@ lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a lengt
 lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
 lvgl26_compile_fail(token_color_alpha "design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
-# The forms from before the Design Tokens Format 2025.10 are errors unless lv::config::tokens_legacy_values is set.
+# The forms from before the Design Tokens Format 2025.10 are errors unless rules.tokens_legacy_values is set.
 lvgl26_compile_fail(token_legacy_color "'ink' is written .*#3366ff.*a form from before the Design Tokens Format 2025.10.*colorSpace.*tools/dtcg_fix.py.*tokens_legacy_values")
 lvgl26_compile_fail(token_legacy_dimension "'gap' is written .*8px.*a form from before the Design Tokens Format 2025.10.*value.*unit.*tools/dtcg_fix.py")
 lvgl26_compile_fail(token_legacy_duration "'fast' is written .*200ms.*a form from before the Design Tokens Format 2025.10.*tools/dtcg_fix.py")
@@ -541,7 +543,19 @@ lvgl26_compile_fail(bind_wrong_type "this property cannot be bound to a state of
 lvgl26_compile_fail(bind_format_not_text "is for text properties only")
 lvgl26_compile_fail(state_bad_type "a state holds a quantity")
 lvgl26_compile_fail(bind_two_values "this property cannot follow a state")
-lvgl26_compile_fail(config_too_late "redefinition of .*lv::cfg<lv::override>")
+lvgl26_compile_fail(config_too_late "specialization of .lv::cfg<lv::override>. after instantiation")
+# Each mistake in a settings file, with the message that names it.
+lvgl26_compile_fail(settings_unknown_key "lv: test\\.json: unknown key 'thread' in allow\\. Did you mean 'threads'\\? The keys of allow: allocation, threads, files, floating_point\\.")
+lvgl26_compile_fail(settings_unknown_section "lv: test\\.json: unknown key 'alow'\\. Did you mean 'allow'\\? The keys of the file: allow, rules, limits\\.")
+lvgl26_compile_fail(settings_not_bool "lv: test\\.json: allow\\.threads takes true or false, not \"no\"\\.")
+lvgl26_compile_fail(settings_section_not_object "lv: test\\.json: rules takes an object of settings, not true\\. Its keys: raw_style_values, raw_integer_state, tokens_legacy_values\\.")
+lvgl26_compile_fail(settings_not_json "lv: test\\.json: the file is no well-formed JSON\\.")
+lvgl26_compile_fail(settings_not_object "lv: test\\.json: the file takes an object of settings, not \\[1, 2\\]\\. Its keys: allow, rules, limits\\.")
+lvgl26_compile_fail(settings_amount_plain "lv: test\\.json: limits\\.compile_time_image takes a value and a unit, as \\{\"value\": 4, \"unit\": \"px\"\\}, not 16384\\. Its units: px\\.")
+lvgl26_compile_fail(settings_unknown_unit "lv: test\\.json: limits\\.compile_time_image has the unit 'pix'\\. Did you mean 'px'\\? Its units: px\\.")
+lvgl26_compile_fail(settings_negative "lv: test\\.json: limits\\.compile_time_image is -1 px, and a limit cannot be negative\\.")
+lvgl26_compile_fail(settings_too_large "lv: test\\.json: limits\\.compile_time_image is 1e300 px, more than a limit can hold\\.")
+lvgl26_compile_fail(settings_fraction "lv: test\\.json: limits\\.compile_time_image is 0\\.5 px, which is no whole number of px\\.")
 lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h.;.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")

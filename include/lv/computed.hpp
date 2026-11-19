@@ -70,6 +70,7 @@
 //
 // Like all of LVGL, use these from the UI thread only.
 
+#include <lv/detail/settings.hpp>
 #include <lv/state.hpp>
 
 #include <array>
@@ -143,13 +144,6 @@ template <class F, class... Values>
   requires std::invocable<F, Values...>
 struct result_of_call<F, Values...> {
   using type = std::remove_cvref_t<std::invoke_result_t<F, Values...>>;
-};
-
-// The settings tag, named through a template parameter so that lv::cfg is read
-// when the computed is used and not when this header is.
-template <class>
-struct settings {
-  using tag = override;
 };
 
 consteval std::string_view bad_dependency(std::string_view what) {
@@ -248,11 +242,11 @@ class computed : detail::watched<typename detail::result_of_call<const F&, detai
  private:
   static_assert(state_value<value_type>, detail::bad_result<value_type>());
   static_assert(!detail::integer<value_type> ||
-                    cfg<typename detail::settings<F>::tag>.raw_integer_state,
+                    detail::project<typename detail::settings<F>::tag>.rules.raw_integer_state,
                 "lv: the function of an lv::computed returns a plain integer, which does not "
                 "say what the number is. Return a quantity (the difference of two speeds is "
                 "one), an lv::counter, or a named type: `struct tab_index { int value; };`. To "
-                "allow plain integers, set lv::config::raw_integer_state.");
+                "allow plain integers, set rules.raw_integer_state in the settings.");
 
   using base = detail::watched<value_type>;
   friend detail::graph_access;
