@@ -7,3 +7,10 @@ target_link_libraries(slice.elf PRIVATE lvgl26::lvgl26)
 target_compile_options(slice.elf PRIVATE -Os)
 target_link_options(slice.elf PRIVATE -T ${PROJECT_SOURCE_DIR}/cmake/arm/mps2-an386.ld
                     -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/slice.map)
+
+# The stack of one run-time set, for tools/stack_budget.py (run by tools/arm-run.sh). It is
+# compiled only, as the slice is, never linked.
+add_library(set_stack_probe OBJECT set_probe.cpp)
+target_link_libraries(set_stack_probe PRIVATE lvgl26::lvgl26)
+target_compile_options(set_stack_probe PRIVATE -Os -fstack-usage)
+add_dependencies(slice.elf set_stack_probe)
