@@ -49,6 +49,26 @@ add_test(NAME app_loop_violation_display_of_c_display
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # The application of examples/window, fed by an lv::pointer as its window feeds it.
 lvgl26_test(window_app)
+# The host build of examples/wasm: its platform and host program with each application,
+# replaying the application's script. The nightly job builds the same sources for
+# WebAssembly and compares the frames; this run catches a library change that breaks them.
+foreach(application counter bounce)
+  set(script_inc ${CMAKE_CURRENT_BINARY_DIR}/wasm_${application}/script.inc)
+  add_custom_command(OUTPUT ${script_inc}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/wasm_${application}
+    COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/wasm/make-script.py
+            ${PROJECT_SOURCE_DIR}/examples/wasm/${application}/script.json > ${script_inc}
+    DEPENDS ${PROJECT_SOURCE_DIR}/examples/wasm/${application}/script.json ${PROJECT_SOURCE_DIR}/tools/wasm/make-script.py)
+  add_executable(wasm_host_${application} ${PROJECT_SOURCE_DIR}/examples/wasm/platform.cpp
+                 ${PROJECT_SOURCE_DIR}/examples/wasm/host_main.cpp ${script_inc})
+  target_include_directories(wasm_host_${application} PRIVATE ${PROJECT_SOURCE_DIR}/examples/wasm/${application}
+                             ${PROJECT_SOURCE_DIR}/examples/wasm ${CMAKE_CURRENT_BINARY_DIR}/wasm_${application})
+  target_compile_options(wasm_host_${application} PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/wasm/${application})
+  target_link_libraries(wasm_host_${application} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  add_test(NAME wasm_host_${application}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:wasm_host_${application}>
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/run_quiet.cmake)
+endforeach()
 # A polled pointer without a function ends the program.
 add_test(NAME pointer_violation_no_function
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:pointer> -DCASE=no_function
