@@ -37,6 +37,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [input-devices.md](input-devices.md) | Input devices as objects of `lv::`: what LVGL reads and when, why a short press is missed and how a queue keeps it, pointer first, then keypad, encoder and focus, and an SDL window. Measured on both LVGL versions, decisions for the owner. |
 | [design-sync.md](design-sync.md) | Whether a tool can read Signal's design system from Claude Design without a login, which routes exist, and four options to check or sync it: a recorded hash, a manual target, a scheduled job, a build step. |
 | [task-handles.md](task-handles.md) | A handle that controls the lifetime of a spawned task: what jthread, std::execution, Trio, Kotlin, Swift, tokio, Qt and Slint do, the options for lvgl26 with a measured probe, and a recommendation. |
+| [visibility.md](visibility.md) | Work that nobody sees: what LVGL does for hidden, scrolled, covered and off-screen widgets (measured on v9.6.0 and the v10 pin), what other toolkits pause, and a model for what lvgl26 pauses and what must go on. |
 
 ## How each claim is marked
 

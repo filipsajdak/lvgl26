@@ -131,6 +131,29 @@ The Linux format of `/usr/bin/time -v` is parsed from a sample written by hand, 
 | 10 | `--param ggc-min-expand` and `ggc-min-heapsize` higher. | Fewer collections: a bug report saw 5 GB of GC memory in constant evaluation. | Raises peak memory, which is what hurts. | `summary` [PR 96197](https://inbox.sourceware.org/gcc-bugs/bug-96197-4-YVbjVKmoUA@http.gcc.gnu.org%2Fbugzilla%2F/t) |
 | 11 | C++20 modules. | Probably none: the benchmark found a precompiled header faster than a module for `<meta>` (92 ms against 279 ms), and our own note found modules 2.2 times slower. | Experimental in GCC 16. | `source` Romeo, `measured` |
 
+## Work a header does where it is read
+
+`measured` 2026-11-19 with `tools/compile_report.py`, in instructions of `cc1plus`, a file that only includes the header named, against a file that includes only that header's own `lv/` includes.
+
+| Header | Its own cost before | After | What it was |
+|---|---|---|---|
+| `lv/theme.hpp` | 14.2 G (29.49 against 15.33) | 0.16 G | Five scans called with no template argument (`look_targets()`, `theme_widgets()` and the functions they call) from variable templates: GCC evaluates a call that depends on nothing where the template is read |
+| `lv/scaled_font.hpp` | 0.87 G | 0.67 G | Three `find("lv_tiny_ttf_...")` in variable templates; the rest is parsing |
+| `lv/encoded_image.hpp` | 0.57 G | 0.21 G | Two `find(...)` for the decoders |
+| `lv/font.hpp` | 3.0 G | unchanged | Real work: constant-evaluation time does not grow, parsing and instantiation do (the rasteriser, `<memory>`, `<array>`) |
+| `lv/look.hpp` | 0.6 G | unchanged | Real work, mostly parsing |
+| `<lv/lv.hpp>` | 37.81 G | 23.21 G | All of the above |
+
+`tools/check_eager.py` (ctest `eager_check`) finds the two patterns in the text of the headers; it reads text, not what GCC does.
+
+Why no compiler counter guards it, `measured` the same day:
+
+- `-fconstexpr-ops-limit` counts one outermost evaluation. The largest of a file that only includes `<lv/lv.hpp>` lies between 4.0 M and 5.5 M operations before and after the fix alike: it is the scan of the LVGL API (`detail/api.hpp`, 4.0 M to 5.5 M on its own, its includes under 1 M). A limit would not have caught 14 G of eager theme scans.
+- `-fmem-report`: 285 M allocated before, 282 M after. Not a signal.
+- Instructions are the signal, but CI's Linux image has neither `perf` nor a `time` that counts them.
+
+An open optimisation, not built: `detail/api.hpp` builds `api` (every `lv_*` function) at namespace scope, 9.0 G in every file (13.18 G with the header, 4.18 G with its includes). Every file that names a widget needs the scan, so only files without widgets would gain. Making it lazy turns `find`, `names_after`, `resolve*` and the loops over `api` in `props.hpp` and `style.hpp` into templates on D, about 30 call sites. With it lazy, the largest evaluation of an include-only file would fall under 1 M operations, and an operation limit on such a file would become a real guard. `tools/eager_allowed.json` lists `api` with this reason.
+
 ## What to measure first
 
 1. The analyzer on `font_bytes.cpp` with `-fanalyzer-call-summaries`, with `analyzer-supernode-explosion-factor=1`, and with the font array removed. The last one tests bug 110112.

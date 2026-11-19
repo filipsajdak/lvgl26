@@ -37,11 +37,11 @@ namespace detail {
 // LVGL's TinyTTF functions, or null reflections when LVGL is built without it.
 // D only delays the search until a font is used.
 template <class D = void>
-inline constexpr std::meta::info tiny_ttf_create = find("lv_tiny_ttf_create_data");
+inline constexpr std::meta::info tiny_ttf_create = find_later<D>("lv_tiny_ttf_create_data");
 template <class D = void>
-inline constexpr std::meta::info tiny_ttf_set_size = find("lv_tiny_ttf_set_size");
+inline constexpr std::meta::info tiny_ttf_set_size = find_later<D>("lv_tiny_ttf_set_size");
 template <class D = void>
-inline constexpr std::meta::info tiny_ttf_destroy = find("lv_tiny_ttf_destroy");
+inline constexpr std::meta::info tiny_ttf_destroy = find_later<D>("lv_tiny_ttf_destroy");
 
 // Stops the build of a program that uses a font drawn on the device without TinyTTF.
 template <class D>
