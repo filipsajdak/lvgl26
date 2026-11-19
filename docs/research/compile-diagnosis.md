@@ -23,6 +23,7 @@ The marks are in [the README](README.md).
 - The number is "instructions retired" of `cc1plus` itself, from `/usr/bin/time -l`, as `CLAUDE.md` says. `g++ -###` printed the command.
 - "Front end" is `-fsyntax-only`. "Full" is `-c` with the assembler output thrown away. The back end is the difference.
 - Two trees: `main` at `fc6615a` and `perf/lazy-api` at `66fc599`, which is `main` plus a lazy API table.
+- The headline rows and the fixes were measured again on `main` at `8c1aaeb`, after the settings (#144). They moved by less than the noise.
 - The probes are small files in a scratch directory outside the repository. Each adds one thing to the one before it.
 - One run per number unless a range is given. Runs of the same file differed by up to 0.8 G.
 - The share of each phase comes from `-ftime-report`, read as row divided by `TOTAL`. Its rows overlap: parsing contains evaluation and instantiation.
@@ -168,6 +169,36 @@ Fixes 3 to 7 together, measured as one tree; each file built and its reference d
 
 - `include_only` still compiles under its limit of 50,000 operations, and `large_tree` under 6.5 million, with the fixes. `measured`
 - The fixes leave a file that names no widget as it is, and the lazy API table keeps it so.
+
+### One pull request per fix
+
+Each fix alone, on `main` at `8c1aaeb` with the lazy API table, against the same tree without it. Full compile, minimum of two runs, G.
+
+| Fix | One label | 10 widget kinds | `large_tree` | `signal.hpp` | Mark |
+|---|---|---|---|---|---|
+| Without fixes | 54.0 | 106.0 | 81.6 | 81.8 | `measured` |
+| 3, the theme's scan once | 0.0 | −0.3 | 0.0 | −11.4 | `measured` |
+| 4, the merge sort | −4.0 | −4.2 | −4.3 | −4.5 | `measured` |
+| 5, no builtins in the API scan | −3.2 | −3.6 | −3.4 | −3.4 | `measured` |
+| 6, no `std::string` per member | −2.1 | −11.2 | −3.1 | −0.1 | `measured` |
+| 7, the cheap prefix check | −1.2 | −4.9 | −1.9 | −0.5 | `measured` |
+| The sum of the five | −10.5 | −24.3 | −12.8 | −19.9 | `measured` |
+| All five in one tree | −10.1 | −22.5 | −11.8 | −17.4 | `measured` |
+
+- The gains nearly add up, so each fix can be its own pull request in any order.
+- Fixes 3 and 4 overlap on a theme: the theme's scan sorts its items, so scanning once also halves what the sort saves there.
+- Fix 6 grows with the number of widget kinds in a file; fix 3 helps only a file with a theme.
+
+What each kind of file can expect from the five together, from the files measured above:
+
+| Kind of file | Measured on | Gain | Mark |
+|---|---|---|---|
+| A test or example with a few widget kinds | One label, `large_tree` | 14 to 19 % | `measured` |
+| A file with many widget kinds | 10 kinds | 21 % | `measured` |
+| A file with a theme | `signal.hpp`, `tests/theme.cpp` | 21 to 23 % | `measured` |
+| A compile-fail test | 13 of 277 | 12 % on average; none for a file that names no widget | `measured` |
+| A file that draws fonts | `print_page.cpp`, `tests/look.cpp` | 4 to 5 %: the fonts are the cost, see fix 2 | `measured` |
+| A file that names no widget | `<lv/lv.hpp>` only | none | `measured` |
 
 ### The precompiled header, measured
 
