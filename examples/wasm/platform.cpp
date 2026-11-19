@@ -1,3 +1,4 @@
+// editor-check: skip, it includes app.hpp from the directory of the application it is built with
 // What a host needs to drive an application: a clock, a pointer, a frame and one step. The browser
 // (page.html) and the host program (host_main.cpp) call the same functions, in the same order.
 #include "app.hpp"  // the application: counter/app.hpp or bounce/app.hpp, by the include path

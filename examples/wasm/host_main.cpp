@@ -1,3 +1,4 @@
+// editor-check: skip, it includes script.inc, which tools/wasm/make-script.py writes
 // The host build of the demo, driven by a script: a click on each button, a drag of the slider,
 // a click on the switch, 1.2 seconds of 16 ms steps. It writes the last frame to standard
 // output. The browser runs the same script (page.html) and must produce the same bytes.
