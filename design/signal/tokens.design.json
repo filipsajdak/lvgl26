@@ -1,6 +1,6 @@
 {
   "name": "Signal",
-  "version": 2,
+  "version": 5,
   "color": {
     "themes": [
       {
@@ -132,11 +132,43 @@
           "day": "#FFFFFF"
         },
         "usage": "Text and icons on a filled advice block."
+      },
+      {
+        "name": "lamp-green",
+        "value": {
+          "dark": "#3DDB84",
+          "day": "#0B7A3E"
+        },
+        "usage": "Only a tell-tale lamp that the law defines as green: direction indicators, lights on. Never a value, a state or a control."
+      },
+      {
+        "name": "lamp-blue",
+        "value": {
+          "dark": "#4D8DFF",
+          "day": "#1F3FBF"
+        },
+        "usage": "Only the main-beam tell-tale, which the law defines as blue."
       }
     ]
   },
   "type": {
-    "fonts": [],
+    "fonts": [
+      {
+        "family": "Barlow Condensed",
+        "file": "fonts/BarlowCondensed-Bold.ttf",
+        "weight": "700"
+      },
+      {
+        "family": "Barlow Condensed",
+        "file": "fonts/BarlowCondensed-SemiBold.ttf",
+        "weight": "600"
+      },
+      {
+        "family": "Barlow",
+        "file": "fonts/Barlow-Medium.ttf",
+        "weight": "500"
+      }
+    ],
     "families": {
       "display": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
       "text": "\"Barlow\", system-ui, sans-serif"

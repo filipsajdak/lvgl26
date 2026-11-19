@@ -93,6 +93,21 @@ Measured once on one machine, with `-Os` for the flash. The 208 px rows were mea
 - This cost is why the fonts are not in `lv/signal.hpp`. Include `lv/signal_type.hpp` in one file, and make each larger font once.
 - `title` and `label` are capitals with wide spacing. The themes space the text of a button; for a style of your own, merge the token: `lv::style({.text_font = title}) | text.title`.
 - A numeral style with all 95 characters takes six times the flash of `numerals`. Use `type` for it only when the reading has letters.
+
+### Tell-tale lamps
+
+The law defines the colour of some tell-tale lamps: direction indicators and lights on are green, the main beam is blue.
+Signal has a colour for each, in each theme, and they are in a header of their own:
+
+```cpp
+#include <lv/signal_lamps.hpp>
+
+constexpr auto indicator = lv::signal::lamps.dark.green;  // lamps.day.green, lamps.dark.blue, lamps.day.blue
+```
+
+- A lamp colour is never a value, a state or a control. Normal has no colour in Signal.
+- The colours are in `include/lv/signal/lamps.json`, written from the design file by `tools/signal_tokens.py`: every colour named `lamp-...` goes there, and not into the files of the themes.
+- The header costs about 0.3 G instructions of compile time in the file that includes it. `lv/signal.hpp` and `lv/signal_type.hpp` do not include it, so a program without tell-tales pays nothing.
 - `numeral-2xl` is 208 px. `type` makes it too, but 95 characters of that size take 480 KB of flash and 5.4 GB of memory in the compiler. Use `numerals` for it.
 - The fonts have no glyph for LVGL's symbols. A widget that draws one, such as the arrow of a drop-down list, shows an empty box in its place.
 
