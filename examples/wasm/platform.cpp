@@ -3,6 +3,8 @@
 // (page.html) and the host program (host_main.cpp) call the same functions, in the same order.
 #include "app.hpp"  // the application: counter/app.hpp or bounce/app.hpp, by the include path
 
+#include <lv/pointer.hpp>
+
 #include <contracts>
 #include <cstdio>
 #include <cstdlib>
@@ -16,13 +18,6 @@ void handle_contract_violation(const std::contracts::contract_violation& violati
 namespace {
 
 constinit std::uint32_t now_ms = 0;
-
-struct pointer_state {
-  std::int32_t x = 0;
-  std::int32_t y = 0;
-  bool down = false;
-};
-constinit pointer_state pointer;
 
 // The union of what changed since the page last drew.
 constinit lv::area dirty{};
@@ -44,24 +39,25 @@ void changed(lv::area a) {
 
 lv::duration clock() { return lv::duration{now_ms}; }
 
-void read_pointer(lv_indev_t*, lv_indev_data_t* data) {  // C API
-  data->point.x = pointer.x;                             // C API
-  data->point.y = pointer.y;                             // C API
-  data->state = pointer.down ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;  // C API
-}
-
 constinit lv::frame<app::width, app::height> picture;
 
 struct world {
   lv::application app{{.clock = &clock}};
   lv::display display{app, picture, &changed};
+  lv::pointer<> mouse{display};
   app::running application{display.screen()};
+  lv::pointer_sample last{};  // what the page said in its last step
 
   world() {
     if (!application.ok()) std::abort();
-    lv_indev_t* in = lv_indev_create();                // C API
-    lv_indev_set_type(in, LV_INDEV_TYPE_POINTER);      // C API
-    lv_indev_set_read_cb(in, &read_pointer);           // C API
+  }
+
+  // The page's pointer in this step: a press, a release or a move becomes a sample, so a
+  // press shorter than LVGL's read period still reaches it.
+  void pointer_at(lv::pointer_sample now) {
+    if (now == last) return;
+    static_cast<void>(mouse.feed(now.at, now.state));
+    last = now;
   }
 };
 
@@ -79,7 +75,7 @@ void web_init() { the_world = new (world_storage) world; }
 // until something is due.
 std::uint32_t web_step(std::uint32_t now, std::int32_t x, std::int32_t y, std::int32_t down) {
   now_ms = now;
-  pointer = {x, y, down != 0};
+  the_world->pointer_at({{x, y}, down != 0 ? lv::pressed : lv::released});
   return the_world->app.step().ms;
 }
 
