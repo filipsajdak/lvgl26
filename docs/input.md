@@ -54,7 +54,7 @@ A lambda without captures works as well. A lambda that captures is a compile err
 
 The applications of `examples/wasm` (`counter/app.hpp`, `bounce/app.hpp`) know no platform: a tree, states, handlers and a task, and the three things a platform needs, `app::width`, `app::height` and `app::running`. Each platform gives them an `lv::display` and an `lv::pointer`:
 
-- The browser page: `examples/wasm/platform.cpp` feeds the pointer with what the page reports in each step, a press, a move or a release.
+- The browser page: `examples/wasm/platform.cpp` feeds the pointer with each event of the page as it comes, a press, a move or a release; a press and a release within one frame both wait in the queue for the next step.
 - The desktop window: `examples/window/main.cpp`, shown above, through `examples/platform/sdl_window.hpp`, a window that shows the frame and a mouse that feeds the pointer. It is the one file that names SDL.
 - A test: `tests/window_app.cpp` gives the counter a frame and a pointer fed from a script, and checks the clicks and the slider.
 
