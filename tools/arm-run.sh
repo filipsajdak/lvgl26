@@ -7,6 +7,8 @@ set -eu
 cd "$(dirname "$0")/.."
 cmake --preset arm-m4 "$@" > /dev/null
 cmake --build --preset arm-m4 > /dev/null
+# One run-time set must stay within its stack budget (tools/stack_budget.py).
+python3 tools/stack_budget.py build/arm-m4/examples/mcu/CMakeFiles/set_stack_probe.dir/set_probe.cpp.su
 elf=build/arm-m4/examples/mcu/slice.elf
 out=build/arm-m4/slice.out
 qemu-system-arm -M mps2-an386 -cpu cortex-m4 -nographic \

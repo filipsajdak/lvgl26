@@ -891,12 +891,74 @@ constexpr kept<W, D> keep(const lazy_props<W, D>& p) {
   return out;
 }
 
-// Applies every set member of `p`, read at run time.
-template <fixed W>
-void apply_props(lv_obj_t* o, const props<W>& p) {
-  template for (constexpr auto i : indices<members_of_props<W>.size()>) {
-    constexpr auto m = members_of_props<W>[i];
-    if (is_set(p.[:m:])) apply_member<W, i>(o, p.[:m:]);
+// ---- the properties of a run-time set ----------------------------------------
+
+// A style given to view.set(): it points at a style that lives until the end of the call, which
+// set() reads before then. A whole style in each of the 16 style slots of props<W> made the
+// argument of one set about 45 KB, more stack than a microcontroller has.
+template <class S>
+class style_ref {
+  const S* style_;  // no default member initializer: an unset slot is a null pointer, as lv::arg is zeros
+
+ public:
+  style_ref() = default;
+  constexpr style_ref(const S& style) : style_(&style) {}
+  constexpr bool has() const { return style_ != nullptr; }
+  constexpr const S& get() const { return *style_; }
+};
+
+// The type of a style slot of the properties that set() takes: the one place that says it.
+template <class D>
+using style_in_set = style_ref<style_t<D>>;
+
+template <class S>
+constexpr bool is_set(const style_ref<S>& s) {
+  return s.has();
+}
+
+// The members of set_props<W>: those of props<W>, with each style slot a style_in_set.
+template <fixed W, class D>
+consteval std::vector<std::meta::info> set_props_specs() {
+  std::vector<std::meta::info> specs;
+  for (auto m : members_of_props<W>) {
+    const auto type = std::meta::type_of(m);
+    const bool style = std::meta::dealias(type) == std::meta::dealias(^^style_t<D>);
+    specs.push_back(std::meta::data_member_spec(style ? ^^style_in_set<D> : type, {.name = std::meta::identifier_of(m)}));
+  }
+  return specs;
+}
+
+// What view.set({...}) takes: props<W> with its styles by reference. The second parameter delays
+// it like that of props_of.
+template <fixed W, class D = void>
+struct set_props_of {
+  struct type;
+  consteval { std::meta::define_aggregate(^^type, set_props_specs<W, D>()); }
+};
+
+template <fixed W, class D = void>
+using set_props = typename set_props_of<W, D>::type;
+
+template <fixed W, class D = void>
+inline constexpr auto members_of_set_props = std::define_static_array(
+    std::meta::nonstatic_data_members_of(^^set_props<W, D>, std::meta::access_context::unchecked()));
+
+template <fixed W, std::size_t I, class S>
+void apply_set_member(lv_obj_t* o, const style_ref<S>& s) {
+  apply_member<W, I>(o, s.get());
+}
+template <fixed W, std::size_t I, class A>
+void apply_set_member(lv_obj_t* o, const A& a) {
+  apply_member<W, I>(o, a);
+}
+
+// Applies every set member of `p`, read at run time. Its members are those of props<W>, in the
+// same order, so member I is applied as member I of props<W>.
+template <fixed W, class D>
+void apply_set_props(lv_obj_t* o, const set_props<W, D>& p) {
+  template for (constexpr auto i : indices<members_of_set_props<W, D>.size()>) {
+    constexpr auto m = members_of_set_props<W, D>[i];
+    if (is_set(p.[:m:])) apply_set_member<W, i>(o, p.[:m:]);
   }
 }
 

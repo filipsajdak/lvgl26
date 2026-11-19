@@ -399,6 +399,9 @@ lvgl26_compile_fail(like_missing_member "finds no member named 'scan'")
 lvgl26_compile_fail(each_selected_wrong_type ".selected follows the key of the selected row. Bind a state of the key's type")
 lvgl26_compile_fail(each_selected_and_checked ".selected gives the selected row the checked state, and this row template sets .checked itself")
 lvgl26_compile_fail(props_without_braces "made_with_braces")
+lvgl26_compile_fail(set_inline_style "lv: a style in set\\(\\) is made with lv::style\\(\\{...\\}\\)")
+lvgl26_compile_fail(set_named_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
+lvgl26_compile_fail(set_constexpr_props "lv: pass the properties in place: view.set\\(\\{...\\}\\)")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail(props_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(props_wrong_unit "It takes an angle in whole degrees \\(90 \\* lv::deg\\). You gave lv::length")
@@ -772,6 +775,7 @@ if(Python3_FOUND)
                    ${PROJECT_SOURCE_DIR}/examples/looks/tokens.json ${PROJECT_SOURCE_DIR}/examples/looks/screen.hpp
                    --reference ${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE})
   add_test(NAME look_groups_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_look_groups.py)
+  add_test(NAME stack_budget_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_stack_budget.py)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)

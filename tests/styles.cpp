@@ -75,7 +75,7 @@ void applies(lv::obj screen) {
   check(root->get<"unit">().get<"style_text_opa">(LV_PART_MAIN) == 204);
 
   // Changing a style at run time uses local styles and wins over the const one.
-  c.set({.style = {.radius = 2 * px}});
+  c.set({.style = lv::style({.radius = 2 * px})});
   check(c.get<"style_radius">(LV_PART_MAIN) == 2);
 }
 
