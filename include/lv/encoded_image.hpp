@@ -39,9 +39,9 @@ using file_bytes = std::span<const unsigned char>;
 // LVGL's decoders, or null reflections when LVGL is built without them. D only delays
 // the search until a program keeps a picture as a file.
 template <class D = void>
-inline constexpr std::meta::info png_decoder = find("lv_lodepng_init");
+inline constexpr std::meta::info png_decoder = find_later<D>("lv_lodepng_init");
 template <class D = void>
-inline constexpr std::meta::info jpeg_decoder = find("lv_tjpgd_init");
+inline constexpr std::meta::info jpeg_decoder = find_later<D>("lv_tjpgd_init");
 
 consteval bool starts_with(file_bytes d, std::initializer_list<unsigned char> signature) {
   std::size_t i = 0;
