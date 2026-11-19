@@ -378,7 +378,8 @@ What the probe showed with a sleeping loop of 10 ms, a state and a task:
 - **A required test.** The probe's first version left the held handle in the gate when a task was cancelled while paused. A later resume would have touched a destroyed frame.
   The promise's destructor clears the gate's held handle, and the build needs a test for it: cancel a paused task, then open the gate.
 - **The names.** `visible`, `set_visible`, `show` and `hide` of the display are to be aligned with what pull request #132 builds for its window. The two builds meet there.
-- **The cost.** The compile cost of the gate and of the `run` node, and the size of the gate on a 32-bit target, are measured in the build.
+- **The cost.** The build measures the compile cost of the gate and of the `run` node.
+  It also measures the size of the gate on a 32-bit target.
 - **Devices.** How a device maps hide and show (a backlight, a sleep mode) is not studied.
 
 ## The order of the work
