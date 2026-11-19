@@ -1,0 +1,5 @@
+{
+  "$schema": "https://raw.githubusercontent.com/filipsajdak/lvgl26/main/docs/reference/lvgl26-settings.schema.json",
+  "allow": {"allocation": false, "threads": false, "files": false, "floating_point": false},
+  "limits": {"compile_time_image": {"value": 4096, "unit": "px"}}
+}

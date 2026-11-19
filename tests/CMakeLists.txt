@@ -53,6 +53,14 @@ foreach(case all own)
 endforeach()
 set_tests_properties(settings_scan_all PROPERTIES PASS_REGULAR_EXPRESSION
   "mark_b.cpp.o was compiled with other settings \\(lvgl26_settings_bbbbbbbbbbbbbbbb\\) than this program, whose settings file is lvgl26.json")
+# The presets of the setup skill (skills/settings): each builds and runs the example.
+set(LVGL26_SETTINGS_EXAMPLE ${CMAKE_CURRENT_SOURCE_DIR}/../examples/settings)
+foreach(preset desktop microcontroller browser)
+  add_executable(settings_${preset} ${LVGL26_SETTINGS_EXAMPLE}/main.cpp)
+  target_link_libraries(settings_${preset} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+  lvgl26_settings(settings_${preset} ${LVGL26_SETTINGS_EXAMPLE}/presets/${preset}.json)
+  add_test(NAME examples_settings_${preset} COMMAND settings_${preset})
+endforeach()
 # The restrictions change no code: one file with none and with all four.
 add_library(settings_cost_open OBJECT settings_zero_cost.cpp)
 add_library(settings_cost_closed OBJECT settings_zero_cost.cpp)
