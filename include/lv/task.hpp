@@ -91,6 +91,22 @@ struct resume_state {
   bool cancel_requested = false; // the task must end once it is suspended again
 };
 
+// The frame of a coroutine that does nothing: what a task hands control to when nobody waits
+// for it. A frame begins with its resume and its destroy function, and both get the frame.
+// std::noop_coroutine is not used: libstdc++ gives its functions no parameter, and a target
+// that checks the type of an indirect call, such as WebAssembly, stops the program there.
+struct idle_frame {
+  static void nothing(void*) {}
+  void (*resume)(void*) = nothing;
+  void (*destroy)(void*) = nothing;
+};
+inline constinit idle_frame idle_frame_of_tasks{};
+
+// Control given to this handle returns to whoever resumed the task.
+inline std::coroutine_handle<> idle() noexcept {
+  return std::coroutine_handle<>::from_address(&idle_frame_of_tasks);
+}
+
 struct task_promise_base {
   resume_state* running = nullptr;         // set on the spawned task while its code runs
   std::coroutine_handle<> continuation{};  // who awaits this task, if anyone
@@ -126,7 +142,7 @@ struct task_promise_base {
     std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> finished) const noexcept {
       const std::coroutine_handle<> next = finished.promise().continuation;
       if (finished.promise().detached) finished.destroy();
-      return next ? next : std::noop_coroutine();
+      return next ? next : idle();
     }
     void await_resume() const noexcept {}
   };
@@ -249,7 +265,7 @@ struct task_awaiter {
   std::coroutine_handle<> await_suspend(std::coroutine_handle<P> waiting) const noexcept {
     frame.promise().continuation = waiting;
     frame.promise().parent = &waiting.promise();
-    if (cancel_pending(&waiting.promise())) return std::noop_coroutine();  // just get suspended
+    if (cancel_pending(&waiting.promise())) return idle();  // just get suspended
     return frame;  // start the awaited task now
   }
 
