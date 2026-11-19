@@ -193,13 +193,10 @@ jobs:
       - name: Give libstdc++ its own coroutine header back
         shell: bash
         run: |
-          found=0
-          while read -r header; do
-            sed -i 's/__dummy_resume_destroy(void\*) { }/__dummy_resume_destroy() { }/; s/void (\*__r)(void\*) = /void (*__r)() = /; s/void (\*__d)(void\*) = /void (*__d)() = /' "$header"
-            grep -q '__dummy_resume_destroy() { }' "$header"
-            found=1
-          done < <(find / -xdev -type f -path '*/c++/*/coroutine' 2>/dev/null)
-          test "$found" = 1
+          header=/work/gw2/libstdcxx/install/include/c++/17.0.0/coroutine
+          sed -i 's/__dummy_resume_destroy(void\*) { }/__dummy_resume_destroy() { }/; s/void (\*__r)(void\*) = /void (*__r)() = /; s/void (\*__d)(void\*) = /void (*__d)() = /' "$header"
+          grep -q '__dummy_resume_destroy() { }' "$header"
+          grep -q 'void (\*__r)() = ' "$header"
       - name: Build both applications for WebAssembly
         shell: bash
         run: |
