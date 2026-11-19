@@ -147,7 +147,7 @@ consteval std::vector<style_item> scan_style(const std::vector<style_id>& ids) {
   std::vector<style_item> items;
   for (auto f : api(style_prefix)) {
     const auto name = std::meta::identifier_of(f);
-    if (!name.starts_with(style_prefix) || std::meta::is_vararg_function(f)) continue;
+    if (!has_prefix(name, style_prefix) || std::meta::is_vararg_function(f)) continue;
     if (std::meta::parameters_of(f).size() < 3) continue;
     items.push_back(style_item_of<D>(f, name.substr(style_prefix.size()), ids));
   }
