@@ -786,6 +786,11 @@ add_executable(example_mounting ${PROJECT_SOURCE_DIR}/examples/mounting/main.cpp
 target_link_libraries(example_mounting PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_mounting COMMAND example_mounting)
 
+# Pages that follow a state: lv::shown and lv::when.
+add_executable(example_pages ${PROJECT_SOURCE_DIR}/examples/pages/main.cpp)
+target_link_libraries(example_pages PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME example_pages COMMAND example_pages)
+
 # The example of docs/themes.md. Its pictures are the ones on the page.
 add_executable(example_theme ${PROJECT_SOURCE_DIR}/examples/theme/main.cpp)
 target_compile_options(example_theme PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/theme)
