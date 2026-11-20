@@ -38,5 +38,30 @@
     "header": "include/lv/image.hpp",
     "mutant": "write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());  ->  write_rgb565(p, form.format >= LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());",
     "reason": "Equivalent. In the 16-bit branch the format is RGB565 or RGB565A8, and RGB565A8 is the larger enumerator, so >= and == pick the same one."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 1, 3, 1, 2, 0, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 1, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, (0+1), 3, 1, 2, 0, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, (0+1), 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "// The rows: for each its filter byte, then its pixels.  ->  /*// The rows: for each its filter byte, then its pixels.*/",
+    "reason": "Equivalent. The mutant turns a comment into a comment."
   }
 ]
