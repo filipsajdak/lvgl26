@@ -1165,36 +1165,27 @@ struct each_node {
 }  // namespace detail
 
 // A row of the row template for each row of `rows`, named by the key `key`. See the top of this file.
-//   lv::each(tracks, &track::id, row template)
+//   lv::each(tracks, &track::id, {}, row template)
 //   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)}, row template)
-// lv::each(tracks, &track::id)[row template] builds the same node.
-template <detail::row_source S, class T, class K>
+// lv::each(tracks, &track::id)[row template] builds the same node. One template for every form,
+// so that a call has as few candidates to try as before the row template became an argument.
+template <detail::row_source S, class T, class K, class... R>
   requires std::same_as<typename S::value_type, T>
-constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::each_options<T, K> options = {}) {
+constexpr auto each(const S& rows, K T::* key, detail::each_options<T, K> options = {}, const R&... row_template) {
   static_assert(detail::row_key<K>,
                 "lv: a key names one row, and is compared as a state compares its value. Give it a "
                 "named type, `struct track_id { int value; };`, or an enum. To allow plain integers, "
                 "set rules.raw_integer_state in the settings.");
-  return {&rows, key, options, {}};
+  if constexpr (sizeof...(R) == 0) {
+    return detail::each_node<S, T, K>{&rows, key, options, {}};
+  } else {
+    static_assert(sizeof...(R) == 1 && (tree_node<R> && ...),
+                  "lv: the last argument of lv::each is its row template, one widget: "
+                  "lv::each(tracks, &track::id, {...}, track_row).");
+    // Built in one step, as each(rows, key, options)[row_template] would be in two.
+    return detail::each_node<S, T, K, R...>{&rows, key, options, {row_template...}};
+  }
 }
-
-// The row template as the last argument: lv::each(tracks, &track::id, {...}, track_row).
-template <detail::row_source S, class T, class K, class R>
-  requires std::same_as<typename S::value_type, T> && tree_node<R>
-constexpr auto each(const S& rows, K T::* key, detail::each_options<T, K> options, const R& row_template) {
-  // Built in one step, as each(rows, key, options)[row_template] would be in two.
-  return detail::each_node<S, T, K, R>{each(rows, key, options).rows, key, options, {row_template}};
-}
-template <detail::row_source S, class T, class K, class R>
-  requires std::same_as<typename S::value_type, T> && tree_node<R>
-constexpr auto each(const S& rows, K T::* key, const R& row_template) {
-  return detail::each_node<S, T, K, R>{each(rows, key).rows, key, {}, {row_template}};
-}
-template <detail::row_source S, class T, class K, class R>
-  requires std::same_as<typename S::value_type, T>
-void each(const S&, K T::*, detail::each_options<T, K>, const R&) = delete(
-    "lv: the last argument of lv::each is its row template, one widget: "
-    "lv::each(tracks, &track::id, {...}, track_row).");
 
 template <class S, class M, class... O>
 void each(const S&, M, O&&...) = delete(

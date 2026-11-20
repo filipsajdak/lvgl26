@@ -46,7 +46,7 @@ How it works:
   A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
-- **Properties first, then the children.** `lv::group({...}, lv::label({...}), lv::each(tracks, &track::id, row))`:
+- **Properties first, then the children.** `lv::group({...}, lv::label({...}), lv::each(tracks, &track::id, {}, row))`:
   each child is an argument, so a formatter lays the tree out as nested blocks. `lv::group({...})[...]` builds the same node.
 - **The tree costs nothing at run time.** `lv::mount<ui>` reads it at compile time; an optimized build
   contains only the LVGL calls for the properties that are set.

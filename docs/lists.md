@@ -66,7 +66,7 @@ Every style of a node works in a row template, and all rows share it from read-o
 
 ## The list in a tree
 
-`lv::each(tracks, &track::id, track_row)` puts the rows into the widget that holds it. Its options, such as the selected row, come before the row template. In a column they run from top to bottom, in a row from left to right: `lv::column`, `lv::row`, or a group with a `.flex_flow`. That widget may have other children before and after the rows, but only one `lv::each`.
+`lv::each(tracks, &track::id, {...}, track_row)` puts the rows into the widget that holds it. The braces hold its options, such as the selected row, and stay empty, `{}`, when it has none. In a column they run from top to bottom, in a row from left to right: `lv::column`, `lv::row`, or a group with a `.flex_flow`. That widget may have other children before and after the rows, but only one `lv::each`.
 
 <!-- snippet: examples/lists/main.cpp tree -->
 ```cpp

@@ -534,7 +534,7 @@ constexpr auto playlist = lv::column[
 constexpr auto playlist_call = lv::column(
     {.size = {100 * pct, lv::size_content}},
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
-constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
+constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, {}, track_row));
 static_assert(std::same_as<std::remove_const_t<decltype(playlist_plain)>,
                            decltype(lv::column[lv::each(tracks, &track::id)[track_row]])>);
 
