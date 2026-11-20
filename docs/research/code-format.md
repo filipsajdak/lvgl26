@@ -5,7 +5,8 @@ Every mark is dated 2026-11-20.
 
 - `source`: our code, or a tool's own output or help text read on this machine.
 - `measured`: run here: clang-format 21.1.8, 22.1.8 and 23.1.5 (Homebrew), GCC 16.2 with `-fsyntax-only`, instructions of `cc1plus` from `/usr/bin/time -l`.
-- `recalled`: from memory. The web tools failed in this session, so no page of another framework was read. Check those rows before relying on them.
+- `source` for another framework: its page, read on 2026-11-20 and linked in the row.
+- `recalled`: from memory, with no page read. Check those rows before relying on them.
 
 ## Short answers
 
@@ -13,7 +14,7 @@ Every mark is dated 2026-11-20.
 |---|---|---|
 | Is format enforced today? | No. There is no `.clang-format`, no CI step and no hook. The examples follow a Google-like style by hand | `source` |
 | Can clang-format give the owner's form with today's syntax? | No. It reads `[...]` as a subscript: children align under the bracket, and the end stays `})[track_row]]];` | `measured` |
-| What is the lever? | A trailing comma. A braced list ending in `,` gets one property per line; without it, a list stays on one line while it fits | `measured` |
+| What is the lever? | A trailing comma. A braced list ending in `,` gets one property per line; without it, a list stays on one line while it fits. clang-format does not document this | `measured` with versions 21, 22 and 23 |
 | What does a syntax change buy? | Children as arguments, `lv::group({...}, child, child)`, let clang-format lay out the whole tree as nested blocks | `measured` |
 | What does it cost? | Two overloads of the factories and one of `lv::each`, about 15 lines. 0.1 G more instructions on a 47.6 G file. `[]` keeps working | `measured` |
 | Is clang-format safe on our C++26? | Yes, with `SortIncludes: Never`. `^^`, `[: :]`, `pre`, `post`, `#embed` and `template for` survive, and the result compiles | `measured` |
@@ -60,17 +61,18 @@ Column {
 - One property per line, `name: value`, with no punctuation after it.
 - Closing is one `}` per object. There is no `)`, `]` or `,` soup.
 - Short objects may stay on one line: `Text { text: "x" }`.
-- `qmlformat` keeps this layout; it is the reference for "formatted QML". `recalled`
+- `qmlformat` "automatically formats QML files according to the QML Coding Conventions"; its examples nest objects as brace blocks. Its page states no rule of one property per line. `source`, [qmlformat](https://doc.qt.io/qt-6/qtqml-tooling-qmlformat.html)
 
-Slint has the same shape: `Text { text: "x"; }`, properties and children in one block. Its language server formats it. `recalled`; that `slint-lsp` formats is `source` in [lsp.md](lsp.md).
+Slint has the same shape: an element is a name followed by braces that hold its properties and children. `source`, [Slint files](https://docs.slint.dev/latest/docs/slint/guide/language/coding/file/)
+Its formatter is `slint-lsp format -i <path>`. `source`, [Slint tooling](https://docs.slint.dev/latest/docs/slint/guide/tooling/manual-setup/)
 
-SwiftUI, Jetpack Compose and Flutter are code, like ours, and each has its own way to the same look. `recalled`
+SwiftUI, Jetpack Compose and Flutter are code, like ours, and each has its own way to the same look.
 
 | Framework | Children are written | Properties are written | What its formatter does |
 |---|---|---|---|
-| SwiftUI | In a trailing closure: `VStack { Text("a"); Text("b") }` | As modifiers after the closing brace: `.padding(8)` | One child per line |
-| Jetpack Compose | In a trailing lambda, `content`: `Column(modifier = ...) { Text("a") }` | As named arguments | ktfmt and the Kotlin conventions put each argument on its own line when a call does not fit |
-| Flutter | As a named argument, `children: [ ... ]` | As named arguments | Before Dart 3.7 a trailing comma forced one argument per line; since 3.7 the formatter decides and adds the commas itself |
+| SwiftUI | In a trailing closure: `VStack { Text("a"); Text("b") }`. `recalled`: the page was not read | As modifiers after the closing brace: `.padding(8)`. `recalled` | Not checked |
+| Jetpack Compose | "Composables usually take a `content` composable lambda", written `Column { ... }`. `source`, [Compose layouts](https://developer.android.com/develop/ui/compose/layouts/basics) | As named arguments | The Kotlin conventions say "Group multiple closely related arguments on the same line" and give no one-per-line rule. ktfmt was not read. `source`, [Kotlin conventions](https://kotlinlang.org/docs/coding-conventions.html) |
+| Flutter | As a named argument, `children: [ ... ]`. `recalled` | As named arguments | "`dart format` adds or removes trailing commas based on whether the construct splits across multiple lines". An opt-in `trailing_commas: preserve` forces a split. `source`, [dart format](https://dart.dev/tools/dart-format), [dart_style FAQ](https://github.com/dart-lang/dart_style/wiki/FAQ) |
 | Dear ImGui style C++ | As statements between `Begin` and `End` | As calls | Ordinary code layout |
 
 What C++ can have of this:
@@ -80,7 +82,7 @@ What C++ can have of this:
 - No closing punctuation: no. A designated initializer needs `{}`, and a call needs `()`. The best layout puts each closer on its own line, so it reads as an end marker.
 - Free property order: not with designated initializers (section 3).
 
-Flutter's old rule is the closest relative: its children are arguments, and a trailing comma decides the layout. That is what this note proposes for lvgl26. `recalled`
+Flutter is the closest relative: its children are arguments, and the trailing comma marks a list that is split. Dart's formatter now writes the comma itself; clang-format leaves it to us. That is what this note proposes for lvgl26.
 
 ## 2. Formatting alone, with today's syntax
 
@@ -103,7 +105,7 @@ Each was tried on the tree of `examples/lists/main.cpp`.
 
 | Option | Effect on our trees | Mark |
 |---|---|---|
-| A trailing comma in a braced list | One element per line, and the list opens with `({` and closes with `})` on its own line | `measured` |
+| A trailing comma in a braced list | One element per line, and the list opens with `({` and closes with `})` on its own line. The options page documents no such rule: it is observed behaviour | `measured` with versions 21, 22 and 23 |
 | No trailing comma | The list stays on one line while it fits; when it does not, its elements align under the first one | `measured` |
 | `AlignConsecutiveAssignments: Consecutive` | Aligns the `=` of designated initializers inside one block | `measured` |
 | `AlignAfterOpenBracket: BlockIndent` | Arguments of a call open and close like a block, `(` at the end of a line and `)` on its own line. It does not apply to `[...]` | `measured` |
@@ -356,6 +358,8 @@ AllowShortLambdasOnASingleLine: None
 - A `.clang-format` at the root of the repository. One more in the project template or the `write-ui` skill, so users get the same layout.
 - A CI step for `examples/`: clang-format, then the pass, compared with each file. It runs in the editor image, which has clang 21.
 - A rule a script can check: a braced list that spans lines ends with a comma.
+- A test of the lever itself. The trailing-comma behaviour is undocumented, so the check formats a small file with and without commas and compares with the expected layout. A newer clang-format that changes it then fails the check, not the examples.
+- `InsertTrailingCommas`, which would add the commas, is for JavaScript only. `summary`, [clang-format options](https://clang.llvm.org/docs/ClangFormatStyleOptions.html)
 - The docs need no step of their own. `tools/docs.py sync` copies their code from the examples, so formatting the examples formats the docs.
 - `include/` follows later or never: a reader of the docs does not see its code. Even the base style would change 1020 of its 18,959 lines. `measured`
 
