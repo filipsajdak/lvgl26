@@ -4,6 +4,8 @@ A state holds a typed value of the application, and every widget, computed value
 
 Header: `<lv/lv.hpp>`, the core.
 
+![A coffee order on a dark screen: lungo in a dropdown, 4 cups between a minus and a plus button, a slider, "18 g", "72 g in all" and "Not enough beans"](media/state.png)
+
 ## The smallest example
 
 `lv::state` holds a value. `lv::bind` makes a property follow it: here the text of a label, through a format.
