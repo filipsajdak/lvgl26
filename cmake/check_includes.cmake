@@ -1,0 +1,153 @@
+# Checks at build time that each file of a program includes the header of every name of
+# lvgl26 it uses (docs/which-header.md): "main.cpp:12: lv::list needs #include <lv/list.hpp>".
+#
+# Every target that links lvgl26, in any directory of the build, gets the check with no line of
+# its own: a call deferred to the end of the top directory finds the targets. A program that
+# takes lvgl26 by add_subdirectory or FetchContent gets it the same way. Each source file is
+# checked by a command of its own, with a depfile of the headers it reaches, so a build checks a
+# file again only when it, a header of the program it includes, or the table changes.
+#
+# LVGL26_CHECK_INCLUDES=OFF turns it off. lvgl26_check_includes(target) checks one target
+# explicitly, also with the option off. Without Python the check is skipped, with a message;
+# tools/check_includes.py runs by hand as well.
+
+option(LVGL26_CHECK_INCLUDES "Check at build time that each file includes the header of every name of lvgl26 it uses" ON)
+
+# In the cache, so that the call deferred to the top directory of a program that added lvgl26
+# as a sub-directory sees them.
+cmake_path(ABSOLUTE_PATH CMAKE_CURRENT_LIST_DIR NORMALIZE OUTPUT_VARIABLE lvgl26_cmake_dir)
+set(LVGL26_CHECK_INCLUDES_SCRIPT ${lvgl26_cmake_dir}/../tools/check_includes.py CACHE INTERNAL "")
+set(LVGL26_CHECK_INCLUDES_TABLE ${lvgl26_cmake_dir}/../docs/reference/headers.json CACHE INTERNAL "")
+
+# The source files of `target` that a check reads: C++ files that exist when CMake runs.
+function(lvgl26_sources_to_check target out)
+  get_target_property(sources ${target} SOURCES)
+  get_target_property(directory ${target} SOURCE_DIR)
+  set(files)
+  foreach(source IN LISTS sources)
+    if(source MATCHES "\\$<" OR NOT source MATCHES "\\.(cpp|cc|cxx|hpp|h|hh|hxx)$")
+      continue()
+    endif()
+    cmake_path(ABSOLUTE_PATH source BASE_DIRECTORY ${directory} OUTPUT_VARIABLE file)
+    if(EXISTS ${file})
+      list(APPEND files ${file})
+    endif()
+  endforeach()
+  set(${out} ${files} PARENT_SCOPE)
+endfunction()
+
+# Adds the check to one target: a custom target with one command for each source file, which
+# `target` depends on, so that a missing include stops the build before the target compiles.
+function(lvgl26_check_includes target)
+  if(NOT Python3_Interpreter_FOUND)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+  endif()
+  if(NOT Python3_Interpreter_FOUND)
+    message(STATUS "lvgl26: no Python, so the includes of ${target} are not checked")
+    return()
+  endif()
+  get_target_property(done ${target} LVGL26_INCLUDES_CHECKED)
+  if(done)
+    return()
+  endif()
+  set_target_properties(${target} PROPERTIES LVGL26_INCLUDES_CHECKED ON)
+  lvgl26_sources_to_check(${target} files)
+  if(NOT files)
+    return()
+  endif()
+  set(stamps)
+  set(base ${CMAKE_BINARY_DIR}/lvgl26_includes/${target})
+  foreach(file IN LISTS files)
+    string(SHA1 key ${file})
+    string(SUBSTRING ${key} 0 12 key)
+    cmake_path(GET file FILENAME name)
+    set(stamp ${base}/${name}.${key}.stamp)
+    add_custom_command(
+      OUTPUT ${stamp}
+      COMMAND Python3::Interpreter ${LVGL26_CHECK_INCLUDES_SCRIPT} --build ${stamp} ${stamp}.d ${file}
+      DEPENDS ${file} ${LVGL26_CHECK_INCLUDES_SCRIPT} ${LVGL26_CHECK_INCLUDES_TABLE}
+      DEPFILE ${stamp}.d
+      COMMENT "lvgl26: checking the includes of ${name}"
+      VERBATIM)
+    list(APPEND stamps ${stamp})
+  endforeach()
+  add_custom_target(${target}_lvgl26_includes DEPENDS ${stamps})
+  # With Ninja the files of the target compile while they are checked, and only the link waits
+  # for the check, so the check costs no time on the way to the program. Elsewhere, and for a
+  # target with no link step, the target waits for its check.
+  get_target_property(type ${target} TYPE)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND NOT type STREQUAL "OBJECT_LIBRARY")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS ${stamps})
+  else()
+    add_dependencies(${target} ${target}_lvgl26_includes)
+  endif()
+endfunction()
+
+# Whether `target` links lvgl26, directly or through targets it links.
+function(lvgl26_links_lvgl26 target out)
+  set(${out} OFF PARENT_SCOPE)
+  set(todo ${target})
+  set(seen)
+  while(todo)
+    list(POP_FRONT todo current)
+    if(current IN_LIST seen OR NOT TARGET ${current})
+      continue()
+    endif()
+    list(APPEND seen ${current})
+    get_target_property(aliased ${current} ALIASED_TARGET)
+    if(aliased)
+      set(current ${aliased})
+    endif()
+    if(current STREQUAL "lvgl26")
+      set(${out} ON PARENT_SCOPE)
+      return()
+    endif()
+    get_target_property(type ${current} TYPE)
+    set(links)
+    if(NOT type STREQUAL "INTERFACE_LIBRARY")
+      get_target_property(direct ${current} LINK_LIBRARIES)
+      if(direct)
+        list(APPEND links ${direct})
+      endif()
+    endif()
+    get_target_property(interface ${current} INTERFACE_LINK_LIBRARIES)
+    if(interface)
+      list(APPEND links ${interface})
+    endif()
+    foreach(link IN LISTS links)
+      string(REGEX REPLACE "^\\$<LINK_ONLY:(.*)>$" "\\1" link "${link}")
+      if(NOT link MATCHES "\\$<")
+        list(APPEND todo ${link})
+      endif()
+    endforeach()
+  endwhile()
+endfunction()
+
+# Every target of `directory` and the directories below it that links lvgl26.
+function(lvgl26_check_includes_in directory)
+  get_property(targets DIRECTORY ${directory} PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS targets)
+    get_target_property(type ${target} TYPE)
+    get_target_property(imported ${target} IMPORTED)
+    if(imported OR NOT type MATCHES "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY|OBJECT_LIBRARY)$")
+      continue()
+    endif()
+    lvgl26_links_lvgl26(${target} links)
+    if(links)
+      lvgl26_check_includes(${target})
+    endif()
+  endforeach()
+  get_property(children DIRECTORY ${directory} PROPERTY SUBDIRECTORIES)
+  foreach(child IN LISTS children)
+    lvgl26_check_includes_in(${child})
+  endforeach()
+endfunction()
+
+function(lvgl26_check_all_includes)
+  lvgl26_check_includes_in(${CMAKE_SOURCE_DIR})
+endfunction()
+
+if(LVGL26_CHECK_INCLUDES)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  cmake_language(DEFER DIRECTORY ${CMAKE_SOURCE_DIR} CALL lvgl26_check_all_includes)
+endif()

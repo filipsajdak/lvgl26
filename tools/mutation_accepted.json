@@ -3,5 +3,65 @@
     "header": "include/lv/runtime.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. The tool inserts `continue;` before the `}` that closes the body of the `template for` counting the style members in make_style_slots (describe shows it as `}` -> `continue;`, the first line that differs). A `continue;` as the last statement of a loop body changes nothing; runtime_ui and json pass with it. A triage matches the text of the mutant, not its line, so it also covers another `continue;` inserted before a `}` in this header."
+  },
+  {
+    "header": "include/lv/detail/style_add.hpp",
+    "mutant": "return Add(o, style, selector) == LV_RESULT_OK;  ->  return Add(o, style, selector) >= LV_RESULT_OK;",
+    "reason": "Equivalent. lv_result_t has two values, LV_RESULT_INVALID (0) and LV_RESULT_OK (1), so >= LV_RESULT_OK and == LV_RESULT_OK accept the same results."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 0; i != Size; ++i) to[i] = from[i];",
+    "reason": "Equivalent. The loop counts up by one from below Size, so it stops at Size either way."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 1; i < Size; ++i) to[i] = from[i];",
+    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = (0+1); i < Size; ++i) to[i] = from[i];",
+    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "if (depth != 16) {  ->  if (depth > 16) {",
+    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "if (depth == 16)  ->  if (depth <= 16)",
+    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());  ->  write_rgb565(p, form.format >= LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());",
+    "reason": "Equivalent. In the 16-bit branch the format is RGB565 or RGB565A8, and RGB565A8 is the larger enumerator, so >= and == pick the same one."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 1, 3, 1, 2, 0, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 1, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, (0+1), 3, 1, 2, 0, 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, (0+1), 4};",
+    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
+  },
+  {
+    "header": "include/lv/detail/png_reader.hpp",
+    "mutant": "// The rows: for each its filter byte, then its pixels.  ->  /*// The rows: for each its filter byte, then its pixels.*/",
+    "reason": "Equivalent. The mutant turns a comment into a comment."
   }
 ]

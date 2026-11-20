@@ -76,7 +76,8 @@ How it works:
 - **A small core header.** `#include <lv/lv.hpp>` is what nearly every program writes. A theme, a look,
   fonts, pictures, lists, repetition, documents, slots and the pointer each have a header of their own,
   and `#include <lv/all.hpp>` gives everything. [Which header](docs/which-header.md) lists the names of
-  each, and `tools/check_includes.py` tells a file which header it is missing.
+  each. A build through lvgl26's CMake stops at a missing header with
+  `main.cpp:12: lv::list needs #include <lv/list.hpp>`, and clangd offers the include as a quick fix.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
@@ -473,13 +474,14 @@ A program for a device should define `handle_contract_violation` itself, as the 
 ## With Claude Code
 
 The repository is also a Claude Code plugin. It gives an agent what is already known about LVGL, C++26, device UI standards and 3D, with sources. The agent then does not search for it again.
+Its skill `write-ui` tells an agent how to write a screen with lvgl26: which page to read for each feature, which header a name needs, and what to do with an error.
 
 ```
 /plugin marketplace add filipsajdak/lvgl26
 /plugin install lvgl26@lvgl26
 ```
 
-`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: building a screen, designing with the Signal system, and porting from another framework.
+`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: designing with the Signal system, and porting from another framework.
 
 ## Website
 

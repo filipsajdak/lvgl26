@@ -645,7 +645,7 @@ target_compile_options(fail_restrict_from_file PRIVATE -include ${CMAKE_CURRENT_
 # Each mistake in a settings file, with the message that names it.
 # A settings file and a specialization of lv::cfg at once: the compiler shows the line of the
 # file's header that says what to do.
-lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json; use the file or a specialization of lv::cfg, not both")
+lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json\\; use the file or a specialization of lv::cfg, not both")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/project.json settings/project.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail both_forms_hash)
 target_compile_options(fail_settings_both_forms PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail/settings.hpp)
@@ -660,14 +660,14 @@ lvgl26_compile_fail(settings_unknown_unit "lv: test\\.json: limits\\.compile_tim
 lvgl26_compile_fail(settings_negative "lv: test\\.json: limits\\.compile_time_image is -1 px, and a limit cannot be negative\\.")
 lvgl26_compile_fail(settings_too_large "lv: test\\.json: limits\\.compile_time_image is 1e300 px, more than a limit can hold\\.")
 lvgl26_compile_fail(settings_fraction "lv: test\\.json: limits\\.compile_time_image is 0\\.5 px, which is no whole number of px\\.")
-lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h.;.")
+lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h....*To allow plain integers, set rules\\.raw_integer_state in the settings\\.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")
 lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one {} for the value")
 lvgl26_compile_fail(quantity_wrong_dimension "no match for .operator=")
 lvgl26_compile_fail(quantity_lossy "no match for .operator=")
 lvgl26_compile_fail(quantity_floating "a quantity in a state needs an integer number for now")
-lvgl26_compile_fail(computed_plain_int "the function of an lv::computed returns a plain integer, which does not say what the number is. Return a quantity")
+lvgl26_compile_fail(computed_plain_int "the function of an lv::computed returns a plain integer, which does not say what the number is. Return a quantity.*To allow plain integers, set rules\\.raw_integer_state in the settings\\.")
 lvgl26_compile_fail(computed_bad_result "the function of an lv::computed returns double, which a state cannot hold. Return a quantity")
 lvgl26_compile_fail(computed_wrong_arguments "the function of an lv::computed takes the values of its dependencies, in their order: \\(lv::counter, bool\\). Take each by value")
 lvgl26_compile_fail(computed_not_a_state "a dependency of an lv::computed must be an lv::state or an lv::computed that outlives it. Pass the object itself")
@@ -960,6 +960,20 @@ if(Python3_FOUND)
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
+  # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
+  # the check of tests/smoke.cpp left its stamp.
+  if(LVGL26_CHECK_INCLUDES)
+    # A program of its own that misses an include fails to build with the line, passes with
+    # it, and checks nothing twice (tests/include_check/run.cmake).
+    add_test(NAME include_check_build
+             COMMAND ${CMAKE_COMMAND} -DROOT=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/include_check
+                     -DLVGL=${lvgl_SOURCE_DIR} -DMP_UNITS=${mp-units_SOURCE_DIR} -DGENERATOR=${CMAKE_GENERATOR}
+                     -DC_COMPILER=${CMAKE_C_COMPILER} -DCXX_COMPILER=${CMAKE_CXX_COMPILER}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/include_check/run.cmake)
+    add_test(NAME includes_build_check
+             COMMAND Python3::Interpreter -c "import pathlib, sys; sys.exit(0 if list(pathlib.Path(sys.argv[1]).glob('smoke.cpp.*.stamp')) else 1)"
+                     ${CMAKE_BINARY_DIR}/lvgl26_includes/smoke)
+  endif()
   add_test(NAME which_header_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                           --check-page ${PROJECT_SOURCE_DIR}/docs/which-header.md)
   # The token files of the Signal theme are written from the design system.
@@ -984,6 +998,9 @@ if(Python3_FOUND)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
+  # A regular expression of a test is one text: CTest splits it at an unescaped ';' and accepts any part.
+  add_test(NAME ctest_regex_lists COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_regex_lists.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
+  add_test(NAME ctest_regex_lists_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_regex_lists.py)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly compile-cost measure: its parsing, the judging of a night and the trend page.

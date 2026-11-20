@@ -62,6 +62,22 @@ A class that is no template (`lv::scaled_font`, `lv::typeface`, `lv::pointer_fee
 
 Any of these messages for a name `lv::X` means: find `lv::X` in the table and include its header.
 
+## The build says which header
+
+A program that takes lvgl26 through CMake (`FetchContent`, `add_subdirectory`) gets a check of its includes with no line of its own. Before a target links, every file of it that names something of lvgl26 is read, and a missing header stops the build with the line:
+
+```text
+src/parts.hpp:4: lv::list needs #include <lv/list.hpp>
+```
+
+It checks the headers of the program that a file includes with quotes too, skips comments and strings, and reads a file again only when it, or a header it includes, changes. `-DLVGL26_CHECK_INCLUDES=OFF` turns it off; `lvgl26_check_includes(target)` checks one target when it is off. It needs Python 3; without it CMake says so and the build goes on.
+
+## The editor says which header
+
+With [editor support](editor-support.md), clangd offers a quick fix at the name: `Include <lv/list.hpp> for symbol lv::list`. It finds the header in its index of lvgl26, which it builds in the background the first time it opens the project.
+
+## By hand
+
 `tools/check_includes.py` finds every such name in a list of files and says which header it needs:
 
 ```sh
@@ -70,3 +86,7 @@ python3 tools/check_includes.py src/main.cpp src/parts.hpp
 ```
 
 It reads the headers of the program that the files include with quotes, and skips comments and strings. It uses only the Python standard library.
+
+## For an agent
+
+The plugin of this repository has a skill, [skills/write-ui](../skills/write-ui/SKILL.md), that sends an agent to this page when a name is missing. An agent without the plugin reads this page in `llms.txt`: the message `main.cpp:12: lv::list needs #include <lv/list.hpp>` is to be followed as it stands.

@@ -49,6 +49,9 @@ constexpr unsigned char keyed_rgb_png[] = {
 constexpr unsigned char keyed_grey_png[] = {
 #embed "images/keyed_grey.png"
 };  // 3 x 1 grey: 7, 8, 9; the file names 8 as see-through
+constexpr unsigned char chunked_png[] = {
+#embed "images/chunked.png"
+};  // row3.png with its compressed data in two IDAT chunks, and a chunk "Abcd" of 0xff bytes before them
 constexpr unsigned char solid_png[] = {
 #embed "images/solid.png"
 };  // RGBA with every alpha at 255
@@ -65,6 +68,8 @@ constexpr auto corner = lv::image_file<corner_png>;
 constexpr auto solid = lv::image_file<solid_png>;
 constexpr auto keyed_rgb = lv::image_file<keyed_rgb_png>;
 constexpr auto keyed_grey = lv::image_file<keyed_grey_png>;
+constexpr auto row3 = lv::image_file<row3_png>;
+constexpr auto chunked = lv::image_file<chunked_png>;
 
 // The same 3-pixel rows for an LVGL that wants rows of a multiple of four or eight bytes.
 constexpr auto grey_by_4 = lv::detail::make_image(keyed_rgb_png, 16, most, 4);    // see-through: no padding
@@ -166,6 +171,14 @@ void pads_rows_to_what_lvgl_wants() {
   check(is(grey_by_4, LV_COLOR_FORMAT_RGB565A8, 3, 2, 6, 18));  // this form has no padding
 }
 
+// A file may cut its compressed data into several chunks, and carry chunks the reader does not know:
+// the pixels are those of the same picture in one chunk.
+void reads_a_file_cut_into_chunks() {
+  check(is(chunked, LV_COLOR_FORMAT_RGB565, 3, 2, row3->header.stride, row3->data_size));
+  check(sum(chunked) == sum(row3) && sum(row3) != 0);
+  for (std::uint32_t i = 0; i < row3->data_size; ++i) check(chunked->data[i] == row3->data[i]);
+}
+
 void stores_for_32_bits() {
   check(is(flag32, LV_COLOR_FORMAT_XRGB8888, 24, 16, 96, 24 * 16 * 4) && sum(flag32) == 261120);
   check(flag32->data[0] == 0 && flag32->data[2] == 255);  // blue first, red third
@@ -210,6 +223,7 @@ int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   stores_for_16_bits();
+  reads_a_file_cut_into_chunks();
   stores_for_32_bits();
   honours_a_see_through_colour();
   starts_pixels_where_lvgl_wants();

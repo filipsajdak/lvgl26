@@ -10,6 +10,10 @@ printed by reflection (tools/reference/headers.cpp). A header counts when the fi
 when one of our headers that the file includes includes it, or when a header of the user's
 own, included with quotes, does. Comments and strings are not read.
 
+--build STAMP DEPFILE SOURCE is the form a build runs (cmake/check_includes.cmake): it checks
+SOURCE and the headers of the program it includes with quotes, writes STAMP when all is well,
+and writes DEPFILE, so that the build checks the file again only when one of them changes.
+
 --page FILE writes the table of names and headers into FILE (docs/which-header.md) between its
 markers; --check-page FILE fails when the table there is stale.
 
@@ -174,9 +178,48 @@ def page(argv: list[str]) -> int:
     return 0
 
 
+def followed(path: pathlib.Path) -> list[pathlib.Path]:
+    """`path` and every file of the program it includes with quotes, each once."""
+    seen: list[pathlib.Path] = []
+    todo = [path.resolve()]
+    while todo:
+        current = todo.pop()
+        if current in seen or not current.exists():
+            continue
+        seen.append(current)
+        for kind, name in INCLUDE.findall(without_comments(current.read_text())):
+            if kind == '"':
+                todo.append((current.parent / name).resolve())
+    return seen
+
+
+def escaped(path: pathlib.Path) -> str:
+    """A path as a depfile writes it."""
+    return str(path).replace(" ", "\\ ")
+
+
+def build(argv: list[str]) -> int:
+    stamp, depfile, source = (pathlib.Path(a) for a in argv[:3])
+    table, _ = load_table()
+    files = followed(source)
+    found = [problem for path in files for problem in problems(path, table)]
+    inputs = files + [TABLE, pathlib.Path(__file__).resolve()]
+    depfile.parent.mkdir(parents=True, exist_ok=True)
+    depfile.write_text(f"{escaped(stamp)}: " + " ".join(escaped(f) for f in inputs) + "\n")
+    for problem in found:
+        print(problem)
+    if found:
+        stamp.unlink(missing_ok=True)
+        return 1
+    stamp.write_text("")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("--page", "--check-page"):
         return page(argv)
+    if argv and argv[0] == "--build":
+        return build(argv[1:])
     exact = "--exact" in argv
     files = [pathlib.Path(a) for a in argv if a != "--exact"]
     table, _ = load_table()
