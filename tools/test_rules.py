@@ -65,6 +65,33 @@ class Data(unittest.TestCase):
                                  "the evidence needs what was found"])
 
 
+class Probes(unittest.TestCase):
+    def run_time_rule(self) -> dict:
+        data = copy.deepcopy(DATA)
+        data["rules"] = [next(r for r in data["rules"] if r["id"] == "fast-run-9")] + data["rules"]
+        return data
+
+    def test_a_rule_of_run_time_rests_on_a_probe(self):
+        data = self.run_time_rule()
+        data["rules"][0]["evidence"] = None
+        self.assertTrue(any("names its nightly probe" in p for p in first_problems(data)))
+
+    def test_or_names_the_probe_it_needs(self):
+        data = self.run_time_rule()
+        data["rules"][0]["evidence"] = None
+        data["rules"][0]["probe_needed"] = "instructions a second of something"
+        self.assertFalse(any("names its nightly probe" in p for p in first_problems(data)))
+
+    def test_a_probe_exists_in_the_nightly_list(self):
+        data = self.run_time_rule()
+        data["rules"][0]["evidence"] = dict(data["rules"][0]["evidence"], probe="no_such_probe")
+        self.assertIn("no nightly probe is called no_such_probe", first_problems(data))
+
+    def test_the_page_names_the_probe(self):
+        rule = next(r for r in DATA["rules"] if r["id"] == "fast-run-9")
+        self.assertIn("The nightly probe `visibility_hidden` measures it again.", rules.evidence_lines(rule)[0])
+
+
 class Checks(unittest.TestCase):
     pinned = {"plain": "a key names one row", "variable": "${message}"}
 

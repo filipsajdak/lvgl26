@@ -28,9 +28,13 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`fast-run-5`](#fast-run-5) | Change a mounted widget with `set({...})` written in place, and give it a named style or a look rather than `lv::style({...})` built in the call. |
 | [`fast-run-6`](#fast-run-6) | Let the compiler make the fonts and pictures known at build time; decode on the device only photos and sizes chosen at run time. |
 | [`fast-run-7`](#fast-run-7) | Turn off what the product does not use: `LVGL26_NO_DEFAULT_THEME` when your theme covers every widget, and the options of the decoders. |
+| [`fast-run-8`](#fast-run-8) | When nobody sees the screen, say so with `display.hide()`: a display that is not visible draws nothing until it is shown again. |
+| [`fast-run-9`](#fast-run-9) | Hide a widget that nobody should see with `.hidden`; do not cover it or make it transparent. |
+| [`fast-run-10`](#fast-run-10) | Make a property follow a state through `lv::bind`; never poll a value in a timer or a loop to set the property. |
+| [`fast-run-11`](#fast-run-11) | Change only what changed: set or bind the one property, and never mount a tree again to show a new value. |
+| [`fast-run-12`](#fast-run-12) | Animate the smallest widget that shows the motion, and let the animation end when the motion is over. |
 | [`fast-build-1`](#fast-build-1) | Include `<lv/lv.hpp>` and the header of each feature the file uses; include `<lv/all.hpp>` only in a first program. |
 | [`fast-build-2`](#fast-build-2) | Name drawn fonts in few files, and give the other files their text through the display's theme. |
-| [`fast-build-3`](#fast-build-3) | When two widget kinds would do, take one the file already uses: a new kind costs a file about as much as 28 more nodes. |
 | [`fast-build-4`](#fast-build-4) | Let the compiler decode pictures up to the limit in the settings, and decode larger ones on the device with `lv::encoded_image`. |
 | [`fast-build-5`](#fast-build-5) | Bind, name and style nodes freely: after its first use in a file, a binding, an id or a property costs little to compile. |
 | [`checked-1`](#checked-1) | Give every value a type that says what it is: a quantity, an `lv::counter`, or a struct of one member. |
@@ -41,6 +45,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`checked-6`](#checked-6) | Read the first error and its `note:` lines before anything else, and do what the message says. |
 | [`checked-7`](#checked-7) | Keep lvgl26's headers out of a precompiled header. |
 | [`checked-8`](#checked-8) | Reach LVGL's C API only through `raw()`, and only for what lvgl26 has no form for; never to quiet an error. |
+| [`checked-9`](#checked-9) | Reach a widget of a mounted tree by its id, `root->get<"title">()`; never keep a pointer to it or search for it at run time. |
 | [`expressive-1`](#expressive-1) | Write a choice as an enum, and let the compiler derive from it: `lv::options_of<E>` for its options, `lv::match` for one arm per value. |
 | [`expressive-2`](#expressive-2) | Name a value made from states as an `lv::computed`, and bind it like a state: `.hidden = lv::bind(enough)`. |
 | [`expressive-3`](#expressive-3) | Write a sequence in time, such as wait for a click, pause, then animate, as one `lv::task` coroutine, not as callbacks and timers. |
@@ -295,7 +300,7 @@ constinit lv::state current{track_id{0}};          // the selected row; no track
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-18, in [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md): In the measured program only LVGL's heap was used: no operator new and no malloc. A screen that did not change allocated nothing.
+Measured on 2026-11-18, see [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md). In the measured program only LVGL's heap was used: no operator new and no malloc. A screen that did not change allocated nothing.
 
 Guide: Code that runs fast (not written yet).
 
@@ -314,7 +319,7 @@ Only the widgets of that row change, and the other rows keep theirs, with their 
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-17, in [lists.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/lists.md): A job added to the printer's queue of six: the port's own loop built all six cards again, and `lv::each` built none of them.
+Measured on 2026-11-17, see [lists.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/lists.md). A job added to the printer's queue of six: the port's own loop built all six cards again, and `lv::each` built none of them.
 
 Guide: [Lists](lists.md).
 
@@ -340,7 +345,7 @@ constexpr auto track_row =
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-17, in [lists.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/lists.md): A row of two labels took 960 bytes of LVGL's heap through `lv::each`, and 1094 bytes as a tree of its own with copied texts.
+Measured on 2026-11-17, see [lists.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/lists.md). A row of two labels took 960 bytes of LVGL's heap through `lv::each`, and 1094 bytes as a tree of its own with copied texts.
 
 Guide: [Lists](lists.md).
 
@@ -354,7 +359,7 @@ No example yet: the Tasks guide will add one.
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-18, in [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md): A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24.
+Measured on 2026-11-18, see [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md). A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24.
 
 Guide: Tasks (not written yet).
 
@@ -368,7 +373,9 @@ No example yet: the `set` of the mounting example sits next to test code. A clea
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-19, in [memory.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory.md): One `set({.value = v})` took 3,504 bytes of stack on a Cortex-M4 at -Os; with `lv::style({...})` inside it 6,120 bytes; with a look 3,504 bytes.
+Measured on 2026-11-19, see [memory.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory.md). One `set({.value = v})` took 3,504 bytes of stack on a Cortex-M4 at -Os; with `lv::style({...})` inside it 6,120 bytes; with a look 3,504 bytes. The nightly probe `set_stack` measures it again.
+
+Wins over a style written inline where it is used: on a Cortex-M4 the 2.6 KB of stack decide.
 
 Guide: Code that runs fast (not written yet).
 
@@ -397,7 +404,7 @@ constexpr auto numeral = type(tok.text.numeral);
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-18, in [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md): Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment.
+Measured on 2026-11-18, see [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md). Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment.
 
 Wins over `fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes.
 
@@ -413,9 +420,96 @@ No example yet: it is one CMake line, `set(LVGL26_NO_DEFAULT_THEME ON)`, which n
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-16, in [memory.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory.md): LVGL built its default theme for the first display: 2532 bytes of styles on its heap.
+Measured on 2026-11-16, see [memory.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory.md). LVGL built its default theme for the first display: 2532 bytes of styles on its heap.
 
 Guide: [Themes](themes.md).
+
+### fast-run-8
+
+**When nobody sees the screen, say so with `display.hide()`: a display that is not visible draws nothing until it is shown again.**
+
+LVGL keeps drawing into a frame that nobody sees, and only the program knows that the window is hidden or the panel is off.
+
+No example yet: the window platform hides its display; the guide Application and loop will show it.
+
+Checked: no tool checks this rule yet.
+
+Measured on 2026-11-19, see [visibility.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/visibility.md). 24 animated arcs drawn into a frame nobody saw took 438 M instructions a second. With nothing marked for redraw, as on a hidden display, they took 15 M. The nightly probe `visibility_invalidation_off` measures it again.
+
+Guide: Application and loop (not written yet).
+
+### fast-run-9
+
+**Hide a widget that nobody should see with `.hidden`; do not cover it or make it transparent.**
+
+LVGL skips a hidden widget when it draws. A covered widget, or one at opacity zero, is still drawn every frame.
+
+<!-- snippet: examples/state/main.cpp tree -->
+```cpp
+constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
+    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+    stepper<cups>(cups_text),
+    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+```
+
+Checked: no tool checks this rule yet.
+
+Measured on 2026-11-19, see [visibility.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/visibility.md). 24 animated arcs took 438 M instructions a second visible, and 0.6 to 0.9 M hidden. Covered by an opaque sibling they took 42.5 M; at opacity zero, 74.9 M. The nightly probe `visibility_hidden` measures it again.
+
+Guide: Code that runs fast (not written yet).
+
+### fast-run-10
+
+**Make a property follow a state through `lv::bind`; never poll a value in a timer or a loop to set the property.**
+
+A binding works only when the value changes, and sets only the widgets that show it. A poll works on every tick, changed or not.
+
+<!-- snippet: examples/state/main.cpp smallest -->
+```cpp
+constinit lv::state cups{lv::counter{2}};  // a value that widgets follow
+
+constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
+```
+
+Checked: no tool checks this rule yet.
+
+Measured: not measured yet.
+
+Guide: [State and bindings](state.md).
+
+### fast-run-11
+
+**Change only what changed: set or bind the one property, and never mount a tree again to show a new value.**
+
+LVGL redraws the area of the widget whose property changed. A tree mounted again is built, laid out and drawn whole.
+
+<!-- snippet: examples/state/main.cpp change -->
+```cpp
+  cups = lv::counter{4};  // the count, the total, the warning and the grinder follow
+```
+
+Checked: no tool checks this rule yet.
+
+Measured: not measured yet.
+
+Guide: Code that runs fast (not written yet).
+
+### fast-run-12
+
+**Animate the smallest widget that shows the motion, and let the animation end when the motion is over.**
+
+Every frame of an animation redraws the area of the widget it moves, for as long as it runs.
+
+No example yet: the Animation guide will add one.
+
+Checked: no tool checks this rule yet.
+
+Measured on 2026-11-19, see [visibility.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/visibility.md). 24 arcs of 70 by 70 pixels, animated without end on a 480 by 320 display, took 438 M instructions a second. The nightly probe `visibility_visible` measures it again.
+
+Guide: Animation (not written yet).
 
 ## Fast to compile
 
@@ -439,7 +533,7 @@ Checked by the build (`cmake/check_includes.cmake`), in every target that links 
 parts.hpp:8: lv::list needs #include <lv/list.hpp>
 ```
 
-Measured on 2026-11-20, in [header-structure.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/header-structure.md): A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G.
+Measured on 2026-11-20, see [header-structure.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/header-structure.md). A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G. The nightly probe `include_lv` measures it again.
 
 Wins over the ease of one header for everything, which is worth it in a first program only.
 
@@ -464,21 +558,7 @@ int main() {
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-19, in [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md): A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page.
-
-Guide: Keeping builds fast (not written yet).
-
-### fast-build-3
-
-**When two widget kinds would do, take one the file already uses: a new kind costs a file about as much as 28 more nodes.**
-
-A file pays once for each kind it names, for its properties and their tables, and little for each further node of that kind.
-
-No example: the rule is about a choice between widgets.
-
-Checked: no tool checks this rule yet.
-
-Measured on 2026-11-19, in [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md): A widget kind cost 5.6 G instructions the first time a file named it, and a further node 0.2 G. Ten labels: 55.8 G; ten widgets of ten kinds: 105.8 G.
+Measured on 2026-11-19, see [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md). A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page. The nightly probe `one_label` measures it again.
 
 Guide: Keeping builds fast (not written yet).
 
@@ -530,7 +610,7 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .s
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-19, in [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md): Ten labels: 55.8 G instructions. Each bound to a state: 56.0 G. Each with an id: 55.8 G. Each with three more properties: 59.1 G.
+Measured on 2026-11-19, see [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md). Ten labels: 55.8 G instructions. Each bound to a state: 56.0 G. Each with an id: 55.8 G. Each with three more properties: 59.1 G. The nightly probe `large_tree` measures it again.
 
 Guide: Keeping builds fast (not written yet).
 
@@ -618,6 +698,8 @@ Checked by the compiler. The test `style_needs_token` pins the message.
 error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length.
 ```
 
+Wins over the shorter raw value: one source for the design is worth the name of a token.
+
 Guide: Design tokens (not written yet).
 
 ### checked-4
@@ -680,7 +762,7 @@ No code: the rule is about the build. CMake's `target_precompile_headers` must n
 
 Checked: no tool checks this rule yet.
 
-Measured on 2026-11-19, in [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md): A warm precompiled header took a file with one label from 54 G to 6 G instructions: the largest build saving measured.
+Measured on 2026-11-19, see [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md). A warm precompiled header took a file with one label from 54 G to 6 G instructions: the largest build saving measured.
 
 Wins over the largest build saving there is: a check that silently goes away is worse than a slow build.
 
@@ -697,6 +779,26 @@ No example: the examples name no C function, and `tools/check_examples.py` keeps
 Checked: no tool checks this rule yet.
 
 Guide: Extending lvgl26 (not written yet).
+
+### checked-9
+
+**Reach a widget of a mounted tree by its id, `root->get<"title">()`; never keep a pointer to it or search for it at run time.**
+
+The compiler turns the id into the widget's place in the tree, and gives a view of its kind. A wrong id stops the build.
+
+<!-- snippet: examples/mounting/main.cpp mount-global -->
+```cpp
+  if (!home_page.mount(display.screen())) return 1;
+  home_page->get<"title">().set({.text = "Ready"});
+```
+
+Checked by the compiler. The test `unknown_id` pins the message.
+
+```text
+error: constexpr message: lv: the tree has no id 'titel'. Its ids: title.
+```
+
+Guide: Views and ids (not written yet).
 
 ## Expressive
 
@@ -825,7 +927,7 @@ No example yet: the printer port has a file per page; a smaller program comes wi
 
 Checked: no tool checks this rule yet.
 
-Wins over the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file.
+Wins over the total work of a build. Each file pays again for its first widget, about 35 G instructions, but a change rebuilds one file.
 
 Guide: An application that grows (not written yet).
 

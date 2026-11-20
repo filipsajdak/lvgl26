@@ -225,13 +225,15 @@ These mistakes stop the build too, each with a test of its own in `tests/fail/`:
 
 ## Rules
 
-<!-- rules: no-boilerplate-2 no-boilerplate-3 checked-1 expressive-2 extendable-3 fast-run-1 fast-build-5 -->
+<!-- rules: no-boilerplate-2 no-boilerplate-3 checked-1 expressive-2 extendable-3 fast-run-1 fast-run-10 fast-run-11 fast-build-5 -->
 - [`no-boilerplate-2`](rules.md#no-boilerplate-2): Make a property follow a state with `lv::bind`, instead of a handler that copies the value into the widget.
 - [`no-boilerplate-3`](rules.md#no-boilerplate-3): Write a handler that only changes a state as a lambda in the tree: `.on_clicked = [] { ++cups; }`.
 - [`checked-1`](rules.md#checked-1): Give every value a type that says what it is: a quantity, an `lv::counter`, or a struct of one member.
 - [`expressive-2`](rules.md#expressive-2): Name a value made from states as an `lv::computed`, and bind it like a state: `.hidden = lv::bind(enough)`.
 - [`extendable-3`](rules.md#extendable-3): Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state.
 - [`fast-run-1`](rules.md#fast-run-1): Keep states, lists and mounted trees in `constinit` globals or in variables: lvgl26 takes no heap for them.
+- [`fast-run-10`](rules.md#fast-run-10): Make a property follow a state through `lv::bind`; never poll a value in a timer or a loop to set the property.
+- [`fast-run-11`](rules.md#fast-run-11): Change only what changed: set or bind the one property, and never mount a tree again to show a new value.
 - [`fast-build-5`](rules.md#fast-build-5): Bind, name and style nodes freely: after its first use in a file, a binding, an id or a property costs little to compile.
 <!-- rules: end -->
 

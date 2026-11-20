@@ -16,7 +16,11 @@ never used again, so a review, a commit, a guide or a message can cite it. The d
                   compile-fail test names the file that pins it, `pinned_in`
     guide         the page that explains it: a page in docs/, or one of `pages_planned`
     evidence      null ("not measured yet"), or the note that holds a measurement, its date and
-                  what it found
+                  what it found, and the nightly probe (tools/metrics/probes.json) that measures it
+                  again, if one does
+    probe_needed  a rule of run time without a nightly probe says what the probe must measure:
+                  every rule of run time ends up resting on one
+    revisit       optional: the planned work that will change the rule; not shown on the page
     wins_over     optional: what the rule beats when two qualities disagree, and why; the page
                   writes it after "Wins over"
 
@@ -37,9 +41,11 @@ TESTS = ROOT / "tests"
 PAGE_TITLE = "Writing good lvgl26 code"
 REPOSITORY = "https://github.com/filipsajdak/lvgl26/blob/main/"
 FIELDS = {"id", "quality", "rule", "why", "example", "check", "guide", "evidence"}
-OPTIONAL = {"example_note", "wins_over"}
+OPTIONAL = {"example_note", "wins_over", "probe_needed", "revisit"}
 CHECKERS = {"compiler", "build", "tool"}
 MEASURED = {"fast-run", "fast-build"}  # their rules rest on a measurement, or say there is none
+PROBED = "fast-run"  # its rules rest on a nightly probe, or name the probe they need
+PROBES = ROOT / "tools" / "metrics" / "probes.json"
 COMPILE_FAIL = re.compile(r'^lvgl26_compile_fail\((\w+) "((?:\\.|[^"\\])*)"\)', re.M)
 ADD_TEST = re.compile(r"add_test\(NAME (\w+)")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -139,13 +145,27 @@ def guide_problems(guide: str, planned: dict[str, str]) -> list[str]:
     return [] if written else [f"the guide {guide} is neither a page nor planned"]
 
 
+def probe_ids() -> set[str]:
+    return {probe["id"] for probe in json.loads(PROBES.read_text())["probes"]}
+
+
 def evidence_problems(evidence: dict | None) -> list[str]:
     if evidence is None:
         return []
     problems = [] if (ROOT / evidence.get("source", "")).is_file() else ["the evidence names no file"]
     if not DATE.match(evidence.get("date", "")):
         problems.append("the evidence needs the date of the measurement")
+    if "probe" in evidence and evidence["probe"] not in probe_ids():
+        problems.append(f"no nightly probe is called {evidence['probe']}")
     return problems + ([] if evidence.get("finding") else ["the evidence needs what was found"])
+
+
+def probe_problems(rule: dict) -> list[str]:
+    """A rule of run time rests on a nightly probe, or names the probe it needs."""
+    probed = rule["evidence"] is not None and "probe" in rule["evidence"]
+    if rule["quality"] != PROBED or probed or rule.get("probe_needed"):
+        return []
+    return ["a rule of run time names its nightly probe in its evidence, or the probe it needs in probe_needed"]
 
 
 def shape_problems(rule: dict, qualities: set[str]) -> list[str]:
@@ -165,7 +185,8 @@ def rule_problems(rule: dict, data: dict, context: tuple[set[str], dict[str, str
         return problems
     tests, pinned = context
     return (example_problems(rule) + check_problems(rule["check"], tests, pinned) +
-            guide_problems(rule["guide"], data["pages_planned"]) + evidence_problems(rule["evidence"]))
+            guide_problems(rule["guide"], data["pages_planned"]) + evidence_problems(rule["evidence"]) +
+            probe_problems(rule))
 
 
 def problems(data: dict) -> list[str]:
@@ -227,7 +248,8 @@ def evidence_lines(rule: dict) -> list[str]:
     if evidence is None:
         return ["Measured: not measured yet."] if rule["quality"] in MEASURED else []
     link = f"[{pathlib.Path(evidence['source']).name}]({REPOSITORY}{evidence['source']})"
-    return [f"Measured on {evidence['date']}, in {link}: {evidence['finding']}"]
+    again = f" The nightly probe `{evidence['probe']}` measures it again." if "probe" in evidence else ""
+    return [f"Measured on {evidence['date']}, see {link}. {evidence['finding']}{again}"]
 
 
 def rule_section(rule: dict, data: dict) -> list[str]:

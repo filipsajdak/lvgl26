@@ -16,7 +16,9 @@
     "run-fast.md": "Code that runs fast",
     "build-fast.md": "Keeping builds fast",
     "growing.md": "An application that grows",
-    "extending.md": "Extending lvgl26"
+    "extending.md": "Extending lvgl26",
+    "views.md": "Views and ids",
+    "animation.md": "Animation"
   },
   "rules": [
     {
@@ -107,7 +109,8 @@
       "example": "examples/mounting/main.cpp slot",
       "check": null,
       "guide": "mounting.md",
-      "evidence": null
+      "evidence": null,
+      "revisit": "lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only"
     },
     {
       "id": "fast-run-1",
@@ -117,7 +120,8 @@
       "example": "examples/lists/main.cpp model",
       "check": null,
       "guide": "run-fast.md",
-      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "In the measured program only LVGL's heap was used: no operator new and no malloc. A screen that did not change allocated nothing."}
+      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "In the measured program only LVGL's heap was used: no operator new and no malloc. A screen that did not change allocated nothing."},
+      "probe_needed": "LVGL's heap after a mount and after a thousand changes of the states of a screen that does not change shape: the same number"
     },
     {
       "id": "fast-run-2",
@@ -127,7 +131,8 @@
       "example": "examples/lists/main.cpp move",
       "check": null,
       "guide": "lists.md",
-      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A job added to the printer's queue of six: the port's own loop built all six cards again, and `lv::each` built none of them."}
+      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A job added to the printer's queue of six: the port's own loop built all six cards again, and `lv::each` built none of them."},
+      "probe_needed": "instructions and pixels flushed for one row inserted into a list of twenty, against building the twenty rows again"
     },
     {
       "id": "fast-run-3",
@@ -137,7 +142,8 @@
       "example": "examples/lists/main.cpp row",
       "check": null,
       "guide": "lists.md",
-      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A row of two labels took 960 bytes of LVGL's heap through `lv::each`, and 1094 bytes as a tree of its own with copied texts."}
+      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A row of two labels took 960 bytes of LVGL's heap through `lv::each`, and 1094 bytes as a tree of its own with copied texts."},
+      "probe_needed": "LVGL's heap of a row that shows a text field through lv::bind, against one that copies the text"
     },
     {
       "id": "fast-run-4",
@@ -148,7 +154,8 @@
       "example_note": "No example yet: the Tasks guide will add one.",
       "check": null,
       "guide": "tasks.md",
-      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24."}
+      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24."},
+      "probe_needed": "LVGL's heap and instructions a second of a task whose owner was deleted, against one with no owner"
     },
     {
       "id": "fast-run-5",
@@ -159,7 +166,8 @@
       "example_note": "No example yet: the `set` of the mounting example sits next to test code. A clean one comes with the Views and ids guide.",
       "check": null,
       "guide": "run-fast.md",
-      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-19", "finding": "One `set({.value = v})` took 3,504 bytes of stack on a Cortex-M4 at -Os; with `lv::style({...})` inside it 6,120 bytes; with a look 3,504 bytes."}
+      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-19", "finding": "One `set({.value = v})` took 3,504 bytes of stack on a Cortex-M4 at -Os; with `lv::style({...})` inside it 6,120 bytes; with a look 3,504 bytes.", "probe": "set_stack"},
+      "wins_over": "a style written inline where it is used: on a Cortex-M4 the 2.6 KB of stack decide."
     },
     {
       "id": "fast-run-6",
@@ -170,6 +178,7 @@
       "check": null,
       "guide": "fonts.md",
       "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment."},
+      "probe_needed": "LVGL's heap and instructions to draw a label in a font the compiler made, against the same font drawn by TinyTTF",
       "wins_over": "`fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes."
     },
     {
@@ -181,7 +190,63 @@
       "example_note": "No example yet: it is one CMake line, `set(LVGL26_NO_DEFAULT_THEME ON)`, which no example sets.",
       "check": null,
       "guide": "themes.md",
-      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-16", "finding": "LVGL built its default theme for the first display: 2532 bytes of styles on its heap."}
+      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-16", "finding": "LVGL built its default theme for the first display: 2532 bytes of styles on its heap."},
+      "probe_needed": "LVGL's heap after the first display, with and without LVGL26_NO_DEFAULT_THEME"
+    },
+    {
+      "id": "fast-run-8",
+      "quality": "fast-run",
+      "rule": "When nobody sees the screen, say so with `display.hide()`: a display that is not visible draws nothing until it is shown again.",
+      "why": "LVGL keeps drawing into a frame that nobody sees, and only the program knows that the window is hidden or the panel is off.",
+      "example": null,
+      "example_note": "No example yet: the window platform hides its display; the guide Application and loop will show it.",
+      "check": null,
+      "guide": "application.md",
+      "evidence": {"source": "docs/research/visibility.md", "date": "2026-11-19", "finding": "24 animated arcs drawn into a frame nobody saw took 438 M instructions a second. With nothing marked for redraw, as on a hidden display, they took 15 M.", "probe": "visibility_invalidation_off"}
+    },
+    {
+      "id": "fast-run-9",
+      "quality": "fast-run",
+      "rule": "Hide a widget that nobody should see with `.hidden`; do not cover it or make it transparent.",
+      "why": "LVGL skips a hidden widget when it draws. A covered widget, or one at opacity zero, is still drawn every frame.",
+      "example": "examples/state/main.cpp tree",
+      "check": null,
+      "guide": "run-fast.md",
+      "evidence": {"source": "docs/research/visibility.md", "date": "2026-11-19", "finding": "24 animated arcs took 438 M instructions a second visible, and 0.6 to 0.9 M hidden. Covered by an opaque sibling they took 42.5 M; at opacity zero, 74.9 M.", "probe": "visibility_hidden"}
+    },
+    {
+      "id": "fast-run-10",
+      "quality": "fast-run",
+      "rule": "Make a property follow a state through `lv::bind`; never poll a value in a timer or a loop to set the property.",
+      "why": "A binding works only when the value changes, and sets only the widgets that show it. A poll works on every tick, changed or not.",
+      "example": "examples/state/main.cpp smallest",
+      "check": null,
+      "guide": "state.md",
+      "evidence": null,
+      "probe_needed": "instructions a second of a label bound to a state that changes once a second, against a timer that sets the label every 50 ms"
+    },
+    {
+      "id": "fast-run-11",
+      "quality": "fast-run",
+      "rule": "Change only what changed: set or bind the one property, and never mount a tree again to show a new value.",
+      "why": "LVGL redraws the area of the widget whose property changed. A tree mounted again is built, laid out and drawn whole.",
+      "example": "examples/state/main.cpp change",
+      "check": null,
+      "guide": "run-fast.md",
+      "evidence": null,
+      "probe_needed": "instructions and pixels flushed for one property change, against unmounting and mounting the same tree"
+    },
+    {
+      "id": "fast-run-12",
+      "quality": "fast-run",
+      "rule": "Animate the smallest widget that shows the motion, and let the animation end when the motion is over.",
+      "why": "Every frame of an animation redraws the area of the widget it moves, for as long as it runs.",
+      "example": null,
+      "example_note": "No example yet: the Animation guide will add one.",
+      "check": null,
+      "guide": "animation.md",
+      "evidence": {"source": "docs/research/visibility.md", "date": "2026-11-19", "finding": "24 arcs of 70 by 70 pixels, animated without end on a 480 by 320 display, took 438 M instructions a second.", "probe": "visibility_visible"},
+      "probe_needed": "instructions a second of one animation, against the area of the animated widget"
     },
     {
       "id": "fast-build-1",
@@ -191,7 +256,7 @@
       "example": "examples/lists/main.cpp includes",
       "check": {"by": "build", "tool": "cmake/check_includes.cmake", "scope": "every target that links lvgl26 through its CMake, unless LVGL26_CHECK_INCLUDES is off", "test": "include_check_build", "pinned_in": "tests/include_check/run.cmake", "message": "parts.hpp:8: lv::list needs #include <lv/list.hpp>"},
       "guide": "which-header.md",
-      "evidence": {"source": "docs/research/header-structure.md", "date": "2026-11-20", "finding": "A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G."},
+      "evidence": {"source": "docs/research/header-structure.md", "date": "2026-11-20", "finding": "A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G.", "probe": "include_lv"},
       "wins_over": "the ease of one header for everything, which is worth it in a first program only."
     },
     {
@@ -202,18 +267,7 @@
       "example": "examples/signal_type/main.cpp main",
       "check": null,
       "guide": "build-fast.md",
-      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page."}
-    },
-    {
-      "id": "fast-build-3",
-      "quality": "fast-build",
-      "rule": "When two widget kinds would do, take one the file already uses: a new kind costs a file about as much as 28 more nodes.",
-      "why": "A file pays once for each kind it names, for its properties and their tables, and little for each further node of that kind.",
-      "example": null,
-      "example_note": "No example: the rule is about a choice between widgets.",
-      "check": null,
-      "guide": "build-fast.md",
-      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A widget kind cost 5.6 G instructions the first time a file named it, and a further node 0.2 G. Ten labels: 55.8 G; ten widgets of ten kinds: 105.8 G."}
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page.", "probe": "one_label"}
     },
     {
       "id": "fast-build-4",
@@ -233,7 +287,7 @@
       "example": "examples/state/main.cpp tree",
       "check": null,
       "guide": "build-fast.md",
-      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "Ten labels: 55.8 G instructions. Each bound to a state: 56.0 G. Each with an id: 55.8 G. Each with three more properties: 59.1 G."}
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "Ten labels: 55.8 G instructions. Each bound to a state: 56.0 G. Each with an id: 55.8 G. Each with three more properties: 59.1 G.", "probe": "large_tree"}
     },
     {
       "id": "checked-1",
@@ -263,7 +317,8 @@
       "example": "examples/lists/main.cpp row",
       "check": {"by": "compiler", "test": "style_needs_token", "message": "error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length."},
       "guide": "tokens.md",
-      "evidence": null
+      "evidence": null,
+      "wins_over": "the shorter raw value: one source for the design is worth the name of a token."
     },
     {
       "id": "checked-4",
@@ -317,6 +372,16 @@
       "example_note": "No example: the examples name no C function, and `tools/check_examples.py` keeps them so in this repository.",
       "check": null,
       "guide": "extending.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-9",
+      "quality": "checked",
+      "rule": "Reach a widget of a mounted tree by its id, `root->get<\"title\">()`; never keep a pointer to it or search for it at run time.",
+      "why": "The compiler turns the id into the widget's place in the tree, and gives a view of its kind. A wrong id stops the build.",
+      "example": "examples/mounting/main.cpp mount-global",
+      "check": {"by": "compiler", "test": "unknown_id", "message": "error: constexpr message: lv: the tree has no id 'titel'. Its ids: title."},
+      "guide": "views.md",
       "evidence": null
     },
     {
@@ -381,7 +446,7 @@
       "check": null,
       "guide": "growing.md",
       "evidence": null,
-      "wins_over": "the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file."
+      "wins_over": "the total work of a build. Each file pays again for its first widget, about 35 G instructions, but a change rebuilds one file."
     },
     {
       "id": "extendable-2",
