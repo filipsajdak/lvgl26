@@ -39,7 +39,7 @@ Rules 1, 3, 6 and 7 are clang-format options. Rules 2, 4 and 5 are where today's
 
 ### What makes QML read well
 
-The same screen, as QML would write it. `recalled`
+The same screen, as QML would write it; written for this note, not taken from a page.
 
 ```qml
 Column {
@@ -381,7 +381,22 @@ The trailing commas are not added by clang-format. They are written by hand once
 3. Reformat `examples/` in one pull request with no other change, and add the CI check.
 4. Then rewrite the docs, so that every snippet is written once.
 
-## Decisions for the owner
+## The owner's decisions, 2026-11-20
+
+The owner read the candidates below and decided.
+
+| Question | Decision |
+|---|---|
+| Children | As call arguments: `lv::group({props}, child, child)`. `[...]` keeps compiling; examples and pages use the call form |
+| Layout switch | A trailing comma, with clang-format and the small pass after it |
+| Indent | Two spaces, so examples, docs and `include/` share one indent. `include/` is not reformatted in this work |
+| Readability | Named pieces of at most about three levels per constant, taught as a rule with an id |
+| Property order | Alphabetical stays for now. More research into an order a person reads comes first |
+| A declarative file | No |
+
+The work follows in two pull requests: the call form in the library, then the format and its check over `examples/`.
+
+## The candidates the owner chose from
 
 1. **Children as arguments (form A).** Recommended. It is the one change that lets a formatter keep the tree as blocks, and `[]` stays for one-liners.
 2. **Trailing comma as the layout switch.** Recommended. A block with a trailing comma breaks; a short one without stays on one line.
