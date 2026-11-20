@@ -26,7 +26,7 @@ The table is written from what each header declares, read by reflection (`docs/r
 | `<lv/repeat.hpp>` | `lv::caption`, `lv::field`, `lv::for_each`, `lv::for_each_field`, `lv::like`, `lv::name_of`, `lv::repeat_part` |
 | `<lv/runtime.hpp>` | `lv::load_error`, `lv::load_failure`, `lv::runtime` |
 | `<lv/scaled_font.hpp>` | `lv::scaled_font` |
-| `<lv/shown.hpp>` | `lv::shown`, `lv::when` |
+| `<lv/shown.hpp>` | `lv::page`, `lv::page_of`, `lv::shown`, `lv::transition`, `lv::when` |
 | `<lv/theme.hpp>` | `lv::theme` |
 | `<lv/list.hpp>` | `lv::bind(&row::field)`: a field of a row |
 <!-- headers: end -->

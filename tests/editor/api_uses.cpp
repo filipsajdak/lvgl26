@@ -352,6 +352,13 @@ constexpr auto pager = lv::group[lv::shown(current_page)[
     lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup, {.on_shown = &on_popup}), lv::otherwise()]];
 constexpr auto spinner_while_busy = lv::group[lv::when(busy)[popup]];
 constexpr auto empty_arm = lv::is<screen_page::none>();
+constinit const lv::page popup_page = lv::page_of<popup, &on_popup>;
+constinit const lv::page main_page = lv::page_of<ui>;
+constexpr auto slide_in = lv::transition({.x = {320 * px, 0 * px}}, 200 * lv::ms);
+constexpr auto slide_out = lv::transition({.x = {0 * px, 320 * px}}, 200 * lv::ms);
+constexpr auto sliding_pages = lv::group[lv::shown(current_page, {.alive = 2, .enter = slide_in, .leave = slide_out})[
+    lv::is<screen_page::main>(main_page), lv::is<screen_page::popup_page>(popup_page), lv::otherwise()]];
+static_assert(lv::page_of<popup>.size > 0);
 
 constinit lv::frame<320, 240> frame;
 constinit lv::band<320, 240, 10> band;
@@ -490,6 +497,8 @@ int use_application() {
   busy = true;
   lv::settle();
   if (!paged || !waiting) return 15;
+  auto slid = lv::mount<sliding_pages>(plain.screen());
+  if (!slid) return 16;
   if (slot.error() != lv::mount_error::not_mounted || which.value_or(0) + or_empty < 0) return 13;
   static_cast<void>(direct.root());
   lv::application::options none{};

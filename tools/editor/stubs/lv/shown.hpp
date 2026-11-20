@@ -9,7 +9,9 @@
 // The editor does not check that every value has an arm; GCC does.
 
 #include <lv/detail/missing.hpp>
+#include <lv/animate.hpp>
 #include <lv/computed.hpp>
+#include <lv/easing.hpp>
 #include <lv/match.hpp>
 #include <lv/one_of.hpp>
 #include <lv/state.hpp>
@@ -26,6 +28,40 @@ inline constexpr bool included<"lv/shown.hpp"> = true;
 namespace lv {
 
 namespace detail {
+struct shown_slot {};
+}  // namespace detail
+
+/// A page whose tree is in a file of its own: constinit const lv::page home_page = lv::page_of<ui>;
+struct page {
+  std::size_t size;
+  std::size_t align;
+  const void* tree;
+  bool (*mount)(void* memory, lv_obj_t* parent);
+  void (*end)(void* memory);
+  void (*abandon)(void* memory);
+  lv_obj_t* (*root)(const void* memory);
+  void (*on_shown)(detail::shown_slot& slot);
+};
+
+/// The page of the tree `Tree`, for lv::page. OnShown, if given, is called with a handle to the page.
+template <const auto& Tree, auto OnShown = nullptr>
+  requires tree_node<decltype(Tree)>
+inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+namespace detail {
+
+/// How a page enters or leaves: one property of its root, from one value to another.
+struct transition_spec {
+  int from = 0;
+  int to = 0;
+};
+
+/// What lv::shown takes beside its state: lv::shown(current, {.enter = slide_in, .leave = slide_out}).
+struct shown_options {
+  std::size_t alive = 2;
+  transition_spec enter{};
+  transition_spec leave{};
+};
 
 /// What .on_shown takes: a function void f(lv::held<T>) of the arm's tree T.
 struct shown_hook {
@@ -71,7 +107,7 @@ struct when_node {
 
   /// The tree shown while the flag is true.
   template <class T>
-    requires tree_node<T>
+    requires tree_node<T> || std::same_as<T, page>
   constexpr shown_node<S, tree_arm<one_of<true>, T>, tree_arm<one_of<false>, void>> operator[](const T&) const {
     return {source};
   }
@@ -79,16 +115,22 @@ struct when_node {
 
 }  // namespace detail
 
+/// How a page of lv::shown enters or leaves: the arguments of lv::animate, for the page's root.
+template <class D = void>
+constexpr detail::transition_spec transition(const animatable<"obj">& what, duration time, const easing& how = {}) {
+  return {};
+}
+
 /// Shows the arm of the value of `state`: lv::shown(current)[lv::is<page::home>(home_ui), ...].
 template <detail::shown_source S>
-constexpr detail::shown_node<S> shown(const S& state) {
+constexpr detail::shown_node<S> shown(const S& state, const detail::shown_options& options = {}) {
   return {&state};
 }
 
 /// Shows `tree` while `flag` is true: lv::when(online)[online_ui].
 template <detail::shown_source S>
   requires std::same_as<detail::value_of<S>, bool>
-constexpr detail::when_node<S> when(const S& flag) {
+constexpr detail::when_node<S> when(const S& flag, const detail::shown_options& options = {}) {
   return {&flag};
 }
 
