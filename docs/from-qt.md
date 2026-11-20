@@ -25,7 +25,7 @@ There is no second language, no code generator and no engine: the C++ compiler c
 | `State` and `Transition` | `lv::match` on a state, and animations in a task |
 | `Image { source: "a.png" }` | `lv::image_file<a_png>`. The compiler decodes the PNG, and the device needs no decoder |
 | `FontLoader` and a font family | `lv::typeface`. The compiler makes the font from a TrueType file |
-| `Loader`, `StackView` | `lv::mount<tree>` creates a page and its owner deletes it. See the printer port for a page switcher |
+| `Loader`, `StackView` | `lv::mount<tree>` creates a page and its owner deletes it. `lv::one_of` holds one of several trees in a slot, for a root. See [Where a tree lives](mounting.md). The printer port has a page switcher |
 | A Qt Quick Controls style | A theme: `lv::theme({...})` gives each kind of widget its look |
 | Colors and sizes kept in one design file | A W3C Design Tokens file, read at compile time. A style takes tokens only |
 | A property of the wrong type | A compile error that says what the property takes |
@@ -81,7 +81,6 @@ Numbers for the memory row come from `docs/research/memory.md`.
 
 - **Components.** A repeated part is a C++ function that returns a piece of tree. Components with their own state, parameters and slots are planned.
 - **A `ListView` over a long model.** `lv::each` over an `lv::list` builds a row for each row, up to the list's capacity. A list that recycles its rows while it scrolls is planned.
-- **A style for one part in one state.** The knob of a slider while pressed has no form yet. Themes set a part or a state, not both.
 - **Translations.** `qsTr` has no counterpart yet.
 - **Qt Design Studio.** There is no visual editor. The workflow is text and a screenshot: `lv::write_png` and the agent tools.
 
