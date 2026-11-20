@@ -13,6 +13,6 @@ constexpr auto ui = job_page<job_kind::scan>("Scan", "Format", "PDF\nJPEG\nPNG",
 
 }  // namespace
 
-lv::owned<lv::obj> mount_scan(lv::obj parent) { return mount_page<ui>(parent); }
+constinit const lv::page scan_page = lv::page_of<ui>;
 
 }  // namespace printer
