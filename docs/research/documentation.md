@@ -116,6 +116,19 @@ coffee/
 - It depends on two features built first: pages that live in other files under `lv::shown`, with no size number written by hand, and fonts drawn once, with one file per font.
 - The rule is `extendable-1`. Its data names the layout check in `check_planned`, which the page shows as not built yet, until the check exists.
 
+### How UI code is written and formatted (2026-11-20)
+
+The owner did not like the dense form of trees, and asked for one that reads like formatted QML. The research is in `docs/research/code-format.md`.
+
+- Children are call arguments: `lv::group({props}, child, child)`. The `[...]` form keeps compiling, but the examples and the pages use the call form.
+- A property list that ends with a comma is laid out one property per line. Without the comma it stays on one line while it fits: `lv::label({.text = "One"})`.
+- clang-format formats the trees, with a small pass after it that changes only whitespace and keeps `.style = {` on one line. A `.clang-format` lies at the root of the repository, and a check in CI holds the examples to it. The pages follow, since their code is copied from the examples.
+- Indentation is two spaces.
+- A screen is built from named pieces: small constants such as `empty_note` and `track_list`, each at most about three levels deep, which the screen lists. This is the rule `expressive-6`.
+- The order of properties stays alphabetical for now, since C++ requires the declared order of designated members. An order that reads the way a person thinks (id, size and position, style, content, handlers), with completion in the editor kept, is to be researched.
+- No declarative file in the manner of QML.
+- The order of the work: the call form in the library, then all examples reformatted in one pull request together with the check, then the pages.
+
 ### The owner's steer on the first rule list (2026-11-20)
 
 - "Fast at run time" covers processor time, not only memory: a display nobody sees, a hidden widget, a binding against polling, changing only what changed, and the cost of an animation. Every rule of run time ends up resting on a nightly probe; until it does, its data says `probe_needed`, and the tool fails a rule of run time that has neither.
@@ -221,6 +234,8 @@ State: "pilot" is done in the pilot; "rewrite" is an existing page; "new" is a p
 | LVGL in C | `from-lvgl.md` | new | `examples/lvgl` | | 5 |
 | Two ports | `port-slint-printer.md`, `port-lvgl-examples.md` | rewrite, the printer split | the printer and the treadmill, brought to the layout above | `lv::shown` for the pager and for pages in other files; fonts drawn once | 5 |
 
+The format of UI code is settled before the batches, and every batch waits for the reformat of all examples to the call form: `tools/docs.py sync` then rewrites the snippets of the pages, and a page written before it would show the old form. The pilot's pages show the `[...]` form until then; `no-boilerplate-1` and `expressive-6` say so in `revisit`.
+
 Batch 1 is Start, Core ideas and The program, the stable layers. Batch 2 is the rest of the screen and the performance pages, once their probes exist. Batch 3 is "How it looks", after the redesign. Batch 4 is Growing and Tools; batch 5 the migration pages.
 
 A section "What the compiler checks" shows whole messages only after the compile-fail tests pin them; until then it shows the message GCC prints, checked against the pinned part.
@@ -251,7 +266,9 @@ The guides of the pilot say "not measured yet" for these too: the processor time
 
 ### Rules to revisit
 
+- `no-boilerplate-1`: the call form of a tree, lv::column({...}, child, child), with the reformat of all examples: the sentence shows [...] children and changes with it, and the snippet follows its file.
 - `no-boilerplate-9`: lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only.
+- `expressive-6`: the reformat of all examples to the call form: the example of this rule comes with it.
 
 ### Later work outside the pages
 
