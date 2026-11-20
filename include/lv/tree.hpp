@@ -75,6 +75,7 @@ concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
 template <class... A>
 concept children_given = sizeof...(A) > 0;
 
+
 template <class... Kids>
 struct kids_of {
   struct type;
@@ -112,6 +113,10 @@ inline constexpr bool is_repeated<repeated<Nodes...>> = true;
 // What a parent takes in []: a child, or the widgets of a repetition.
 template <class T>
 concept tree_kid = tree_child<T> || is_repeated<std::remove_cvref_t<T>>;
+
+// Every argument is a child.
+template <class... A>
+concept all_kids = (tree_kid<A> && ...);
 
 // References to the children that a value gives its parent: itself, or each widget of a
 // repetition.
@@ -217,7 +222,7 @@ struct takes_children {
         n.how = Self::starts_with;
         return n;
       }
-    } else if constexpr (!(tree_kid<Kids> && ...)) {
+    } else if constexpr (!all_kids<Kids...>) {
       static_assert(false,
                     "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
                     "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
@@ -234,7 +239,7 @@ struct takes_children {
   // The children alone: lv::column(lv::label({...}), lv::arc({...})).
   template <class Self, class First, class... Rest>
   constexpr auto operator()(this const Self& self, const First& first, const Rest&... rest) {
-    static_assert(tree_kid<First> && (tree_kid<Rest> && ...),
+    static_assert(all_kids<First, Rest...>,
                   "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
                   "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
     return self.template operator()<std::void_t<First, Rest...>>({}, first, rest...);
