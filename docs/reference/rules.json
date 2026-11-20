@@ -10,7 +10,6 @@
   ],
   "pages_planned": {
     "tree.md": "The tree and its widgets",
-    "state.md": "State and bindings",
     "tokens.md": "Design tokens",
     "tasks.md": "Tasks",
     "application.md": "Application and loop",

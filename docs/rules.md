@@ -93,7 +93,7 @@ constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // s
 
 Checked: no tool checks this rule yet.
 
-Guide: State and bindings (not written yet).
+Guide: [State and bindings](state.md).
 
 ### no-boilerplate-3
 
@@ -117,7 +117,7 @@ constexpr auto stepper(lv::tree_node auto shown) {
 
 Checked: no tool checks this rule yet.
 
-Guide: State and bindings (not written yet).
+Guide: [State and bindings](state.md).
 
 ### no-boilerplate-4
 
@@ -562,7 +562,7 @@ Checked by the compiler. The test `state_plain_int` pins the message.
 error: static assertion failed: lv: a state of a plain integer does not say what the number is. If it is a measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For anything else, name it: `struct tab_index { int value; };`. To allow plain integers, set rules.raw_integer_state in the settings.
 ```
 
-Guide: State and bindings (not written yet).
+Guide: [State and bindings](state.md).
 
 ### checked-2
 
@@ -748,7 +748,7 @@ constinit lv::computed enough{[](grams n, grams b) { return n <= b; }, needed, b
 
 Checked: no tool checks this rule yet.
 
-Guide: State and bindings (not written yet).
+Guide: [State and bindings](state.md).
 
 ### expressive-3
 
