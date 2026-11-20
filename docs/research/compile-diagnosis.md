@@ -1378,6 +1378,19 @@ Decided by the owner on 2026-11-20: the code that builds the messages of a bad t
 - The scan that finds where a settings file stops being JSON (`include/lv/detail/json_fault.hpp`) costs nothing: only the header that `lvgl26_settings()` writes includes it, and `settings.hpp` declares it.
 - The next nightly run on `main` after the merge shows `include_lv` 17 M higher, once. The history needs nothing for it: a rise of 0.28 percent is inside the 0.5 percent threshold, so the night is `same` and the baseline does not move. The 17 M stay counted against the baseline, as every change inside the threshold does: a later change of 0.22 percent or more in `include_lv` crosses it, and a night that crosses it names the commits since the baseline.
 
+### The messages of a bound state, a bare value and a state of the wrong type
+
+Decided by the owner on 2026-11-20 (pull request #187): the same kind of allowance for the second round of message fixes. Marks: `measured`, Valgrind `Ir` on GitHub's runners, main against the branch, before the last split of two functions for complexity.
+
+| Probe | main | branch | change |
+|---|---:|---:|---:|
+| `include_lv` | 6,052.35 M | 6,062.92 M | +10.6 M (+0.17%) |
+| `one_label` | 29,254.19 M | 29,281.33 M | +27.1 M (+0.09%) |
+| `large_tree` | 58,672.05 M | 58,647.28 M | -24.8 M (-0.04%) |
+
+- The first version put the text work in `wrong_value::message`, which every argument type instantiates: +5.6 M, +51.9 M and +109.2 M. Each instance now holds one call of a function of its own (`wrong_value_text`, `bound_text`, `format_text`), and the rest is the parse of those helpers.
+- With the token messages above, the nightly after both merges shows `include_lv` about 28 M (0.45 percent) above the night before, under the 0.5 percent threshold by a small margin. The baseline does not move for a rise inside the threshold, so these 28 M count against it: the next change of 0.05 percent or more in `include_lv` crosses it. If the night does fail on the threshold, the cause is these two accepted changes, and the remedy is to record the new baseline, not to revert.
+
 ## Tried and ruled out
 
 | Idea | Result | Mark |
