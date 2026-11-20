@@ -6,6 +6,7 @@
 //   constexpr auto ui = lv::column[lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})]];
 //   tracks.push_back({{1}, "Intro"});
 
+#include <lv/detail/missing.hpp>
 #include <lv/state.hpp>
 #include <lv/tree.hpp>
 
@@ -14,6 +15,11 @@
 #include <expected>
 #include <string>
 #include <type_traits>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/list.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -26,7 +32,8 @@ enum class list_error {
 /// A list of up to N rows of type T: the model of lv::each. A row keeps its address
 /// from insert to erase. Make it a `constinit` global, as a state is.
 template <class T, std::size_t N>
-class list {
+  requires detail::included<"lv/list.hpp">
+class list<T, N> {
   state<counter> count_{};
 
  public:

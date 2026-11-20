@@ -42,6 +42,12 @@ inline constexpr bool included = false;
 template <class...>
 inline constexpr bool header_missing = false;
 
+// The condition of a function's fallback. It names the call's own template parameters, so that it is
+// checked at the call: a condition that depends on nothing is worked out where the fallback is
+// declared, before the header could say it was read, and Clang refuses the header's specialization.
+template <fixed Header, class... Call>
+concept not_read = !included<Header>;
+
 // The constraints that the fallbacks and the real templates share: a constraint written twice is
 // two constraints to the compiler, and the real template must be the more constrained one.
 template <class... T>
@@ -75,25 +81,25 @@ class list {
 };
 
 template <class... A>
-  requires(!detail::included<"lv/list.hpp">)
+  requires detail::not_read<"lv/list.hpp", A...>
 void each(A&&...) = delete("lv::each is in <lv/list.hpp>: add #include <lv/list.hpp>");
 
 // lv/repeat.hpp
 template <class E, class... X, class... A>
-  requires(!detail::included<"lv/repeat.hpp">)
+  requires detail::not_read<"lv/repeat.hpp", A...>
 void for_each(A&&...) = delete("lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>");
 
 template <const auto& Items, class... A>
-  requires(!detail::included<"lv/repeat.hpp">)
+  requires detail::not_read<"lv/repeat.hpp", A...>
 void for_each(A&&...) = delete("lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>");
 
 template <class T, class... A>
-  requires(!detail::included<"lv/repeat.hpp">)
+  requires detail::not_read<"lv/repeat.hpp", A...>
 void for_each_field(A&&...) = delete("lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>");
 
 // lv/theme.hpp
 template <class D = void>
-  requires(!detail::included<"lv/theme.hpp">)
+  requires detail::not_read<"lv/theme.hpp", D>
 theme_styles theme(detail::needs_theme_header) = delete("lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>");
 
 // lv/look.hpp

@@ -12,6 +12,7 @@
 // of the token file lists the groups (lv/token_files.hpp, `look_groups`). It does not check the
 // entries of a group against the style properties, nor the path of lv::look_of, which GCC does.
 
+#include <lv/detail/missing.hpp>
 #include <lv/config.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/font.hpp>
@@ -21,6 +22,11 @@
 
 #include <string_view>
 #include <type_traits>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/look.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -82,8 +88,9 @@ consteval style_t checked_look() {
 
 /// The look of one or several groups of the project's tokens, as a style: lv::look<"queue.card">,
 /// or lv::look<"tile tile.print"> where a later one wins. D picks the registered design.
-template <detail::fixed Paths, class D = override>
-inline constexpr stub::style_t look = stub::checked_look<Paths, D>();
+template <detail::fixed Paths, class D>
+  requires detail::included<"lv/look.hpp">
+inline constexpr stub::style_t look<Paths, D> = stub::checked_look<Paths, D>();
 
 /// The look named for an enumerator: lv::look_of<"tile", subpage::print> is lv::look<"tile.print">.
 template <detail::fixed Prefix, auto V, class D = override>

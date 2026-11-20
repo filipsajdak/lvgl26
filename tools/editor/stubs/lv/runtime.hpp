@@ -2,6 +2,7 @@
 
 // Editor stub of lv/runtime.hpp: a screen built from a JSON document while the program runs.
 
+#include <lv/detail/missing.hpp>
 #include <lv/json.hpp>
 #include <lv/json_writer.hpp>
 #include <lv/props.hpp>
@@ -10,6 +11,11 @@
 #include <cstddef>
 #include <expected>
 #include <string_view>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/runtime.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -35,8 +41,8 @@ struct load_failure {
 /// Builds screens from JSON documents, with the widgets it is given:
 /// lv::runtime<"obj", "label", "button">::load(document, parent).
 template <detail::fixed... Widgets>
-  requires(detail::known_widget<Widgets> && ...)
-class runtime {
+  requires detail::known_widgets<Widgets...> && detail::included<"lv/runtime.hpp">
+class runtime<Widgets...> {
  public:
   /// The most ids a loaded screen keeps, and the longest id.
   static constexpr std::size_t id_capacity = 32;
