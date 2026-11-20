@@ -115,19 +115,37 @@ consteval std::vector<theme_item> theme_items() {
   return items;
 }
 
-// D only delays the scan.
+// A theme_item that can live in a static array.
+struct theme_row {
+  const char* name;
+  std::size_t size;  // of name
+  std::meta::info widget;
+};
+
+template <class D>
+consteval std::vector<theme_row> theme_rows() {
+  std::vector<theme_row> out;
+  for (const auto& item : theme_items<D>()) out.push_back({std::define_static_string(item.name), item.name.size(), item.widget});
+  return out;
+}
+
+// The scan runs once in a file: the members of a theme and their classes both come from this
+// table. D only delays it.
+template <class D = void>
+inline constexpr auto theme_table = std::define_static_array(theme_rows<D>());
+
 template <class D>
 consteval std::vector<std::meta::info> theme_specs() {
   std::vector<std::meta::info> out;
-  for (const auto& item : theme_items<D>())
-    out.push_back(std::meta::data_member_spec(^^typename look_of<D>::type, {.name = item.name}));
+  for (const auto& row : theme_table<D>)
+    out.push_back(std::meta::data_member_spec(^^typename look_of<D>::type, {.name = str(std::string_view(row.name, row.size))}));
   return out;
 }
 
 template <class D>
 consteval std::vector<std::meta::info> theme_widgets() {
   std::vector<std::meta::info> out;
-  for (const auto& item : theme_items<D>()) out.push_back(item.widget);
+  for (const auto& row : theme_table<D>) out.push_back(row.widget);
   return out;
 }
 

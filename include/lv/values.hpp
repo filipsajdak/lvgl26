@@ -15,6 +15,7 @@
 #include <lv/options.hpp>
 #include <lv/units.hpp>
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <initializer_list>
@@ -658,13 +659,34 @@ consteval bool is_one_of(std::string_view s, std::initializer_list<std::string_v
   return false;
 }
 
-// Sorts items that have a `name` by it. An insertion sort: std::sort costs far more
-// constexpr steps for the few hundred items this is used on.
+// Merges the sorted runs from[lo, mid) and from[mid, hi) of indices into items into to[lo, hi),
+// by name. On equal names the first run goes first, so the sort is stable.
+template <class Item>
+consteval void merge_by_name(const std::vector<Item>& items, const std::vector<std::size_t>& from,
+                             std::vector<std::size_t>& to, std::size_t lo, std::size_t mid, std::size_t hi) {
+  std::size_t i = lo, j = mid, k = lo;
+  while (i < mid && j < hi) to[k++] = items[from[j]].name < items[from[i]].name ? from[j++] : from[i++];
+  while (i < mid) to[k++] = from[i++];
+  while (j < hi) to[k++] = from[j++];
+}
+
+// Sorts items that have a `name` by it, stably. A merge sort of indices: the compiler's cost
+// is the comparisons of names, which an insertion sort does n * n / 4 times. std::sort and
+// std::stable_sort do not compile for an item that holds a std::meta::info.
 template <class Item>
 consteval void sort_by_name(std::vector<Item>& items) {
-  for (std::size_t i = 1; i < items.size(); ++i)
-    for (std::size_t j = i; j > 0 && items[j].name < items[j - 1].name; --j)
-      std::swap(items[j], items[j - 1]);
+  const std::size_t n = items.size();
+  std::vector<std::size_t> order(n), merged(n);
+  for (std::size_t i = 0; i < n; ++i) order[i] = i;
+  for (std::size_t width = 1; width < n; width *= 2) {
+    for (std::size_t lo = 0; lo < n; lo += 2 * width)
+      merge_by_name(items, order, merged, lo, std::min(lo + width, n), std::min(lo + 2 * width, n));
+    order.swap(merged);
+  }
+  std::vector<Item> sorted;
+  sorted.reserve(n);
+  for (const std::size_t i : order) sorted.push_back(std::move(items[i]));
+  items = std::move(sorted);
 }
 
 // Names that cannot be used for a generated struct member.

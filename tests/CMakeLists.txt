@@ -170,6 +170,7 @@ lvgl26_test(options)
 # LVGL says which setters take options separated by line breaks in its doc comments; the names
 # that lvgl26 goes by must agree with them.
 lvgl26_test(options_docs)
+lvgl26_test(api_table)
 # A state of an enum given to set() at run time breaks its contract.
 add_test(NAME options_violation_enum_state_in_set
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
