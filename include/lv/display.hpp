@@ -31,6 +31,7 @@
 // display a widget is on.
 
 #include <lv/application.hpp>
+#include <lv/detail/deferred.hpp>
 #include <lv/detail/theme_styles.hpp>
 #include <lv/detail/watch.hpp>
 #include <lv/view.hpp>
@@ -251,6 +252,9 @@ class display {
     lv_display_set_driver_data(raw_, this);
     lv_display_set_buffers(raw_, memory.data(), nullptr, static_cast<std::uint32_t>(memory.size()), mode);
     lv_display_set_flush_cb(raw_, &drawn);
+    // Waiting work, such as the switch of an lv::shown node, is done before each refresh.
+    [[maybe_unused]] const auto* drains = lv_display_add_event_cb(raw_, &detail::drain_deferred, LV_EVENT_REFR_START, nullptr);
+    contract_assert(drains != nullptr);  // LVGL's heap is too small for a display
   }
 
   // How the display reaches each kind of panel. They are functions, not lambdas: GCC's

@@ -128,6 +128,7 @@ add_test(NAME pointer_violation_no_function
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
+lvgl26_test(shown)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
 foreach(case unmount_empty get_other held_after_remount error_of_mounted)
@@ -1255,3 +1256,23 @@ lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/en
 lvgl26_compile_fail(missing_header_runtime "lv::runtime is in <lv/runtime.hpp>: add #include <lv/runtime.hpp>")
 lvgl26_compile_fail(missing_header_one_of "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>")
 lvgl26_compile_fail(missing_header_pointer "lv::pointer is in <lv/pointer.hpp>: add #include <lv/pointer.hpp>")
+
+# lv::shown and lv::when (lv/shown.hpp).
+lvgl26_compile_fail(shown_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")
+lvgl26_compile_fail(shown_missing_value "lv::shown does not cover: ink. Add an arm for each. lv::is<value>\\(\\) shows nothing for it.")
+lvgl26_compile_fail(shown_duplicate_value "lv::shown has two arms for home. Each value needs one. one arm may name several")
+lvgl26_compile_fail(shown_tree_twice "lv::shown shows the tree .*a in two arms. Name both values in one arm: lv::is<a, b>")
+lvgl26_compile_fail(shown_other_enum "lv::shown follows a state of page, and an arm names a value of look")
+lvgl26_compile_fail(shown_not_an_arm "lv::shown takes arms: lv::is<value>\\(tree\\)")
+lvgl26_compile_fail(shown_otherwise_not_last "lv::shown: lv::otherwise must be the last arm")
+lvgl26_compile_fail(shown_two_otherwise "lv::shown has more than one lv::otherwise arm")
+lvgl26_compile_fail(shown_needless_otherwise "lv::shown already covers every value, so its lv::otherwise arm can never be shown")
+lvgl26_compile_fail(shown_sibling "lv::shown is the only child of its widget. Give it a widget of its own")
+lvgl26_compile_fail(shown_on_shown_other_tree "the function of .on_shown takes the lv::held of another tree than its arm shows. Write void f\\(lv::held<.*a>\\)")
+lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a constexpr variable of its own")
+lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
+lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::computed of a bool")
+lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their parent, and this tree keeps run-time storage")
+lvgl26_compile_fail(missing_header_shown "lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")

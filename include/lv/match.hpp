@@ -42,9 +42,36 @@ struct arm {
   F handler;
 };
 
+// An arm of lv::shown: a pattern and the tree it shows, or none (T = void). It and what an arm
+// takes are in <lv/shown.hpp>; lv/detail/missing.hpp names that header without it.
+template <class Pattern, class T>
+struct tree_arm;
+struct arm_options;
+
 // The pattern "equal to one of these values".
 template <auto... Values>
 struct one_of {
+  // An arm of lv::shown that shows `tree`: lv::is<page::home>(home_ui).
+  template <class T>
+  constexpr tree_arm<one_of, T> operator()(const T& tree) const {
+    return {&tree, {}};
+  }
+  // The same with what happens when it is shown: lv::is<page::home>(home_ui, {.on_shown = &start}).
+  template <class T>
+  constexpr tree_arm<one_of, T> operator()(const T& tree, const arm_options& options) const {
+    return {&tree, options};
+  }
+  // A tree made in the arm itself would be gone after the arm is made.
+  template <class T>
+  void operator()(const T&& tree) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class T>
+  void operator()(const T&& tree, const arm_options& options) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  // An arm of lv::shown that shows nothing: lv::is<page::none>().
+  template <class Nothing = void>
+  constexpr tree_arm<one_of, Nothing> operator()() const {
+    return {};
+  }
+
   // What to do when the value is one of these: lv::is<1, 2>.then([] { ... }).
   template <std::move_constructible F>
   constexpr arm<one_of, F> then(F handler) const {
@@ -54,6 +81,25 @@ struct one_of {
 
 // The pattern "anything else".
 struct anything {
+  // The last arm of lv::shown: lv::otherwise(tree), lv::otherwise(tree, {...}), lv::otherwise().
+  template <class T>
+  constexpr tree_arm<anything, T> operator()(const T& tree) const {
+    return {&tree, {}};
+  }
+  template <class T>
+  constexpr tree_arm<anything, T> operator()(const T& tree, const arm_options& options) const {
+    return {&tree, options};
+  }
+  // A tree made in the arm itself would be gone after the arm is made.
+  template <class T>
+  void operator()(const T&& tree) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class T>
+  void operator()(const T&& tree, const arm_options& options) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class Nothing = void>
+  constexpr tree_arm<anything, Nothing> operator()() const {
+    return {};
+  }
+
   // What to do for every other value: lv::otherwise.then([] { ... }).
   template <std::move_constructible F>
   constexpr arm<anything, F> then(F handler) const {
