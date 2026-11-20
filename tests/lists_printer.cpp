@@ -4,6 +4,7 @@
 
 #include "check.hpp"
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 #include <queue.hpp>
 #include <scenes.hpp>

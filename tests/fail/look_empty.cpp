@@ -1,4 +1,5 @@
 // A look that names nothing.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {

@@ -6,6 +6,7 @@
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
+#include <lv/theme.hpp>
 
 using namespace lv::units;
 

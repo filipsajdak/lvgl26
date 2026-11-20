@@ -1,5 +1,6 @@
 // A theme holds styles, so its values are design tokens too.
 #include <lv/lv.hpp>
+#include <lv/theme.hpp>
 
 using namespace lv::units;
 

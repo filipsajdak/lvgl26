@@ -1,4 +1,5 @@
 // The per mille sign is wider than the em: 275 px at this size.
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

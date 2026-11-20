@@ -1,4 +1,5 @@
 // A PNG file that says it is 0 x 0 pixels.
+#include <lv/encoded_image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

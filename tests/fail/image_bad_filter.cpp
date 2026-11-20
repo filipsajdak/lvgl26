@@ -1,4 +1,5 @@
 // A row with filter 7; the format has 0 to 4.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

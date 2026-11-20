@@ -1,4 +1,5 @@
 // The token asks for weight 700 and the typeface has only 400.
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

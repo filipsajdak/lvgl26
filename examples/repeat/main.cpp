@@ -2,7 +2,9 @@
 // docs/repetition.md walks through this file.
 // editor-check: skip, it has annotations ([[=lv::caption{...}]]), which Clang does not read yet
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
+#include <lv/repeat.hpp>
 
 using namespace lv::units;
 

@@ -2,6 +2,7 @@
 //
 //   image <reference.png>
 
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

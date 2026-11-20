@@ -7,6 +7,7 @@
 // red is the column, green is twice the row, blue is 128. Its 131,072 bytes would give a name of 790,000
 // characters.
 
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 namespace {

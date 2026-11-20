@@ -4,6 +4,8 @@
 // value it takes. docs/looks.md sets the two side by side; tests/looks_example.cpp checks that
 // they draw the same pixels.
 
+#include <lv/font.hpp>
+
 #include "screen.hpp"
 
 namespace looks::before {

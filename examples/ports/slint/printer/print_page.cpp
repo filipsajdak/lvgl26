@@ -1,5 +1,7 @@
 // The Print page: the whole queue, a wide card for each job with its details, Pause and Delete.
 
+#include <lv/list.hpp>
+
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"

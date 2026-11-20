@@ -2,6 +2,8 @@
 
 A theme gives every widget of a kind its look, so a screen needs no styles of its own. Signal comes with lvgl26, and you make your own from a token file.
 
+`lv::theme` is in its own header: `#include <lv/theme.hpp>`; Signal's themes are in `<lv/signal.hpp>` (see [Which header](which-header.md)).
+
 | Signal, dark | A theme of your own |
 |---|---|
 | ![The screen in Signal: black ground, a lime ring at 72 percent and a square lime button](media/theme-signal.png) | ![The same screen in a paper look: cream ground, a red ring and a rounded red button](media/theme-paper.png) |

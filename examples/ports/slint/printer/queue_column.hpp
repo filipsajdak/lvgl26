@@ -3,6 +3,8 @@
 // The print queue as a column on the home page: a card for each job, which a tap opens.
 // It is a tree of its own, which the home page nests, so the cards live and die with the page.
 
+#include <lv/list.hpp>
+
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"

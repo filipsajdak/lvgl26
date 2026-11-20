@@ -1,4 +1,6 @@
 // A string token is no standard value for a style property: the message points to $extensions.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

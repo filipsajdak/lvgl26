@@ -1,6 +1,8 @@
 // The USB page: a photo from a stick, which file, how many copies, color or not, and print.
 // The photos are cropped to fit; their credits are in NOTICE.md.
 
+#include <lv/encoded_image.hpp>
+
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"

@@ -1,4 +1,5 @@
 // A font in a style comes from a typography token. One that no token names is lv::raw(...).
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

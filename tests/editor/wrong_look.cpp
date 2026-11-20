@@ -1,6 +1,7 @@
 // A look that names no group of the token file is marked where it is written. Read by Clang
 // with the editor stubs only (the test editor_wrong_look); GCC reports it with lvgl26's own text
 // and lists the groups it could have meant.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {

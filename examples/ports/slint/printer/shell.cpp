@@ -1,6 +1,8 @@
 // The window of the printer panel: the side bar that switches pages, the place where the page
 // is shown, and the place where a sub-page slides in over it.
 
+#include <lv/image.hpp>
+
 #include "pager.hpp"
 #include "parts.hpp"
 #include "queue.hpp"

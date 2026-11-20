@@ -1,4 +1,6 @@
 // A group inside a state that is neither a part nor a state.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

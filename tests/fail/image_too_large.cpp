@@ -1,4 +1,5 @@
 // 200 x 100 pixels is more than the 128 x 128 the compiler decodes by default.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

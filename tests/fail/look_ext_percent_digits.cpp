@@ -1,4 +1,6 @@
 // A percentage written with something else than digits.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

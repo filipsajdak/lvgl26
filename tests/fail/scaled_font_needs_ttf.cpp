@@ -1,5 +1,6 @@
 // This file is compiled as if LVGL had no TinyTTF (see tests/CMakeLists.txt).
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
 
 using namespace lv::units;
 

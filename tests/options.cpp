@@ -2,6 +2,7 @@
 // compiler, lv::options_of<E>, and `.selected` following a state of the enum.
 
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
 
 #include "check.hpp"
 

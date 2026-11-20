@@ -263,10 +263,10 @@ add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.pn
 # not for that to come back.
 # A file that includes <lv/lv.hpp> and names nothing, under a fixed operation limit: a header
 # that does a scan where it is read, in every file, stops it compiling. The largest evaluation
-# of such a file needed 25,000 to 26,000 operations on 2026-11-19, after the API scan became
-# lazy; the limit is about twice that, as large_tree's. Raise it only with a measurement:
+# of such a file needed 12,000 to 14,000 operations on 2026-11-20, once lv/lv.hpp became the core
+# (25,000 to 26,000 before); the limit is about twice that, as large_tree's. Raise it only with a measurement:
 # python3 tools/compile_report.py --ops build/host-v96 tests/include_only.cpp.
-set(lvgl26_include_only_ops 50000)
+set(lvgl26_include_only_ops 26000)
 lvgl26_test(include_only)
 set_source_files_properties(include_only.cpp PROPERTIES
   COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=${lvgl26_include_only_ops}")
@@ -907,6 +907,19 @@ add_test(NAME reference_data
                  -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
 
+# Which header declares each public name, by reflection: what tools/check_includes.py and
+# docs/which-header.md read. The names are the same for both LVGL versions.
+add_executable(lv_headers_reference ${PROJECT_SOURCE_DIR}/tools/reference/headers.cpp)
+target_link_libraries(lv_headers_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# One constant evaluation over every name of lvgl26: 45 to 60 million steps, so a budget of its own
+# at about twice that, as lv_reference has. Not for the analyzer: nothing in it runs.
+set_source_files_properties(${PROJECT_SOURCE_DIR}/tools/reference/headers.cpp
+                            PROPERTIES COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=120000000")
+add_test(NAME headers_data
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_headers_reference>
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/headers.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+
 # The settings as data: every key of a settings file, and its JSON Schema, by reflection.
 add_executable(lv_settings_reference ${PROJECT_SOURCE_DIR}/tools/reference/settings.cpp)
 target_link_libraries(lv_settings_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -938,6 +951,15 @@ if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
+  # Every test and fuzz target includes the header of each name of lvgl26 it uses
+  # (docs/which-header.md); tools/check_examples.py holds the examples to their exact headers.
+  file(GLOB_RECURSE lvgl26_checked_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+       ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp ${PROJECT_SOURCE_DIR}/fuzz/*.cpp)
+  add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
+                                       ${lvgl26_checked_sources})
+  add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
+  add_test(NAME which_header_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
+                                          --check-page ${PROJECT_SOURCE_DIR}/docs/which-header.md)
   # The token files of the Signal theme are written from the design system.
   add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
   # The copy of Signal's design file, its record (version and hash) and the written files agree.

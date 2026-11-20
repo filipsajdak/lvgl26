@@ -1,4 +1,5 @@
 // A file with outlines but without the tables that say how to use them.
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

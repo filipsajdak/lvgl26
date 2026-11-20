@@ -1,4 +1,5 @@
 // A typo in a variant, which is a sibling group.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {

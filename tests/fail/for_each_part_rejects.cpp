@@ -1,4 +1,5 @@
 #include <lv/lv.hpp>
+#include <lv/repeat.hpp>
 #include <array>
 enum class subpage { none, print, scan };
 enum class other { x };

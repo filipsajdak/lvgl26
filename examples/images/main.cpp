@@ -2,6 +2,7 @@
 //
 //   images    writes images.png
 
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 

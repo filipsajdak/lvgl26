@@ -1,6 +1,7 @@
 // The run-time storage of a tree: one object sized by the compiler from what each node
 // kind declares, held inside the lv::mounted that owns the widgets. The object is built
 // where the caller keeps it and never moves.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

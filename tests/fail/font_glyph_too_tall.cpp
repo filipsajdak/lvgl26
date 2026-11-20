@@ -1,4 +1,5 @@
 // A with a breve and a hook stands 1089 units high: 261 px at this size.
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

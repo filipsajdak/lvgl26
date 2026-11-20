@@ -1,4 +1,5 @@
 // The embedded file is not a font.
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 using namespace lv::units;

@@ -1,6 +1,6 @@
 // The quick start of the documentation: docs/quick-start.md shows this file piece by piece.
 
-#include <lv/lv.hpp>
+#include <lv/all.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
 

@@ -1,5 +1,7 @@
 // Two files of one program name the same looks: the registration is in a header they share,
 // and the constants of a look are made in each file without clashing at link time.
+#include <lv/look.hpp>
+
 #include "look_link.hpp"
 
 #include "check.hpp"

@@ -1,4 +1,6 @@
 // A percentage as a dimension value: the standard has none, the message points to $extensions.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

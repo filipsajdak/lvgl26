@@ -1,6 +1,7 @@
 #include <string>
 #include <algorithm>
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
 
 #include "check.hpp"
 

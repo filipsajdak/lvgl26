@@ -1,4 +1,6 @@
 // $extends is in the standard and not read yet: a look of such a group is refused.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

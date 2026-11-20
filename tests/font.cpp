@@ -2,6 +2,7 @@
 //
 //   font <reference.png>
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

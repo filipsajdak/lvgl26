@@ -1,6 +1,7 @@
 // lv::on: a style for one part in one state, merged into a node's style or a theme's.
 
 #include <lv/lv.hpp>
+#include <lv/theme.hpp>
 
 #include "check.hpp"
 

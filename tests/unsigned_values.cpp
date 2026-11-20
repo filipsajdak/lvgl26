@@ -1,6 +1,7 @@
 // A setter that takes an unsigned number, such as lv_spinner_set_arc_sweep(obj,
 // uint32_t angle), takes a unit value that is not negative. LVGL receives it unsigned.
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
 
 #include "check.hpp"
 

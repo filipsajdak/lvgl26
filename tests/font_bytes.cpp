@@ -5,6 +5,7 @@
 //   font_bytes            checks the digests
 //   font_bytes --print    prints them
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

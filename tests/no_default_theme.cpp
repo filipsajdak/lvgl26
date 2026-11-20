@@ -2,6 +2,7 @@
 // until it is given one, and a theme of ours is then the only look there is.
 
 #include <lv/lv.hpp>
+#include <lv/theme.hpp>
 
 #include "check.hpp"
 

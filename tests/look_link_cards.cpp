@@ -1,4 +1,6 @@
 // The second file of the program: it names looks too, and mounts a tree of its own.
+#include <lv/look.hpp>
+
 #include "look_link.hpp"
 
 namespace {

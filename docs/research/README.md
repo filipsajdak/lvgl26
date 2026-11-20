@@ -30,6 +30,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [constexpr-limits.md](constexpr-limits.md) | What the constant-evaluation limit costs us: the operations each file needs, what a very high limit risks, and how fonts can need none. |
 | [compile-time.md](compile-time.md) | What GCC 16.2 and plugins show about constant evaluation, where the compile time goes (the analyzer, the ports), and a ranked list of levers that cut it. |
 | [compile-diagnosis.md](compile-diagnosis.md) | Where the instructions of one file go, part by part: the scans every file repeats, a widget kind, a theme, a font. Fixes ranked by measured gain, and what is GCC's. |
+| [header-structure.md](header-structure.md) | What belongs in `<lv/lv.hpp>`: the cost of each header, what other libraries do, the split the owner decided, and the ways to name a missing header. |
 | [dependency-cves.md](dependency-cves.md) | Known vulnerabilities in what lvgl26 builds against, and whether our API makes them reachable. |
 | [rust-binding.md](rust-binding.md) | The official Rust binding of LVGL: how it is generated and owned, why it froze on LVGL 8.3.7, what users hit, and eleven lessons for lvgl26. |
 | [less-boilerplate.md](less-boilerplate.md) | How a port names fewer design tokens and repeats less: looks by name, text by inheritance, trees from enums and annotated members, option lists, a strings file, sub-trees. Counted against Slint. |

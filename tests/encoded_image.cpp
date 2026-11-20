@@ -2,6 +2,7 @@
 //
 //   encoded_image <reference.png>
 
+#include <lv/encoded_image.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

@@ -2,6 +2,8 @@
 
 The compiler reads a TrueType file and makes the font. The device gets glyph pictures in read-only memory: no heap, no code that draws outlines, and no converter to run.
 
+A font made by the compiler is in `#include <lv/font.hpp>`, and a font drawn on the device in `#include <lv/scaled_font.hpp>` (see [Which header](which-header.md)).
+
 ![A screen with the title "Wake up" in Barlow, the time 06:45 in large Barlow Condensed digits, and a line of small text](media/fonts.png)
 
 ## Embed the files

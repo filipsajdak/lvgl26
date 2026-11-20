@@ -1,4 +1,5 @@
 // 70000 pixels wide, in a project that raised the pixel limit.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 template <>

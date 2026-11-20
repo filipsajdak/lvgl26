@@ -1,4 +1,6 @@
 // A typography token for a color property.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

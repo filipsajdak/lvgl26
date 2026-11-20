@@ -1,5 +1,6 @@
 // A size without a token and without lv::raw.
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
 
 using namespace lv::units;
 

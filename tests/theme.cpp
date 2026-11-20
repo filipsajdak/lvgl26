@@ -1,6 +1,7 @@
 // lv::theme: the styles every widget of a kind starts with, kept in read-only memory.
 
 #include <lv/lv.hpp>
+#include <lv/theme.hpp>
 
 #include "check.hpp"
 

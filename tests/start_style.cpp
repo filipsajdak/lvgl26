@@ -1,6 +1,8 @@
 // The start of lv::group, lv::row and lv::column: one constant style at the bottom of the cascade.
 
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
+#include <lv/theme.hpp>
 
 #include "check.hpp"
 
