@@ -1193,6 +1193,176 @@ Candidate C, the cache of metafunction calls, was not reported: it gains lvgl26 
 
 Related reports found on the way: [106889](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106889), `__builtin_strlen` in constant evaluation, and [127894](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=127894), the evaluator's overhead on array scans. `source` 2026-11-20
 
+## Two levers designed: fonts drawn once, a theme of one slot
+
+Proposals for the owner, measured on 2026-11-20 against `main` at `cc81ec1`. Every prototype is a copy of the files in a scratch directory; nothing in `include/` changed. The flags are those of `host-v96`, Debug at `-O0`, as above.
+
+### A. Fonts drawn once
+
+A font is drawn where `type(tok.text.title)` is evaluated, so every file that names it draws it again. The printer port draws its eight sizes in seven files.
+
+#### Short answers
+
+| Question | Answer | Mark |
+|---|---|---|
+| Can a constant tree point at a font whose glyphs are not in the file? | Yes. A style keeps only the address, and the address of an `extern const` object is a constant. GCC folds a look's font to the address of the object in another file. | `measured` |
+| What does the port gain? | The whole port goes from 1949 G to 1140 G (−42 %). The Print page goes from 326 G to 88 G. | `measured` |
+| What does the program gain? | Constant data in `__TEXT` goes from 1,046,379 to 576,283 bytes (−45 %). Today every file keeps a copy of each font it draws. | `measured` |
+| Does the output change? | No. The seven pages that `printer_shot` writes are equal byte for byte. | `measured` |
+| What must the user write? | One source file that draws the fonts, and a header that names them. The pages stay as they are. | `measured` |
+
+#### The routes
+
+| Route | Print page | What breaks | Mark |
+|---|---|---|---|
+| Today: each file draws its fonts | 325.6 G | Nothing: the cost is the problem | `measured` |
+| 1. `extern const` fonts, drawn in one file | 88.3 G; the file with the fonts 409.6 G | Nothing found. It also compiles under the sanitizer flags | `measured` |
+| 1, behind `lv::typeface` (pages unchanged) | 90.4 G; the file with the fonts 403.9 G | Nothing found. It also compiles under the sanitizer flags | `measured` |
+| 2. A CMake helper that writes the fonts' file | The same as route 1 | Not prototyped. Its only gain over route 1 is one file per font, see below | `measured` for one file per font |
+| 3. The fonts in a C++ module | 90.8 G; the module 259.7 G | The program grows (`__TEXT,__const` 1,146,939 bytes): each importer writes the bitmaps again. It needs `-Wno-expose-global-module-tu-local`, because the font files have internal linkage. A `pre` inside a module does not link (`__tu_has_violation` is undefined, in a three-line test). Module scanning is off for ccache | `measured` |
+| 4. A variable template that draws, with `extern template` | 90.4 G; the instantiating file 261.5 G | It does not link: the font's template arguments (`tok`, `type`) have internal linkage, so the declaring and the instantiating file name different objects. The standard also lets a compiler instantiate a `const` variable of literal type anyway | `measured` |
+
+- Why each file keeps a copy today: an embedded font file such as `constexpr unsigned char inter_regular[]` has internal linkage. A bitmap names the file in its template arguments, so the same glyphs get a different symbol in each file, and the linker keeps all of them. `inline constexpr` would merge them, but CLAUDE.md forbids it for an embedded array (the sanitizer bug). `measured`
+- The header that the pages read must not `#embed` the font files. At `-O0` each page then still writes both files into its object, 80 KB each time, though it draws nothing (route 1 behind the typeface, first version: `__TEXT,__const` 1,146,907 bytes). `measured`
+- One file for all eight fonts costs 404 to 410 G. One file per font costs 74 to 78 G each: about 30 G of headers and tokens, plus the font. That is more work in total, but a shorter build on several cores. `measured`
+- A look takes its font from the design's typeface (`font_of<D, T>` in `look.hpp`). With the drawn fonts in the typeface, a file whose look has a typography entry went from 105.8 G to 49.7 G, and GCC folded the look's font to the object in the other file. `measured`
+- No code of lvgl26 reads a font's value in constant evaluation (no `line_height`, no `dsc`). Only its address matters. `measured`
+
+#### Route 1 behind `lv::typeface`: the user's code
+
+Today, `fonts.hpp` embeds the files, and every page draws what it names:
+
+```cpp
+// fonts.hpp
+constexpr unsigned char inter_regular[] = {
+#embed "fonts/Inter-24pt-Regular.ttf"
+};
+constexpr unsigned char inter_medium[] = {
+#embed "fonts/Inter-24pt-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Inter 24pt", 400, inter_regular}, {"Inter 24pt", 500, inter_medium}});
+
+// print_page.cpp: draws the font here
+constexpr auto title_font = type(tok.text.title);
+```
+
+Proposed: the header names the fonts and lists them in the typeface, and one file draws them. The pages do not change:
+
+```cpp
+// fonts.hpp: no font file here
+extern const lv::drawn_font title, body, subtitle, status, detail, heading, small, label;
+constexpr auto type = lv::typeface({{tok.text.title, title}, {tok.text.body, body} /* ... */});
+
+// fonts.cpp: the one file that draws
+constexpr unsigned char inter_regular[] = {
+#embed "fonts/Inter-24pt-Regular.ttf"
+};
+constexpr unsigned char inter_medium[] = {
+#embed "fonts/Inter-24pt-Medium.ttf"
+};
+constexpr auto files = lv::typeface({{"Inter 24pt", 400, inter_regular}, {"Inter 24pt", 500, inter_medium}});
+constinit const lv::drawn_font title = files.draw(tok.text.title);
+// ... one line for each font
+
+// print_page.cpp: unchanged, and draws nothing
+constexpr auto title_font = type(tok.text.title);
+```
+
+- `lv::drawn_font` is new: an object that holds an LVGL font, so that an example names no `lv_font_t`. `files.draw(token)` is new too: it always draws.
+- `type(token)` gives the address of the listed font whose family, weight and size match the token. A typography token that is not on the list is a compile error that names the token and the file that draws the fonts. A design's `.type` is the same object, so looks and themes find the fonts the same way.
+- The prototype is `fonts.hpp` and `fonts.cpp` of the printer in a scratch copy, with the typeface written in the example. Building it into `lv::typeface` is the work.
+
+#### Signal
+
+`lv/signal_type.hpp` costs every file that includes it about 159 G, because it draws Signal's fonts. lvgl26 is a header-only target (`INTERFACE`), so no file of its own can draw them. The proposal is a compiled target, `lvgl26::signal_type`, with one source file that draws Signal's fonts. `lv/signal_type.hpp` would declare them, and a program that uses it would link the target. This was not prototyped.
+
+### B. A theme that stores only what it sets
+
+#### Where a theme's cost goes
+
+| Probe | G | Mark |
+|---|---|---|
+| A file that includes `lv/lv.hpp` and `lv/theme.hpp` | 9.4 | `measured` |
+| `+` the style struct defined | 23.2 (+13.8, paid by any file with a style) | `measured` |
+| `+` the theme's spec type defined | 33.9 (+9.6) | `measured` |
+| `+` an empty spec as a constant | 42.5 (+8.5) | `measured` |
+| `lv::theme({})` | 44.3 | `measured` |
+| Each further theme | +8.3 | `measured` |
+
+- The run-time side already stores only what is set. `theme_entries` keeps one entry for each style that sets something, and `apply_theme` walks only those. The cost is in the compiler, which builds the whole spec of 54 widgets × 16 slots × 140 members before reading it.
+- A profile of eight empty specs shows the time spread over GCC's walks of the initializer: `walk_tree_1`, `cxx_eval_constant_expression`, `reduced_constant_expression_p`, `potential_constant_expression_1`, `cp_fold`. No single function stands out: the size of the value is the cost. `measured`
+- A spec of the same shape whose members are a plain struct costs 2.1 G for each evaluation. Give that struct one constructor besides the default one, as `lv::arg` has, and it costs 6.2 G. So two thirds of an unset member's cost comes from `lv::arg` having constructors (lever C below). `measured`
+
+#### The representations
+
+Fewer slots for each widget make the spec smaller. The slots after `style` are first the states and then the parts.
+
+| Slots per widget in a theme | A further theme | `tests/theme.cpp` | `tests/signal.cpp` | `examples/quick_start` | Mark |
+|---|---|---|---|---|---|
+| 16, today | 8.3 G | 73.7 G | 58.8 G | 107.1 G | `measured` |
+| 9: `style` and the states. A part is written with `lv::on` | 4.8 G | 68.9 G (−7 %) | 53.5 G (−9 %) | 101.2 G (−6 %) | `measured` |
+| 1: `style` only. States and parts are written with `lv::on` | 0.6 G | 60.3 G (−18 %) | 44.7 G (−24 %) | 91.9 G (−14 %) | `measured` |
+
+- The variants were made by cutting the slot list in `look_items` in a copy of `theme.hpp`. A script rewrote Signal's theme and `tests/theme.cpp` (`.style_x = {...}` into `| lv::on("x", {...})`). Both rewritten `tests/theme.cpp` passed at run time, so the theme sets the same styles. `measured`
+- The first theme of a file gains as much as each further one: the spec is smaller wherever it is built.
+
+#### The user's code
+
+`lv::theme({...})` stays, and so does `.button = {.style = ...}`. What moves is a slot other than `style`. It becomes a layer of `.style`, which is already the form that `docs/themes.md` shows and that a node takes:
+
+```cpp
+// Today
+.arc = {.style = {.arc_color = Tok.color.line, .arc_width = Tok.stroke.track},
+        .style_indicator = {.arc_color = Tok.color.active},
+        .style_knob = {.bg_opa = hidden}},
+.button = {.style = {.bg_color = Tok.color.active},
+           .style_pressed = {.bg_color = Tok.color.surface_raised}},
+
+// One slot
+.arc = {.style = lv::style({.arc_color = Tok.color.line, .arc_width = Tok.stroke.track})
+                 | lv::on("indicator", {.arc_color = Tok.color.active})
+                 | lv::on("knob", {.bg_opa = hidden})},
+.button = {.style = lv::style({.bg_color = Tok.color.active})
+                    | lv::on("pressed", {.bg_color = Tok.color.surface_raised})},
+```
+
+- A slot that is left in an old theme stops compiling. The message must name the new form: "`.style_pressed` is written `.style = ... | lv::on("pressed", {...})` in a theme". That needs a compile-fail test.
+- A node keeps its 16 slots: `kept<W>` stores a node's props once, so this cost does not repeat there. Whether nodes follow later is a separate question.
+
+#### What it touches
+
+- `include/lv/theme.hpp`: the slot list of `look_of` (only `style`), and the message in `add_theme_layers`, which today says to use `.style`.
+- `include/lv/signal.hpp`: its four slot members become layers. `examples/theme`, `tests/theme.cpp`, `docs/themes.md` and the theme compile-fail tests change too; a slot of a node (`.style_pressed` in a tree) does not.
+- `include/lv/detail/theme_styles.hpp`: nothing changes. The stored entries stay as they are.
+- `include/lv/look.hpp`: nothing changes. A look is a style value, so it stands where a style does, and it also stands in `lv::on`.
+- The editor stubs: `tools/editor/reference_stubs.py` writes `stub::look` and `stub::theme_spec` with the 16 slots. They get one, and `tests/editor/api_uses.cpp` follows.
+- Run time: the same entries. ROM and the time to set up a theme were not measured. They should not move, because the stored list is built by the same code from the same styles.
+
+### What the owner decided
+
+Decided 2026-11-20, over the proposals above.
+
+| # | Decision |
+|---|---|
+| A1 | Fonts drawn once are built: route 1 behind `lv::typeface`, with `lv::drawn_font` and `typeface::draw`. |
+| A2 | Signal's fonts become a compiled target, `lvgl26::signal_type`, as a second step after A1 works for user code. It is the first compiled part of lvgl26, so it is prototyped and measured first. |
+| A3 | The form that examples, the printer port and the docs show is one source file per font (74 to 78 G each, built in parallel), not one file that draws them all. |
+| B1 | A theme has one slot, `style`. States and parts are `lv::on` layers. |
+| B2 | A node keeps its 16 slots. |
+| C | `lv::arg` without constructors is a measured spike: `tests/large_tree.cpp` and the eight probes, what it gains and what it changes for users, reported before any decision to build. |
+
+The order of the builds, one pull request each: `lv::shown`, fonts drawn once, the one-slot theme, the Signal target, the `lv::arg` spike.
+
+### C. An unset member without constructors (found on the way)
+
+Two thirds of the cost of an unset member comes from `lv::arg` having constructors (see B). Every node pays that too, for every member it leaves out. Whether `lv::arg`'s conversions can move to the values it takes (`lv::raw`, `lv::token`, a name), so that `lv::arg` itself becomes an aggregate, has not been tried. It needs a spike of its own, measured on `tests/large_tree.cpp`.
+
+### Recommendation
+
+- A: route 1 behind `lv::typeface`. It adds `lv::drawn_font` and `typeface::draw`, and the typeface takes a list of drawn fonts. The printer gets `fonts.cpp`. Signal gets `lvgl26::signal_type` as its own step after that.
+- B: one slot (`style`) in a theme, with every state and part as `lv::on`. A theme then costs 0.6 G instead of 8.3 G, and a file with Signal 24 % less.
+- C: a spike after A and B.
+
 ## Tried and ruled out
 
 | Idea | Result | Mark |
@@ -1212,6 +1382,6 @@ Related reports found on the way: [106889](https://gcc.gnu.org/bugzilla/show_bug
 - A precompiled header under ccache, under CMake's `target_precompile_headers`, and under the analyzer.
 - Why `tests/look.cpp` costs 280 G and `tests/tokens.cpp` 124 G. `look.cpp` draws a font through its design, which is likely most of it.
 - What is left after the fixes. A further widget kind still costs 4.4 G, and the first theme 36.6 G on top of its token files.
-- A theme that stores only what it sets (cause 8): the gain comes from cutting the slots, which changes the API.
+- A theme that stores only what it sets (cause 8): designed and measured in "Two levers designed" above.
 - What a font draw itself costs inside: see [fonts.md](fonts.md).
 - LVGL's C files, mp-units, and the time a build takes on a runner.

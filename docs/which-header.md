@@ -74,7 +74,9 @@ It checks the headers of the program that a file includes with quotes too, skips
 
 ## The editor says which header
 
-With [editor support](editor-support.md), clangd offers a quick fix at the name: `Include <lv/list.hpp> for symbol lv::list`. It finds the header in its index of lvgl26, which it builds in the background the first time it opens the project.
+With [editor support](editor-support.md), the editor marks the line with the same text as the compiler: `lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>`. clangd reads it from the stubs, so it shows at once.
+
+For a class that is no template (`lv::scaled_font`, `lv::typeface`, `lv::pointer_feed`), clangd offers a quick fix at the name instead: `Include <lv/scaled_font.hpp> for symbol lv::scaled_font`. It finds the header in its index of lvgl26, which it builds in the background the first time it opens the project.
 
 ## By hand
 

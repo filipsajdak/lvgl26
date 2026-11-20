@@ -7,12 +7,18 @@
 //
 // The editor does not run the part: GCC does, and checks every element.
 
+#include <lv/detail/missing.hpp>
 #include <lv/but.hpp>
 #include <lv/tree.hpp>
 
 #include <cstddef>
 #include <string_view>
 #include <type_traits>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/repeat.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 

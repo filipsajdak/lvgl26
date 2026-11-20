@@ -969,7 +969,7 @@ if(Python3_FOUND)
   file(GLOB_RECURSE lvgl26_checked_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp ${PROJECT_SOURCE_DIR}/fuzz/*.cpp)
   # These leave out a header on purpose: the compiler must name it (lv/detail/missing.hpp).
-  list(FILTER lvgl26_checked_sources EXCLUDE REGEX "/fail/missing_header_")
+  list(FILTER lvgl26_checked_sources EXCLUDE REGEX "/fail/missing_header_|/editor/missing_header.cpp$")
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
@@ -1103,6 +1103,7 @@ set_source_files_properties(editor/api_uses.cpp ${PROJECT_SOURCE_DIR}/tools/edit
 # each one a line in compile_commands.json, which tools/editor/check.py takes its flags from.
 add_library(editor_clang_only OBJECT EXCLUDE_FROM_ALL
             editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp editor/wrong_look.cpp
+            editor/missing_header.cpp
             editor/tokens_by_bytes.cpp ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp PROPERTIES GENERATED TRUE)
 target_compile_options(editor_clang_only PRIVATE --embed-dir=${CMAKE_CURRENT_BINARY_DIR}/editor)
@@ -1161,12 +1162,13 @@ if(Python3_FOUND)
     add_test(NAME editor_tokens_by_bytes
              COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/tokens_by_bytes.cpp)
     # Mistakes are marked on the line they are written on.
-    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look)
+    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look missing_header)
       add_test(NAME editor_${case}
                COMMAND ${LVGL26_EDITOR_CHECK} --verify ${CMAKE_CURRENT_SOURCE_DIR}/editor/${case}.cpp)
     endforeach()
     set_tests_properties(editor_examples editor_api_uses editor_names_declared editor_tokens_by_bytes
                          editor_wrong_enumerator editor_unknown_member editor_wrong_widget editor_wrong_look
+                         editor_missing_header
                          PROPERTIES FIXTURES_REQUIRED editor_stubs)
     set_property(TEST editor_names_declared APPEND PROPERTY FIXTURES_REQUIRED editor_names)
   endif()
@@ -1189,6 +1191,16 @@ if(Python3_FOUND)
                      -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} ${LVGL26_CONSUMER_CLANGD}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/consumer_test.cmake)
     set_tests_properties(editor_support PROPERTIES TIMEOUT 600)
+    # clangd's background index names the header of a name that a file misses. Indexing lvgl26
+    # takes minutes, so the test runs every night (ctest -L nightly) and the pull request run
+    # leaves it out (-LE nightly).
+    if(LVGL26_CLANGD)
+      add_test(NAME editor_quick_fix
+               COMMAND ${CMAKE_COMMAND} -DSOURCE=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/editor/quick_fix
+                       -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} -DCLANGD=${LVGL26_CLANGD}
+                       -DPYTHON=${Python3_EXECUTABLE} -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/quick_fix_test.cmake)
+      set_tests_properties(editor_quick_fix PROPERTIES TIMEOUT 1800 LABELS nightly)
+    endif()
   endif()
 endif()
 

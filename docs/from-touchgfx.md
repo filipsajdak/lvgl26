@@ -37,7 +37,7 @@ TouchGFX has a Designer that writes code, and a Model, View and Presenter split.
 TouchGFX plans all its memory in advance. LVGL uses a heap for its widgets, and lvgl26 keeps its own use of it small.
 A constant text stays in flash. A constant style is shared by every node that repeats it.
 The heap of a mounted screen is measured, not guessed: see `docs/research/memory.md` for the numbers on a Cortex-M4.
-A fixed memory region for one screen is not built yet.
+What lvgl26 keeps for a screen can go where the program says, with `lv::mount_in`, and its size is a constant (see [Where a tree lives](mounting.md)). LVGL's widgets stay on LVGL's heap, so a fixed region for a whole screen is not built yet.
 
 ## How to port, step by step
 
