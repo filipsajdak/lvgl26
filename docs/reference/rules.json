@@ -29,7 +29,8 @@
       "example": "examples/state/main.cpp tree",
       "check": null,
       "guide": "tree.md",
-      "evidence": null
+      "evidence": null,
+      "revisit": "the call form of a tree, lv::column({...}, child, child), with the reformat of all examples: the sentence shows [...] children and changes with it, and the snippet follows its file"
     },
     {
       "id": "no-boilerplate-2",
@@ -435,6 +436,18 @@
       "check": null,
       "guide": "tokens.md",
       "evidence": null
+    },
+    {
+      "id": "expressive-6",
+      "quality": "expressive",
+      "rule": "Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists.",
+      "why": "A name says what a piece is, the screen shows its shape at a glance, and a piece can move to a file of its own.",
+      "example": null,
+      "example_note": "No example yet: the built example comes with the reformat of the examples to children as call arguments.",
+      "check": null,
+      "guide": "tree.md",
+      "evidence": null,
+      "revisit": "the reformat of all examples to the call form: the example of this rule comes with it"
     },
     {
       "id": "extendable-1",

@@ -51,6 +51,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`expressive-3`](#expressive-3) | Write a sequence in time, such as wait for a click, pause, then animate, as one `lv::task` coroutine, not as callbacks and timers. |
 | [`expressive-4`](#expressive-4) | Name the look of an element, `lv::look<"tile">`, and keep its values in the token file. |
 | [`expressive-5`](#expressive-5) | Use semantic and component tokens in screen code, such as `tok.color.selected`, not primitives such as a step of a palette. |
+| [`expressive-6`](#expressive-6) | Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists. |
 | [`extendable-1`](#extendable-1) | Put one screen in each file with the states only it uses, and give shared state, parts, design, platform and `main` places of their own. |
 | [`extendable-2`](#extendable-2) | Make a reusable piece of screen a function that returns a tree, and constrain each parameter with a public concept: `lv::dependency`, `lv::tree_handler`, `lv::tree_node`. |
 | [`extendable-3`](#extendable-3) | Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state. |
@@ -912,6 +913,18 @@ constexpr auto track_row =
 Checked: no tool checks this rule yet.
 
 Guide: Design tokens (not written yet).
+
+### expressive-6
+
+**Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists.**
+
+A name says what a piece is, the screen shows its shape at a glance, and a piece can move to a file of its own.
+
+No example yet: the built example comes with the reformat of the examples to children as call arguments.
+
+Checked: no tool checks this rule yet.
+
+Guide: The tree and its widgets (not written yet).
 
 ## Extendable
 
