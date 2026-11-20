@@ -196,6 +196,31 @@ class TrackFiles(unittest.TestCase):
             self.assertEqual(listed.stdout.split(), [])
 
 
+class CommentMutants(unittest.TestCase):
+    ORIGINAL = "int a = 1;\n  // a note\nint b = 2;\n"
+
+    def mutants(self, directory, texts):
+        out = []
+        for i, text in enumerate(texts):
+            path = pathlib.Path(directory, f"m{i}.hpp")
+            path.write_text(text)
+            out.append(path)
+        return out
+
+    def test_a_mutant_of_a_comment_line_is_dropped_and_one_of_code_is_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            comment = "int a = 1;\n  /*// a note*/\nint b = 2;\n"
+            code = "int a = 1;\n  // a note\nint b = 3;\n"
+            kept = mutation.without_comment_mutants(self.mutants(directory, [comment, code]), self.ORIGINAL)
+            self.assertEqual([m.name for m in kept], ["m1.hpp"])
+
+    def test_a_trailing_comment_does_not_make_a_line_a_comment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original = "int a = 1;  // one\n"
+            kept = mutation.without_comment_mutants(self.mutants(directory, ["int a = 2;  // one\n"]), original)
+            self.assertEqual(len(kept), 1)
+
+
 class Result(unittest.TestCase):
     def row(self, **kw):
         base = {"header": "include/lv/a.hpp", "since": "abc", "mutants": 10, "judged": 10, "complete": True,

@@ -132,6 +132,17 @@ def changed_line(original_lines, mutant_text):
     return pairs[0] if len(pairs) == 1 else None
 
 
+def without_comment_mutants(mutants, original):
+    """The mutants that change code. A mutant of a comment line changes nothing the compiler reads."""
+    original_lines = original.splitlines()
+    kept = []
+    for m in mutants:
+        pair = changed_line(original_lines, m.read_text())
+        if not (pair and pair[0].lstrip().startswith("//")):
+            kept.append(m)
+    return kept
+
+
 def logic_only(mutants, original):
     original_lines = original.splitlines()
     kept = []
@@ -288,6 +299,7 @@ def result_row(args, counts, survivors, triaged, judged, total):
 def choose_mutants(args, lines, original):
     """The mutants to judge: all of the chosen lines, the logic ones, or a sample."""
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / (TREE / args.header).stem)
+    mutants = without_comment_mutants(mutants, original)
     if args.logic:
         mutants = logic_only(mutants, original)
     total = len(mutants)
