@@ -119,7 +119,7 @@ FAIL_SNIPPET = re.compile(r"<!-- snippet: (tests/fail/(\w+)\.cpp) -->")
 def message_problems(page: pathlib.Path, text: str) -> list[str]:
     """Every quoted message shows what its compile-fail test pins."""
     import rules  # tools/rules.py reads tests/CMakeLists.txt
-    pinned = rules.pins()
+    pinned = rules.all_pins()
     problems = []
     for test, shown in MESSAGE.findall(text):
         if test not in pinned:

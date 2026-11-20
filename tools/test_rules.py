@@ -98,6 +98,20 @@ class Checks(unittest.TestCase):
     def test_a_cmake_argument_is_read_as_cmake_reads_it(self):
         self.assertEqual(rules.cmake_text(r'a \\(b\\) \"c\"'), r'a \(b\) "c"')
 
+    def test_cmake_escapes_are_read(self):
+        self.assertEqual(rules.cmake_text(r'a\nb \$type \\[^\n]'), "a\nb $type \\[^\n]")
+
+    def test_a_whole_message_is_shown_whole(self):
+        pinned = rules.all_pins()
+        whole = "error: constexpr message: lv: roller_mode has no value 'endless'. Its values: normal, infinite."
+        self.assertIsNone(rules.message_problem("enumerator_unknown_name_beside_text", whole + "\n", pinned))
+        self.assertIn("not the whole message",
+                      rules.message_problem("enumerator_unknown_name_beside_text", whole[:-1], pinned))
+
+    def test_a_placeholder_stands_for_what_the_compiler_computes(self):
+        shown = "error: constexpr message: lv: there is no widget 'lable'. Valid: obj, arc, label, slider."
+        self.assertIsNone(rules.message_problem("unknown_widget", shown, rules.all_pins()))
+
     def test_the_pins_of_the_repository_are_read(self):
         self.assertEqual(rules.pins()["each_two_rows"], "lv::each takes one row template")
 

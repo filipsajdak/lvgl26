@@ -47,6 +47,9 @@ MEASURED = {"fast-run", "fast-build"}  # their rules rest on a measurement, or s
 PROBED = "fast-run"  # its rules rest on a nightly probe, or name the probe they need
 PROBES = ROOT / "tools" / "metrics" / "probes.json"
 COMPILE_FAIL = re.compile(r'^lvgl26_compile_fail\((\w+) "((?:\\.|[^"\\])*)"\)', re.M)
+WHOLE_MESSAGE = re.compile(r'^lvgl26_compile_fail_message\((\w+) (\w+) "((?:\\.|[^"\\])*)"\)', re.M)
+CMAKE_SET = re.compile(r'^set\(LVGL26_(FORM|PLACEHOLDER)_(\w+) "((?:\\.|[^"\\])*)"\)', re.M)
+CMAKE_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "$": "$", "\\": "\\", '"': '"'}
 ADD_TEST = re.compile(r"add_test\(NAME (\w+)")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 LANGUAGES = {".cpp": "cpp", ".hpp": "cpp", ".json": "json", ".txt": "cmake"}
@@ -57,27 +60,54 @@ def load(path: pathlib.Path = DATA) -> dict:
 
 
 def cmake_text(quoted: str) -> str:
-    """The value of a quoted CMake argument: `\\\\.` is `\\.` and `\\"` is `"`."""
-    return re.sub(r'\\(["\\])', r"\1", quoted)
+    """The value of a quoted CMake argument: `\\\\.` is `\\.`, `\\"` is `"`, `\\n` a line break."""
+    return re.sub(r'\\([nrt$"\\])', lambda m: CMAKE_ESCAPES[m[1]], quoted)
 
 
 def pins() -> dict[str, str]:
-    """Each compile-fail test of tests/CMakeLists.txt, with the regular expression it pins."""
+    """Each compile-fail test of tests/CMakeLists.txt that pins a part of its message, with its regular expression."""
     text = (TESTS / "CMakeLists.txt").read_text()
     return {name: cmake_text(quoted) for name, quoted in COMPILE_FAIL.findall(text)}
+
+
+def message_forms() -> dict[tuple[str, str], str]:
+    """The forms and placeholders of a whole message, as cmake/compile_fail.cmake sets them."""
+    text = (ROOT / "cmake" / "compile_fail.cmake").read_text()
+    return {(kind, name): cmake_text(value) for kind, name, value in CMAKE_SET.findall(text)}
+
+
+def whole_pins() -> dict[str, str]:
+    """Each test of lvgl26_compile_fail_message, with the regular expression that its whole line matches,
+    from `error: ` on, as cmake/compile_fail.cmake builds it."""
+    forms = message_forms()
+    found = {}
+    for name, form, quoted in WHOLE_MESSAGE.findall((TESTS / "CMakeLists.txt").read_text()):
+        pattern = re.escape(cmake_text(quoted))
+        for (kind, placeholder), value in forms.items():
+            pattern = pattern.replace(re.escape(f"<<{placeholder}>>"), f"(?:{value})") if kind == "PLACEHOLDER" else pattern
+        found[name] = "error: " + forms[("FORM", form)] + pattern
+    return found
 
 
 def test_names() -> set[str]:
     """Every test that tests/CMakeLists.txt adds, compile-fail tests by their own name."""
     text = (TESTS / "CMakeLists.txt").read_text()
-    return set(ADD_TEST.findall(text)) | set(pins())
+    return set(ADD_TEST.findall(text)) | set(pins()) | set(whole_pins())
+
+
+def all_pins() -> dict[str, str]:
+    """Every compile-fail test: a part of its message (a pattern to search), or `whole:` and the whole line."""
+    return pins() | {name: "whole:" + pattern for name, pattern in whole_pins().items()}
 
 
 def message_problem(test: str, message: str, pinned: dict[str, str]) -> str | None:
-    """Why `message` does not show what the test `test` pins, or None."""
+    """Why `message` does not show what the test `test` pins, or None. A whole message is shown whole."""
     pin = pinned.get(test)
     if pin is None:
         return None
+    if pin.startswith("whole:"):
+        whole = re.fullmatch(pin[len("whole:"):], message.strip("\n")) is not None
+        return None if whole else f"the message is not the whole message that the test {test} pins"
     if "${" in pin:
         return f"the test {test} pins its message through a CMake variable, which this check cannot read"
     if re.search(pin, message) is None:
@@ -191,7 +221,7 @@ def rule_problems(rule: dict, data: dict, context: tuple[set[str], dict[str, str
 
 def problems(data: dict) -> list[str]:
     """Everything wrong with the data, one line each, prefixed by the rule's id."""
-    context = (test_names(), pins())
+    context = (test_names(), all_pins())
     found = []
     seen: set[str] = set()
     for rule in data["rules"]:
