@@ -176,6 +176,26 @@ class Baseline(unittest.TestCase):
             mutation.run = old
 
 
+class TrackFiles(unittest.TestCase):
+    def test_the_copy_lists_its_files_to_git(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "tokens.json").write_text("{}")
+            mutation.track_files(tree)
+            listed = subprocess.run(["git", "ls-files", "*.json"], cwd=tree, capture_output=True, text=True, check=True)
+            self.assertEqual(listed.stdout.split(), ["tokens.json"])
+
+    def test_a_second_run_sees_a_file_that_is_gone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "a.json").write_text("{}")
+            mutation.track_files(tree)
+            (tree / "a.json").unlink()
+            mutation.track_files(tree)
+            listed = subprocess.run(["git", "ls-files"], cwd=tree, capture_output=True, text=True, check=True)
+            self.assertEqual(listed.stdout.split(), [])
+
+
 class Result(unittest.TestCase):
     def row(self, **kw):
         base = {"header": "include/lv/a.hpp", "since": "abc", "mutants": 10, "judged": 10, "complete": True,

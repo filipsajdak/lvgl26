@@ -153,11 +153,19 @@ def run(command, cwd=TREE):
     return r.returncode, r.stdout + r.stderr
 
 
+def track_files(tree):
+    """Makes the copy a git repository of its own, so that a test that asks git for the tracked
+    files (tools/check_tokens.py) finds the same files as in the working tree."""
+    for command in (["git", "init", "-q"], ["git", "add", "-A"]):
+        subprocess.run(command, cwd=tree, check=True, capture_output=True)
+
+
 def make_copy(preset, cmake_args):
-    """Copies the working tree (without build/ and .git) and configures it."""
+    """Copies the working tree (without build/ and .git), makes it a repository and configures it."""
     TREE.mkdir(parents=True, exist_ok=True)
     subprocess.run(["rsync", "-a", "--delete", "--exclude", "/build", "--exclude", "/.git",
                     "./", str(TREE) + "/"], check=True)
+    track_files(TREE)
     code, output = run(f"cmake --preset {preset} {cmake_args}")
     if code != 0:
         sys.exit("Configuring the copy failed:\n" + output[-2000:])
