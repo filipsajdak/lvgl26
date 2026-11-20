@@ -78,3 +78,7 @@ python3 tools/check_includes.py src/main.cpp src/parts.hpp
 ```
 
 It reads the headers of the program that the files include with quotes, and skips comments and strings. It uses only the Python standard library.
+
+## For an agent
+
+The plugin of this repository has a skill, [skills/write-ui](../skills/write-ui/SKILL.md), that sends an agent to this page when a name is missing. An agent without the plugin reads this page in `llms.txt`: the message `main.cpp:12: lv::list needs #include <lv/list.hpp>` is to be followed as it stands.
