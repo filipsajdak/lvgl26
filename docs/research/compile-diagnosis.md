@@ -227,21 +227,22 @@ What each kind of file can expect from the five together, from the files measure
 | A file that draws fonts | `print_page.cpp`, `tests/look.cpp` | 4 to 5 %: the fonts are the cost, see fix 2 | `measured` |
 | A file that names no widget | `<lv/lv.hpp>` only | none | `measured` |
 
-### Fixes 3 to 7 as built
+### Fixes 3, 4, 5 and 7 as built
 
-Built in the branch `perf/first-widget`, one commit per fix, on top of `perf/lazy-api`. Full compile with the flags of the build, operation limits kept, minimum of three runs, G.
+Built in the branch `perf/first-widget`, one commit per fix. Measured on 2026-11-20 against `main` at `9dccce2`: full compile with the flags of the build, operation limits kept, minimum of three runs, G.
 
 | File | Before | After | Change | Mark |
 |---|---|---|---|---|
-| `<lv/lv.hpp>` only | 12.75 | 12.82 | +0.5 %, within the spread of 0.43 | `measured` |
-| One mounted label | 53.74 | 43.79 | −18.5 % | `measured` |
-| 100 labels | 74.15 | 64.16 | −13.5 % | `measured` |
-| 10 widget kinds | 105.57 | 83.13 | −21.3 % | `measured` |
-| `tests/large_tree.cpp`, under its limit of 6.5 million | 92.25 | 72.16 | −21.8 % | `measured` |
-| `examples/quick_start/main.cpp` | 133.99 | 108.53 | −19.0 % | `measured` |
-| `<lv/signal.hpp>` | 81.48 | 64.05 | −21.4 % | `measured` |
-| `tests/theme.cpp` | 103.43 | 79.66 | −23.0 % | `measured` |
+| `<lv/lv.hpp>` only | 12.84 | 12.83 | −0.1 % | `measured` |
+| One mounted label | 53.85 | 45.66 | −15.2 % | `measured` |
+| 10 widget kinds | 105.56 | 93.93 | −11.0 % | `measured` |
+| `tests/large_tree.cpp`, under its limit of 6.5 million | 92.02 | 75.04 | −18.5 % | `measured` |
+| `examples/quick_start/main.cpp` | 134.07 | 112.70 | −15.9 % | `measured` |
+| `<lv/signal.hpp>` | 81.34 | 64.23 | −21.0 % | `measured` |
+| `tests/theme.cpp` | 103.35 | 81.99 | −20.7 % | `measured` |
 
+- Fix 6 was withdrawn. A name passed to `data_member_spec` as a view of a static string makes a `std::string` that compares the pointer with null. Under a sanitizer GCC 16.2 does not fold that: `host-v96-asan` stopped compiling `theme.cpp`, `look.cpp` and `signal.cpp`. `member_pairs` and the theme table copy the name with `detail::str` again. `measured`
+- The same holds for `std::string(view)`: it fails under a sanitizer on a string from `std::define_static_string`, and compiles without one. `std::string(view.begin(), view.end())` compiles under both, at a quarter of the cost of `detail::str`'s `push_back` loop. `measured` on a probe of 1000 names
 - The builtins are filtered by `detail::declared_in_a_file`. `tests/api_table.cpp` compares the table with a scan that asks every name, so a platform that puts builtins elsewhere loses the gain, not a function.
 - The merge sort is two functions, each of complexity 8 or less, as `tools/crap.py` asks.
 - All 277 compile-fail tests give the same error text as before on `host-v96`; only line numbers in our headers moved.
