@@ -315,7 +315,7 @@ jobs:
   cost:
     needs: [image, cost-plan]
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: read

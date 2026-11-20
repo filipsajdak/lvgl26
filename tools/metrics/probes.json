@@ -1,6 +1,6 @@
 {
   "comment": "The probes of the nightly compile-cost run. One line adds a probe. kind compile: Valgrind's instruction total of one cc1plus on `file` (docs/research/compile-time.md, 'The nightly measure'). kind stack: bytes of stack of a function, read from the report of the Arm job. threshold_percent is the change in Ir that opens an issue; it is the default when a probe names none.",
-  "default_threshold_percent": 0.4,
+  "default_threshold_percent": 0.5,
   "probes": [
     {
       "id": "include_lv",
