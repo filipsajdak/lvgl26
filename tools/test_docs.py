@@ -152,6 +152,12 @@ class Rules(unittest.TestCase):
         self.assertTrue(any("fast-run-2" in p for p in missing))
 
 
+class OutlineList(unittest.TestCase):
+    def test_a_name_that_is_no_page_fails(self):
+        self.assertEqual(docs.outline_name_problems({"lists.md", "list.md"}),
+                         ["docs/docs.json: the outline names list.md, which is no page"])
+
+
 class Links(unittest.TestCase):
     def test_limits_link_the_status_page(self):
         self.assertTrue(any("status page" in p for p in problems(guide(Limits="Nothing yet.\n"))))

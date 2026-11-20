@@ -295,6 +295,12 @@ def outlined() -> set[str]:
     return set(json.loads((DOCS / "docs.json").read_text()).get("outline", []))
 
 
+def outline_name_problems(outline: set[str]) -> list[str]:
+    """A name under `outline` that is no page would leave the outline unchecked."""
+    return [f"docs/docs.json: the outline names {name}, which is no page" for name in sorted(outline)
+            if not (DOCS / name).is_file()]
+
+
 def page_problems(page: pathlib.Path, text: str, outline: set[str]) -> list[str]:
     problems = snippet_problems(page, text) + c_name_problems(page, text) + link_problems(page, text)
     problems += message_problems(page, text) + rules_problems(page, text)
@@ -304,8 +310,8 @@ def page_problems(page: pathlib.Path, text: str, outline: set[str]) -> list[str]
 
 
 def check() -> int:
-    problems = []
     outline = outlined()
+    problems = outline_name_problems(outline)
     for page in pages():
         problems += page_problems(page, page.read_text(), outline)
     for problem in problems:
