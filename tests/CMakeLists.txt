@@ -955,6 +955,8 @@ target_link_libraries(visibility_probe PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+  # The outline of a guide, its messages tied to compile-fail tests, and its rules.
+  add_test(NAME docs_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_docs.py)
   # The rules of good code are data; the page "Writing good lvgl26 code" is written from it.
   add_test(NAME rules_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/rules.py
                                    --check-page ${PROJECT_SOURCE_DIR}/docs/rules.md)

@@ -4,6 +4,7 @@
   "for_agents": "Every page below is Markdown. Its code blocks come from files that the project's tests compile and run. Read the quick start first; llms-full.txt holds all pages in one file.",
   "site": "https://filipsajdak.github.io/lvgl26/",
   "repository": "https://github.com/filipsajdak/lvgl26",
+  "outline": [],
   "sections": [
     {
       "title": "Start",
