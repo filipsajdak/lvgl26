@@ -399,7 +399,7 @@ Checked: no tool checks this rule yet.
 
 Measured on 2026-11-18, in [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md): Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment.
 
-Wins over: Beats `fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes.
+Wins over `fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes.
 
 Guide: [Fonts](fonts.md).
 
@@ -441,7 +441,7 @@ parts.hpp:8: lv::list needs #include <lv/list.hpp>
 
 Measured on 2026-11-20, in [header-structure.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/header-structure.md): A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G.
 
-Wins over: Beats the ease of one header for everything: that ease is worth it in a first program only.
+Wins over the ease of one header for everything, which is worth it in a first program only.
 
 Guide: [Which header](which-header.md).
 
@@ -682,7 +682,7 @@ Checked: no tool checks this rule yet.
 
 Measured on 2026-11-19, in [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md): A warm precompiled header took a file with one label from 54 G to 6 G instructions: the largest build saving measured.
 
-Wins over: Beats the largest build saving there is: a check that silently goes away is worse than a slow build.
+Wins over the largest build saving there is: a check that silently goes away is worse than a slow build.
 
 Guide: Keeping builds fast (not written yet).
 
@@ -783,7 +783,7 @@ constexpr auto ui = lv::group({.style = lv::look<"page">})[
 
 Checked: no tool checks this rule yet.
 
-Wins over: Beats a little build time: `<lv/look.hpp>` adds about 3.3 G instructions to a file that uses it, less than one new widget kind.
+Wins over a little build time: `<lv/look.hpp>` adds about 3.3 G instructions to a file that uses it, less than one new widget kind.
 
 Guide: [Looks](looks.md).
 
@@ -825,7 +825,7 @@ No example yet: the printer port has a file per page; a smaller program comes wi
 
 Checked: no tool checks this rule yet.
 
-Wins over: Beats the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file.
+Wins over the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file.
 
 Guide: An application that grows (not written yet).
 

@@ -170,7 +170,7 @@
       "check": null,
       "guide": "fonts.md",
       "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment."},
-      "wins_over": "Beats `fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes."
+      "wins_over": "`fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes."
     },
     {
       "id": "fast-run-7",
@@ -192,7 +192,7 @@
       "check": {"by": "build", "tool": "cmake/check_includes.cmake", "scope": "every target that links lvgl26 through its CMake, unless LVGL26_CHECK_INCLUDES is off", "test": "include_check_build", "pinned_in": "tests/include_check/run.cmake", "message": "parts.hpp:8: lv::list needs #include <lv/list.hpp>"},
       "guide": "which-header.md",
       "evidence": {"source": "docs/research/header-structure.md", "date": "2026-11-20", "finding": "A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G."},
-      "wins_over": "Beats the ease of one header for everything: that ease is worth it in a first program only."
+      "wins_over": "the ease of one header for everything, which is worth it in a first program only."
     },
     {
       "id": "fast-build-2",
@@ -306,7 +306,7 @@
       "check": null,
       "guide": "build-fast.md",
       "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A warm precompiled header took a file with one label from 54 G to 6 G instructions: the largest build saving measured."},
-      "wins_over": "Beats the largest build saving there is: a check that silently goes away is worse than a slow build."
+      "wins_over": "the largest build saving there is: a check that silently goes away is worse than a slow build."
     },
     {
       "id": "checked-8",
@@ -359,7 +359,7 @@
       "check": null,
       "guide": "looks.md",
       "evidence": null,
-      "wins_over": "Beats a little build time: `<lv/look.hpp>` adds about 3.3 G instructions to a file that uses it, less than one new widget kind."
+      "wins_over": "a little build time: `<lv/look.hpp>` adds about 3.3 G instructions to a file that uses it, less than one new widget kind."
     },
     {
       "id": "expressive-5",
@@ -381,7 +381,7 @@
       "check": null,
       "guide": "growing.md",
       "evidence": null,
-      "wins_over": "Beats the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file."
+      "wins_over": "the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file."
     },
     {
       "id": "extendable-2",

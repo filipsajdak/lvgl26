@@ -17,7 +17,8 @@ never used again, so a review, a commit, a guide or a message can cite it. The d
     guide         the page that explains it: a page in docs/, or one of `pages_planned`
     evidence      null ("not measured yet"), or the note that holds a measurement, its date and
                   what it found
-    wins_over     optional: which pull the rule beats when two qualities disagree, and why
+    wins_over     optional: what the rule beats when two qualities disagree, and why; the page
+                  writes it after "Wins over"
 
 The checks: unique ids of the form <quality>-<n>; an example's region exists; a check's test exists,
 and the message equals what a compile-fail test pins; a guide exists or is planned, and a planned
@@ -232,7 +233,7 @@ def evidence_lines(rule: dict) -> list[str]:
 def rule_section(rule: dict, data: dict) -> list[str]:
     lines = [f"### {rule['id']}", "", f"**{rule['rule']}**", "", rule["why"], ""]
     lines += example_lines(rule) + [""] + check_lines(rule["check"]) + [""]
-    for extra in (evidence_lines(rule), [f"Wins over: {rule['wins_over']}"] if rule.get("wins_over") else []):
+    for extra in (evidence_lines(rule), [f"Wins over {rule['wins_over']}"] if rule.get("wins_over") else []):
         lines += extra + ([""] if extra else [])
     return lines + [guide_line(rule["guide"], data), ""]
 
