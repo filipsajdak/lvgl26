@@ -1288,3 +1288,7 @@ lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their par
 lvgl26_compile_fail(missing_header_shown "lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+
+add_library(tmp_lists_old OBJECT ${PROJECT_SOURCE_DIR}/examples/lists/old.cpp)
+target_compile_options(tmp_lists_old PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/lists)
+target_link_libraries(tmp_lists_old PRIVATE lvgl26::lvgl26 lvgl26_warnings)
