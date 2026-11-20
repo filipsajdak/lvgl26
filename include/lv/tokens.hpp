@@ -96,25 +96,16 @@ consteval std::meta::info token_cpp_type(token_type t) {
   fail("lv: design tokens: " + str(what));
 }
 
-// The path of the token that holds the text at `at`, as "group.token": made only for a message, by a search of the
-// document, so that reading a token costs nothing for it. A group on the way is part of the path; what lies inside
-// a token (its value, the parts of a shadow) is not.
-consteval bool locate_token(json::value group, const char* at, std::string& path) {
+// The path "group.token" of the token that holds the text `inside`, or an empty text: made only for a message, by
+// a search of the document, so that reading a token costs nothing for it.
+consteval std::string token_path(json::value group, std::string_view inside) {
   for (const json::member m : group.members()) {
-    if (m.key.starts_with("$") || at < m.text.data() || at >= m.text.data() + m.text.size()) continue;
-    const auto before = path.size();
-    if (!path.empty()) path += '.';
-    path.append(m.key);
-    if (json::value{m.text}["$value"] || locate_token(json::value{m.text}, at, path)) return true;
-    path.resize(before);
+    if (m.key.starts_with("$") || inside.data() < m.text.data() || inside.data() >= m.text.data() + m.text.size()) continue;
+    if (json::value{m.text}["$value"]) return std::string(m.key);
+    const auto within = token_path(json::value{m.text}, inside);
+    return within.empty() ? within : join({m.key, ".", within});
   }
-  return false;
-}
-
-consteval std::string token_path(json::value root, std::string_view inside) {
-  std::string path;
-  locate_token(root, inside.data(), path);
-  return path;
+  return {};
 }
 
 // A message about the token that holds the text `inside`, which is part of the document `root`.
@@ -176,28 +167,24 @@ consteval json::value alias_target(json::value root, std::string_view alias) {
   return {};
 }
 
-// Whether the chain of aliases that starts at `alias` comes back to it: a real circle, and no chain that is only long.
-consteval bool alias_circles(json::value root, std::string_view alias) {
-  const auto most_hops = 64;
-  auto next = alias;
-  for (int hop = 0; hop < most_hops; ++hop) {
-    const auto value = alias_target(root, next)["$value"];
-    if (!value.is(json::kind::string) || !value.string().starts_with("{")) return false;
-    next = value.string();
-    if (next == alias) return true;
-  }
-  return false;
-}
-
 inline constexpr int most_aliases_in_a_row = 8;
 
+// The chain of aliases is too long, or it comes back to its start: a real circle.
 [[noreturn]] consteval void fail_alias_chain(json::value root, std::string_view alias) {
-  if (alias_circles(root, alias)) token_fail_in(root, alias, {"the alias ", alias, " goes in a circle."});
+  const auto most_hops = 64;
+  auto next = alias;
+  bool circle = false;
+  for (int hop = 0; hop < most_hops && !circle; ++hop) {
+    const auto value = alias_target(root, next)["$value"];
+    if (!value.is(json::kind::string) || !value.string().starts_with("{")) break;
+    next = value.string();
+    circle = next == alias;
+  }
+  if (circle) token_fail_in(root, alias, {"the alias ", alias, " goes in a circle."});
   token_fail_in(root, alias, {"the alias ", alias, " follows more than ", decimal(most_aliases_in_a_row),
                               " aliases in a row, the most lvgl26 follows. Point the first alias of the chain nearer its value."});
 }
 
-// Follows "{group.token}" from the root. The type is inherited along the way.
 consteval resolved_token follow_alias(json::value root, std::string_view alias, int depth) {
   if (depth > most_aliases_in_a_row) fail_alias_chain(root, alias);
   auto path = alias.substr(1, alias.size() - 2);
@@ -582,29 +569,25 @@ consteval bool is_legacy_form(token_type kind, json::value v) {
 
 // A channel of a color as the standard writes it: 0 to 1, in at most three decimals ("0.2", "1", "0.133").
 consteval std::string channel_text(int channel) {
-  const int thousandths = (channel * 1000 + 127) / 255;
-  if (thousandths == 1000) return "1";
-  if (thousandths == 0) return "0";
-  std::string fraction = decimal(static_cast<std::size_t>(thousandths));
-  fraction.insert(0, 3 - fraction.size(), '0');
-  while (fraction.back() == '0') fraction.pop_back();
-  return join({"0.", fraction});
-}
-
-// A color written "#rrggbb" or "#rgb" as the standard writes it: its components, and the hex.
-consteval std::string standard_color(std::string_view hex) {
-  const auto short_form = hex.size() == 4;
-  std::string components;
-  for (std::size_t i = 0; i < 3; ++i) {
-    const int channel = short_form ? hex_digit(hex[1 + i]) * 17 : hex_digit(hex[1 + 2 * i]) * 16 + hex_digit(hex[2 + 2 * i]);
-    components += join({i ? ", " : "", channel_text(channel)});
-  }
-  return join({"{\"colorSpace\": \"srgb\", \"components\": [", components, "], \"hex\": \"", hex, "\"}"});
+  const auto thousandths = static_cast<std::size_t>(channel) * 1000 / 255 + (static_cast<std::size_t>(channel) * 1000 % 255 >= 128);
+  if (thousandths % 1000 == 0) return thousandths ? "1" : "0";
+  char digits[] = {'0', '.', static_cast<char>('0' + thousandths / 100), static_cast<char>('0' + thousandths / 10 % 10),
+                   static_cast<char>('0' + thousandths % 10)};
+  std::size_t length = sizeof digits;
+  while (digits[length - 1] == '0') --length;
+  return std::string(digits, length);
 }
 
 // What the standard writes in place of the form `v`, with the value of `v`: {"value": 16, "unit": "px"}.
 consteval std::string standard_form(token_type kind, json::value v) {
-  if (kind == token_type::color) return standard_color(v.string());
+  if (kind == token_type::color) {
+    const auto hex = v.string();
+    const auto component = [&](std::size_t i) {
+      return channel_text(hex.size() == 4 ? hex_digit(hex[1 + i]) * 17 : hex_digit(hex[1 + 2 * i]) * 16 + hex_digit(hex[2 + 2 * i]));
+    };
+    return join({"{\"colorSpace\": \"srgb\", \"components\": [", component(0), ", ", component(1), ", ", component(2),
+                 "], \"hex\": \"", hex, "\"}"});
+  }
   const std::string_view default_unit = kind == token_type::duration ? "ms" : "px";
   if (v.is(json::kind::number)) return join({"{\"value\": ", v.text(), ", \"unit\": \"", default_unit, "\"}"});
   const auto s = v.string();
