@@ -38,6 +38,11 @@ struct node;
 
 namespace detail {
 
+// tmp: a declaration that changes nothing, to see how far Ir moves for no reason.
+struct cost_null_marker {
+  int unused;
+};
+
 template <class T>
 inline constexpr bool is_node = false;
 template <fixed W, class... Kids>
