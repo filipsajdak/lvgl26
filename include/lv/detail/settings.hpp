@@ -10,6 +10,7 @@
 #include <lv/config.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/detail/json_fault.hpp>
 #include <lv/detail/nearest.hpp>
 #include <lv/json.hpp>
 
@@ -159,8 +160,11 @@ struct settings_read {
 template <settings_section S>
 consteval settings_read<S> read_settings(settings_text file) {
   const settings_place top{file.name, ""};
-  const auto document = json::value::parse(std::string_view{file.text, file.size});
-  if (!document) return {S{}, std::define_static_string(mistake(top, "the file is no well-formed JSON."))};
+  const std::string_view text{file.text, file.size};
+  const auto document = json::value::parse(text);
+  if (!document)
+    return {S{}, std::define_static_string(mistake(top, "the file is not well-formed JSON. " +
+                                                            json::detail::describe_fault(text, json::detail::find_fault(text))))};
   S out{};
   const std::string wrong = read_into(out, *document, top);
   return {out, std::define_static_string(wrong)};
