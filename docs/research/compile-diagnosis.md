@@ -1173,6 +1173,26 @@ index ae4442f385..556a5de715 100644
 - Files other than the one-label file: `signal.hpp`, `look.cpp`, the fonts. D is likely to matter there.
 - The editor stubs and the compile-fail tests of lvgl26 under the patched compilers.
 
+## What was reported to GCC
+
+GCC declines a legally significant contribution that includes or derives from LLM output. Its policy allows such tools for research, analysis and bug reports. [GCC AI policy](https://gcc.gnu.org/ai-policy.html), adopted 2026-07-29. `source` 2026-11-20
+
+So each report holds a reproducer and numbers. An experiment's diff is attached only as "LLM-generated, reference only, not a patch submission".
+
+| Report | What it says | State on 2026-11-20 |
+|---|---|---|
+| [128900](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128900) | Candidate A: `identifier_of` builds its view from a pointer though it knows the length | Open. The diff was first attached as a patch; a comment corrects that |
+| [128901](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128901) | Candidate B: the string built-ins do not fold on the constexpr heap | Closed as a duplicate of [94082](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94082). A comment there names the library half, which needs no compiler change |
+| [128902](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128902) | Candidate D: `vector<T>(n)` constructs and destroys each element through calls | Open |
+| [125819](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=125819) | A comment asks for a backport to GCC 16 of the commit that makes `members_of` skip built-ins | Fixed on trunk; no answer on the backport |
+| [128909](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128909) | A precompiled header drops the `pre` and `post` of templates, depending on addresses | Open |
+| [128870](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128870) | "taking address of an immediate function" at random with `-fdeclone-ctor-dtor` | Open; others confirmed it on MinGW |
+| [128871](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128871) | The frame of `std::noop_coroutine` holds functions of the wrong type | Open |
+
+Candidate C, the cache of metafunction calls, was not reported: it gains lvgl26 at most 1 %.
+
+Related reports found on the way: [106889](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106889), `__builtin_strlen` in constant evaluation, and [127894](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=127894), the evaluator's overhead on array scans. `source` 2026-11-20
+
 ## Tried and ruled out
 
 | Idea | Result | Mark |
