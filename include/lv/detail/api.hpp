@@ -83,7 +83,7 @@ consteval std::string decimal(std::size_t n) {
 // resolution among the many operator+ of std::string at each +; a message is built here.
 consteval std::string join(std::initializer_list<std::string_view> parts) {
   std::string out;
-  for (const std::string_view part : parts) out.append(part);
+  for (const std::string_view part : parts) out += str(part);  // not append(part): see str
   return out;
 }
 
