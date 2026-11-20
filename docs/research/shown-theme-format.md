@@ -878,3 +878,21 @@ They belong to the looks feature, and they share its constant styles per mode.
 The order of building is the page node, formatted text, injection, and then looks.
 The cost of a wider handler to `tests/large_tree.cpp` is measured before injection is built.
 If a tree without injection gets dearer, the owner decides again.
+
+### Building `lv::shown`: slots, transitions, pages of other files
+
+Decided 2026-11-20, while `lv::shown` was built (pull requests 182 and 183).
+The numbers continue the list above.
+
+| # | Decision |
+|---|---|
+| 28 | The form of the notes stands: `lv::shown(state)[lv::is<v>(tree), lv::is<v>(), lv::otherwise()]`, and `lv::when(flag)[tree]`. |
+| 29 | `.on_shown` gets `lv::held<tree>`, the handle that `lv::one_of` gives; `held` serves both. |
+| 30 | A page of another file declares no size. The file defines `constinit const lv::page home_page = lv::page_of<ui>;` and the others declare `extern const lv::page home_page;`. |
+| 31 | Pages live in slots of the size of the largest page. `.alive` is the number of slots, 2 by default, and the program may raise it. With every tree visible the slots are in the tree's storage; with a page of another file the node takes one block of `alive` slots from LVGL's heap at mount, frees it with the tree, and a mount without room for it fails with `out_of_memory`. A switch allocates nothing. |
+| 32 | Transitions are given on the node: `lv::shown(state, {.enter = slide_in, .leave = slide_out})`, with `lv::transition`, which takes the arguments of `lv::animate`. Per-arm transitions may follow. |
+| 33 | The entering page is built in a free slot before the old one leaves. A page asked for again while it leaves turns round where it stands; a change during an enter makes the entering page leave; a third page cuts the one that leaves. A leaving page takes no clicks. |
+| 34 | Without a transition the old page is deleted before the new one is built; the new one is built first only when a transition needs both. Measured on the printer: 102,592 bytes of peak heap against 132,312 with both pages. |
+| 35 | With `.alive` above 2 the most recently shown pages stay built and hidden; the one shown longest ago is dropped when a slot is needed. `.keep = lv::neighbours` and named pages may follow as options. It is the pull request after the transitions and the printer. |
+| 36 | `.on_shown` means "the page was built". `.on_front` runs each time a page comes to the front, built or kept, and takes the same `lv::held<tree>`. On a build `.on_shown` runs first, then `.on_front`. |
+| 37 | The printer's pagers go: both page sets are `lv::shown`, and the holder of the sub-pages takes no clicks itself. |

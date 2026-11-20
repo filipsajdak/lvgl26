@@ -130,4 +130,7 @@ class display {
 /// The display a widget is on. The widget must be on an lv::display.
 display& display_of(obj widget);
 
+/// Does the waiting work now, such as the switch of an lv::shown node whose state changed.
+inline void settle() {}
+
 }  // namespace lv

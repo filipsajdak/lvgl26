@@ -9,6 +9,7 @@
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/detail/theme_styles.hpp>
+#include <lv/match.hpp>
 #include <lv/generated.hpp>
 #include <lv/props.hpp>
 #include <lv/stub.hpp>
@@ -119,5 +120,21 @@ class pointer {
  public:
   explicit pointer(display&) {}
 };
+
+// lv/shown.hpp
+namespace detail {
+template <class Pattern, class T>
+struct tree_arm {
+  static_assert(header_missing<T>, "lv::is<...>(tree) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>");
+};
+}  // namespace detail
+
+template <class... A>
+  requires detail::not_read<"lv/shown.hpp", A...>
+stub::anything shown(A&&...) = delete("lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>");
+
+template <class... A>
+  requires detail::not_read<"lv/shown.hpp", A...>
+stub::anything when(A&&...) = delete("lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>");
 
 }  // namespace lv
