@@ -58,7 +58,7 @@
     <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .size = {<span class="n">110</span> * px, <span class="n">110</span> * px}, .value = <span class="n">120</span>}),
     <span class="t">lv::button</span>({.id = <span class="s">"reset"</span>, .on_clicked = &amp;reset})[<span class="t">lv::label</span>({.text = <span class="s">"Reset"</span>})]];
 
-<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(screen);        <span class="c">// built in place; owns the widgets</span>
+<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(display.screen());  <span class="c">// built in place; owns the widgets</span>
 <span class="k">auto</span> speedo = root-&gt;get&lt;<span class="s">"speedo"</span>&gt;();     <span class="c">// lv::view&lt;"arc"&gt;, typed by the id</span>
 speedo.set({.value = <span class="n">60</span>});</code></pre>
         </figure>
@@ -113,7 +113,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <dl class="spec">
           <div><dt>Came from</dt><dd>The printer demo of Slint: <code>.slint</code> files, seven pages.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/ports_printer.cpp</code> shows every page and compares it with a reference picture in <code>tests/ref/</code>.</dd></div>
-          <div><dt>To compile</dt><dd>None of the ten files measured took more than 30 s or 3.1 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
+          <div><dt>To compile</dt><dd>None of the nine files measured took more than 28 s or 3.4 GB, at the project's normal limit for constant evaluation. Measured once with GCC 16.2 on a loaded machine.</dd></div>
           <div><dt>Differs</dt><dd>Gradients are vertical or horizontal, and one of the original's four themes is ported. <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/ports/slint/printer/README.md#what-differs-from-the-original">All differences</a>.</dd></div>
         </dl>
         <ul class="links">
@@ -179,7 +179,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       </figure>
       <div class="prose">
         <span class="tag">LVGL's own examples</span>
-        <h3>67 of 96 examples, for 17 widgets</h3>
+        <h3>69 of 102 examples, for 18 widgets</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
           <div><dt>Ported</dt><dd>69 of the 102 examples of the 18 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
@@ -221,7 +221,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt><code>NumberAnimation</code>, <code>Behavior</code>, easing</dt><dd><code>lv::animate(widget, {.value = {0, 100}}, 300 * ms, lv::ease::in_quad)</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-qt.html">Read the guide for Qt Quick</a></p>
-        <p class="more"><strong>12 of 29 concepts work.</strong> <a href="status.html#migration-qt">See what is missing</a>.</p>
+        <p class="more"><strong>16 of 31 concepts work.</strong> <a href="status.html#migration-qt">See what is missing</a>.</p>
       </div>
       <div class="card" id="migrate-slint">
         <span class="tag">Slint</span>
@@ -233,7 +233,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt><code>animate x { duration: 200ms; }</code></dt><dd><code>lv::animate(widget, {.x = {0 * px, 80 * px}}, 200 * ms, lv::ease::in_quad)</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-slint.html">Read the guide for Slint</a></p>
-        <p class="more"><strong>12 of 25 concepts work.</strong> <a href="status.html#migration-slint">See what is missing</a>.</p>
+        <p class="more"><strong>15 of 27 concepts work.</strong> <a href="status.html#migration-slint">See what is missing</a>.</p>
       </div>
       <div class="card" id="migrate-touchgfx">
         <span class="tag">TouchGFX</span>
@@ -245,7 +245,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
           <div><dt>A timer tick, <code>handleTickEvent</code></dt><dd><code>co_await lv::sleep(20 * ms)</code> in an <code>lv::task</code></dd></div>
         </dl>
         <p class="more"><a href="docs/from-touchgfx.html">Read the guide for TouchGFX</a>. There is no TouchGFX port yet.</p>
-        <p class="more"><strong>10 of 21 concepts work.</strong> <a href="status.html#migration-touchgfx">See what is missing</a>.</p>
+        <p class="more"><strong>12 of 21 concepts work.</strong> <a href="status.html#migration-touchgfx">See what is missing</a>.</p>
       </div>
     </div>
   </div>
@@ -274,7 +274,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <figcaption><span>a length where an angle goes</span><span>tests/fail/props_wrong_unit.cpp</span></figcaption>
 <pre tabindex="0"><code><span class="k">constexpr auto</span> ui =
     <span class="t">lv::arc</span>({.rotation = <span class="n">120</span> * px});</code></pre>
-        <div class="out"><pre>error: ... It takes an angle (90 * lv::deg). You gave lv::length</pre></div>
+        <div class="out"><pre>error: ... It takes an angle in whole degrees (90 * lv::deg). You gave lv::length</pre></div>
       </figure>
       <figure class="code">
         <figcaption><span>a raw value in a style</span><span>tests/fail/style_needs_token.cpp</span></figcaption>
@@ -283,7 +283,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <div class="out"><pre>error: ... It takes a design token (for example tok.space.md) or lv::raw(...), holding a length ... You gave lv::length</pre></div>
       </figure>
     </div>
-    <p class="cap">Each message is the text that a compile-fail test in <code>tests/CMakeLists.txt</code> requires. "..." stands for the part of the compiler's line that the test does not pin down. There are 91 such tests.</p>
+    <p class="cap">Each message is the text that a compile-fail test in <code>tests/CMakeLists.txt</code> requires. "..." stands for the part of the compiler's line that the test does not pin down. There are 298 compile-fail tests in all.</p>
 
     <div class="feature two">
       <div class="prose">
@@ -321,7 +321,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <p>A state says what it holds: a measure with a unit, a count, a bool, an enum, a color. Widgets follow it, and a bound arc writes back. Measures are <a href="https://github.com/mpusz/mp-units">mp-units</a> quantities, so a conversion that would lose something does not compile.</p>
         <ul>
           <li><code>lv::state&lt;int&gt;</code> is rejected: a plain integer does not say what it is. The error shows the choices.</li>
-          <li>A state is an <code>lv_subject_t</code> underneath, so C code can share it.</li>
+          <li>A state keeps its own list of watchers. <code>raw()</code> makes an <code>lv_subject_t</code> on first use, so C code can share it.</li>
         </ul>
       </div>
       <figure class="code">
@@ -444,7 +444,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Signal's typefaces</strong>: a second header sets the theme's text in Barlow and makes a font of digits for a large reading</li>
         <li><strong>Token-only styles</strong> in read-only memory</li>
         <li><strong>Selectors</strong>: a style for one part in one state, <code>lv::on("knob", "pressed", {...})</code>, in a node or a theme</li>
-        <li><strong>Typed state and bindings</strong> over <code>lv_subject_t</code>, with mp-units measures</li>
+        <li><strong>Typed state and bindings</strong> with mp-units measures, shared with C code through <code>raw()</code></li>
         <li><strong>Derived state and effects</strong> with <code>lv::computed</code> and <code>lv::effect</code></li>
         <li><strong>Lists</strong> of keyed rows: a change touches its own row only, and a state follows the selected row</li>
         <li><strong>Named looks</strong>: <code>.style = lv::look&lt;"tile"&gt;</code> builds a constant style from a group of the design tokens, by name, with the entries checked</li>
@@ -571,7 +571,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
     </div>
 
     <ul class="facts">
-      <li><b>251</b><span>compile-fail tests, each with the message the user must see</span><small>tests/CMakeLists.txt</small></li>
+      <li><b>298</b><span>compile-fail tests, each with the message the user must see</span><small>tests/CMakeLists.txt</small></li>
       <li><b>2</b><span>LVGL versions on every change: v9.6.0 and the v10 pin</span><small>CMakePresets.json</small></li>
       <li><b>9</b><span>build presets: warnings as errors, sanitizers, analyzer, coverage, a microcontroller</span><small>CMakePresets.json</small></li>
       <li><b>8</b><span>the limit for complexity and for CRAP, for every function</span><small>tools/crap.py</small></li>
@@ -589,7 +589,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
           <tr><th scope="row">Pixel tests</th><td>Screens are rendered headless and compared with reference pictures. The ported LVGL examples are compared with the C originals.</td><td class="path">tests/ref/, tests/examples_*.cpp, tests/ports_*.cpp</td></tr>
           <tr><th scope="row">Complexity and CRAP</th><td>A function over complexity 8 is split, not excused. CI fails above the limit.</td><td class="path">tools/crap.py, .github/workflows/ci.yml</td></tr>
           <tr><th scope="row">Mutation testing</th><td>Changed lines are mutated. Every surviving mutant gets a test, or a reason.</td><td class="path">tools/mutation.py</td></tr>
-          <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents and MCP messages each have a target. The 34 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
+          <tr><th scope="row">Fuzzing</th><td>The JSON reader, runtime documents, MCP messages and MCP streams each have a target. The 33 corpus inputs are replayed as tests under every preset.</td><td class="path">fuzz/, fuzz/corpus/</td></tr>
         </tbody>
       </table>
     </div>
@@ -683,7 +683,7 @@ cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ct
     <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="n">120</span>}),
     <span class="t">lv::button</span>({.on_clicked = &amp;reset})[<span class="t">lv::label</span>({.text = <span class="s">"Reset"</span>})]];
 
-<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(<span class="t">lv::screen_active</span>());   <span class="c">// built in place; owns the widgets</span>
+<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(display.screen());   <span class="c">// built in place; owns the widgets</span>
 root-&gt;get&lt;<span class="s">"speedo"</span>&gt;().set({.value = <span class="n">0</span>});          <span class="c">// a typed view of the arc</span></code></pre>
         </figure>
       </div></li>

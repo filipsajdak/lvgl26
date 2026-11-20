@@ -18,14 +18,14 @@ with all the quality presets.
 |---|---|
 | `label_translation` | LVGL's translation tables (`lv_translation_*`), which the framework does not wrap |
 | `arc_knob_widget` | `lv_arc_rotate_obj_to_angle`: a view reaches `set` and `get` functions only |
-| `slider_styling`, `switch_styling`, `checkbox_styling` | A style for one part in one state (the knob while pressed) |
+| `slider_styling`, `switch_styling`, `checkbox_styling` | Can be ported now: `lv::on("knob", "pressed", {...})` styles a part in a state. Not done yet |
 | `obj_draggable` | The input device (`lv_indev_get_vect`), which the framework does not wrap |
 | `obj_transform` | `LV_DRAW_TRANSFORM_USE_MATRIX`, which the test build does not enable |
 | `roller_event`, `roller_fade_mask`, `roller_styling`, `roller_visible_rows` | Can be ported now. Not done yet |
 | `spinner_basic` | Can be ported now: `.arc_sweep = 270 * deg` compiles. Not done yet |
 | `table_*` (8 of 8) | More than one cell: `.cell_value` takes a row, a column and a text, and a props struct names it once |
 | `buttonmatrix_button_ctrl`, `_button_width`, `_one_checked`, `_popover`, `_recolor`, `keyboard_custom_map` | An array of control flags, written with LVGL's C enumerators |
-| `buttonmatrix_styling`, `textarea_cursor` | A style for one part in one state (`items` and checked, `cursor` and focused) |
+| `buttonmatrix_styling`, `textarea_cursor` | Can be ported now: `lv::on` styles `items` and checked, `cursor` and focused. Not done yet |
 | `dropdown_styling` | The style of the list part: the list is a widget of its own, reached by `lv_dropdown_get_list` |
 | `textarea_buttonmatrix`, `textarea_format` | `lv_textarea_add_text`, `lv_textarea_delete_char` and `lv_textarea_add_char`, which are not set or get functions |
 | `textarea_password`, `keyboard_custom_draw` | A keyboard joined to a text area (`.textarea` takes a widget pointer), and draw task events |
@@ -41,12 +41,6 @@ Not tried yet, and expected to need functions that are neither set nor get funct
 ## Findings
 
 Each finding is a gap in lvgl26 that stopped a port. The port is left out and no workaround is used.
-
-An angle for a spinner does not compile with `-Werror=sign-conversion` (the setter takes `uint32_t`):
-
-```cpp
-lv::spinner({.arc_sweep = 270 * lv::deg})  // props.hpp: conversion to uint32_t from int
-```
 
 A table has one `cell_value` in its props, so the C original's several `lv_table_set_cell_value` calls have no form:
 
