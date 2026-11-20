@@ -922,6 +922,18 @@ add_test(NAME settings_schema
 # The pages in docs/ show only code that these tests have built, and no C names.
 # The examples name nothing of LVGL's C API either.
 find_package(Python3 COMPONENTS Interpreter)
+# The files that the nightly compile-cost run measures and that no test is (tools/metrics/probes.json).
+# They are compiled only by the run, and are in the compile database for tools/compile_cost.py.
+add_library(cost_probes OBJECT EXCLUDE_FROM_ALL
+  ${PROJECT_SOURCE_DIR}/tools/probes/include_lv.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/one_label.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/ten_kinds.cpp
+  ${PROJECT_SOURCE_DIR}/examples/quick_start/main.cpp)
+target_link_libraries(cost_probes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+# The run-time probe of docs/research/visibility.md, run under Valgrind by the same job.
+add_executable(visibility_probe EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/tools/probes/visibility.cpp)
+target_link_libraries(visibility_probe PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
   # An example names nothing of LVGL's C API.
@@ -950,6 +962,8 @@ if(Python3_FOUND)
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
+  # The nightly compile-cost measure: its parsing, the judging of a night and the trend page.
+  add_test(NAME compile_cost_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_cost.py)
   # The nightly mutation run: which headers it mutates, its time budget and its summary.
   add_test(NAME mutation_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_mutation.py)
   # The longest symbol of that object file stays under a budget that no picture's pixels could fit in.

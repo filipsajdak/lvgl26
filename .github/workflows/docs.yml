@@ -5,7 +5,8 @@ name: docs
 on:
   pull_request:
     paths: ['docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
-            'tools/check_site.py', '.github/workflows/docs.yml']
+            'tools/check_site.py', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
+            '.github/workflows/docs.yml']
 
 jobs:
   docs:
@@ -21,5 +22,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends pandoc
           python3 tools/docs.py build
+      - name: Write the compile-cost page, empty here (pages.yml fills it from the history)
+        run: python3 tools/cost_page.py /dev/null site/metrics.html
       - name: Check the site
         run: python3 tools/check_site.py

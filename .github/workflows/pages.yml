@@ -6,7 +6,11 @@ on:
   push:
     branches: [main]
     paths: ['site/**', 'docs/**', 'examples/quick_start/**', 'tools/check_site.py', 'tools/docs.py',
-            'tools/docs_page.html', '.github/workflows/pages.yml']
+            'tools/docs_page.html', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
+            '.github/workflows/pages.yml']
+  # The trend of the compile cost is written from the branch `metrics`, which the nightly run adds to.
+  schedule:
+    - cron: '47 6 * * *'
   workflow_dispatch:
 
 # One deployment at a time. A newer one waits for the one that is running.
@@ -31,6 +35,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends pandoc
           python3 tools/docs.py check
           python3 tools/docs.py build
+      - name: Write the compile-cost page from the history
+        run: |
+          git fetch --depth 1 origin metrics:refs/remotes/origin/metrics || true
+          git show origin/metrics:history.jsonl > /tmp/history.jsonl 2>/dev/null || : > /tmp/history.jsonl
+          python3 tools/cost_page.py /tmp/history.jsonl site/metrics.html
       - name: Check links and assets
         run: python3 tools/check_site.py
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
