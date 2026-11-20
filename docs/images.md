@@ -2,6 +2,8 @@
 
 The compiler decodes a PNG file and stores its pixels in read-only memory, in the form the display draws fastest. The device needs no decoder and no heap.
 
+A picture decoded by the compiler is in `#include <lv/image.hpp>`, and one decoded on the device in `#include <lv/encoded_image.hpp>` (see [Which header](which-header.md)).
+
 ![A sun with rays on a blue sky gradient, and a line of text below](media/images.png)
 
 ## Embed a file and name its picture

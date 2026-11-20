@@ -2,6 +2,8 @@
 
 `lv::for_each` writes the repeated widgets of a tree. The compiler calls a part once for each element and puts what it returns among the children of the widget that holds the `lv::for_each`. The tree is the one that would have been written by hand: no list at run time, no memory from lvgl26.
 
+`lv::for_each` and `lv::for_each_field` are in their own header: `#include <lv/repeat.hpp>` (see [Which header](which-header.md)).
+
 Use it for a set that is fixed when the program is written: the tiles of a home screen, the lines of a detail view, the tubes of a gauge. For rows that change while the program runs, use [lists](lists.md).
 
 ## One tile for each enumerator

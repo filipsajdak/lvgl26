@@ -48,10 +48,10 @@ int main() {
 }
 ```
 
-Above them go the includes and two `using` lines for the units:
+Above them go the includes and two `using` lines for the units. `<lv/all.hpp>` is the whole library; a program that wants a shorter build includes `<lv/lv.hpp>` and the headers of what it uses ([Which header](which-header.md)):
 
 ```cpp
-#include <lv/lv.hpp>
+#include <lv/all.hpp>
 #include <lv/png.hpp>
 #include <lv/signal.hpp>
 

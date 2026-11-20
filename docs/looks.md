@@ -2,6 +2,8 @@
 
 A look is a named group of the project's design tokens, used as a style: `.style = lv::look<"tile">`. The code says what an element is, and the token file says how it looks.
 
+`lv::look` is in its own header: `#include <lv/look.hpp>` (see [Which header](which-header.md)).
+
 The compiler finds the group in the token file, matches each entry to the style property of the same name, and builds a constant style in flash. A look costs no run time and no heap from lvgl26: LVGL keeps a pointer to the constant, as it does for every style of lvgl26.
 
 ![A printer's home screen: the title Printer, three tiles in blue, green and red that say Print, Scan and Copy, and the line Ready to print in green](media/looks.png)

@@ -9,7 +9,7 @@ Documentation: start with the [quick start](docs/quick-start.md). The site is at
 Status: early. Typed widget views, the declarative tree, styles, design tokens, themes, fonts, images, state, derived state, lists, concepts for reusable parts and coroutines exist. The first agent tools exist: a tree dump, screenshots and an MCP server (`lv/mcp.hpp`, `examples/agent`).
 
 ```cpp
-#include <lv/lv.hpp>
+#include <lv/all.hpp>
 using namespace lv::units;
 
 void reset();
@@ -73,6 +73,10 @@ How it works:
   window alike: a platform object joins the loop with `lv::in_loop` and is polled before each step, and a
   closed window ends `run()` unless the program takes the request. A hidden window keeps its trees and
   draws nothing. A host that owns the loop, such as a browser page, calls `step()`.
+- **A small core header.** `#include <lv/lv.hpp>` is what nearly every program writes. A theme, a look,
+  fonts, pictures, lists, repetition, documents, slots and the pointer each have a header of their own,
+  and `#include <lv/all.hpp>` gives everything. [Which header](docs/which-header.md) lists the names of
+  each, and `tools/check_includes.py` tells a file which header it is missing.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are

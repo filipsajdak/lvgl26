@@ -2,6 +2,8 @@
 
 A list shows a row template once for each row of an `lv::list`. When the program adds, removes, moves or changes a row, only the widgets of that row change. The other rows keep their widgets, their animations, their tasks and the focus.
 
+`lv::list` and `lv::each` are in their own header: `#include <lv/list.hpp>` (see [Which header](which-header.md)).
+
 ![A playlist of four tracks on a dark screen; the second row, Northern Lights, is selected in blue](media/lists.png)
 
 ## The rows
