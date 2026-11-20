@@ -252,6 +252,8 @@ A feature pull request also:
 - A new page goes into `docs/docs.json`, or it has no place in the sidebar and in `llms.txt`.
 - One line per paragraph. A picture on a page is written by a test (see `quick_start_picture`).
 - `site/docs/`, `site/llms.txt` and `site/llms-full.txt` are generated: do not commit them.
+- The rules of good code are data, `docs/reference/rules.json`; `python3 tools/rules.py --page docs/rules.md` writes the page "Writing good lvgl26 code" (test `rules_page`). An id never changes and is never used again. A rule names a check only where the compiler or the build enforces it in a program, and a rule of run time or compile time names its measurement and date, or says "not measured yet".
+- A guide follows the outline of `docs/README.md` once `docs/docs.json` lists it under `outline`; `tools/docs.py check` holds it there. A message on a page is `<!-- message: <test> -->` before a `text` block, and must show what that compile-fail test pins. A guide's rules are a block `<!-- rules: ids -->` that `tools/docs.py sync` writes from the data.
 
 ## Editor stubs
 

@@ -1,10 +1,13 @@
 {
   "title": "lvgl26",
   "summary": "A C++26 framework over LVGL for embedded user interfaces: screens are checked at compile time, properties are typed, and user code calls no C. GCC 16.2 or newer.",
-  "for_agents": "Every page below is Markdown. Its code blocks come from files that the project's tests compile and run. Read the quick start first; llms-full.txt holds all pages in one file.",
+  "for_agents": "Every page below is Markdown. Its code blocks come from files that the project's tests compile and run. Read the quick start first, then Writing good lvgl26 code (rules.md); llms-full.txt holds all pages in one file.",
   "site": "https://filipsajdak.github.io/lvgl26/",
   "repository": "https://github.com/filipsajdak/lvgl26",
-  "outline": ["lists.md", "state.md"],
+  "outline": [
+    "lists.md",
+    "state.md"
+  ],
   "sections": [
     {
       "title": "Start",
@@ -15,6 +18,49 @@
       ]
     },
     {
+      "title": "Core ideas",
+      "pages": [
+        "state.md",
+        "mounting.md"
+      ]
+    },
+    {
+      "title": "A screen that changes",
+      "pages": [
+        "lists.md",
+        "repetition.md",
+        "options.md"
+      ]
+    },
+    {
+      "title": "How it looks",
+      "pages": [
+        "themes.md",
+        "looks.md",
+        "fonts.md",
+        "images.md"
+      ]
+    },
+    {
+      "title": "The program",
+      "pages": [
+        "input.md",
+        "settings.md"
+      ]
+    },
+    {
+      "title": "Growing",
+      "pages": [
+        "concepts.md"
+      ]
+    },
+    {
+      "title": "Tools",
+      "pages": [
+        "editor-support.md"
+      ]
+    },
+    {
       "title": "Coming from another framework",
       "pages": [
         "from-qt.md",
@@ -22,24 +68,6 @@
         "from-touchgfx.md",
         "port-slint-printer.md",
         "port-lvgl-examples.md"
-      ]
-    },
-    {
-      "title": "Guides",
-      "pages": [
-        "state.md",
-        "mounting.md",
-        "input.md",
-        "lists.md",
-        "repetition.md",
-        "options.md",
-        "concepts.md",
-        "themes.md",
-        "looks.md",
-        "fonts.md",
-        "images.md",
-        "settings.md",
-        "editor-support.md"
       ]
     }
   ]
