@@ -51,7 +51,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`expressive-3`](#expressive-3) | Write a sequence in time, such as wait for a click, pause, then animate, as one `lv::task` coroutine, not as callbacks and timers. |
 | [`expressive-4`](#expressive-4) | Name the look of an element, `lv::look<"tile">`, and keep its values in the token file. |
 | [`expressive-5`](#expressive-5) | Use semantic and component tokens in screen code, such as `tok.color.selected`, not primitives such as a step of a palette. |
-| [`extendable-1`](#extendable-1) | Put each screen in a file of its own, with the states that only it uses beside it. |
+| [`extendable-1`](#extendable-1) | Put one screen in each file with the states only it uses, and give shared state, parts, design, platform and `main` places of their own. |
 | [`extendable-2`](#extendable-2) | Make a reusable piece of screen a function that returns a tree, and constrain each parameter with a public concept: `lv::dependency`, `lv::tree_handler`, `lv::tree_node`. |
 | [`extendable-3`](#extendable-3) | Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state. |
 | [`extendable-4`](#extendable-4) | Keep the design in a token file named once for the project, and let a library of parts take the design as a template parameter. |
@@ -919,13 +919,13 @@ Grow the application, reuse its parts and extend lvgl26 itself, without changing
 
 ### extendable-1
 
-**Put each screen in a file of its own, with the states that only it uses beside it.**
+**Put one screen in each file with the states only it uses, and give shared state, parts, design, platform and `main` places of their own.**
 
-A change then rebuilds one screen, files build side by side, and a reader finds a screen's state next to its tree.
+`main` only starts the application, and only the platform's file names the platform. A change then rebuilds one screen, and a reader finds each thing where the layout puts it.
 
-No example yet: the printer port has a file per page; a smaller program comes with the guide An application that grows.
+No example yet: a small program laid out by screen comes with the guide An application that grows.
 
-Checked: no tool checks this rule yet.
+Checked: no tool checks this rule yet. Not built yet: a layout check, switched on in CMake like the include check, for a file with two screens, a screen that includes another screen's header, a font drawn outside `design/` and a platform name outside `platform/`.
 
 Wins over the total work of a build. Each file pays again for its first widget, about 35 G instructions, but a change rebuilds one file.
 

@@ -153,6 +153,15 @@ class Page(unittest.TestCase):
     def test_a_rule_without_a_check_says_so(self):
         self.assertEqual(rules.check_lines(None), ["Checked: no tool checks this rule yet."])
 
+    def test_a_planned_check_is_named_as_not_built(self):
+        self.assertEqual(rules.check_lines(None, "a layout check."),
+                         ["Checked: no tool checks this rule yet. Not built yet: a layout check."])
+
+    def test_a_planned_check_belongs_to_a_rule_without_one(self):
+        check = {"by": "compiler", "test": "state_plain_int", "message": "a state of a plain integer"}
+        self.assertIn("a planned check belongs to a rule without a check",
+                      first_problems(with_rule(check=check, check_planned="another check.")))
+
     def test_a_performance_rule_without_a_measure_says_so(self):
         rule = {"quality": "fast-run", "evidence": None}
         self.assertEqual(rules.evidence_lines(rule), ["Measured: not measured yet."])

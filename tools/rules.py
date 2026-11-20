@@ -21,6 +21,8 @@ never used again, so a review, a commit, a guide or a message can cite it. The d
     probe_needed  a rule of run time without a nightly probe says what the probe must measure:
                   every rule of run time ends up resting on one
     revisit       optional: the planned work that will change the rule; not shown on the page
+    check_planned optional, with a check of null: the check that is planned, which the page names
+                  as not built yet
     wins_over     optional: what the rule beats when two qualities disagree, and why; the page
                   writes it after "Wins over"
 
@@ -41,7 +43,7 @@ TESTS = ROOT / "tests"
 PAGE_TITLE = "Writing good lvgl26 code"
 REPOSITORY = "https://github.com/filipsajdak/lvgl26/blob/main/"
 FIELDS = {"id", "quality", "rule", "why", "example", "check", "guide", "evidence"}
-OPTIONAL = {"example_note", "wins_over", "probe_needed", "revisit"}
+OPTIONAL = {"example_note", "wins_over", "probe_needed", "revisit", "check_planned"}
 CHECKERS = {"compiler", "build", "tool"}
 MEASURED = {"fast-run", "fast-build"}  # their rules rest on a measurement, or say there is none
 PROBED = "fast-run"  # its rules rest on a nightly probe, or name the probe they need
@@ -214,7 +216,8 @@ def rule_problems(rule: dict, data: dict, context: tuple[set[str], dict[str, str
     if problems:
         return problems
     tests, pinned = context
-    return (example_problems(rule) + check_problems(rule["check"], tests, pinned) +
+    planned = ["a planned check belongs to a rule without a check"] if rule.get("check_planned") and rule["check"] else []
+    return (planned + example_problems(rule) + check_problems(rule["check"], tests, pinned) +
             guide_problems(rule["guide"], data["pages_planned"]) + evidence_problems(rule["evidence"]) +
             probe_problems(rule))
 
@@ -263,9 +266,9 @@ def example_lines(rule: dict) -> list[str]:
     return snippet(rule["example"])
 
 
-def check_lines(check: dict | None) -> list[str]:
+def check_lines(check: dict | None, planned: str | None = None) -> list[str]:
     if check is None:
-        return ["Checked: no tool checks this rule yet."]
+        return ["Checked: no tool checks this rule yet." + (f" Not built yet: {planned}" if planned else "")]
     test = f" The test `{check['test']}` pins the message." if check.get("test") else ""
     who = {"compiler": "the compiler", "build": f"the build (`{check.get('tool', '')}`)",
            "tool": f"`{check.get('tool', '')}`"}[check["by"]]
@@ -284,7 +287,7 @@ def evidence_lines(rule: dict) -> list[str]:
 
 def rule_section(rule: dict, data: dict) -> list[str]:
     lines = [f"### {rule['id']}", "", f"**{rule['rule']}**", "", rule["why"], ""]
-    lines += example_lines(rule) + [""] + check_lines(rule["check"]) + [""]
+    lines += example_lines(rule) + [""] + check_lines(rule["check"], rule.get("check_planned")) + [""]
     for extra in (evidence_lines(rule), [f"Wins over {rule['wins_over']}"] if rule.get("wins_over") else []):
         lines += extra + ([""] if extra else [])
     return lines + [guide_line(rule["guide"], data), ""]
