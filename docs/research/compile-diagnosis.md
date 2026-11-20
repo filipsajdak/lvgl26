@@ -1338,6 +1338,21 @@ Fewer slots for each widget make the spec smaller. The slots after `style` are f
 - The editor stubs: `tools/editor/reference_stubs.py` writes `stub::look` and `stub::theme_spec` with the 16 slots. They get one, and `tests/editor/api_uses.cpp` follows.
 - Run time: the same entries. ROM and the time to set up a theme were not measured. They should not move, because the stored list is built by the same code from the same styles.
 
+### What the owner decided
+
+Decided 2026-11-20, over the proposals above.
+
+| # | Decision |
+|---|---|
+| A1 | Fonts drawn once are built: route 1 behind `lv::typeface`, with `lv::drawn_font` and `typeface::draw`. |
+| A2 | Signal's fonts become a compiled target, `lvgl26::signal_type`, as a second step after A1 works for user code. It is the first compiled part of lvgl26, so it is prototyped and measured first. |
+| A3 | The form that examples, the printer port and the docs show is one source file per font (74 to 78 G each, built in parallel), not one file that draws them all. |
+| B1 | A theme has one slot, `style`. States and parts are `lv::on` layers. |
+| B2 | A node keeps its 16 slots. |
+| C | `lv::arg` without constructors is a measured spike: `tests/large_tree.cpp` and the eight probes, what it gains and what it changes for users, reported before any decision to build. |
+
+The order of the builds, one pull request each: `lv::shown`, fonts drawn once, the one-slot theme, the Signal target, the `lv::arg` spike.
+
 ### C. An unset member without constructors (found on the way)
 
 Two thirds of the cost of an unset member comes from `lv::arg` having constructors (see B). Every node pays that too, for every member it leaves out. Whether `lv::arg`'s conversions can move to the values it takes (`lv::raw`, `lv::token`, a name), so that `lv::arg` itself becomes an aggregate, has not been tried. It needs a spike of its own, measured on `tests/large_tree.cpp`.
