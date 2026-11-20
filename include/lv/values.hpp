@@ -171,11 +171,9 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
   return {};
 }
 
-consteval std::string how_to_write(std::meta::info t) {
-  if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
-  if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
-  if (is_made_from(t, ^^nonnegative))
-    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+// How to write a value that is no number with a unit: a list of options, a handler, a font, an LVGL value by name.
+// Empty for another type.
+consteval std::string how_to_write_kind(std::meta::info t) {
   if (t == ^^option_list)
     return "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line "
            "break between the options";
@@ -188,10 +186,19 @@ consteval std::string how_to_write(std::meta::info t) {
   if (t == ^^styled<const lv_font_t*>)
     return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
            "lv/font.hpp), or lv::raw(font) for a font that no token names";
+  if (std::meta::is_enum_type(t)) return "the name of an LVGL value in quotes, such as \"center\"";
+  return {};
+}
+
+consteval std::string how_to_write(std::meta::info t) {
+  if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
+  if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (is_made_from(t, ^^nonnegative))
+    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+  if (auto kind = how_to_write_kind(t); !kind.empty()) return kind;
   if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
-  if (std::meta::is_enum_type(t)) return "the name of an LVGL value in quotes, such as \"center\"";
   return str(std::meta::display_string_of(t));
 }
 
@@ -217,18 +224,24 @@ consteval bool is_bare_payload(std::meta::info wanted, std::meta::info given) {
   return is_made_from(wanted, ^^styled) && std::meta::template_arguments_of(wanted)[0] == given;
 }
 
+// The sentence after "You gave ...": what to write instead, when the mistake is one of two known ones.
+consteval std::string wrong_value_hint(type_list ts, type_list us) {
+  if (ts.size() == 1 && us.size() == 1) {
+    if (is_bare_payload(ts[0], us[0])) return " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
+    return {};
+  }
+  if (!us.empty() && ts.size() != us.size())
+    return " The property takes " + decimal(ts.size()) + " values in braces, and this has " + decimal(us.size()) + ".";
+  return {};
+}
+
 // The text of the message of a wrong value. A function of its own, so that the instance of
 // wrong_value::message that every argument type needs holds a call and no more.
 consteval std::string_view wrong_value_text(type_list ts, type_list us) {
   std::string m = "lv: wrong value for this property. It takes " + takes_text(ts) + ". You gave ";
   for (std::size_t i = 0; i < us.size(); ++i) m += (i ? ", " : "") + given_name(us[i]);
   m += us.empty() ? "nothing." : ".";
-  if (ts.size() == 1 && us.size() == 1) {
-    if (is_bare_payload(ts[0], us[0])) m += " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
-  } else if (!us.empty() && ts.size() != us.size()) {
-    m += " The property takes " + decimal(ts.size()) + " values in braces, and this has " + decimal(us.size()) + ".";
-  }
-  return std::define_static_string(m);
+  return std::define_static_string(m + wrong_value_hint(ts, us));
 }
 
 consteval std::string_view bound_text(type_list ts, std::meta::info state) {
