@@ -70,8 +70,8 @@
       "logic": true
     },
     "include/lv/shown.hpp": {
-      "tests": "^shown$|^shown_transitions$|fail_shown|fail_when|fail_page_of|^example_pages$|^printer_cost$",
-      "targets": "shown shown_transitions example_pages printer_cost"
+      "tests": "^shown$|^shown_transitions$|^shown_kept$|fail_shown|fail_when|fail_page_of|^example_pages$|^printer_cost$",
+      "targets": "shown shown_transitions shown_kept example_pages printer_cost"
     },
     "include/lv/detail/deferred.hpp": {
       "tests": "^shown$|^example_pages$",

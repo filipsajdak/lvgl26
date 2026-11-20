@@ -130,6 +130,7 @@ target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.j
 lvgl26_test(one_of)
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
+lvgl26_test(shown_kept)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
 foreach(case unmount_empty get_other held_after_remount error_of_mounted)
@@ -1277,7 +1278,7 @@ lvgl26_compile_fail(shown_sibling "lv::shown is the only child of its widget. Gi
 lvgl26_compile_fail(shown_on_shown_other_tree "the function of .on_shown takes the lv::held of another tree than its arm shows. Write void f\\(lv::held<.*a>\\)")
 lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a constexpr variable of its own")
 lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
-lvgl26_compile_fail(shown_alive_three "lv::shown keeps one or two pages alive for now: .alive = 1 or 2")
+lvgl26_compile_fail(shown_alive_zero "lv::shown needs a slot for the page it shows: .alive = 1 or more.")
 lvgl26_compile_fail(shown_alive_one_with_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
 lvgl26_compile_fail(shown_page_on_shown_in_arm "a page of another file takes its .on_shown in its own file: constinit const lv::page home_page = lv::page_of<ui, \\{.on_shown = &f\\}>")
 lvgl26_compile_fail(shown_transition_two_properties "contract predicate is false in constant expression")
