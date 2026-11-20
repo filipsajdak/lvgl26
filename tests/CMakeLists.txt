@@ -667,7 +667,7 @@ lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one 
 lvgl26_compile_fail(quantity_wrong_dimension "no match for .operator=")
 lvgl26_compile_fail(quantity_lossy "no match for .operator=")
 lvgl26_compile_fail(quantity_floating "a quantity in a state needs an integer number for now")
-lvgl26_compile_fail(computed_plain_int "the function of an lv::computed returns a plain integer, which does not say what the number is. Return a quantity")
+lvgl26_compile_fail(computed_plain_int "the function of an lv::computed returns a plain integer, which does not say what the number is. Return a quantity.*To allow plain integers, set rules\\.raw_integer_state in the settings\\.")
 lvgl26_compile_fail(computed_bad_result "the function of an lv::computed returns double, which a state cannot hold. Return a quantity")
 lvgl26_compile_fail(computed_wrong_arguments "the function of an lv::computed takes the values of its dependencies, in their order: \\(lv::counter, bool\\). Take each by value")
 lvgl26_compile_fail(computed_not_a_state "a dependency of an lv::computed must be an lv::state or an lv::computed that outlives it. Pass the object itself")
