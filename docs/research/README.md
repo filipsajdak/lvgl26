@@ -15,6 +15,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [web-target.md](web-target.md) | Whether an lvgl26 application can run in a browser, and by which route. |
 | [targets-and-safety.md](targets-and-safety.md) | Where lvgl26 can run beyond a GCC host: a browser, Android, Android Automotive OS and iOS, each against the one compiler. Whether a product with a functional safety goal can use it, LVGL Safe, and what the site may say. |
 | [agent-docs.md](agent-docs.md) | How a library gives its documentation to AI coding agents: measurements, formats, what other projects ship. |
+| [documentation.md](documentation.md) | The documentation programme: the owner's decisions on structure, outline, rules and checks, the audit of every page, what the pilot found, and the plan of every page with its batch. |
 | [components.md](components.md) | Components: reusable behaviour and its lifetime, dynamic content on small devices, slots, parameters and invariants, in other frameworks and for our trees. |
 | [lists.md](lists.md) | Lists whose rows change: a fixed-capacity model, keyed rows, bindings to a row's fields, the selected row, the heap and code a row costs, and the API of recycling and sorted views. |
 | [node-storage.md](node-storage.md) | Run-time storage of structural nodes without heap: sized at compile time, placed by the caller, open to new kinds. When a shown tree switches, a style value that follows a state, and what a region for the whole program still needs. |
