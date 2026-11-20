@@ -955,6 +955,10 @@ target_link_libraries(visibility_probe PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+  # The rules of good code are data; the page "Writing good lvgl26 code" is written from it.
+  add_test(NAME rules_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/rules.py
+                                   --check-page ${PROJECT_SOURCE_DIR}/docs/rules.md)
+  add_test(NAME rules_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_rules.py)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # Every test and fuzz target includes the header of each name of lvgl26 it uses

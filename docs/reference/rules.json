@@ -1,0 +1,439 @@
+{
+  "$comment": "The rules of good lvgl26 code. tools/rules.py checks this file and writes docs/rules.md from it. An id never changes and is never used again: a rule that goes leaves a gap.",
+  "qualities": [
+    {"id": "no-boilerplate", "title": "No boilerplate", "aim": "Say what the screen is, and let lvgl26 write the code that builds it, keeps it current and takes it down."},
+    {"id": "fast-run", "title": "Fast at run time", "aim": "Let the compiler do the work once, so that the device does less and allocates less while the program runs."},
+    {"id": "fast-build", "title": "Fast to compile", "aim": "Pay the compiler only for what a file uses. The sizes below are rough and relative; they are instructions of GCC 16.2, measured on one machine."},
+    {"id": "checked", "title": "Checked at compile time", "aim": "Write the code so that a mistake stops the build, with a message that says how to fix it."},
+    {"id": "expressive", "title": "Expressive", "aim": "Write what the screen means, in the words of the product, and let the compiler derive the rest."},
+    {"id": "extendable", "title": "Extendable", "aim": "Grow the application, reuse its parts and extend lvgl26 itself, without changing what already works."}
+  ],
+  "pages_planned": {
+    "tree.md": "The tree and its widgets",
+    "state.md": "State and bindings",
+    "tokens.md": "Design tokens",
+    "tasks.md": "Tasks",
+    "application.md": "Application and loop",
+    "run-fast.md": "Code that runs fast",
+    "build-fast.md": "Keeping builds fast",
+    "growing.md": "An application that grows",
+    "extending.md": "Extending lvgl26"
+  },
+  "rules": [
+    {
+      "id": "no-boilerplate-1",
+      "quality": "no-boilerplate",
+      "rule": "Write a screen as one constant tree, `constexpr auto ui = lv::column[...]`, and mount it; never create its widgets one by one.",
+      "why": "The compiler checks the whole tree against the widgets' properties, and `lv::mount` builds every widget and deletes them all when it ends.",
+      "example": "examples/state/main.cpp tree",
+      "check": null,
+      "guide": "tree.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-2",
+      "quality": "no-boilerplate",
+      "rule": "Make a property follow a state with `lv::bind`, instead of a handler that copies the value into the widget.",
+      "why": "A binding sets every widget that shows the value after each change, and an arc, a slider or a dropdown writes the user's change back.",
+      "example": "examples/state/main.cpp smallest",
+      "check": null,
+      "guide": "state.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-3",
+      "quality": "no-boilerplate",
+      "rule": "Write a handler that only changes a state as a lambda in the tree: `.on_clicked = [] { ++cups; }`.",
+      "why": "A state takes `=`, `++`, `--`, `+=` and `-=`. A named function, a pointer to it or an `update` call adds lines and says nothing more.",
+      "example": "examples/state/main.cpp part",
+      "check": null,
+      "guide": "state.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-4",
+      "quality": "no-boilerplate",
+      "rule": "Show rows that change with `lv::each` over an `lv::list`, and change the list, never the widgets.",
+      "why": "The list builds, moves and deletes the widgets of one row at a time. A loop that builds rows by hand repeats that work for every change.",
+      "example": "examples/lists/main.cpp tree",
+      "check": null,
+      "guide": "lists.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-5",
+      "quality": "no-boilerplate",
+      "rule": "Write a set that is fixed when the program is written with `lv::for_each`: a part for each enumerator, captioned member or constant record.",
+      "why": "The compiler writes the repeated widgets, so a new enumerator or member gets its widget without a new line in the tree.",
+      "example": "examples/repeat/main.cpp tiles",
+      "check": null,
+      "guide": "repetition.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-6",
+      "quality": "no-boilerplate",
+      "rule": "Give a dropdown or a roller its options as a list, `{\"Cut\", \"Copy\"}`, or as `lv::options_of<E>`, never as one text with line breaks.",
+      "why": "The compiler joins the list into LVGL's text in read-only memory, and `lv::options_of<E>` keeps the options and a state of `E` in step.",
+      "example": "examples/options/main.cpp but",
+      "check": null,
+      "guide": "options.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-7",
+      "quality": "no-boilerplate",
+      "rule": "Give all widgets of a kind their look in a theme, not in a style on each node.",
+      "why": "A theme is written once, its styles are constants in read-only memory, and the tree keeps only what differs.",
+      "example": "examples/theme/main.cpp paper",
+      "check": null,
+      "guide": "themes.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-8",
+      "quality": "no-boilerplate",
+      "rule": "Start the program with `lv::application`, take the screen from an `lv::display`, and end `main` with `return app.run();`.",
+      "why": "The two objects start and stop LVGL, and `run()` is the loop. A program has no start-up code, no tick and no loop of its own.",
+      "example": "examples/window/main.cpp main",
+      "check": null,
+      "guide": "application.md",
+      "evidence": null
+    },
+    {
+      "id": "no-boilerplate-9",
+      "quality": "no-boilerplate",
+      "rule": "Show one of several dialogs or screens in an `lv::one_of` slot; never write a pager of `mount` and `unmount` calls.",
+      "why": "The slot keeps one tree at a time in the memory of the largest, ends the old tree first, and allocates nothing.",
+      "example": "examples/mounting/main.cpp slot",
+      "check": null,
+      "guide": "mounting.md",
+      "evidence": null
+    },
+    {
+      "id": "fast-run-1",
+      "quality": "fast-run",
+      "rule": "Keep states, lists and mounted trees in `constinit` globals or in variables: lvgl26 takes no heap for them.",
+      "why": "Their sizes are known when the program is compiled. The heap then holds only the widgets and what each needs, and a screen that does not change allocates nothing.",
+      "example": "examples/lists/main.cpp model",
+      "check": null,
+      "guide": "run-fast.md",
+      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "In the measured program only LVGL's heap was used: no operator new and no malloc. A screen that did not change allocated nothing."}
+    },
+    {
+      "id": "fast-run-2",
+      "quality": "fast-run",
+      "rule": "Change one row with `insert`, `erase`, `move` or `update`; never clear and fill a list again to change it.",
+      "why": "Only the widgets of that row change, and the other rows keep theirs, with their animations, their tasks and the focus.",
+      "example": "examples/lists/main.cpp move",
+      "check": null,
+      "guide": "lists.md",
+      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A job added to the printer's queue of six: the port's own loop built all six cards again, and `lv::each` built none of them."}
+    },
+    {
+      "id": "fast-run-3",
+      "quality": "fast-run",
+      "rule": "Show a text field of a row through `lv::bind`; do not copy it into a buffer of your own.",
+      "why": "A list keeps each row at one address, so a label shows the row's text where it is. A copy costs heap in every row.",
+      "example": "examples/lists/main.cpp row",
+      "check": null,
+      "guide": "lists.md",
+      "evidence": {"source": "docs/research/lists.md", "date": "2026-11-17", "finding": "A row of two labels took 960 bytes of LVGL's heap through `lv::each`, and 1094 bytes as a tree of its own with copied texts."}
+    },
+    {
+      "id": "fast-run-4",
+      "quality": "fast-run",
+      "rule": "Start work that belongs to a part of the screen with `lv::spawn(task, owner)`, so that it ends when the owner is deleted.",
+      "why": "A task that outlives its widgets keeps its frame and its timers, and goes on working for a screen that nobody sees.",
+      "example": null,
+      "example_note": "No example yet: the Tasks guide will add one.",
+      "check": null,
+      "guide": "tasks.md",
+      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24."}
+    },
+    {
+      "id": "fast-run-5",
+      "quality": "fast-run",
+      "rule": "Change a mounted widget with `set({...})` written in place, and give it a named style or a look rather than `lv::style({...})` built in the call.",
+      "why": "One `set` takes about 3.5 KB of stack on a Cortex-M4, and a style built inside the call adds about 2.6 KB more.",
+      "example": null,
+      "example_note": "No example yet: the `set` of the mounting example sits next to test code. A clean one comes with the Views and ids guide.",
+      "check": null,
+      "guide": "run-fast.md",
+      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-19", "finding": "One `set({.value = v})` took 3,504 bytes of stack on a Cortex-M4 at -Os; with `lv::style({...})` inside it 6,120 bytes; with a look 3,504 bytes."}
+    },
+    {
+      "id": "fast-run-6",
+      "quality": "fast-run",
+      "rule": "Let the compiler make the fonts and pictures known at build time; decode on the device only photos and sizes chosen at run time.",
+      "why": "A font or a picture made by the compiler is constant data in flash, drawn with no decoder and no heap.",
+      "example": "examples/fonts/main.cpp typeface",
+      "check": null,
+      "guide": "fonts.md",
+      "evidence": {"source": "docs/research/memory-region.md", "date": "2026-11-18", "finding": "Fonts and pictures the compiler makes were constants in flash. A font drawn on the device kept 1.3 KB of heap for its cache. A PNG decoded on the device took 164 KB for a moment."},
+      "wins_over": "Beats `fast-build-2` where the two meet. The device pays for a decoder each time the program runs; the build pays for a drawn font only when its file changes."
+    },
+    {
+      "id": "fast-run-7",
+      "quality": "fast-run",
+      "rule": "Turn off what the product does not use: `LVGL26_NO_DEFAULT_THEME` when your theme covers every widget, and the options of the decoders.",
+      "why": "LVGL's default theme takes heap for the first display, under a theme that replaces it anyway.",
+      "example": null,
+      "example_note": "No example yet: it is one CMake line, `set(LVGL26_NO_DEFAULT_THEME ON)`, which no example sets.",
+      "check": null,
+      "guide": "themes.md",
+      "evidence": {"source": "docs/research/memory.md", "date": "2026-11-16", "finding": "LVGL built its default theme for the first display: 2532 bytes of styles on its heap."}
+    },
+    {
+      "id": "fast-build-1",
+      "quality": "fast-build",
+      "rule": "Include `<lv/lv.hpp>` and the header of each feature the file uses; include `<lv/all.hpp>` only in a first program.",
+      "why": "The core costs a file about a third less than all headers together, and an opt-in header costs only the files that use its feature.",
+      "example": "examples/lists/main.cpp includes",
+      "check": {"by": "build", "tool": "cmake/check_includes.cmake", "scope": "every target that links lvgl26 through its CMake, unless LVGL26_CHECK_INCLUDES is off", "test": "include_check_build", "message": "parts.hpp:8: lv::list needs #include <lv/list.hpp>"},
+      "guide": "which-header.md",
+      "evidence": {"source": "docs/research/header-structure.md", "date": "2026-11-20", "finding": "A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G."},
+      "wins_over": "Beats the ease of one header for everything: that ease is worth it in a first program only."
+    },
+    {
+      "id": "fast-build-2",
+      "quality": "fast-build",
+      "rule": "Name drawn fonts in few files, and give the other files their text through the display's theme.",
+      "why": "Every file that names a font draws it again, which costs about as much compile work as a whole screen.",
+      "example": "examples/signal_type/main.cpp main",
+      "check": null,
+      "guide": "build-fast.md",
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page."}
+    },
+    {
+      "id": "fast-build-3",
+      "quality": "fast-build",
+      "rule": "When two widget kinds would do, take one the file already uses: a new kind costs a file about as much as 28 more nodes.",
+      "why": "A file pays once for each kind it names, for its properties and their tables, and little for each further node of that kind.",
+      "example": null,
+      "example_note": "No example: the rule is about a choice between widgets.",
+      "check": null,
+      "guide": "build-fast.md",
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A widget kind cost 5.6 G instructions the first time a file named it, and a further node 0.2 G. Ten labels: 55.8 G; ten widgets of ten kinds: 105.8 G."}
+    },
+    {
+      "id": "fast-build-4",
+      "quality": "fast-build",
+      "rule": "Let the compiler decode pictures up to the limit in the settings, and decode larger ones on the device with `lv::encoded_image`.",
+      "why": "The compiler's work grows with the pixels, so a large picture makes every build of its file slow.",
+      "example": "examples/images/main.cpp files",
+      "check": {"by": "compiler", "test": "image_too_large", "message": "error: constexpr message: lv: this picture is 200 x 100 pixels, and the compiler decodes at most 16384 (a large picture makes the build slow). To allow it, raise limits.compile_time_image in the settings."},
+      "guide": "images.md",
+      "evidence": null
+    },
+    {
+      "id": "fast-build-5",
+      "quality": "fast-build",
+      "rule": "Bind, name and style nodes freely: after its first use in a file, a binding, an id or a property costs little to compile.",
+      "why": "The compiler pays for a widget kind once in each file; what one node adds on top of it is small.",
+      "example": "examples/state/main.cpp tree",
+      "check": null,
+      "guide": "build-fast.md",
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "Ten labels: 55.8 G instructions. Each bound to a state: 56.0 G. Each with an id: 55.8 G. Each with three more properties: 59.1 G."}
+    },
+    {
+      "id": "checked-1",
+      "quality": "checked",
+      "rule": "Give every value a type that says what it is: a quantity, an `lv::counter`, or a struct of one member.",
+      "why": "A length is then no speed, a speed converts by its unit, and the compiler refuses a state of a plain integer.",
+      "example": "examples/state/main.cpp typed",
+      "check": {"by": "compiler", "test": "state_plain_int", "message": "error: static assertion failed: lv: a state of a plain integer does not say what the number is. If it is a measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For anything else, name it: `struct tab_index { int value; };`. To allow plain integers, set rules.raw_integer_state in the settings."},
+      "guide": "state.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-2",
+      "quality": "checked",
+      "rule": "Write an LVGL enumerator as its name in quotes, `.align = \"center\"`; a misspelled name stops the build and lists the right ones.",
+      "why": "The names are read from LVGL's headers, so they are complete, and the same on both LVGL versions.",
+      "example": "examples/lists/main.cpp row",
+      "check": {"by": "compiler", "test": "enumerator_unknown_name", "message": "error: constexpr message: lv: align has no value 'centre'. Its values: default, top_left, top_mid, top_right, bottom_left, bottom_mid, bottom_right, left_mid, right_mid, center, out_top_left, out_top_mid, out_top_right, out_bottom_left, out_bottom_mid, out_bottom_right, out_left_top, out_left_mid, out_left_bottom, out_right_top, out_right_mid, out_right_bottom."},
+      "guide": "tree.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-3",
+      "quality": "checked",
+      "rule": "Give a style design tokens, and mark a value that no token should name with `lv::raw(...)`.",
+      "why": "The design then lives in one token file, and a value typed straight into a style stops the build.",
+      "example": "examples/lists/main.cpp row",
+      "check": {"by": "compiler", "test": "style_needs_token", "message": "error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length."},
+      "guide": "tokens.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-4",
+      "quality": "checked",
+      "rule": "Name one settings file for the program, and forbid in it what the product may not use: allocation, threads, files, floating point.",
+      "why": "A part of lvgl26 that needs a forbidden feature is then a compile error that names the key, and a restriction changes no generated code.",
+      "example": "examples/settings/presets/microcontroller.json",
+      "check": {"by": "compiler", "test": "restrict_from_file", "message": "error: static assertion failed: lv: lv::ui_scheduler needs threads, and this project does not allow them (allow.threads in settings/restricted.json)."},
+      "guide": "settings.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-5",
+      "quality": "checked",
+      "rule": "Handle the `std::expected` that `lv::mount`, `insert` and `assign` return: a full list or a heap without room is a value, not a crash.",
+      "why": "On a small device memory runs out; the result says so, nothing is left half built, and the program decides what to show.",
+      "example": "examples/lists/main.cpp fill",
+      "check": null,
+      "guide": "mounting.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-6",
+      "quality": "checked",
+      "rule": "Read the first error and its `note:` lines before anything else, and do what the message says.",
+      "why": "An lvgl26 message names the fix: the header, the token, the unit, the settings key or the property.",
+      "example": null,
+      "example_note": "No code: the rule is about the build's output. Each guide shows the messages of its feature.",
+      "check": null,
+      "guide": "which-header.md",
+      "evidence": null
+    },
+    {
+      "id": "checked-7",
+      "quality": "checked",
+      "rule": "Keep lvgl26's headers out of a precompiled header.",
+      "why": "With GCC 16.2 a precompiled header drops the `pre` and `post` checks of templates without a word: GCC bug 128909.",
+      "example": null,
+      "example_note": "No code: the rule is about the build. CMake's `target_precompile_headers` must not name a header of lvgl26.",
+      "check": null,
+      "guide": "build-fast.md",
+      "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A warm precompiled header took a file with one label from 54 G to 6 G instructions: the largest build saving measured."},
+      "wins_over": "Beats the largest build saving there is: a check that silently goes away is worse than a slow build."
+    },
+    {
+      "id": "checked-8",
+      "quality": "checked",
+      "rule": "Reach LVGL's C API only through `raw()`, and only for what lvgl26 has no form for; never to quiet an error.",
+      "why": "Code that names no C function stays checked by the compiler, and keeps working on both LVGL versions.",
+      "example": null,
+      "example_note": "No example: the examples name no C function, and `tools/check_examples.py` keeps them so in this repository.",
+      "check": null,
+      "guide": "extending.md",
+      "evidence": null
+    },
+    {
+      "id": "expressive-1",
+      "quality": "expressive",
+      "rule": "Write a choice as an enum, and let the compiler derive from it: `lv::options_of<E>` for its options, `lv::match` for one arm per value.",
+      "why": "A new enumerator then reaches every place that lists the choices, and an `lv::match` that misses one stops the build.",
+      "example": "examples/state/main.cpp tree",
+      "check": {"by": "compiler", "test": "match_missing_case", "message": "error: static assertion failed: lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`."},
+      "guide": "options.md",
+      "evidence": null
+    },
+    {
+      "id": "expressive-2",
+      "quality": "expressive",
+      "rule": "Name a value made from states as an `lv::computed`, and bind it like a state: `.hidden = lv::bind(enough)`.",
+      "why": "The tree then reads as what the screen means, and a computed that nothing binds stores nothing and does no work.",
+      "example": "examples/state/main.cpp computed",
+      "check": null,
+      "guide": "state.md",
+      "evidence": null
+    },
+    {
+      "id": "expressive-3",
+      "quality": "expressive",
+      "rule": "Write a sequence in time, such as wait for a click, pause, then animate, as one `lv::task` coroutine, not as callbacks and timers.",
+      "why": "The steps read in the order they happen, and the task ends with its owner.",
+      "example": null,
+      "example_note": "No example yet: the Tasks guide will add one.",
+      "check": null,
+      "guide": "tasks.md",
+      "evidence": null
+    },
+    {
+      "id": "expressive-4",
+      "quality": "expressive",
+      "rule": "Name the look of an element, `lv::look<\"tile\">`, and keep its values in the token file.",
+      "why": "The tree says what an element is, the token file says how it looks, and a designer can change the look without touching the code.",
+      "example": "examples/looks/screen.hpp tree",
+      "check": null,
+      "guide": "looks.md",
+      "evidence": null,
+      "wins_over": "Beats a little build time: `<lv/look.hpp>` adds about 3.3 G instructions to a file that uses it, less than one new widget kind."
+    },
+    {
+      "id": "expressive-5",
+      "quality": "expressive",
+      "rule": "Use semantic and component tokens in screen code, such as `tok.color.selected`, not primitives such as a step of a palette.",
+      "why": "A semantic name says why the value is there, and survives a new palette or a dark mode.",
+      "example": "examples/lists/main.cpp row",
+      "check": null,
+      "guide": "tokens.md",
+      "evidence": null
+    },
+    {
+      "id": "extendable-1",
+      "quality": "extendable",
+      "rule": "Put each screen in a file of its own, with the states that only it uses beside it.",
+      "why": "A change then rebuilds one screen, files build side by side, and a reader finds a screen's state next to its tree.",
+      "example": null,
+      "example_note": "No example yet: the printer port has a file per page; a smaller program comes with the guide An application that grows.",
+      "check": null,
+      "guide": "growing.md",
+      "evidence": null,
+      "wins_over": "Beats the total work of a build: each file pays again for its first widget, about 35 G instructions, and a change rebuilds one file."
+    },
+    {
+      "id": "extendable-2",
+      "quality": "extendable",
+      "rule": "Make a reusable piece of screen a function that returns a tree, and constrain each parameter with a public concept: `lv::dependency`, `lv::tree_handler`, `lv::tree_node`.",
+      "why": "A wrong argument is then refused at the call, with the name of the concept, and not deep inside the part.",
+      "example": "examples/state/main.cpp part",
+      "check": {"by": "compiler", "test": "part_dependency_plain_value", "message": "error: no matching function for call to 'shown(int)'\ncandidate 1: 'template<class auto:10>  requires  dependency<auto:10> constexpr auto shown(const auto:10&)'"},
+      "guide": "concepts.md",
+      "evidence": null
+    },
+    {
+      "id": "extendable-3",
+      "quality": "extendable",
+      "rule": "Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state.",
+      "why": "A handler in a constant tree is a plain function pointer and captures nothing; a template argument is a constant that it can name.",
+      "example": "examples/state/main.cpp part",
+      "check": {"by": "compiler", "test": "part_handler_capturing_lambda", "message": "error: no matching function for call to 'tap_button(make(int)::<lambda()>)'\nthe expression 'without_captures__name_the_state_as_a_template_argument<F> [with F = make::._anon_343]' evaluated to 'false'"},
+      "guide": "concepts.md",
+      "evidence": null
+    },
+    {
+      "id": "extendable-4",
+      "quality": "extendable",
+      "rule": "Keep the design in a token file named once for the project, and let a library of parts take the design as a template parameter.",
+      "why": "A library of parts then serves several products, each with its own tokens, and no part names a file.",
+      "example": "examples/looks/screen.hpp design",
+      "check": null,
+      "guide": "looks.md",
+      "evidence": null
+    },
+    {
+      "id": "extendable-5",
+      "quality": "extendable",
+      "rule": "Connect a platform as an object that feeds `lv::display` and `lv::pointer` and joins the loop with `lv::in_loop`; the application names no platform.",
+      "why": "The same application then runs in a window, in a browser and on a board, and each platform is one file.",
+      "example": "examples/window/main.cpp main",
+      "check": null,
+      "guide": "input.md",
+      "evidence": null
+    },
+    {
+      "id": "extendable-6",
+      "quality": "extendable",
+      "rule": "Reach a widget that has no short name with `lv::widget<\"spinbox\">`: its properties and events come from LVGL's headers, as for every widget.",
+      "why": "Nothing is written by hand for one widget, so a widget of a new LVGL version works once that version builds.",
+      "example": null,
+      "example_note": "No example yet: the ports of LVGL's spin box examples use it, without a marked part to show.",
+      "check": null,
+      "guide": "extending.md",
+      "evidence": null
+    }
+  ]
+}

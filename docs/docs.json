@@ -9,7 +9,8 @@
       "title": "Start",
       "pages": [
         "quick-start.md",
-        "which-header.md"
+        "which-header.md",
+        "rules.md"
       ]
     },
     {
