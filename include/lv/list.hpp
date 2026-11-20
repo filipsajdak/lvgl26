@@ -1182,12 +1182,13 @@ constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::eac
 template <detail::row_source S, class T, class K, class R>
   requires std::same_as<typename S::value_type, T> && tree_node<R>
 constexpr auto each(const S& rows, K T::* key, detail::each_options<T, K> options, const R& row_template) {
-  return each(rows, key, options)[row_template];
+  // Built in one step, as each(rows, key, options)[row_template] would be in two.
+  return detail::each_node<S, T, K, R>{each(rows, key, options).rows, key, options, {row_template}};
 }
 template <detail::row_source S, class T, class K, class R>
   requires std::same_as<typename S::value_type, T> && tree_node<R>
 constexpr auto each(const S& rows, K T::* key, const R& row_template) {
-  return each(rows, key)[row_template];
+  return detail::each_node<S, T, K, R>{each(rows, key).rows, key, {}, {row_template}};
 }
 template <detail::row_source S, class T, class K, class R>
   requires std::same_as<typename S::value_type, T>

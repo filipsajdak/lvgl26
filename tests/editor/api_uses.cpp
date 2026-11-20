@@ -357,6 +357,9 @@ constexpr auto empty_arm = lv::is<screen_page::none>();
 constexpr auto pager_call = lv::group(lv::shown(
     current_page, lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup), lv::otherwise()));
 constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
+static_assert(std::same_as<decltype(lv::when(busy, popup)), decltype(lv::when(busy)[popup])>);
+static_assert(std::same_as<decltype(lv::shown(current_page, lv::is<screen_page::main>(ui), lv::otherwise())),
+                           decltype(lv::shown(current_page)[lv::is<screen_page::main>(ui), lv::otherwise()])>);
 constexpr auto boxed = lv::column({.size = {100 * pct, lv::size_content}}, lv::label({.text = "a"}), lv::label());
 constexpr auto boxed_bare = lv::row(lv::label({.text = "a"}), lv::button({.id = "go"}, lv::label({.text = "Go"})));
 // The call form and the subscript form build the same node.
@@ -532,6 +535,8 @@ constexpr auto playlist_call = lv::column(
     {.size = {100 * pct, lv::size_content}},
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
 constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
+static_assert(std::same_as<std::remove_const_t<decltype(playlist_plain)>,
+                           decltype(lv::column[lv::each(tracks, &track::id)[track_row]])>);
 
 static_assert(std::same_as<decltype(lv::bind(&track::title)), lv::detail::row_binding<const char*>>);
 static_assert(std::same_as<decltype(lv::bind(&track::plays, "{} plays")), lv::detail::row_formatted_binding<lv::counter>>);

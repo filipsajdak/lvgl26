@@ -480,7 +480,9 @@ constexpr detail::shown_node<S> shown(const S& state) {
 template <detail::shown_source S, class... A>
   requires detail::children_given<A...>
 constexpr auto shown(const S& state, const A&... arms) {
-  return shown(state)[arms...];
+  using value_type = detail::value_of<S>;
+  static_assert(detail::shown_problem<value_type, A...>().empty(), detail::shown_problem<value_type, A...>());
+  return detail::shown_node<S, A...>{&state, {arms...}};
 }
 template <class S>
 void shown(const S&) = delete(
@@ -502,7 +504,9 @@ constexpr detail::when_node<S> when(const S& flag) {
 template <detail::shown_source S, class T>
   requires std::same_as<detail::value_of<S>, bool> && tree_node<T>
 constexpr auto when(const S& flag, const T& tree) {
-  return when(flag)[tree];
+  using shows = detail::tree_arm<detail::one_of<true>, T>;
+  using hides = detail::tree_arm<detail::one_of<false>, void>;
+  return detail::shown_node<S, shows, hides>{&flag, {shows{&tree, {}}, hides{}}};
 }
 template <class S>
 void when(const S&) = delete("lv::when follows an lv::state or an lv::computed of a bool: lv::when(online, tree).");

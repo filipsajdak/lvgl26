@@ -146,6 +146,22 @@ constexpr auto splice(const Node& self, const K&... k) {
 
 }  // namespace detail
 
+namespace detail {
+
+// What every way of giving a widget its children checks.
+template <class... K>
+constexpr void check_children() {
+  // Its rows are the widget's children from a fixed place on.
+  static_assert((std::size_t{0} + ... + std::size_t{is_structural<K>}) <= 1,
+                "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
+                "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
+  static_assert(sole_child_alone<K...>,
+                "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
+                "lv::group({...})[lv::shown(page)[...]].");
+}
+
+}  // namespace detail
+
 // One widget of a tree: its properties and its children.
 template <detail::fixed W, class... Kids>
 struct node {
@@ -158,13 +174,7 @@ struct node {
   template <detail::tree_child... K>
     requires(sizeof...(Kids) == 0)
   constexpr node<W, K...> operator[](const K&... k) const {
-    // Its rows are the widget's children from a fixed place on.
-    static_assert((std::size_t{0} + ... + std::size_t{detail::is_structural<K>}) <= 1,
-                  "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
-                  "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
-    static_assert(detail::sole_child_alone<K...>,
-                  "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
-                  "lv::group({...})[lv::shown(page)[...]].");
+    detail::check_children<K...>();
     return {p, {k...}, how};
   }
 
@@ -190,11 +200,52 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
+// The calls that take children, shared by every factory. A class that is no template, so
+// that the compiler reads these templates once, not once for each kind of widget; each
+// factory names its props as `props_kind` and adds them with a using-declaration.
+struct takes_children {
+  // The properties, then the children: lv::button({...}, lv::label({...})).
+  template <class D = void, class Self, tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(this const Self& self, const lazy_props<Self::props_kind, D>& p, const Kids&... kids) {
+    if constexpr ((is_repeated<Kids> || ...)) {
+      return splice(self.template operator()<D>(p), kids...);
+    } else {
+      // Built in place, as one step: a call that returned the node without children
+      // would copy its properties once more in constant evaluation.
+      check_children<Kids...>();
+      return node<Self::props_kind, Kids...>{keep<Self::props_kind, D>(p), {kids...}, Self::starts_with};
+    }
+  }
+
+  // The children alone: lv::column(lv::label({...}), lv::arc({...})).
+  template <class Self, tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(this const Self& self, const Kids&... kids) {
+    return self.template operator()<std::void_t<Kids...>>({}, kids...);
+  }
+
+  template <class D = void, class Self, class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(this const Self&, const lazy_props<Self::props_kind, D>&, const A&...) = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+  template <class Self, class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(this const Self&, const A&...) = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+};
+
 // What lv::arc is: call it with properties, then its children.
 //   lv::arc({.value = 1})      lv::button({...}, lv::label({...}))      lv::box(child, child)
 // Indexing with the children, lv::button({...})[lv::label({...})], builds the same node.
 template <fixed W>
-struct factory {
+struct factory : takes_children {
+  static constexpr auto props_kind = W;
+  static constexpr start starts_with{};
+  using takes_children::operator();
+
   template <class D = void>
   constexpr auto operator()(const lazy_props<W, D>& p = {}) const {
     return make_node<W, D>(p);
@@ -204,31 +255,6 @@ struct factory {
   constexpr auto operator[](const Kids&... kids) const {
     return (*this)()[kids...];
   }
-
-  // The properties, then the children: lv::button({...}, lv::label({...})).
-  template <class D = void, tree_kid... Kids>
-    requires children_given<Kids...>
-  constexpr auto operator()(const lazy_props<W, D>& p, const Kids&... kids) const {
-    return make_node<W, D>(p)[kids...];
-  }
-
-  // The children alone: lv::button(lv::label({...})).
-  template <tree_kid... Kids>
-    requires children_given<Kids...>
-  constexpr auto operator()(const Kids&... kids) const {
-    return (*this)[kids...];
-  }
-
-  template <class D = void, class... A>
-    requires(children_given<A...> && !(tree_kid<A> && ...))
-  void operator()(const lazy_props<W, D>&, const A&...) const = delete(
-      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
-      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
-  template <class... A>
-    requires(children_given<A...> && !(tree_kid<A> && ...))
-  void operator()(const A&...) const = delete(
-      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
-      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
 };
 
 // lv::group, lv::row and lv::column: a box that starts with the start style of S.
@@ -236,7 +262,11 @@ struct factory {
 // fills its parent; it groups widgets without drawing anything itself. lv::row and lv::column are
 // flex containers. The node's own properties and its looks beat the start: see start_style.
 template <start S>
-struct start_factory {
+struct start_factory : takes_children {
+  static constexpr fixed props_kind = "obj";
+  static constexpr start starts_with = S;
+  using takes_children::operator();
+
   template <class D = void>
   constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
     auto n = make_node<"obj", D>(p);
@@ -251,31 +281,6 @@ struct start_factory {
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];
   }
-
-  // The properties, then the children: lv::column({...}, lv::label({...}), lv::arc({...})).
-  template <class D = void, tree_kid... Kids>
-    requires children_given<Kids...>
-  constexpr auto operator()(const lazy_props<"obj", D>& p, const Kids&... kids) const {
-    return this->operator()<D>(p)[kids...];
-  }
-
-  // The children alone: lv::column(lv::label({...}), lv::arc({...})).
-  template <tree_kid... Kids>
-    requires children_given<Kids...>
-  constexpr auto operator()(const Kids&... kids) const {
-    return (*this)[kids...];
-  }
-
-  template <class D = void, class... A>
-    requires(children_given<A...> && !(tree_kid<A> && ...))
-  void operator()(const lazy_props<"obj", D>&, const A&...) const = delete(
-      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
-      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
-  template <class... A>
-    requires(children_given<A...> && !(tree_kid<A> && ...))
-  void operator()(const A&...) const = delete(
-      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
-      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
 };
 
 }  // namespace detail
