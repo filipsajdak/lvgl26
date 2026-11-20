@@ -849,11 +849,11 @@ constexpr auto stepper(lv::tree_node auto shown) {
 }
 ```
 
-Checked by the compiler. The test `part_dependency_plain_value` pins the message.
+Checked by the compiler. The test `part_dependency_requires_clause` pins the message.
 
 ```text
-error: no matching function for call to 'shown(int)'
-candidate 1: 'template<class auto:10>  requires  dependency<auto:10> constexpr auto shown(const auto:10&)'
+error: no matching function for call to 'shown<plain>()'
+candidate 1: 'template<auto& Count>  requires  dependency<typename std::remove_cvref<decltype(Count)>::type> constexpr auto shown()'
 ```
 
 Guide: [Concepts for parts](concepts.md).
@@ -882,7 +882,7 @@ Checked by the compiler. The test `part_handler_capturing_lambda` pins the messa
 
 ```text
 error: no matching function for call to 'tap_button(make(int)::<lambda()>)'
-the expression 'without_captures__name_the_state_as_a_template_argument<F> [with F = make::._anon_343]' evaluated to 'false'
+concept tree_handler = detail::without_captures__name_the_state_as_a_template_argument<F>;
 ```
 
 Guide: [Concepts for parts](concepts.md).

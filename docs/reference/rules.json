@@ -189,7 +189,7 @@
       "rule": "Include `<lv/lv.hpp>` and the header of each feature the file uses; include `<lv/all.hpp>` only in a first program.",
       "why": "The core costs a file about a third less than all headers together, and an opt-in header costs only the files that use its feature.",
       "example": "examples/lists/main.cpp includes",
-      "check": {"by": "build", "tool": "cmake/check_includes.cmake", "scope": "every target that links lvgl26 through its CMake, unless LVGL26_CHECK_INCLUDES is off", "test": "include_check_build", "message": "parts.hpp:8: lv::list needs #include <lv/list.hpp>"},
+      "check": {"by": "build", "tool": "cmake/check_includes.cmake", "scope": "every target that links lvgl26 through its CMake, unless LVGL26_CHECK_INCLUDES is off", "test": "include_check_build", "pinned_in": "tests/include_check/run.cmake", "message": "parts.hpp:8: lv::list needs #include <lv/list.hpp>"},
       "guide": "which-header.md",
       "evidence": {"source": "docs/research/header-structure.md", "date": "2026-11-20", "finding": "A file that includes only the core: 9.01 G instructions, against 13.00 G for all headers before the split. On top of the core, look.hpp adds 3.28 G, font.hpp 1.97 G and list.hpp 0.17 G."},
       "wins_over": "Beats the ease of one header for everything: that ease is worth it in a first program only."
@@ -389,7 +389,7 @@
       "rule": "Make a reusable piece of screen a function that returns a tree, and constrain each parameter with a public concept: `lv::dependency`, `lv::tree_handler`, `lv::tree_node`.",
       "why": "A wrong argument is then refused at the call, with the name of the concept, and not deep inside the part.",
       "example": "examples/state/main.cpp part",
-      "check": {"by": "compiler", "test": "part_dependency_plain_value", "message": "error: no matching function for call to 'shown(int)'\ncandidate 1: 'template<class auto:10>  requires  dependency<auto:10> constexpr auto shown(const auto:10&)'"},
+      "check": {"by": "compiler", "test": "part_dependency_requires_clause", "message": "error: no matching function for call to 'shown<plain>()'\ncandidate 1: 'template<auto& Count>  requires  dependency<typename std::remove_cvref<decltype(Count)>::type> constexpr auto shown()'"},
       "guide": "concepts.md",
       "evidence": null
     },
@@ -399,7 +399,7 @@
       "rule": "Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state.",
       "why": "A handler in a constant tree is a plain function pointer and captures nothing; a template argument is a constant that it can name.",
       "example": "examples/state/main.cpp part",
-      "check": {"by": "compiler", "test": "part_handler_capturing_lambda", "message": "error: no matching function for call to 'tap_button(make(int)::<lambda()>)'\nthe expression 'without_captures__name_the_state_as_a_template_argument<F> [with F = make::._anon_343]' evaluated to 'false'"},
+      "check": {"by": "compiler", "test": "part_handler_capturing_lambda", "message": "error: no matching function for call to 'tap_button(make(int)::<lambda()>)'\nconcept tree_handler = detail::without_captures__name_the_state_as_a_template_argument<F>;"},
       "guide": "concepts.md",
       "evidence": null
     },

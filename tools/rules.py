@@ -12,7 +12,8 @@ never used again, so a review, a commit, a guide or a message can cite it. The d
     example       `path name`: the part of a built file between two `//! [name]` lines, or
                   `path` for the whole file; or null, with `example_note` saying why there is none
     check         null, or what enforces the rule in a program: by the compiler, the build or a
-                  tool, the test that pins its message, and that message
+                  tool, the test that pins its message, and that message; a test that is no
+                  compile-fail test names the file that pins it, `pinned_in`
     guide         the page that explains it: a page in docs/, or one of `pages_planned`
     evidence      null ("not measured yet"), or the note that holds a measurement, its date and
                   what it found
@@ -101,7 +102,17 @@ def check_shape_problems(check: dict) -> list[str]:
         problems.append("a check has the message it prints")
     if "tool" in check and not (ROOT / check["tool"]).exists():
         problems.append(f"the tool {check['tool']} does not exist")
-    return problems
+    return problems + pinned_in_problems(check)
+
+
+def pinned_in_problems(check: dict) -> list[str]:
+    """A test that is no compile-fail test names the file that pins its message: it must hold it."""
+    if "pinned_in" not in check:
+        return []
+    file = ROOT / check["pinned_in"]
+    if not file.is_file() or check.get("message", "") not in file.read_text():
+        return [f"{check['pinned_in']} does not hold the message"]
+    return []
 
 
 def check_test_problems(check: dict, tests: set[str], pinned: dict[str, str]) -> list[str]:

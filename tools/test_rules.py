@@ -85,6 +85,11 @@ class Checks(unittest.TestCase):
         check = {"by": "compiler", "test": "no_such_test", "message": "x"}
         self.assertIn("the test no_such_test does not exist", first_problems(with_rule(check=check)))
 
+    def test_a_message_pinned_in_a_file_is_in_it(self):
+        check = {"by": "build", "test": "include_check_build", "pinned_in": "tests/include_check/run.cmake",
+                 "message": "main.cpp:1: lv::nothing needs #include <lv/nothing.hpp>"}
+        self.assertIn("tests/include_check/run.cmake does not hold the message", first_problems(with_rule(check=check)))
+
     def test_a_check_is_by_the_compiler_the_build_or_a_tool(self):
         check = {"by": "review", "message": "x"}
         self.assertTrue(any("a check is by one of" in p for p in first_problems(with_rule(check=check))))
