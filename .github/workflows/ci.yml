@@ -190,7 +190,8 @@ jobs:
       - name: Build the list of public names
         run: cmake --build --preset host-v96 --target lv_names
       - name: Test
-        run: ctest --preset host-v96 -R '^editor_' -j "$(nproc)" --output-on-failure
+        # editor_quick_fix runs every night (nightly.yml).
+        run: ctest --preset host-v96 -R '^editor_' -LE nightly -j "$(nproc)" --output-on-failure
       - name: The stubs, if a test failed
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
