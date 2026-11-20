@@ -59,7 +59,7 @@
     </div>
     <dl class="titleblock">
       <div><dt>Version</dt><dd>0.0.1</dd></div>
-      <div><dt>Compiler</dt><dd>GCC 16 or newer</dd></div>
+      <div><dt>Compiler</dt><dd>GCC 16.2 or newer</dd></div>
       <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
       <div><dt>Tested on</dt><dd>Linux host, in CI</dd></div>
     </dl>
@@ -389,7 +389,7 @@
       <div class="prose">
         <h3>Compiler and platform</h3>
         <ul class="yesno dot">
-          <li><strong>GCC 16 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
+          <li><strong>GCC 16.2 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
           <li><strong>CMake 3.30 or newer</strong> and Ninja.</li>
           <li><strong>Headers only.</strong> There is no <code>import lv;</code> yet.</li>
           <li><strong>One microcontroller is proven, in an emulator.</strong> The slice runs on a Cortex-M4 in QEMU. No real board, no display driver and no other processor family has been tried, and there is no size budget yet.</li>

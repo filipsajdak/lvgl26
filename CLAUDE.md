@@ -1,6 +1,6 @@
 # lvgl26
 
-A C++26 framework over LVGL. Namespace `lv`. GCC 16 or newer only: the code uses reflection.
+A C++26 framework over LVGL. Namespace `lv`. GCC 16.2 or newer only: the code uses reflection.
 
 ## Build and test
 

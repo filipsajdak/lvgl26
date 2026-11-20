@@ -432,7 +432,7 @@ clangd cannot parse reflection, so lvgl26 gives it stub headers of the public AP
 
 ## Requirements
 
-- GCC 16 or newer (`-std=c++26 -freflection`)
+- GCC 16.2 or newer (`-std=c++26 -freflection`)
 - CMake 3.30 or newer, Ninja
 
 ## Build and test

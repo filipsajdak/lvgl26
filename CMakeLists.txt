@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
 project(lvgl26 VERSION 0.0.1 LANGUAGES C CXX)
 
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
-  message(FATAL_ERROR "lvgl26 needs GCC 16 or newer (C++26 reflection). Found "
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.2)
+  message(FATAL_ERROR "lvgl26 needs GCC 16.2 or newer (C++26 reflection). Found "
                       "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}.")
 endif()
 
