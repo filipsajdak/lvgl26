@@ -435,7 +435,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Compile-time UI trees</strong> with ids and <code>lv::mount</code></li>
         <li><strong>A mouse or a touch panel</strong> as <code>lv::pointer</code>, fed by the platform; no press is lost between two reads</li>
         <li><strong>A mounted tree where the program puts it</strong>: never moved, sized by the compiler, in a variable or a <code>constinit</code> global that mounts and unmounts in the same memory</li>
-        <li><strong>Pages that follow a state</strong>: <code>lv::shown(current)[lv::is&lt;page::home&gt;(home), ...]</code> and <code>lv::when(flag)[tree]</code>, every value covered, the old page gone before the new one is built</li>
+        <li><strong>Pages that follow a state</strong>: <code>lv::shown(current)[lv::is&lt;page::home&gt;(home), ...]</code> and <code>lv::when(flag)[tree]</code>, every value covered, pages that slide with <code>lv::transition</code>, and pages from other files as <code>lv::page</code> with no size to write</li>
         <li><strong>One slot for one of several trees</strong>: <code>lv::one_of</code> in the memory of the largest, with a <code>visit</code> whose arms are chosen by their parameter type</li>
         <li><strong>Units</strong> for lengths, angles, times and opacity, and strict integers</li>
         <li><strong>Design tokens</strong> from W3C DTCG JSON through <code>#embed</code></li>

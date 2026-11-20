@@ -57,8 +57,10 @@ How it works:
   same memory. See [Where a tree lives](docs/mounting.md).
 - **Pages that follow a state** (`#include <lv/shown.hpp>`). `lv::shown(current)[lv::is<page::home>(home), lv::otherwise()]`
   shows the tree of the value of a state of an enum or a bool, and `lv::when(offline)[banner]` a tree while a flag is
-  true. Every value has one arm, checked by the compiler. The old page is deleted before the new one is built, in the
-  memory of the tree that holds it, before the next frame; `lv::settle()` switches at once. See `examples/pages`.
+  true. Every value has one arm, checked by the compiler. `lv::shown(current, {.enter = slide_in, .leave = slide_out})`
+  slides pages with `lv::transition`: the new page is built before the old one leaves. A page of another file is
+  `extern const lv::page home_page;`, defined there as `lv::page_of<ui>`, with no size to write. A switch allocates
+  nothing of lvgl26's; `lv::settle()` switches at once. See `examples/pages`.
 - **One slot for one of several trees** (`#include <lv/one_of.hpp>`). `lv::one_of<saving, failed>` holds one tree at a time in the
   memory of the largest, as `std::variant` does. `slot.mount<failed>(parent)` ends the tree that is there
   first, and `slot.visit(...)` calls the function whose parameter names the tree that is mounted:
