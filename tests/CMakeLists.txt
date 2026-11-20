@@ -660,7 +660,7 @@ lvgl26_compile_fail(settings_unknown_unit "lv: test\\.json: limits\\.compile_tim
 lvgl26_compile_fail(settings_negative "lv: test\\.json: limits\\.compile_time_image is -1 px, and a limit cannot be negative\\.")
 lvgl26_compile_fail(settings_too_large "lv: test\\.json: limits\\.compile_time_image is 1e300 px, more than a limit can hold\\.")
 lvgl26_compile_fail(settings_fraction "lv: test\\.json: limits\\.compile_time_image is 0\\.5 px, which is no whole number of px\\.")
-lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h.;.")
+lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h....*To allow plain integers, set rules\\.raw_integer_state in the settings\\.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")
 lvgl26_compile_fail(bind_printf_format "a text binding format needs exactly one {} for the value")
