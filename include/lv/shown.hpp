@@ -389,29 +389,38 @@ struct shown_node {
     s.shown = no_arm;
     bool ok = true;
     template for (constexpr auto i : indices<arm_count>) {
-      if (i == k) {
-        if constexpr (has_tree<i, Tree, Path...>()) {
-          constexpr auto at = storage<Tree, Path...>::place[i];
-          auto& tree = s.region.template emplace<at>();
-          ok = tree.mount(obj{s.holder}).has_value();
-          if (ok) {
-            s.shown = k;
-            if (focus != nullptr) focus_first(focus, tree.root().raw());
-            constexpr const auto& hook = arm<i, Tree, Path...>().options.on_shown;
-            if constexpr (!is_null(hook.tree)) {
-              const auto handle =
-                  held_access::make<*arm<i, Tree, Path...>().tree>(&s, &storage<Tree, Path...>::template find<i>);
-              hook.call(&handle);
-            }
-          } else {
-            s.region.reset();
-          }
-        } else {
-          s.shown = k;
-        }
-      }
+      if (i == k) ok = show_arm<i, Tree, Path...>(s, focus);
     }
     return ok;
+  }
+
+  // Builds arm I in the empty region of `s`. False when LVGL had no memory; then nothing is shown.
+  template <std::size_t I, const auto& Tree, std::size_t... Path>
+  static bool show_arm(storage<Tree, Path...>& s, lv_group_t* focus) {
+    if constexpr (has_tree<I, Tree, Path...>()) {
+      auto& tree = s.region.template emplace<storage<Tree, Path...>::place[I]>();
+      if (!tree.mount(obj{s.holder}).has_value()) {
+        s.region.reset();
+        return false;
+      }
+      s.shown = I;
+      if (focus != nullptr) focus_first(focus, tree.root().raw());
+      welcome<I, Tree, Path...>(s);
+    } else {
+      s.shown = I;
+    }
+    return true;
+  }
+
+  // .on_shown of arm I, with a handle to its tree.
+  template <std::size_t I, const auto& Tree, std::size_t... Path>
+  static void welcome(storage<Tree, Path...>& s) {
+    constexpr const auto& hook = arm<I, Tree, Path...>().options.on_shown;
+    if constexpr (!is_null(hook.tree)) {
+      const auto handle =
+          held_access::make<*arm<I, Tree, Path...>().tree>(&s, &storage<Tree, Path...>::template find<I>);
+      hook.call(&handle);
+    }
   }
 
   template <const auto& Tree, std::size_t... Path>
