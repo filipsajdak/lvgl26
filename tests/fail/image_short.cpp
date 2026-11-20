@@ -1,4 +1,5 @@
 // The file says four rows and holds three.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

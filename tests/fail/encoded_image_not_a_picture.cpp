@@ -1,4 +1,5 @@
 // A licence text is neither a PNG nor a JPEG.
+#include <lv/encoded_image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

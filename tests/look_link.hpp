@@ -3,6 +3,8 @@
 // The registration of a project, in a header that every file includes: the way lv::look is meant
 // to be used. tests/look_link_main.cpp and tests/look_link_cards.cpp include it and link together.
 
+#include <lv/font.hpp>
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 namespace link_project {

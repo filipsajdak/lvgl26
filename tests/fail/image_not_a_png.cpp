@@ -1,4 +1,5 @@
 // A font file is not a picture.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

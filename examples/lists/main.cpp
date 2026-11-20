@@ -3,6 +3,7 @@
 //
 //   lists    writes lists.png
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 

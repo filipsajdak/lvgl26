@@ -1,4 +1,6 @@
 // A color with alpha for a property that takes a dimension.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

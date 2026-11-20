@@ -1,6 +1,10 @@
 // lv::look: a group of the project's tokens as a style, by name.
 
+#include <lv/font.hpp>
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
+#include <lv/repeat.hpp>
+#include <lv/theme.hpp>
 
 #include "check.hpp"
 

@@ -1,6 +1,8 @@
 // lv::for_each and lv::for_each_field: the compiler writes the repeated widgets.
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
+#include <lv/repeat.hpp>
 
 #include "check.hpp"
 

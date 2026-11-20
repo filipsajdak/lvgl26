@@ -4,6 +4,7 @@
 // column on the home page and the list of the Print page) are `lv::each` over `queue`. A change
 // of a job touches the widgets of that job only.
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 
 #include <cstddef>

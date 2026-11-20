@@ -1,4 +1,5 @@
 // Sixteen bits for each channel.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

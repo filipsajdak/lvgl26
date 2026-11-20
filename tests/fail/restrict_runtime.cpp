@@ -1,5 +1,6 @@
 // A part of lvgl26 that needs floating point, in a project that does not allow it.
 #include <lv/config.hpp>
+#include <lv/runtime.hpp>
 
 template <>
 inline constexpr lv::config lv::cfg<lv::override>{.allow = {.floating_point = false}};

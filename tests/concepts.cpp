@@ -1,8 +1,10 @@
 // The concepts a user writes a reusable part with, and what satisfies each (docs/concepts.md).
 // Nothing runs: it compiles or it does not.
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 #include <lv/pointer.hpp>
+#include <lv/repeat.hpp>
 
 #include <mp-units/systems/si.h>
 

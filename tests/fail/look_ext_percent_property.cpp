@@ -1,4 +1,6 @@
 // A percentage for a property that LVGL does not give one.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

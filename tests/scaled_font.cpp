@@ -5,6 +5,7 @@
 //   scaled_font negative    resizes to -5 px: the same
 
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
 
 #include "check.hpp"
 

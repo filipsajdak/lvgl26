@@ -3,7 +3,10 @@
 // A small screen written with looks: the code says what each element is, tokens.json says how
 // it looks. docs/looks.md walks through this file.
 
+#include <lv/font.hpp>
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
+#include <lv/repeat.hpp>
 
 namespace looks {
 

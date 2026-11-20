@@ -2,6 +2,7 @@
 //
 //   fonts    writes fonts.png
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 

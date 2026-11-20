@@ -1,4 +1,6 @@
 // An entry that matches no style property: the message lists the nearest ones.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

@@ -1,4 +1,5 @@
 // The registration comes after a look has read the design: like lv::cfg, it must come first.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {

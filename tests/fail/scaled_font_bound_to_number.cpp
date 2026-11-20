@@ -1,5 +1,6 @@
 // Only a font property follows a font.
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
 
 using namespace lv::units;
 

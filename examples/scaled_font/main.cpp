@@ -2,6 +2,7 @@
 // It needs LVGL's TinyTTF: set(LVGL26_TTF ON) in CMake.
 
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
 
 using namespace lv::units;
 

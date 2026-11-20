@@ -1,4 +1,5 @@
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
 #include <string>
 void f(lv::obj screen) {
   std::string text;

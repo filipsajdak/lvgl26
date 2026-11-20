@@ -1,5 +1,7 @@
 // The splash screen: an orange backdrop, the slogan and the wordmark sliding in.
 
+#include <lv/image.hpp>
+
 #include "pages.hpp"
 #include "parts.hpp"
 

@@ -1,4 +1,5 @@
 // An interlaced file.
+#include <lv/image.hpp>
 #include <lv/lv.hpp>
 
 constexpr unsigned char file[] = {

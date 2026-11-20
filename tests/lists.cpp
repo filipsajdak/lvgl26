@@ -1,5 +1,6 @@
 // lv::list and lv::each: a change touches the widgets of its own row only.
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

@@ -1,4 +1,6 @@
 // size takes two values and a token holds one.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

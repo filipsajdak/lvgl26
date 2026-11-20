@@ -1,4 +1,5 @@
 // A path that names one token, not a group.
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
 
 constexpr char tokens_json[] = {

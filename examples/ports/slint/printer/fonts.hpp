@@ -5,6 +5,7 @@
 //
 //   constexpr auto body = printer::type(tok.text.body);
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 namespace printer {

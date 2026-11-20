@@ -3,6 +3,7 @@
 
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
+#include <lv/runtime.hpp>
 
 #include "check.hpp"
 

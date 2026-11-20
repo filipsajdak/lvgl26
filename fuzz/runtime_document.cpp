@@ -10,6 +10,7 @@
 // must leave nothing on the screen.
 
 #include <lv/lv.hpp>
+#include <lv/runtime.hpp>
 
 #include <cstdio>
 #include <string>

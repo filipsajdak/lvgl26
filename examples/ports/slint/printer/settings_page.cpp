@@ -1,5 +1,7 @@
 // The Settings page: two groups of options, with check boxes and choices.
 
+#include <lv/image.hpp>
+
 #include "fonts.hpp"
 #include "pages.hpp"
 #include "parts.hpp"

@@ -4,6 +4,8 @@
 // tree. A page's file instantiates the ones it uses, so it pays for those alone. Fonts come in
 // as arguments: a font costs compile time, and each page makes the sizes it shows.
 
+#include <lv/image.hpp>
+
 #include "icons.hpp"
 #include "state.hpp"
 #include "ui.hpp"

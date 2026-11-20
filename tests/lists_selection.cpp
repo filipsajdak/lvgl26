@@ -1,6 +1,7 @@
 // The selected row of an lv::each: a state of the key's type, set by a click or the focus,
 // shown as the checked state of the row.
 
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

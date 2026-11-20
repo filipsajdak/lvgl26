@@ -6,15 +6,24 @@
 // When you add a public name to include/lv, use it here and declare it in the stubs.
 // tools/editor/inventory.py fails until both are done.
 
+#include <lv/encoded_image.hpp>
+#include <lv/font.hpp>
 #include <lv/host.hpp>
+#include <lv/image.hpp>
+#include <lv/list.hpp>
+#include <lv/look.hpp>
 #include <lv/lv.hpp>
-#include <lv/one_of.hpp>
 #include <lv/mcp.hpp>
+#include <lv/one_of.hpp>
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
+#include <lv/repeat.hpp>
+#include <lv/runtime.hpp>
+#include <lv/scaled_font.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
 #include <lv/signal_type.hpp>
+#include <lv/theme.hpp>
 #include <lv/ui_scheduler.hpp>
 
 #include <mp-units/systems/si.h>

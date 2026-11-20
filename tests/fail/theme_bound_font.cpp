@@ -1,5 +1,7 @@
 // A theme is a constant; a font that is drawn on the device is not.
 #include <lv/lv.hpp>
+#include <lv/scaled_font.hpp>
+#include <lv/theme.hpp>
 
 using namespace lv::units;
 

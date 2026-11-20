@@ -1,4 +1,6 @@
 // A typo in a nested path: the message lists the groups there and the nearest.
+#include <lv/look.hpp>
+
 #include "legacy_tokens.hpp"
 
 constexpr char tokens_json[] = {

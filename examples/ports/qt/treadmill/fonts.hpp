@@ -6,6 +6,7 @@
 //
 //   constexpr auto label_font = treadmill::words_face(tok.text.label);
 
+#include <lv/font.hpp>
 #include <lv/lv.hpp>
 
 namespace treadmill {
