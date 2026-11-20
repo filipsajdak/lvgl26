@@ -1363,6 +1363,21 @@ Two thirds of the cost of an unset member comes from `lv::arg` having constructo
 - B: one slot (`style`) in a theme, with every state and part as `lv::on`. A theme then costs 0.6 G instead of 8.3 G, and a file with Signal 24 % less.
 - C: a spike after A and B.
 
+## What a token message costs every file
+
+Decided by the owner on 2026-11-20: the code that builds the messages of a bad token is allowed to cost every file that includes `<lv/lv.hpp>` 0.28 percent. Marks: `measured`, Valgrind `Ir` of the nightly's method on GitHub's runners (two runs gave the same count).
+
+| Part (in `include/lv/tokens.hpp`) | What a message gains | Cost of the file that only includes `lv.hpp` |
+|---|---|---:|
+| The path of the token (`token_path`) | `'space.md':` in every token message | 4.3 M |
+| A chain of aliases that is too long, or a real circle (`fail_alias_chain`) | two texts for two mistakes | 5.0 M |
+| The example of a form from before the standard, with the token's own value (`standard_form`) | `{"value": 16, "unit": "px"}` for `"16px"` | 7.5 M |
+| Together | | 16.9 M of 6,027 M (+0.28 percent) |
+
+- The parts cost at parse time: nothing runs for a token that is well-formed, and no text is built. A shorter rewrite of the same code cost the same, so the amount of code is the cost.
+- The scan that finds where a settings file stops being JSON (`include/lv/detail/json_fault.hpp`) costs nothing: only the header that `lvgl26_settings()` writes includes it, and `settings.hpp` declares it.
+- The next nightly run on `main` after the merge shows `include_lv` 17 M higher, once. The history needs nothing for it: a rise of 0.28 percent is inside the 0.5 percent threshold, so the night is `same` and the baseline does not move. The 17 M stay counted against the baseline, as every change inside the threshold does: a later change of 0.22 percent or more in `include_lv` crosses it, and a night that crosses it names the commits since the baseline.
+
 ## Tried and ruled out
 
 | Idea | Result | Mark |

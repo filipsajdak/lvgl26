@@ -280,6 +280,10 @@
     "include/lv/units.hpp": {
       "tests": "^units$|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_units_bool_count$|^fail_units_count_too_large$|^fail_units_count_too_large_folded$|^fail_units_decidegrees_not_tenths$",
       "targets": "units"
+    },
+    "include/lv/detail/json_fault.hpp": {
+      "tests": "^json_fault$|^settings$|^fail_settings_not_json$",
+      "targets": "json_fault settings"
     }
   }
 }
