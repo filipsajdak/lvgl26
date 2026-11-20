@@ -958,6 +958,13 @@ if(Python3_FOUND)
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
+  # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
+  # the check of tests/smoke.cpp left its stamp.
+  if(LVGL26_CHECK_INCLUDES)
+    add_test(NAME includes_build_check
+             COMMAND Python3::Interpreter -c "import pathlib, sys; sys.exit(0 if list(pathlib.Path(sys.argv[1]).glob('smoke.cpp.*.stamp')) else 1)"
+                     ${CMAKE_BINARY_DIR}/lvgl26_includes/smoke)
+  endif()
   add_test(NAME which_header_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                           --check-page ${PROJECT_SOURCE_DIR}/docs/which-header.md)
   # The token files of the Signal theme are written from the design system.

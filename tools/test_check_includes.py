@@ -71,6 +71,28 @@ class CheckIncludes(unittest.TestCase):
             self.assertIn(header, headers)
         self.assertNotIn("lv/lv.hpp", headers)
 
+    def test_the_build_form_writes_a_stamp_and_a_depfile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "parts.hpp").write_text("#pragma once\n#include <lv/list.hpp>\n")
+            (root / "main.cpp").write_text('#include "parts.hpp"\nlv::list<int, 2> rows;\n')
+            stamp, depfile = root / "out" / "main.stamp", root / "out" / "main.d"
+            self.assertEqual(tool.build([str(stamp), str(depfile), str(root / "main.cpp")]), 0)
+            self.assertTrue(stamp.exists())
+            depends = depfile.read_text()
+            self.assertIn("main.cpp", depends)
+            self.assertIn("parts.hpp", depends)
+            self.assertIn("headers.json", depends)
+
+    def test_the_build_form_fails_on_a_header_of_the_program(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "parts.hpp").write_text("#pragma once\nlv::list<int, 2> rows;\n")
+            (root / "main.cpp").write_text('#include "parts.hpp"\n')
+            stamp = root / "main.stamp"
+            self.assertEqual(tool.build([str(stamp), str(root / "main.d"), str(root / "main.cpp")]), 1)
+            self.assertFalse(stamp.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
