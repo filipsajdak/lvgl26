@@ -164,6 +164,7 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
         entry{^^decidegrees, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
         entry{^^duration, "a time (300 * lv::ms)"},
         entry{^^opa, "an opacity (50 * lv::pct)"},
+        entry{std::meta::dealias(^^lv_color_t), "a color (lv::rgb(0x1b2430))"},
         entry{^^strict<bool>, "true or false"}})
     if (e.type == t) return e.text;
   return {};
@@ -189,22 +190,58 @@ consteval std::string how_to_write(std::meta::info t) {
   if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
+  if (std::meta::is_enum_type(t)) return "the name of an LVGL value in quotes, such as \"center\"";
   return str(std::meta::display_string_of(t));
 }
 
+// What a value that was given is called in a message: lvgl26's words, not LVGL's or the compiler's.
+consteval std::string given_name(std::meta::info t) {
+  if (t == std::meta::dealias(^^lv_color_t)) return "a color";
+  if (std::meta::is_array_type(t) && std::meta::remove_extent(t) == ^^char) return "a text";
+  return str(std::meta::display_string_of(t));
+}
+
+// A style value that was given as the plain value inside the token or lv::raw that the property wants.
+template <class T, class U>
+inline constexpr bool bare_payload =
+    is_made_from(^^T, ^^styled) && std::meta::template_arguments_of(^^T)[0] == std::meta::dealias(^^std::remove_cvref_t<U>);
+
 template <class... Ts>
 struct wrong_value {
+  // "a width or x (...), then a color": what the property takes.
+  static consteval std::string takes() {
+    std::string m, sep;
+    ((m += sep + how_to_write(^^Ts), sep = ", then "), ...);
+    return m;
+  }
+
   template <class... U>
   static consteval std::string_view message() {
-    std::string m = "lv: wrong value for this property. It takes ";
+    std::string m = "lv: wrong value for this property. It takes " + takes() + ". You gave ";
     std::string sep;
-    ((m += sep + how_to_write(^^Ts), sep = ", then "), ...);
-    m += ". You gave ";
-    sep.clear();
-    ((m += sep + str(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
-     ...);
+    ((m += sep + given_name(std::meta::dealias(^^std::remove_cvref_t<U>)), sep = ", "), ...);
     if (sizeof...(U) == 0) m += "nothing";
-    return std::define_static_string(m + ".");
+    m += ".";
+    if constexpr (sizeof...(Ts) == 1 && sizeof...(U) == 1) {
+      if (bare_payload<Ts..., U...>) m += " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
+    } else if constexpr (sizeof...(U) != 0 && sizeof...(Ts) != sizeof...(U)) {
+      m += " The property takes " + decimal(sizeof...(Ts)) + " values in braces, and this has " + decimal(sizeof...(U)) + ".";
+    }
+    return std::define_static_string(m);
+  }
+
+  // A state of type T that the property cannot follow.
+  template <class T>
+  static consteval std::string_view bound_message() {
+    return std::define_static_string("lv: this property takes " + takes() + ", and the state holds " +
+                                     given_name(std::meta::dealias(^^T)) +
+                                     ". A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.");
+  }
+
+  // lv::bind(state, format) on a property that is not a text.
+  static consteval std::string_view format_message() {
+    return std::define_static_string("lv: lv::bind(state, format) is for text properties only, and this property takes " +
+                                     takes() + ". Bind the state without a format: lv::bind(state).");
   }
 };
 
@@ -571,9 +608,7 @@ struct arg {
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
                       std::convertible_to<typename detail::state_payload<T>::type, first> ||
                       (std::is_enum_v<T> && detail::is_strict<first>),
-                  "lv: this property cannot be bound to a state of that type. The state's "
-                  "type, or the number inside its quantity or named type, must be what the "
-                  "property takes.");
+                  detail::wrong_value<Ts...>::template bound_message<T>());
     // A subject carries a plain number, and the property would read whole degrees
     // as tenths.
     static_assert(!(std::same_as<T, angle> && std::same_as<first, decidegrees>),
@@ -605,7 +640,7 @@ struct arg {
   constexpr arg(formatted_binding<T> b)
       : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_ops(b.ops), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
-                  "lv: lv::bind(state, format) is for text properties only.");
+                  detail::wrong_value<Ts...>::format_message());
   }
 
  private:
