@@ -82,6 +82,13 @@ Qt and Slint: a short fragment in their own language, written by us, beside the 
 - A pilot the owner reads first: the rules page, one existing guide in the new outline (Lists), one new guide (State and bindings).
 - After his comments: batches, merged when CI is green. Start, Core ideas and The program first. "How it looks" after the fonts and theme designs are decided. Message sections after the compile-fail tests pin whole messages.
 
+### The owner's steer on the first rule list (2026-11-20)
+
+- "Fast at run time" covers processor time, not only memory: a display nobody sees, a hidden widget, a binding against polling, changing only what changed, and the cost of an animation. Every rule of run time ends up resting on a nightly probe; until it does, its data says `probe_needed`, and the tool fails a rule of run time that has neither.
+- A widget is reached by an id that the compiler resolves, `root->get<"title">()`, not through a stored pointer or a search at run time (`checked-9`).
+- Where two qualities pull apart, clarity wins over build time: choose the widget that says what the element is. The rule "take a widget kind the file already uses" (`fast-build-3`) is gone; its number stays unused. What a new kind costs a file (5.6 G instructions against 0.2 G for a node, 2026-11-19) is a fact for the page "Keeping builds fast".
+- `no-boilerplate-9` (one of several trees in an `lv::one_of` slot) changes when `lv::shown` is built. Its data says so in `revisit`, which the page does not show.
+
 ## The audit (2026-11-20)
 
 Every page, `README.md`, the site pages and `examples/README.md` were read against `main`. `source` 2026-11-20, nothing compiled.
@@ -104,7 +111,19 @@ Every page, `README.md`, the site pages and `examples/README.md` were read again
 
 Ranked most out of date: `docs/README.md`; the counts and in-review rows of the site; the token forms in `looks.md`; `from-qt.md`, `from-touchgfx.md` and `examples/README.md`; the printer walkthrough; the screen lines of the site.
 
-Shorter forms that need a feature first: one table of enumerator texts for `lv::like` and `lv::options_of`; `app.step(50 * ms)`; naming the token file in the settings; an `lv::list` built from a braced list; `lv::shown`; a way to start a task on the widgets of `lv::for_each`; components and `lv::use`.
+### What would shorten user code further
+
+These need a feature first. They are not rules, and no page describes them.
+
+| Today | Shorter, once built |
+|---|---|
+| A `labels` struct for `lv::like`, and a `switch` in `lv::option_text<E>`, for the same texts | One table of an enum's texts that both read |
+| `app.advance(50 * ms), app.step();` | `app.step(50 * ms)` |
+| Three lines that embed the token file and read it, in every file that uses tokens | The token file named once, in the settings |
+| No way to reach the widgets of `lv::for_each`, so a task per widget is started by hand | A task started on each repeated widget |
+| An `lv::list` filled by `assign` from a constant array | An `lv::list` built from a braced list |
+| A pager of `lv::owned` trees in the printer port | `lv::shown` |
+| A part with its own state and slots | Components and `lv::use` |
 
 ## What the pilot found (2026-11-20)
 
@@ -174,11 +193,19 @@ A section "What the compiler checks" shows whole messages only after the compile
 
 ### Probes that do not exist yet
 
-The "What it costs" tables of the pilot say "not measured yet" for these:
+Each rule of run time that no nightly probe measures says what its probe must measure (`probe_needed` in `rules.json`):
 
-- the processor time of one change of a state with N followers, and of one row change of a list;
-- the stack of a list change and of a state change;
-- the code size of a state, a computed and an effect.
+- `fast-run-1`: LVGL's heap after a mount and after a thousand changes of the states of a screen that does not change shape: the same number.
+- `fast-run-2`: instructions and pixels flushed for one row inserted into a list of twenty, against building the twenty rows again.
+- `fast-run-3`: LVGL's heap of a row that shows a text field through lv::bind, against one that copies the text.
+- `fast-run-4`: LVGL's heap and instructions a second of a task whose owner was deleted, against one with no owner.
+- `fast-run-6`: LVGL's heap and instructions to draw a label in a font the compiler made, against the same font drawn by TinyTTF.
+- `fast-run-7`: LVGL's heap after the first display, with and without LVGL26_NO_DEFAULT_THEME.
+- `fast-run-10`: instructions a second of a label bound to a state that changes once a second, against a timer that sets the label every 50 ms.
+- `fast-run-11`: instructions and pixels flushed for one property change, against unmounting and mounting the same tree.
+- `fast-run-12`: instructions a second of one animation, against the area of the animated widget.
+
+The guides of the pilot say "not measured yet" for these too: the processor time of a state change and of a row change, the stack of both, and the code size of a state, a computed and an effect.
 
 ### Checks that do not exist yet
 
@@ -186,6 +213,10 @@ The "What it costs" tables of the pilot say "not measured yet" for these:
 - The lint for plumbing in examples (check 4).
 - A rule whose example is pending fails once a marked region exists for it: today the data only says why there is none.
 - The prose rules (one line per paragraph, 25 words a sentence) are kept by review, not by a tool.
+
+### Rules to revisit
+
+- `no-boilerplate-9`: lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only.
 
 ### Later work outside the pages
 
