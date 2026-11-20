@@ -263,10 +263,10 @@ add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.pn
 # not for that to come back.
 # A file that includes <lv/lv.hpp> and names nothing, under a fixed operation limit: a header
 # that does a scan where it is read, in every file, stops it compiling. The largest evaluation
-# of such a file needed 25,000 to 26,000 operations on 2026-11-19, after the API scan became
-# lazy; the limit is about twice that, as large_tree's. Raise it only with a measurement:
+# of such a file needed 12,000 to 14,000 operations on 2026-11-20, once lv/lv.hpp became the core
+# (25,000 to 26,000 before); the limit is about twice that, as large_tree's. Raise it only with a measurement:
 # python3 tools/compile_report.py --ops build/host-v96 tests/include_only.cpp.
-set(lvgl26_include_only_ops 50000)
+set(lvgl26_include_only_ops 26000)
 lvgl26_test(include_only)
 set_source_files_properties(include_only.cpp PROPERTIES
   COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=${lvgl26_include_only_ops}")
