@@ -248,6 +248,24 @@ Built in the branch `perf/first-widget`, one commit per fix. Measured on 2026-11
 - The merge sort is two functions, each of complexity 8 or less, as `tools/crap.py` asks.
 - All 277 compile-fail tests give the same error text as before on `host-v96`; only line numbers in our headers moved.
 
+### The second round: strings in constant evaluation
+
+Built in the branch `perf/consteval-strings`, from the costs of "Inside GCC". Measured on 2026-11-20 against `main` at `815fcf4`: full compile, operation limits kept, minimum of three runs, G.
+
+| File | Before | After | Change | Mark |
+|---|---|---|---|---|
+| `<lv/lv.hpp>` only | 13.06 | 13.07 | +0.1 % | `measured` |
+| One mounted label | 45.85 | 42.22 | −7.9 % | `measured` |
+| 10 widget kinds | 94.28 | 82.90 | −12.1 % | `measured` |
+| `tests/large_tree.cpp`, under its limit | 75.37 | 70.98 | −5.8 % | `measured` |
+| `examples/quick_start/main.cpp` | 112.88 | 106.77 | −5.4 % | `measured` |
+| `<lv/signal.hpp>` | 64.42 | 62.60 | −2.8 % | `measured` |
+| `tests/theme.cpp` | 81.99 | 77.54 | −5.4 % | `measured` |
+
+- `detail::str` copies through the iterator constructor of `std::string`, which compiles under a sanitizer, at a quarter of the cost of a `push_back` loop. It gives back most of withdrawn fix 6. `measured`
+- `values.hpp` and `props.hpp` compare names with `"..."sv` literals, so no view counts its characters. `measured`
+- The same literals in the other eight headers, caching `api()`, and the PNG reader's `vector(n)` each saved under 0.8 G on these files and were left out. `measured`
+
 ### The precompiled header, measured
 
 | Header | `.gch` size | Instructions to build | Saves per file | Mark |
