@@ -474,13 +474,14 @@ A program for a device should define `handle_contract_violation` itself, as the 
 ## With Claude Code
 
 The repository is also a Claude Code plugin. It gives an agent what is already known about LVGL, C++26, device UI standards and 3D, with sources. The agent then does not search for it again.
+Its skill `write-ui` tells an agent how to write a screen with lvgl26: which page to read for each feature, which header a name needs, and what to do with an error.
 
 ```
 /plugin marketplace add filipsajdak/lvgl26
 /plugin install lvgl26@lvgl26
 ```
 
-`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: building a screen, designing with the Signal system, and porting from another framework.
+`python3 tools/check_plugin.py` checks the manifests and that every file a skill points to exists. More skills are planned: designing with the Signal system, and porting from another framework.
 
 ## Website
 
