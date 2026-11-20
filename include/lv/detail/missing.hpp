@@ -20,6 +20,7 @@
 #include <lv/detail/embedded.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/detail/theme_styles.hpp>
+#include <lv/match.hpp>
 #include <lv/tree.hpp>
 
 #include <lvgl/lvgl.h>
@@ -67,6 +68,7 @@ inline constexpr fallback fallbacks[] = {
     {"image_file"sv, "lv/image.hpp"sv},    {"encoded_image"sv, "lv/encoded_image.hpp"sv},
     {"runtime"sv, "lv/runtime.hpp"sv},     {"one_of"sv, "lv/one_of.hpp"sv},
     {"pointer"sv, "lv/pointer.hpp"sv},     {"most_pointer_samples"sv, "lv/pointer.hpp"sv},
+    {"shown"sv, "lv/shown.hpp"sv},         {"when"sv, "lv/shown.hpp"sv},
 };
 
 // What lv::theme's fallback takes: a type that no braced list of a theme converts to.
@@ -139,6 +141,23 @@ template <const auto&... Trees>
 class one_of {
   static_assert(detail::header_missing<decltype(Trees)...>, "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>");
 };
+
+// lv/shown.hpp
+template <class... A>
+  requires detail::not_read<"lv/shown.hpp", A...>
+void shown(A&&...) = delete("lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>");
+
+template <class... A>
+  requires detail::not_read<"lv/shown.hpp", A...>
+void when(A&&...) = delete("lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>");
+
+namespace detail {
+// lv::is<...>(tree) and lv::otherwise(tree), the arms of lv::shown (lv/match.hpp).
+template <class Pattern, class T>
+struct tree_arm {
+  static_assert(header_missing<T>, "lv::is<...>(tree) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>");
+};
+}  // namespace detail
 
 // lv/pointer.hpp
 inline constexpr std::size_t most_pointer_samples = 256;

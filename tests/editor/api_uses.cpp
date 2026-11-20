@@ -20,6 +20,7 @@
 #include <lv/repeat.hpp>
 #include <lv/runtime.hpp>
 #include <lv/scaled_font.hpp>
+#include <lv/shown.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
 #include <lv/signal_type.hpp>
@@ -342,6 +343,16 @@ constinit lv::mounted<ui> page;
 constexpr auto popup = lv::column[lv::label({.text = "Popup"})];
 constinit lv::one_of<ui, popup> slot;
 
+// lv::shown and lv::when: a page for the value of a state, a tree while a flag is true.
+enum class screen_page { main, popup_page, none };
+constinit lv::state<screen_page> current_page{screen_page::main};
+constinit lv::state<bool> busy{false};
+void on_popup(lv::held<popup> shown_popup) { static_cast<void>(shown_popup.has_value()); }
+constexpr auto pager = lv::group[lv::shown(current_page)[
+    lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup, {.on_shown = &on_popup}), lv::otherwise()]];
+constexpr auto spinner_while_busy = lv::group[lv::when(busy)[popup]];
+constexpr auto empty_arm = lv::is<screen_page::none>();
+
 constinit lv::frame<320, 240> frame;
 constinit lv::band<320, 240, 10> band;
 static_assert(lv::frame<320, 240>::width == 320 && lv::frame<320, 240>::height == 240 && lv::frame<320, 240>::stride > 0);
@@ -473,6 +484,12 @@ int use_application() {
   static_assert(std::same_as<decltype(slot.visit<long>([](auto) { return 1; })), std::optional<long>>);
   slot.visit<void>([](auto) { return 1; });
   slot.unmount();
+  auto paged = lv::mount<pager>(plain.screen());
+  auto waiting = lv::mount<spinner_while_busy>(plain.screen());
+  current_page = screen_page::popup_page;
+  busy = true;
+  lv::settle();
+  if (!paged || !waiting) return 15;
   if (slot.error() != lv::mount_error::not_mounted || which.value_or(0) + or_empty < 0) return 13;
   static_cast<void>(direct.root());
   lv::application::options none{};

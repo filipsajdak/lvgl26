@@ -23,6 +23,7 @@
   "lv/repeat.hpp": ["for_each", "for_each_field", "caption", "field", "repeat_part", "name_of", "like"],
   "lv/runtime.hpp": ["runtime", "load_error", "load_failure"],
   "lv/scaled_font.hpp": ["scaled_font", "bind"],
+  "lv/shown.hpp": ["shown", "when"],
   "lv/state.hpp": ["state_value", "bind"],
   "lv/style.hpp": ["style_value", "style", "on"],
   "lv/task.hpp": ["task", "spawn", "sleep", "changed", "first"],

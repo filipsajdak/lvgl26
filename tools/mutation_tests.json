@@ -69,6 +69,14 @@
       "targets": "one_of",
       "logic": true
     },
+    "include/lv/shown.hpp": {
+      "tests": "^shown$|fail_shown|fail_when|^example_pages$",
+      "targets": "shown example_pages"
+    },
+    "include/lv/detail/deferred.hpp": {
+      "tests": "^shown$|^example_pages$",
+      "targets": "shown example_pages"
+    },
     "include/lv/detail/one_of_region.hpp": {
       "tests": "^one_of$|one_of_violation",
       "targets": "one_of"
