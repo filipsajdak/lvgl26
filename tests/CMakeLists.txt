@@ -6,6 +6,8 @@ target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${PROJECT_SOURCE_D
 # The compile-fail tests that use quantities need mp-units too.
 target_link_libraries(lvgl26_test_data INTERFACE mp-units::mp-units)
 
+include(${PROJECT_SOURCE_DIR}/cmake/compile_fail.cmake)
+
 function(lvgl26_test name)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -29,6 +31,16 @@ function(lvgl26_compile_fail name message)
                    ${CMAKE_CURRENT_SOURCE_DIR}/fail/${name}.cpp
            COMMAND_EXPAND_LISTS)
   set_tests_properties(${target} PROPERTIES PASS_REGULAR_EXPRESSION "${message}" LABELS compile-fail)
+endfunction()
+
+# The same, for a message that the library writes: the text is the whole message, as the user reads it, and the
+# test fails when the message differs or has text after it (cmake/compile_fail.cmake says how a text becomes a
+# regular expression). `form` is where GCC prints it: constexpr (a consteval error), static_assert or deleted.
+# The text is kept in the test's properties for tools/compile_fail_messages.py.
+function(lvgl26_compile_fail_message name form text)
+  lvgl26_message_regex(regex "${form}" "${text}")
+  lvgl26_compile_fail(${name} "${regex}")
+  set_tests_properties(fail_${name} PROPERTIES LVGL26_MESSAGE "${text}" LVGL26_MESSAGE_FORM "${form}")
 endfunction()
 
 lvgl26_test(smoke)
@@ -420,10 +432,10 @@ add_executable(ports_treadmill ports_treadmill.cpp)
 target_link_libraries(ports_treadmill PRIVATE treadmill_pages lvgl26_warnings)
 add_test(NAME ports_treadmill COMMAND ports_treadmill ${CMAKE_CURRENT_SOURCE_DIR}/ref/treadmill_)
 
-lvgl26_compile_fail(dump_not_a_sink "dump takes a sink: something to call with a std::string_view")
+lvgl26_compile_fail_message(dump_not_a_sink deleted "dump takes a sink: something to call with a std::string_view, for example [&](std::string_view piece) { text += piece; }")
 lvgl26_compile_fail(dump_loaded_not_a_sink "dump takes a sink: something to call with a std::string_view")
-lvgl26_compile_fail(unknown_property "widget 'label' has no property 'txt' to set. Its own: .*text")
-lvgl26_compile_fail(unknown_widget "there is no widget 'lable'. Valid: .*label")
+lvgl26_compile_fail_message(unknown_property constexpr "lv: widget 'label' has no property 'txt' to set. Its own: <<names>>. Every 'lv_obj_set_*' property of obj works too.")
+lvgl26_compile_fail_message(unknown_widget constexpr "lv: there is no widget 'lable'. Valid: <<widgets>>.")
 lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one pointer-sized")
 # A part that constrains its parameters with the public concepts (docs/concepts.md).
 # The whole message of a handler that holds state, sentence by sentence: each says what to do.
@@ -576,33 +588,33 @@ lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LV
 lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
 lvgl26_compile_fail(font_bitmap_too_large "the pixels of this font take 1538941 bytes. LVGL's font format holds at most 1048575")
-lvgl26_compile_fail(typeface_no_file "the typeface has no file for the family 'Montserrat' at weight 700. Add it")
-lvgl26_compile_fail(typeface_too_many_files "a typeface has at most eight files")
+lvgl26_compile_fail_message(typeface_no_file constexpr "lv: the typeface has no file for the family 'Montserrat' at weight 700. Add it: lv::typeface({{\"Montserrat\", 700, its_ttf}}).")
+lvgl26_compile_fail_message(typeface_too_many_files constexpr "lv: a typeface has at most eight files.")
 lvgl26_compile_fail(signal_numerals_not_a_numeral "the typeface has no file for the family 'Barlow' at weight 500. Add it")
 lvgl26_compile_fail(style_wrong_token "It takes a design token .*holding a length .*You gave lv::token<lv_color_t>")
-lvgl26_compile_fail(token_bad_alias "design tokens: the alias {color.brand} points at nothing")
+lvgl26_compile_fail_message(token_bad_alias constexpr "lv: design tokens: the alias {color.brand} points at nothing")
 lvgl26_compile_fail(token_bad_color "design tokens: a color has a character that is not a hex digit")
-lvgl26_compile_fail(token_color_alpha "design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
+lvgl26_compile_fail_message(token_color_alpha constexpr "lv: design tokens: the color '#01020380' has an alpha channel, which a color token does not carry. Write it as #rrggbb and give the opacity its own token")
 # The forms from before the Design Tokens Format 2025.10 are errors unless rules.tokens_legacy_values is set.
-lvgl26_compile_fail(token_legacy_color "'ink' is written .*#3366ff.*a form from before the Design Tokens Format 2025.10.*colorSpace.*tools/dtcg_fix.py.*tokens_legacy_values")
-lvgl26_compile_fail(token_legacy_dimension "'gap' is written .*8px.*a form from before the Design Tokens Format 2025.10.*value.*unit.*tools/dtcg_fix.py")
-lvgl26_compile_fail(token_legacy_duration "'fast' is written .*200ms.*a form from before the Design Tokens Format 2025.10.*tools/dtcg_fix.py")
-lvgl26_compile_fail(token_legacy_number "'gap' is written 8, a form from before the Design Tokens Format 2025.10")
+lvgl26_compile_fail_message(token_legacy_color constexpr "lv: design tokens: 'ink' is written \"#3366ff\", a form from before the Design Tokens Format 2025.10. The standard writes it as {\"colorSpace\": \"srgb\", \"components\": [0.2, 0.4, 1], \"hex\": \"#3366ff\"}. Run python3 tools/dtcg_fix.py on the token file, or set rules.tokens_legacy_values in the settings while the files convert")
+lvgl26_compile_fail_message(token_legacy_dimension constexpr "lv: design tokens: 'gap' is written \"8px\", a form from before the Design Tokens Format 2025.10. The standard writes it as {\"value\": 8, \"unit\": \"px\"}. Run python3 tools/dtcg_fix.py on the token file, or set rules.tokens_legacy_values in the settings while the files convert")
+lvgl26_compile_fail_message(token_legacy_duration constexpr "lv: design tokens: 'fast' is written \"200ms\", a form from before the Design Tokens Format 2025.10. The standard writes it as {\"value\": 200, \"unit\": \"ms\"}. Run python3 tools/dtcg_fix.py on the token file, or set rules.tokens_legacy_values in the settings while the files convert")
+lvgl26_compile_fail_message(token_legacy_number constexpr "lv: design tokens: 'gap' is written 8, a form from before the Design Tokens Format 2025.10. The standard writes it as {\"value\": 8, \"unit\": \"px\"}. Run python3 tools/dtcg_fix.py on the token file, or set rules.tokens_legacy_values in the settings while the files convert")
 lvgl26_compile_fail(token_legacy_member "'body' member 'fontSize' is written .*16px.*a form from before the Design Tokens Format 2025.10")
 lvgl26_compile_fail(token_legacy_in_list "'lift' member 'offsetX' is written .*0px.*a form from before the Design Tokens Format 2025.10")
-lvgl26_compile_fail(token_color_no_hash "design tokens: the color 'x123456' is not #rgb or #rrggbb")
-lvgl26_compile_fail(token_color_too_long "design tokens: the color '#1122334455' is not #rgb or #rrggbb")
-lvgl26_compile_fail(token_color_too_short "design tokens: the color '#' is not #rgb or #rrggbb")
-lvgl26_compile_fail(token_color_five_digits "design tokens: the color '#12345' is not #rgb or #rrggbb")
+lvgl26_compile_fail_message(token_color_no_hash constexpr "lv: design tokens: the color 'x123456' is not #rgb or #rrggbb")
+lvgl26_compile_fail_message(token_color_too_long constexpr "lv: design tokens: the color '#1122334455' is not #rgb or #rrggbb")
+lvgl26_compile_fail_message(token_color_too_short constexpr "lv: design tokens: the color '#' is not #rgb or #rrggbb")
+lvgl26_compile_fail_message(token_color_five_digits constexpr "lv: design tokens: the color '#12345' is not #rgb or #rrggbb")
 lvgl26_compile_fail(token_color_two_components "design tokens: a color needs a hex string or three components")
 lvgl26_compile_fail(token_duration_unit_h "design tokens: the duration unit 'h' is not ms or s")
 lvgl26_compile_fail(token_duration_unit_us "design tokens: the duration unit 'us' is not ms or s")
 lvgl26_compile_fail(token_length_unit_bang "design tokens: the dimension unit '!' is not px, rem or %")
-lvgl26_compile_fail(token_unit_without_number "design tokens: 'px' has no number before its unit")
+lvgl26_compile_fail_message(token_unit_without_number constexpr "lv: design tokens: 'px' has no number before its unit")
 lvgl26_compile_fail(token_bad_weight "design tokens: the font weight 'thin' is not a number, normal or bold")
 lvgl26_compile_fail(token_gradient_not_a_list "design tokens: a gradient token must be a list of at most eight stops")
 lvgl26_compile_fail(token_alias_too_deep "design tokens: the alias {g.t9} goes in a circle")
-lvgl26_compile_fail(token_alias_circle "design tokens: the alias {g.[ab]} goes in a circle")
+lvgl26_compile_fail_message(token_alias_circle constexpr "lv: design tokens: the alias {g.b} goes in a circle")
 lvgl26_compile_fail(token_value_at_end "contract predicate is false")
 lvgl26_compile_fail(token_bezier_three_numbers "design tokens: a cubicBezier token must be a list of four numbers")
 lvgl26_compile_fail(token_bezier_not_a_list "design tokens: a cubicBezier token must be a list of four numbers")
@@ -649,17 +661,17 @@ lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/project.json settings/project.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail both_forms_hash)
 target_compile_options(fail_settings_both_forms PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail/settings.hpp)
-lvgl26_compile_fail(settings_unknown_key "lv: test\\.json: unknown key 'thread' in allow\\. Did you mean 'threads'\\? The keys of allow: allocation, threads, files, floating_point\\.")
-lvgl26_compile_fail(settings_unknown_section "lv: test\\.json: unknown key 'alow'\\. Did you mean 'allow'\\? The keys of the file: allow, rules, limits\\.")
-lvgl26_compile_fail(settings_not_bool "lv: test\\.json: allow\\.threads takes true or false, not \"no\"\\.")
-lvgl26_compile_fail(settings_section_not_object "lv: test\\.json: rules takes an object of settings, not true\\. Its keys: raw_style_values, raw_integer_state, tokens_legacy_values\\.")
+lvgl26_compile_fail_message(settings_unknown_key static_assert "lv: test.json: unknown key 'thread' in allow. Did you mean 'threads'? The keys of allow: allocation, threads, files, floating_point.")
+lvgl26_compile_fail_message(settings_unknown_section static_assert "lv: test.json: unknown key 'alow'. Did you mean 'allow'? The keys of the file: allow, rules, limits.")
+lvgl26_compile_fail_message(settings_not_bool static_assert "lv: test.json: allow.threads takes true or false, not \"no\".")
+lvgl26_compile_fail_message(settings_section_not_object static_assert "lv: test.json: rules takes an object of settings, not true. Its keys: raw_style_values, raw_integer_state, tokens_legacy_values.")
 lvgl26_compile_fail(settings_not_json "lv: test\\.json: the file is no well-formed JSON\\.")
-lvgl26_compile_fail(settings_not_object "lv: test\\.json: the file takes an object of settings, not \\[1, 2\\]\\. Its keys: allow, rules, limits\\.")
-lvgl26_compile_fail(settings_amount_plain "lv: test\\.json: limits\\.compile_time_image takes a value and a unit, as \\{\"value\": 4, \"unit\": \"px\"\\}, not 16384\\. Its units: px\\.")
-lvgl26_compile_fail(settings_unknown_unit "lv: test\\.json: limits\\.compile_time_image has the unit 'pix'\\. Did you mean 'px'\\? Its units: px\\.")
-lvgl26_compile_fail(settings_negative "lv: test\\.json: limits\\.compile_time_image is -1 px, and a limit cannot be negative\\.")
-lvgl26_compile_fail(settings_too_large "lv: test\\.json: limits\\.compile_time_image is 1e300 px, more than a limit can hold\\.")
-lvgl26_compile_fail(settings_fraction "lv: test\\.json: limits\\.compile_time_image is 0\\.5 px, which is no whole number of px\\.")
+lvgl26_compile_fail_message(settings_not_object static_assert "lv: test.json: the file takes an object of settings, not [1, 2]. Its keys: allow, rules, limits.")
+lvgl26_compile_fail_message(settings_amount_plain static_assert "lv: test.json: limits.compile_time_image takes a value and a unit, as {\"value\": 4, \"unit\": \"px\"}, not 16384. Its units: px.")
+lvgl26_compile_fail_message(settings_unknown_unit static_assert "lv: test.json: limits.compile_time_image has the unit 'pix'. Did you mean 'px'? Its units: px.")
+lvgl26_compile_fail_message(settings_negative static_assert "lv: test.json: limits.compile_time_image is -1 px, and a limit cannot be negative.")
+lvgl26_compile_fail_message(settings_too_large static_assert "lv: test.json: limits.compile_time_image is 1e300 px, more than a limit can hold.")
+lvgl26_compile_fail_message(settings_fraction static_assert "lv: test.json: limits.compile_time_image is 0.5 px, which is no whole number of px.")
 lvgl26_compile_fail(state_plain_int "give it a unit with mp-units: .lv::state speed.0 \\* km / h....*To allow plain integers, set rules\\.raw_integer_state in the settings\\.")
 lvgl26_compile_fail(units_wrong_axis "It takes a width or x .*not a vertical length")
 lvgl26_compile_fail(units_bool_count "no match for 'operator\\*'")
@@ -699,8 +711,8 @@ lvgl26_compile_fail(set_wrong_argument "no matching function for call to .*set<.
 lvgl26_compile_fail(then_bad_handler "no matching function for call to .*then")
 lvgl26_compile_fail(weak_not_a_view "requires +view_value<V> class lv::weak")
 lvgl26_compile_fail(owned_not_a_view "requires +view_value<V> class lv::owned")
-lvgl26_compile_fail(enumerator_unknown_name "align has no value 'centre'. Its values: default, top_left")
-lvgl26_compile_fail(enumerator_unknown_name_beside_text "roller_mode has no value .endless.. Its values: normal, infinite")
+lvgl26_compile_fail_message(enumerator_unknown_name constexpr "lv: align has no value 'centre'. Its values: default, top_left, top_mid, top_right, bottom_left, bottom_mid, bottom_right, left_mid, right_mid, center, out_top_left, out_top_mid, out_top_right, out_bottom_left, out_bottom_mid, out_bottom_right, out_left_top, out_left_mid, out_left_bottom, out_right_top, out_right_mid, out_right_bottom.")
+lvgl26_compile_fail_message(enumerator_unknown_name_beside_text constexpr "lv: roller_mode has no value 'endless'. Its values: normal, infinite.")
 lvgl26_compile_fail(mount_not_a_tree "no matching function for call to .mount<not_a_tree>")
 lvgl26_compile_fail(mounted_not_a_tree "template constraint failure for .*class lv::mounted")
 lvgl26_compile_fail(place_not_a_tree "no matching function for call to .place<not_a_tree>")
@@ -955,6 +967,8 @@ if(Python3_FOUND)
   # (docs/which-header.md); tools/check_examples.py holds the examples to their exact headers.
   file(GLOB_RECURSE lvgl26_checked_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp ${PROJECT_SOURCE_DIR}/fuzz/*.cpp)
+  # These leave out a header on purpose: the compiler must name it (lv/detail/missing.hpp).
+  list(FILTER lvgl26_checked_sources EXCLUDE REGEX "/fail/missing_header_|/editor/missing_header.cpp$")
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
@@ -997,6 +1011,11 @@ if(Python3_FOUND)
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
   # A regular expression of a test is one text: CTest splits it at an unescaped ';' and accepts any part.
+  # The messages that the compile-fail tests pin can be read back (the documentation quotes them), and the tool is tested.
+  add_test(NAME compile_fail_messages COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/compile_fail_messages.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
+  add_test(NAME compile_fail_messages_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_fail_messages.py)
+  # How a text becomes the regular expression of a compile-fail test.
+  add_test(NAME compile_fail_regex COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail_regex.cmake)
   add_test(NAME ctest_regex_lists COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_regex_lists.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
   add_test(NAME ctest_regex_lists_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_regex_lists.py)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
@@ -1083,6 +1102,7 @@ set_source_files_properties(editor/api_uses.cpp ${PROJECT_SOURCE_DIR}/tools/edit
 # each one a line in compile_commands.json, which tools/editor/check.py takes its flags from.
 add_library(editor_clang_only OBJECT EXCLUDE_FROM_ALL
             editor/wrong_enumerator.cpp editor/unknown_member.cpp editor/wrong_widget.cpp editor/wrong_look.cpp
+            editor/missing_header.cpp
             editor/tokens_by_bytes.cpp ${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/editor/names_declared.cpp PROPERTIES GENERATED TRUE)
 target_compile_options(editor_clang_only PRIVATE --embed-dir=${CMAKE_CURRENT_BINARY_DIR}/editor)
@@ -1141,12 +1161,13 @@ if(Python3_FOUND)
     add_test(NAME editor_tokens_by_bytes
              COMMAND ${LVGL26_EDITOR_CHECK} ${CMAKE_CURRENT_SOURCE_DIR}/editor/tokens_by_bytes.cpp)
     # Mistakes are marked on the line they are written on.
-    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look)
+    foreach(case wrong_enumerator unknown_member wrong_widget wrong_look missing_header)
       add_test(NAME editor_${case}
                COMMAND ${LVGL26_EDITOR_CHECK} --verify ${CMAKE_CURRENT_SOURCE_DIR}/editor/${case}.cpp)
     endforeach()
     set_tests_properties(editor_examples editor_api_uses editor_names_declared editor_tokens_by_bytes
                          editor_wrong_enumerator editor_unknown_member editor_wrong_widget editor_wrong_look
+                         editor_missing_header
                          PROPERTIES FIXTURES_REQUIRED editor_stubs)
     set_property(TEST editor_names_declared APPEND PROPERTY FIXTURES_REQUIRED editor_names)
   endif()
@@ -1169,6 +1190,16 @@ if(Python3_FOUND)
                      -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} ${LVGL26_CONSUMER_CLANGD}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/consumer_test.cmake)
     set_tests_properties(editor_support PROPERTIES TIMEOUT 600)
+    # clangd's background index names the header of a name that a file misses. Indexing lvgl26
+    # takes minutes, so the test runs every night (ctest -L nightly) and the pull request run
+    # leaves it out (-LE nightly).
+    if(LVGL26_CLANGD)
+      add_test(NAME editor_quick_fix
+               COMMAND ${CMAKE_COMMAND} -DSOURCE=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/editor/quick_fix
+                       -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} -DCLANGD=${LVGL26_CLANGD}
+                       -DPYTHON=${Python3_EXECUTABLE} -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/quick_fix_test.cmake)
+      set_tests_properties(editor_quick_fix PROPERTIES TIMEOUT 1800 LABELS nightly)
+    endif()
   endif()
 endif()
 
@@ -1186,26 +1217,40 @@ lvgl26_compile_fail(options_roller_two_texts "roller_mode has no value 'Tue'")
 lvgl26_compile_fail(options_row_enum "a field of a row that holds an enum cannot follow a whole number")
 
 # lv::look: every mistake in a look is a compile error that says what is valid.
-lvgl26_compile_fail(look_unknown_group "the look 'queue.crad' has no group 'crad' in 'queue'. The groups there: card, details. Did you mean 'card'\\?")
-lvgl26_compile_fail(look_unknown_root "the look 'tile-pritn' has no group 'tile-pritn' in the token file. The groups there: .*Did you mean 'tile_print'\\?")
-lvgl26_compile_fail(look_entry_no_property "the look entry 'colour' of 'typo' fits no style property. Nearest style properties: ")
-lvgl26_compile_fail(look_wrong_type "the look entry 'radius' of 'wrongtype' is a color, but the style property 'radius' takes a dimension")
-lvgl26_compile_fail(look_bad_enumerator "text_align has no value 'centre'. Its values: ")
-lvgl26_compile_fail(look_size_one_value "'size' of 'sizeone' sets several properties from several values, and a token holds one. Write each of them: width and height")
-lvgl26_compile_fail(look_font_for_color "the look entry 'text_color' of 'font_for_color' is a typography, but the style property 'text_color' takes a color")
-lvgl26_compile_fail(look_group_not_layer "in the look 'layered' the group 'cheked' is neither a part nor a state. Did you mean 'checked'\\? A group nested in a look is a layer: a part \\(main, .*\\) or a state \\(default, .*\\). A variant of a look is a sibling group, 'a-cheked' beside 'a'")
-lvgl26_compile_fail(look_group_in_layer "in the look 'layeredin' the group 'extra' is neither a part nor a state")
-lvgl26_compile_fail(look_names_a_token "the look 'tile.radius' names a token, not a group")
-lvgl26_compile_fail(look_empty "lv::look<\"  \"> names no look. Write the path of a group of the token file")
-lvgl26_compile_fail(look_empty_name "has an empty name between its dots")
+lvgl26_compile_fail_message(look_unknown_group constexpr "lv: the look 'queue.crad' has no group 'crad' in 'queue'. The groups there: card, details. Did you mean 'card'?")
+lvgl26_compile_fail_message(look_unknown_root constexpr "lv: the look 'tile-pritn' has no group 'tile-pritn' in the token file. The groups there: <<names>>. Did you mean 'tile_print'?")
+lvgl26_compile_fail_message(look_entry_no_property constexpr "lv: the look entry 'colour' of 'typo' fits no style property. Nearest style properties: <<names>>. A shadow, border, transition or typography token may have any name; anything else is named for its property.")
+lvgl26_compile_fail_message(look_wrong_type constexpr "lv: the look entry 'radius' of 'wrongtype' is a color, but the style property 'radius' takes a dimension (such as 8px). Change the entry's \$type or its value in the token file.")
+lvgl26_compile_fail_message(look_bad_enumerator constexpr "lv: text_align has no value 'centre'. Its values: auto, left, center, right.")
+lvgl26_compile_fail_message(look_size_one_value constexpr "lv: the look entry 'size' of 'sizeone' sets several properties from several values, and a token holds one. Write each of them: width and height.")
+lvgl26_compile_fail_message(look_font_for_color constexpr "lv: the look entry 'text_color' of 'font_for_color' is a typography, but the style property 'text_color' takes a color. Change the entry's \$type or its value in the token file.")
+lvgl26_compile_fail_message(look_group_not_layer constexpr "lv: in the look 'layered' the group 'cheked' is neither a part nor a state. Did you mean 'checked'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-cheked' beside 'a', used as lv::look<\"a a-cheked\">.")
+lvgl26_compile_fail_message(look_group_in_layer constexpr "lv: in the look 'layeredin' the group 'extra' is neither a part nor a state. A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-extra' beside 'a', used as lv::look<\"a a-extra\">.")
+lvgl26_compile_fail_message(look_names_a_token constexpr "lv: the look 'tile.radius' names a token, not a group: 'tile.radius' holds one value. A look is a group of tokens, written lv::look<\"tile\">, and the style property is its entry 'radius'.")
+lvgl26_compile_fail_message(look_empty constexpr "lv: lv::look<\"  \"> names no look. Write the path of a group of the token file: lv::look<\"queue.card\">. The groups there: <<names>>.")
+lvgl26_compile_fail_message(look_empty_name constexpr "lv: the look 'tile..print' has an empty name between its dots. Write lv::look<\"queue.card\">.")
 lvgl26_compile_fail(look_no_design "no design is registered for lv::look. Name the token file once")
 lvgl26_compile_fail(look_design_too_late "conflicting declaration .*lv::design<lv::override>")
-lvgl26_compile_fail(look_string_token "the look entry 'flex_flow' of 'stringtoken' is a string token, and a string is no standard value for the style property 'flex_flow'.*goes in \"\\$extensions\": {\"io.github.filipsajdak.lvgl26\"")
-lvgl26_compile_fail(look_percent_value "the look entry 'width' of 'percentvalue' is a percentage, and Design Tokens Format 2025.10 has no percentage. Write a size in pixels as the .value")
-lvgl26_compile_fail(look_extends "the group of the look 'extends' has \"\\$extends\", which Design Tokens Format 2025.10 has and lvgl26 does not read yet")
-lvgl26_compile_fail(look_ext_unknown_property "the .extensions entry 'colour' of 'extunknown' fits no style property. Nearest style properties: ")
-lvgl26_compile_fail(look_ext_percent_property "the .extensions entry 'pad_all' of 'extpad' is a percentage, and LVGL takes one for width, height, min_width")
-lvgl26_compile_fail(look_ext_text "the .extensions entry 'radius' of 'exttext' is the text 'big', and the style property 'radius' takes a dimension")
-lvgl26_compile_fail(look_ext_percent_digits "is '5x%', and a percentage is written as whole digits and %")
-lvgl26_compile_fail(look_alpha_wrong_kind "the look entry 'radius' of 'alpharadius' is a color with an alpha, but the style property 'radius' takes a dimension")
-lvgl26_compile_fail(look_ext_not_string "the value of 'width' in .extensions 'io.github.filipsajdak.lvgl26' is not a string")
+lvgl26_compile_fail_message(look_string_token constexpr "lv: the look entry 'flex_flow' of 'stringtoken' is a string token, and a string is no standard value for the style property 'flex_flow', which takes a string that names an LVGL value. An LVGL value by name (\"flex_flow\": \"row\") goes in \"\$extensions\": {\"io.github.filipsajdak.lvgl26\": {...}} of the group.")
+lvgl26_compile_fail_message(look_percent_value constexpr "lv: the look entry 'width' of 'percentvalue' is a percentage, and Design Tokens Format 2025.10 has no percentage. Write a size in pixels as the \$value, for design tools, and the percentage in \"\$extensions\": {\"io.github.filipsajdak.lvgl26\": {\"width\": \"50%\"}} of the group.")
+lvgl26_compile_fail_message(look_extends constexpr "lv: the group of the look 'extends' has \"\$extends\", which Design Tokens Format 2025.10 has and lvgl26 does not read yet. Write the entries of the group out, or use the sibling groups of a variant: lv::look<\"a a-b\">.")
+lvgl26_compile_fail_message(look_ext_unknown_property constexpr "lv: the \$extensions entry 'colour' of 'extunknown' fits no style property. Nearest style properties: <<names>>.")
+lvgl26_compile_fail_message(look_ext_percent_property constexpr "lv: the \$extensions entry 'pad_all' of 'extpad' is a percentage, and LVGL takes one for width, height, min_width, min_height, max_width, max_height, x, y, transform_width, transform_height, translate_x, translate_y only.")
+lvgl26_compile_fail_message(look_ext_text constexpr "lv: the \$extensions entry 'radius' of 'exttext' is the text 'big', and the style property 'radius' takes a dimension (such as 8px). \$extensions holds LVGL values by name and sizes in percent: write this one as a token, with its \$type.")
+lvgl26_compile_fail_message(look_ext_percent_digits constexpr "lv: the \$extensions entry 'width' of 'extpercent' is '5x%', and a percentage is written as whole digits and %, such as \"50%\".")
+lvgl26_compile_fail_message(look_alpha_wrong_kind constexpr "lv: the look entry 'radius' of 'alpharadius' is a color with an alpha, but the style property 'radius' takes a dimension (such as 8px). Change the entry's \$type or its value in the token file.")
+lvgl26_compile_fail_message(look_ext_not_string constexpr "lv: design tokens: the value of 'width' in \$extensions 'io.github.filipsajdak.lvgl26' is not a string. Write an LVGL value by its name (\"flex_flow\": \"row\") or a size in percent (\"width\": \"50%\")")
+
+# A name of an opt-in header used with lv/lv.hpp alone names its header (lv/detail/missing.hpp).
+lvgl26_compile_fail(missing_header_list "lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>")
+lvgl26_compile_fail(missing_header_each "lv::each is in <lv/list.hpp>: add #include <lv/list.hpp>")
+lvgl26_compile_fail(missing_header_for_each "lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_for_each_items "lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
+lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
+lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
+lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")
+lvgl26_compile_fail(missing_header_runtime "lv::runtime is in <lv/runtime.hpp>: add #include <lv/runtime.hpp>")
+lvgl26_compile_fail(missing_header_one_of "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>")
+lvgl26_compile_fail(missing_header_pointer "lv::pointer is in <lv/pointer.hpp>: add #include <lv/pointer.hpp>")

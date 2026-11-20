@@ -41,7 +41,7 @@ GCC still builds your program from the real headers. The stubs are for the edito
 | Typed views | `root->get<"speedo">()` is an `lv::view<"arc">`, so `set({.` completes for an arc |
 | Design tokens | `tok.color.` lists the tokens of your file, each with its value |
 | Go to definition | It leads into the stub, which has the documentation, not into lvgl26's code |
-| A missing header | `lv::list<track, 8>` without `<lv/list.hpp>`: the quick fix `Include <lv/list.hpp> for symbol lv::list`, once clangd has indexed lvgl26 in the background ([Which header](which-header.md)) |
+| A missing header | `lv::list<track, 8>` without `<lv/list.hpp>`: `lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>`. For `lv::scaled_font`, `lv::typeface` and `lv::pointer_feed`, the quick fix `Include <lv/scaled_font.hpp> for symbol lv::scaled_font`, once clangd has indexed lvgl26 in the background ([Which header](which-header.md)) |
 
 Measured once on one machine, with clangd 23 and the quick start. Opening the file takes about two seconds until its first check. A completion list takes a tenth of a second, and a hover a few milliseconds.
 

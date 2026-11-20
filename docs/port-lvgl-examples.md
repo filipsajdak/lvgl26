@@ -59,10 +59,8 @@ Each skipped example is a gap in lvgl26 that stopped a port.
 The port is left out, and no workaround is used.
 The table "Not ported yet" in [examples/README.md](../examples/README.md) says what each one needs.
 
-Two findings show the kind of gap:
-
-- An angle for a spinner does not compile with `-Werror=sign-conversion`, because the setter takes an unsigned number.
-- A table has one `cell_value` in its properties, so the original's several calls that set a cell have no form.
+One finding shows the kind of gap.
+A table has one `cell_value` in its properties, so the original's several calls that set a cell have no form.
 
 For you, a finding is a warning.
 If your UI uses the same feature, expect the same gap.

@@ -16,6 +16,7 @@
 #include <lv/tokens.hpp>
 #include <lv/tree.hpp>
 #include <lv/view.hpp>
+#include <lv/detail/missing.hpp>
 
 namespace lv {
 

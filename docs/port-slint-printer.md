@@ -438,8 +438,8 @@ Several jobs at once multiply the memory.
 
 ## What it costs
 
-The first column is the port as it is on `origin/main` (`747c741`), before this change.
-The second is the port as this page shows it (`d0df2dd`).
+The first column is the port at commit `747c741`, before it used `lv::list` and `lv::each`.
+The second is the port at commit `d0df2dd`, as this page shows it.
 Both were measured on 2026-11-17 on one machine in one sitting, with LVGL v9.6.0 and GCC 16.2, with the same test and the same four jobs in the queue.
 Nothing else was compiling during the compile measurements.
 
@@ -459,9 +459,9 @@ Nothing else was compiling during the compile measurements.
 | Compile, the largest file: peak memory | 2.7 GB (`queue_view.cpp`) | 3.4 GB (`print_page.cpp`) |
 
 Reproduce the heap and widget rows with the test `printer_cost`.
-For the before column, copy `tests/printer_cost.cpp` into a checkout of `origin/main`, and add it to `tests/CMakeLists.txt`.
+For the before column, copy `tests/printer_cost.cpp` into a checkout of `747c741`, and add it to `tests/CMakeLists.txt`.
 Count the lines with `wc -l` over the `.cpp` and `.hpp` files of `examples/ports/slint/printer`, minus `shot.cpp` and `window.cpp`.
-Compile with `python3 tools/compile_report.py build/host-v96 <the nine or ten sources> --table`.
+Compile with `python3 tools/compile_report.py build/host-v96 <the sources of the port> --table`.
 
 What the table says:
 

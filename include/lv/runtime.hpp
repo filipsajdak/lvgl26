@@ -32,6 +32,7 @@
 // (the ids are views into it). At most 32 nodes of a document can have an id.
 // A table has at most 64 rows and columns, a chart 1024 points (detail::count_limits).
 
+#include <lv/detail/missing.hpp>
 #include <lv/detail/enum_names.hpp>
 #include <lv/detail/settings.hpp>
 #include <lv/dump.hpp>
@@ -49,6 +50,12 @@
 #include <optional>
 #include <span>
 #include <string_view>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/runtime.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -592,7 +599,8 @@ std::expected<void, load_failure> apply_properties(lv_obj_t* o, json::value prop
 // The widgets a document may use, and loading documents that use them.
 // See the top of this file.
 template <detail::fixed... Widgets>
-class runtime {
+  requires detail::included<"lv/runtime.hpp">
+class runtime<Widgets...> {
  public:
   // How many nodes of one document can have an id.
   static constexpr std::size_t id_capacity = 32;

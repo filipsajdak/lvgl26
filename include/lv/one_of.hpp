@@ -14,6 +14,7 @@
 // It carries its own failure, as lv::mounted does: if (!window), window.has_value(),
 // window.error(), which is mount_error::not_mounted while the slot holds no tree.
 
+#include <lv/detail/missing.hpp>
 #include <lv/detail/one_of_region.hpp>
 #include <lv/tree.hpp>
 
@@ -28,14 +29,17 @@
 #include <type_traits>
 #include <vector>
 
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/one_of.hpp"> = true;
+}  // namespace lv::detail
+
 namespace lv {
 
 // The arm of visit for a slot that holds no tree: [](lv::not_mounted) { ... }.
 struct not_mounted {};
 
-template <const auto&... Trees>
-  requires(tree_node<decltype(Trees)> && ...)
-class one_of;
 
 // A handle to the tree Tree in an lv::one_of: what an arm of visit gets, and what
 // slot.get<Tree>() gives. It is a small value that never owns, and may be copied and kept.
@@ -50,7 +54,7 @@ class held {
   mounted<Tree>* (*find_)(void* slot) = nullptr;  // the tree, if the slot holds it
 
   template <const auto&... Trees>
-    requires(tree_node<decltype(Trees)> && ...)
+    requires detail::tree_nodes<decltype(Trees)...>
   friend class one_of;
 
   constexpr held(void* slot, mounted<Tree>* (*find)(void*)) noexcept : slot_(slot), find_(find) {}
@@ -302,8 +306,8 @@ consteval bool trees_distinct() {
 
 // One slot for one of the trees Trees, alive one at a time. See the top of this file.
 template <const auto&... Trees>
-  requires(tree_node<decltype(Trees)> && ...)
-class one_of {
+  requires detail::tree_nodes<decltype(Trees)...> && detail::included<"lv/one_of.hpp">
+class one_of<Trees...> {
   static_assert(detail::trees_distinct<Trees...>());
 
   detail::one_of_region<mounted<Trees>...> region_;
