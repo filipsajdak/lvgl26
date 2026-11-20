@@ -19,10 +19,10 @@ struct fault {
 
 inline constexpr int deepest_nesting = 64;  // as skip_value
 
-constexpr fault value_fault(std::string_view s, std::size_t& i, int depth);
+consteval fault value_fault(std::string_view s, std::size_t& i, int depth);
 
 // After a member or an element that ends at s[i]: the fault, or nothing with `closed` set when the container ends.
-constexpr fault after_fault(std::string_view s, std::size_t& i, char close, bool& closed) {
+consteval fault after_fault(std::string_view s, std::size_t& i, char close, bool& closed) {
   i = skip_space(s, i);
   if (i >= s.size() || (s[i] != ',' && s[i] != close))
     return {i, close == '}' ? "',' or '}' after the value" : "',' or ']' after the value"};
@@ -32,7 +32,7 @@ constexpr fault after_fault(std::string_view s, std::size_t& i, char close, bool
 }
 
 // The key and the colon of a member that starts at s[i].
-constexpr fault key_fault(std::string_view s, std::size_t& i, bool first) {
+consteval fault key_fault(std::string_view s, std::size_t& i, bool first) {
   if (i >= s.size() || s[i] != '"') return {i, first ? "a key in quotes or '}'" : "a key in quotes"};
   const auto end = skip_string(s, i);
   if (end == npos) return {i, "the closing quote of this string"};
@@ -43,14 +43,14 @@ constexpr fault key_fault(std::string_view s, std::size_t& i, bool first) {
 }
 
 // One member of an object (its key, the colon and the value) or one element of a list, at s[i].
-constexpr fault element_fault(std::string_view s, std::size_t& i, bool object, bool first, int depth) {
+consteval fault element_fault(std::string_view s, std::size_t& i, bool object, bool first, int depth) {
   if (object)
     if (const auto f = key_fault(s, i, first); f.at != npos) return f;
   return value_fault(s, i, depth + 1);
 }
 
 // The object or list that opens at s[i].
-constexpr fault container_fault(std::string_view s, std::size_t& i, int depth) {
+consteval fault container_fault(std::string_view s, std::size_t& i, int depth) {
   const bool object = s[i] == '{';
   const char close = object ? '}' : ']';
   i = skip_space(s, i + 1);
@@ -64,7 +64,7 @@ constexpr fault container_fault(std::string_view s, std::size_t& i, int depth) {
 }
 
 // A string, a word or a number that starts at s[i].
-constexpr fault scalar_fault(std::string_view s, std::size_t& i) {
+consteval fault scalar_fault(std::string_view s, std::size_t& i) {
   const bool quoted = s[i] == '"';
   const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) != npos ? skip_word(s, i) : skip_number(s, i));
   if (end == npos)
@@ -74,7 +74,7 @@ constexpr fault scalar_fault(std::string_view s, std::size_t& i) {
 }
 
 // The value that starts at s[i]; i moves past it.
-constexpr fault value_fault(std::string_view s, std::size_t& i, int depth) {
+consteval fault value_fault(std::string_view s, std::size_t& i, int depth) {
   if (i >= s.size()) return {i, "a value"};
   if (depth > deepest_nesting) return {i, "fewer levels: a document nests 64 at most"};
   if (s[i] == '{' || s[i] == '[') return container_fault(s, i, depth);
@@ -82,7 +82,7 @@ constexpr fault value_fault(std::string_view s, std::size_t& i, int depth) {
 }
 
 // The first place where `s` is not one JSON value.
-constexpr fault find_fault(std::string_view s) {
+consteval fault find_fault(std::string_view s) {
   std::size_t i = skip_space(s, 0);
   if (const auto f = value_fault(s, i, 0); f.at != npos) return f;
   i = skip_space(s, i);
