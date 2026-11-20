@@ -1,6 +1,3 @@
 {
-  "allowed": {
-    "include/lv/detail/api.hpp: api": "Every lv_* function, found once for each file. Making it lazy (9.0 G instructions in a file that includes only <lv/lv.hpp>, measured 2026-11-19) turns find, names_after and the loops of props.hpp and style.hpp into templates on D, about 30 call sites, and only files without widgets gain: an open optimisation in docs/research/compile-time.md.",
-    "include/lv/detail/api.hpp: scan_api": "The scan behind api, run once for each file for the same reason."
-  }
+  "allowed": {}
 }

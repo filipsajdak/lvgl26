@@ -2,8 +2,9 @@
 
 // The reflected LVGL C API.
 //
-// The global namespace is scanned once, here, where lvgl.h is visible. Everything
-// else searches the resulting table by name. A template instantiated by a module
+// The global namespace is scanned once in a file, where lvgl.h is visible, and only when
+// the file first needs a function of LVGL by name. Everything else searches the resulting
+// table by name. A template instantiated by a module
 // importer cannot scan the global namespace itself (see spikes/README.md).
 
 #include <lvgl/lvgl.h>
@@ -32,6 +33,8 @@ consteval bool is_name_char(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
+// A template on D so that the scan is not run where this header is read.
+template <class D>
 consteval std::vector<std::meta::info> scan_api() {
   std::vector<std::meta::info> v;
   for (auto m : std::meta::members_of(^^::, std::meta::access_context::unchecked()))
@@ -43,7 +46,17 @@ consteval std::vector<std::meta::info> scan_api() {
 
 // Every lv_* function, in declaration order. Sorting ~2000 names at compile time
 // costs more than the linear searches it would save.
-inline constexpr std::span<const std::meta::info> api = std::define_static_array(scan_api());
+template <class D = void>
+inline constexpr std::span<const std::meta::info> api_table = std::define_static_array(scan_api<D>());
+
+// The table, worked out on the first call of a file. It is reached through substitute, not
+// named: a function that names api_table<> instantiates it, and runs the scan, where the
+// function is read (9.0 G instructions in every file, measured 2026-11-19). `asked` is the
+// name or prefix the caller searches for, and is not read: a call with no argument that is not
+// a constant is run by GCC where a non-template function is read, which would run the scan there.
+consteval std::span<const std::meta::info> api(std::string_view /*asked*/) {
+  return std::meta::extract<const std::span<const std::meta::info>&>(std::meta::substitute(^^api_table, {^^void}));
+}
 
 // Stops a constant evaluation with a message: the compile error a user sees for a
 // wrong name, id, token or format. It is not an exception, so that the library builds
@@ -76,7 +89,7 @@ consteval std::string join(std::initializer_list<std::string_view> parts) {
 
 // The function called `name`, or a null reflection.
 consteval std::meta::info find(std::string_view name) {
-  for (auto f : api)
+  for (auto f : api(name))
     if (std::meta::identifier_of(f) == name) return f;
   return {};
 }
@@ -92,7 +105,7 @@ consteval std::meta::info find_later(std::string_view name) {
 // The names that follow `prefix` in the API, comma separated.
 consteval std::string names_after(std::string_view prefix) {
   std::string out;
-  for (auto f : api) {
+  for (auto f : api(prefix)) {
     auto id = std::meta::identifier_of(f);
     if (!id.starts_with(prefix)) continue;
     if (!out.empty()) out += ", ";
@@ -121,7 +134,7 @@ consteval std::meta::info resolve_create(std::string_view widget) {
   if (auto f = find("lv_" + str(widget) + "_create"); f != std::meta::info{}) return f;
 
   std::string valid;
-  for (auto f : api) {
+  for (auto f : api(widget)) {
     auto id = std::meta::identifier_of(f);
     if (!id.ends_with("_create") || std::meta::parameters_of(f).size() != 1) continue;
     if (std::meta::return_type_of(f) != ^^lv_obj_t*) continue;

@@ -138,7 +138,7 @@ void easings_name_lvgl_paths() {
 // Every animation path LVGL has is named in lv::ease. A new one in LVGL fails here.
 consteval std::size_t lvgl_paths() {
   std::size_t n = 0;
-  for (auto f : lv::detail::api)
+  for (auto f : lv::detail::api_table<>)
     if (std::meta::identifier_of(f).starts_with("lv_anim_path_")) ++n;
   return n;
 }

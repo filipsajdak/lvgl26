@@ -51,7 +51,7 @@ static_assert(!lv::detail::takes_option_list(^^lv_label_set_text, "text"));
 // Every setter with the name has the mark in its comment, and the other way round, for the
 // setters of these two headers.
 consteval bool names_and_comments_agree() {
-  for (auto f : lv::detail::api) {
+  for (auto f : lv::detail::api_table<>) {
     const auto name = std::meta::identifier_of(f);
     if (!name.starts_with("lv_dropdown_set_") && !name.starts_with("lv_roller_set_")) continue;
     const auto params = std::meta::parameters_of(f);

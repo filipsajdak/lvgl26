@@ -111,7 +111,7 @@ consteval std::string members_json(std::string_view widget, std::vector<std::met
 // Every widget: what LVGL can create with one parent and nothing else.
 consteval std::vector<std::string> widget_names() {
   std::vector<std::string> out;
-  for (auto f : lv::detail::api) {
+  for (auto f : lv::detail::api_table<>) {
     const auto id = std::meta::identifier_of(f);
     if (!id.ends_with("_create") || std::meta::parameters_of(f).size() != 1) continue;
     if (std::meta::return_type_of(f) != ^^lv_obj_t*) continue;
