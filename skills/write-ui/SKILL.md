@@ -24,7 +24,7 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 [docs/which-header.md](../../docs/which-header.md) lists every name with its header, and the error texts that mean a header is missing.
 
 - Include `<lv/lv.hpp>` and the header of each feature the file uses. Use `<lv/all.hpp>` only for a first program.
-- When the build prints `main.cpp:12: lv::list needs #include <lv/list.hpp>`, add that include. Do not look for another cause.
+- When the build prints `main.cpp:12: lv::list needs #include <lv/list.hpp>`, or the compiler `lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>`, add that include. Do not look for another cause.
 - When GCC says `'list' is not a member of 'lv'`, look the name up on that page.
 
 ## The page for each feature

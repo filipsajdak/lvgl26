@@ -26,6 +26,7 @@
 // The pointer is deleted when the object ends, so declare it after its display. LVGL keeps
 // 488 bytes of its heap for it on a 64-bit host.
 
+#include <lv/detail/missing.hpp>
 #include <lv/display.hpp>
 #include <lv/detail/input_queue.hpp>
 
@@ -34,6 +35,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/pointer.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -133,12 +140,11 @@ concept pointer_feeder = requires(F& f, pointer_feed feed) {
 };
 
 // The largest queue of a pointer: LVGL takes a queue in one read, sample after sample.
-inline constexpr std::size_t most_pointer_samples = 256;
 
 // A queue of `Capacity` samples, or none (Capacity 0) for a pointer that LVGL asks.
-template <std::size_t Capacity = 16>
-  requires(Capacity <= most_pointer_samples)
-class pointer : public detail::pointer_device {
+template <std::size_t Capacity>
+  requires detail::pointer_capacity<Capacity> && detail::included<"lv/pointer.hpp">
+class pointer<Capacity> : public detail::pointer_device {
   detail::input_queue<pointer_sample, Capacity, detail::merge_pointer_moves> queue_{};
   pointer_sample last_{};
 

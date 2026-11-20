@@ -42,6 +42,7 @@
 // factory such as lv::group or lv::column sets by default gives way to a look that says it: a
 // group whose look sets a width does not also fill its parent.
 
+#include <lv/detail/missing.hpp>
 #include <lv/config.hpp>
 #include <lv/detail/fixed_string.hpp>
 #include <lv/detail/nearest.hpp>
@@ -58,6 +59,12 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/look.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -687,8 +694,9 @@ consteval look_style_of<D> look_value() {
 
 // The look of one or several groups of the project's tokens, as a style: lv::look<"queue.card">,
 // or lv::look<"tile tile.print"> where a later one wins. D picks the registered design.
-template <detail::fixed Paths, class D = override>
-inline constexpr auto look = detail::look_value<Paths, D>();
+template <detail::fixed Paths, class D>
+  requires detail::included<"lv/look.hpp">
+inline constexpr auto look<Paths, D> = detail::look_value<Paths, D>();
 
 namespace detail {
 

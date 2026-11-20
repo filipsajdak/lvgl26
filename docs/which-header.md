@@ -42,12 +42,20 @@ These are not in `<lv/all.hpp>`, because they are a platform, a design system or
 
 ## When a header is missing
 
-The compiler says that the name does not exist. It does not say which header declares it. These are the messages, and what to add:
+For a template or a function of an opt-in header, the compiler names the header itself:
+
+```text
+error: static assertion failed: lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>
+```
+
+`lv::list`, `lv::each`, `lv::for_each`, `lv::for_each_field`, `lv::look`, `lv::image_file`, `lv::encoded_image`, `lv::runtime`, `lv::one_of` and `lv::pointer` say so on the error line. For `lv::theme({...})` GCC says `no matching function for call to 'theme(<brace-enclosed initializer list>)'`, and the note below it quotes the line `lv::theme is in <lv/theme.hpp>`.
+
+A class that is no template (`lv::scaled_font`, `lv::typeface`, `lv::pointer_feed`) cannot be declared without its header, so for it the compiler says only that the name does not exist. These are the messages, and what to add:
 
 | The message | Add |
 |---|---|
-| GCC: `'list' is not a member of 'lv'` | the header of `lv::list` in the table above, here `<lv/list.hpp>` |
-| GCC: `'look' is not a member of 'lv'` | `<lv/look.hpp>` |
+| GCC: `'scaled_font' is not a member of 'lv'` | the header of `lv::scaled_font` in the table above, here `<lv/scaled_font.hpp>` |
+| GCC: `'typeface' is not a member of 'lv'` | `<lv/font.hpp>` |
 | GCC: `no matching function for call to 'bind(int track::*, ...)'` | `<lv/list.hpp>`: a field of a row |
 | Clang, in the editor: `no template named 'list' in namespace 'lv'` | the header of the name, from the table |
 | Clang, in the editor: `no member named 'theme' in namespace 'lv'` | the header of the name, from the table |

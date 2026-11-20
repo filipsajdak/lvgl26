@@ -25,6 +25,7 @@
 // A part in a state is a selector in `style`, as in a node:
 //   .slider = {.style = base | lv::on("knob", "pressed", {.bg_color = tok.color.active})}
 
+#include <lv/detail/missing.hpp>
 #include <lv/detail/theme_styles.hpp>
 #include <lv/props.hpp>
 #include <lv/style.hpp>
@@ -33,6 +34,12 @@
 #include <span>
 #include <string_view>
 #include <vector>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/theme.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
