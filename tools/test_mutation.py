@@ -98,6 +98,11 @@ class Plan(unittest.TestCase):
         self.assertEqual(lines[1], "since=HEAD~1")
         self.assertEqual(len(json.loads(lines[2].removeprefix("matrix="))["include"]), 2)
 
+    def test_every_header_of_include_lv_has_its_own_tests_and_none_falls_back_to_all_tests(self):
+        config = json.loads(plan.CONFIG.read_text())["headers"]
+        headers = sorted(p.relative_to(plan.ROOT).as_posix() for p in (plan.ROOT / "include/lv").rglob("*.hpp"))
+        self.assertEqual([h for h in headers if h not in config], [])
+
     def test_the_real_config_names_a_test_for_every_listed_header(self):
         config = json.loads(plan.CONFIG.read_text())
         for header, chosen in config["headers"].items():
