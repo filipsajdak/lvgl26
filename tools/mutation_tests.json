@@ -1,5 +1,5 @@
 {
-  "comment": "Each header names the tests that judge its mutants. A test is listed when it includes the header or is named after it, or when its source uses the most names that the header declares (counted by tools-free text search); compile-fail tests named after the header go in too. Heavy tests (ports, examples, fuzz, large_tree) are left out, and a header that nothing in tests names uses smoke and l1_views. Every header of include/lv must have an entry: test_mutation.py fails otherwise.",
+  "comment": "Each header names the tests that judge its mutants. A test is listed when it includes the header or is named after it, or when its source uses the most names that the header declares; compile-fail tests named after the header go in too. Heavy tests (ports, examples, fuzz, large_tree) are left out, and a header that nothing in tests names uses smoke and l1_views. Every header of include/lv must have an entry: test_mutation.py fails otherwise.",
   "default": {
     "tests": ".",
     "targets": null
