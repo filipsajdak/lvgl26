@@ -907,6 +907,19 @@ add_test(NAME reference_data
                  -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/${LVGL26_REFERENCE_FILE}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
 
+# Which header declares each public name, by reflection: what tools/check_includes.py and
+# docs/which-header.md read. The names are the same for both LVGL versions.
+add_executable(lv_headers_reference ${PROJECT_SOURCE_DIR}/tools/reference/headers.cpp)
+target_link_libraries(lv_headers_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+# One constant evaluation over every name of lvgl26: 45 to 60 million steps, so a budget of its own
+# at about twice that, as lv_reference has. Not for the analyzer: nothing in it runs.
+set_source_files_properties(${PROJECT_SOURCE_DIR}/tools/reference/headers.cpp
+                            PROPERTIES COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=120000000")
+add_test(NAME headers_data
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:lv_headers_reference>
+                 -DEXPECTED=${PROJECT_SOURCE_DIR}/docs/reference/headers.json
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_output.cmake)
+
 # The settings as data: every key of a settings file, and its JSON Schema, by reflection.
 add_executable(lv_settings_reference ${PROJECT_SOURCE_DIR}/tools/reference/settings.cpp)
 target_link_libraries(lv_settings_reference PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -938,6 +951,15 @@ if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
+  # Every test and fuzz target includes the header of each name of lvgl26 it uses
+  # (docs/which-header.md); tools/check_examples.py holds the examples to their exact headers.
+  file(GLOB_RECURSE lvgl26_checked_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+       ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp ${PROJECT_SOURCE_DIR}/fuzz/*.cpp)
+  add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
+                                       ${lvgl26_checked_sources})
+  add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
+  add_test(NAME which_header_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
+                                          --check-page ${PROJECT_SOURCE_DIR}/docs/which-header.md)
   # The token files of the Signal theme are written from the design system.
   add_test(NAME signal_tokens_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/signal_tokens.py --check)
   # The copy of Signal's design file, its record (version and hash) and the written files agree.
