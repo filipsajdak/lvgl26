@@ -1279,8 +1279,8 @@ lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a cons
 lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
 lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::computed of a bool")
 # The children as arguments: a wrong one is named, with the form that works.
-lvgl26_compile_fail_message(children_not_a_child deleted "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
-lvgl26_compile_fail_message(children_alone_not_a_child deleted "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
+lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
+lvgl26_compile_fail_message(children_alone_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(each_row_not_a_tree deleted "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(when_second_not_a_tree deleted "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).")
 lvgl26_compile_fail(shown_arms_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")
