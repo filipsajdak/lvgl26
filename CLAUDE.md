@@ -22,7 +22,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Where | What runs |
 |---|---|
 | Every pull request and push to main (`ci.yml`) | `host-v96`, `host-v10`, `host-v96-asan`, `host-v96-analyze`, the compile-fail tests on both LVGL versions, ThreadSanitizer on the threaded tests, the editor stubs read by Clang, CRAP, one minute of fuzzing |
-| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), the interactive example for WebAssembly (the experimental browser target, below), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
+| Every night (`nightly.yml`) | `host-v10-asan`, `host-v96-tsan` on every test, half an hour of fuzzing, the slice on an Arm Cortex-M4 in QEMU (`tools/arm-run.sh`), the interactive example for WebAssembly (the experimental browser target, below), the compile cost of the probe files (below), mutation testing of the lines of `include/lv` changed since the last clean night (below). A failure opens an issue |
 
 - The analyzer build compiles three files at once (`LVGL26_ANALYZE_JOBS` in `cmake/quality.cmake`): a test file needs up to 2.4 GB under the analyzer, and four at once lost the CI runner. Raise it only with a measurement of peak memory.
 - The analyzer (`host-v96-analyze`) runs on the tests, not on a port: `lvgl26_skip_analyzer(<dir>)` in `cmake/quality.cmake` leaves the targets of a directory out. It triples the compile time of a port, and the job is near its limit.
@@ -160,6 +160,13 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
   several times longer. `/usr/bin/time -l` prints "instructions retired", but for the process it
   starts, so start `cc1plus` itself: `g++ -###` prints its command.
   `tools/compile_report.py <build dir> <file>...` does this and prints one JSON row per file (see `docs/research/compile-time.md`).
+
+## The nightly compile cost
+
+`tools/metrics/probes.json` lists the probes of the nightly run; a new probe is one line there (`docs/research/compile-time.md`, "The nightly measure"). Each is a file, a run-time probe or a stack size.
+
+- The number is Valgrind's instruction count of one `cc1plus` (`tools/compile_cost.py`): the hosted runners have no hardware counter, and this count is the same on every run. `tools/compile_report.py` on a Mac counts another thing: bisect with it, compare trends, not numbers. Peak memory is never a threshold.
+- A rise beyond a probe's `threshold_percent` (0.5 percent by default) fails the job and opens the issue of the night. Only a run on `main` writes the history on the branch `metrics`. A probe runs under 90 minutes: callgrind is 50 to 60 times slower than the compile.
 
 ## The experimental browser target
 
