@@ -3,28 +3,10 @@
   "default_threshold_percent": 0.5,
   "probes": [
     {
-      "id": "include_lv",
+      "id": "port_page",
       "kind": "compile",
-      "file": "tools/probes/include_lv.cpp",
-      "stands_for": "every file of a user: the cost of including <lv/lv.hpp> and nothing else"
-    },
-    {
-      "id": "one_label",
-      "kind": "compile",
-      "file": "tools/probes/one_label.cpp",
-      "stands_for": "the first widget of a program: one label, mounted"
-    },
-    {
-      "id": "signal",
-      "kind": "compile",
-      "file": "tests/signal.cpp",
-      "stands_for": "the Signal look: what <lv/signal.hpp> and its themes cost a file that uses them"
-    },
-    {
-      "id": "lists",
-      "kind": "compile",
-      "file": "examples/lists/main.cpp",
-      "stands_for": "tmp"
+      "file": "examples/ports/slint/printer/print_page.cpp",
+      "stands_for": "one page of a real port: the printer demo's print page"
     }
   ]
 }
