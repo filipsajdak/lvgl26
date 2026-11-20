@@ -111,7 +111,7 @@ def registered_tests():
     text = (plan.ROOT / "tests/CMakeLists.txt").read_text()
     targets = set(re.findall(r"^\s*(?:lvgl26_test|add_executable)\((\w+)", text, re.M))
     names = set(targets) | set(re.findall(r"add_test\(NAME (\w+)", text))
-    names |= {"fail_" + n for n in re.findall(r"^\s*lvgl26_compile_fail\((\w+)", text, re.M)}
+    names |= {"fail_" + n for n in re.findall(r"^\s*lvgl26_compile_fail(?:_message)?\((\w+)", text, re.M)}
     return names, targets
 
 
