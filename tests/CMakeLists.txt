@@ -6,6 +6,8 @@ target_compile_options(lvgl26_test_data INTERFACE --embed-dir=${PROJECT_SOURCE_D
 # The compile-fail tests that use quantities need mp-units too.
 target_link_libraries(lvgl26_test_data INTERFACE mp-units::mp-units)
 
+include(${PROJECT_SOURCE_DIR}/cmake/compile_fail.cmake)
+
 function(lvgl26_test name)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -29,6 +31,16 @@ function(lvgl26_compile_fail name message)
                    ${CMAKE_CURRENT_SOURCE_DIR}/fail/${name}.cpp
            COMMAND_EXPAND_LISTS)
   set_tests_properties(${target} PROPERTIES PASS_REGULAR_EXPRESSION "${message}" LABELS compile-fail)
+endfunction()
+
+# The same, for a message that the library writes: the text is the whole message, as the user reads it, and the
+# test fails when the message differs or has text after it (cmake/compile_fail.cmake says how a text becomes a
+# regular expression). `form` is where GCC prints it: constexpr (a consteval error), static_assert or deleted.
+# The text is kept in the test's properties for tools/compile_fail_messages.py.
+function(lvgl26_compile_fail_message name form text)
+  lvgl26_message_regex(regex "${form}" "${text}")
+  lvgl26_compile_fail(${name} "${regex}")
+  set_tests_properties(fail_${name} PROPERTIES LVGL26_MESSAGE "${text}" LVGL26_MESSAGE_FORM "${form}")
 endfunction()
 
 lvgl26_test(smoke)
@@ -999,6 +1011,11 @@ if(Python3_FOUND)
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
   # A regular expression of a test is one text: CTest splits it at an unescaped ';' and accepts any part.
+  # The messages that the compile-fail tests pin can be read back (the documentation quotes them), and the tool is tested.
+  add_test(NAME compile_fail_messages COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/compile_fail_messages.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
+  add_test(NAME compile_fail_messages_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_fail_messages.py)
+  # How a text becomes the regular expression of a compile-fail test.
+  add_test(NAME compile_fail_regex COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/compile_fail_regex.cmake)
   add_test(NAME ctest_regex_lists COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_regex_lists.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
   add_test(NAME ctest_regex_lists_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_regex_lists.py)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
