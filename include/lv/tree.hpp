@@ -57,6 +57,15 @@ namespace detail {
 template <class T>
 inline constexpr bool is_structural = false;
 
+// A structural node that must be the only child of its widget, such as lv::shown: what it
+// shows is all the widget holds.
+template <class T>
+inline constexpr bool sole_child = false;
+
+// Whether the children K obey sole_child.
+template <class... K>
+inline constexpr bool sole_child_alone = !(sole_child<K> || ...) || sizeof...(K) == 1;
+
 // What a node takes as a child: a node, or a structural node.
 template <class T>
 concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
@@ -121,6 +130,9 @@ constexpr auto splice(const Node& self, const K&... k) {
         static_assert((std::size_t{0} + ... + std::size_t{is_structural<std::remove_cvref_t<decltype(flat)>>}) <= 1,
                       "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
                       "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
+        static_assert(sole_child_alone<std::remove_cvref_t<decltype(flat)>...>,
+                      "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
+                      "lv::group({...})[lv::shown(page)[...]].");
         return node<Node::kind, std::remove_cvref_t<decltype(flat)>...>{
             self.p, kids<std::remove_cvref_t<decltype(flat)>...>{flat...}, self.how};
       },
@@ -145,6 +157,9 @@ struct node {
     static_assert((std::size_t{0} + ... + std::size_t{detail::is_structural<K>}) <= 1,
                   "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
                   "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
+    static_assert(detail::sole_child_alone<K...>,
+                  "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
+                  "lv::group({...})[lv::shown(page)[...]].");
     return {p, {k...}, how};
   }
 
@@ -643,9 +658,15 @@ enum class mount_error {
 //   page.unmount();                               // the window closes; mount again later
 //
 // sizeof and alignof are constants: lv::mount_in builds one in memory of the caller's.
+namespace detail {
+struct mounted_access;
+}
+
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class mounted {
+  friend struct detail::mounted_access;
+
   lv_obj_t* root_ = nullptr;
   mount_error error_ = mount_error::not_mounted;
   bool built_ = false;
@@ -776,6 +797,21 @@ class mounted {
     return view_type{ids_[detail::id_index<Tree>(Name.sv())]};
   }
 };
+
+namespace detail {
+
+struct mounted_access {
+  // Ends `m` without deleting its widgets, which LVGL deletes next with a parent being deleted:
+  // what the storage of a scope (an arm of lv::shown) does when its own tree ends.
+  template <const auto& Tree>
+  static void abandon(mounted<Tree>& m) noexcept {
+    if (m.root_ == nullptr) return;
+    lv_obj_remove_event_cb_with_user_data(m.root_, &mounted<Tree>::root_deleted, &m);
+    m.end();
+  }
+};
+
+}  // namespace detail
 
 // The bytes that lv::mount_in needs for `Tree`: sizeof(lv::mounted<Tree>), a constant.
 // Its alignment is alignof(lv::mounted<Tree>).
