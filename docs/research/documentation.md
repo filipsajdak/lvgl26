@@ -118,6 +118,8 @@ Shorter forms that need a feature first: one table of enumerator texts for `lv::
 | Most compile-fail tests pin a fragment of their message. The message check therefore asks that the shown text contains a match of the pin; once the tests pin whole messages, the same check is exact | `source`, `tests/CMakeLists.txt` |
 | The editor check read every file a page shows; a file of `tests/fail/` is now left out, since it is wrong on purpose | `source`, `tools/editor/check.py` |
 | Examples that break a rule today: `quick_start` (`reset()` and `&reset`), `parts` (`update` lambdas), the printer (`void (*)()`, `\n` options, the pager), `mounting` (test code beside `set`) | `source` |
+| The row template of `examples/lists` styles each node and repeats `.style_checked` pairs, against `no-boilerplate-7` and `expressive-4`. It stays until "How it looks" is rewritten: a look changes its picture | `source` |
+| A text binding with a format prints a quantity's number without its unit: `lv::bind(speed, "now {}")` shows "now 40" | `source`, `tests/state.cpp` |
 
 ## The plan
 
