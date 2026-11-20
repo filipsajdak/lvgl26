@@ -492,7 +492,7 @@ lvgl26_compile_fail(row_field_plain_int "a field of a plain integer does not say
 lvgl26_compile_fail(row_field_string_view "a std::string_view field has no ending zero")
 lvgl26_compile_fail(row_field_not_a_value "a field of a row follows like a state")
 lvgl26_compile_fail(row_field_function "follows a data member of a row")
-lvgl26_compile_fail(row_field_wrong_property "this property cannot be bound to a state of that type")
+lvgl26_compile_fail_message(row_field_wrong_property static_assert "lv: this property takes a whole number (not bool, not floating point), then true or false, and the state holds const char*. A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.")
 lvgl26_compile_fail(row_field_two_values "takes more than one value and cannot follow a field of a row")
 lvgl26_compile_fail(row_view_unknown_id "the row template has no id 'titel'. Its ids: title")
 lvgl26_compile_fail(row_template_duplicate_id "the id 'a' is used twice in one row template")
