@@ -476,9 +476,20 @@ template <detail::shown_source S>
 constexpr detail::shown_node<S> shown(const S& state) {
   return {&state};
 }
+// The arms as further arguments: lv::shown(current, lv::is<page::home>(home_ui), ...).
+template <detail::shown_source S, class... A>
+  requires detail::children_given<A...>
+constexpr auto shown(const S& state, const A&... arms) {
+  return shown(state)[arms...];
+}
 template <class S>
 void shown(const S&) = delete(
-    "lv::shown follows an lv::state or an lv::computed of an enum or a bool: lv::shown(current)[...]. "
+    "lv::shown follows an lv::state or an lv::computed of an enum or a bool: lv::shown(current, ...). "
+    "For a number or a text, make an lv::computed of an enum from it.");
+template <class S, class... A>
+  requires(detail::children_given<A...> && !detail::shown_source<S>)
+void shown(const S&, const A&...) = delete(
+    "lv::shown follows an lv::state or an lv::computed of an enum or a bool: lv::shown(current, ...). "
     "For a number or a text, make an lv::computed of an enum from it.");
 
 // Shows `tree` while `flag` is true: lv::when(online)[online_ui].
@@ -487,7 +498,16 @@ template <detail::shown_source S>
 constexpr detail::when_node<S> when(const S& flag) {
   return {&flag};
 }
+// The tree as the second argument: lv::when(online, online_ui).
+template <detail::shown_source S, class T>
+  requires std::same_as<detail::value_of<S>, bool> && tree_node<T>
+constexpr auto when(const S& flag, const T& tree) {
+  return when(flag)[tree];
+}
 template <class S>
-void when(const S&) = delete("lv::when follows an lv::state or an lv::computed of a bool: lv::when(online)[tree].");
+void when(const S&) = delete("lv::when follows an lv::state or an lv::computed of a bool: lv::when(online, tree).");
+template <class S, class T>
+void when(const S&, const T&) = delete(
+    "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).");
 
 }  // namespace lv

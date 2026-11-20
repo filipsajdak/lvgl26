@@ -353,6 +353,18 @@ constexpr auto pager = lv::group[lv::shown(current_page)[
 constexpr auto spinner_while_busy = lv::group[lv::when(busy)[popup]];
 constexpr auto empty_arm = lv::is<screen_page::none>();
 
+// The same with the children as arguments: properties first, then each child.
+constexpr auto pager_call = lv::group(lv::shown(
+    current_page, lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup), lv::otherwise()));
+constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
+constexpr auto boxed = lv::column({.size = {100 * pct, lv::size_content}}, lv::label({.text = "a"}), lv::label());
+constexpr auto boxed_bare = lv::row(lv::label({.text = "a"}), lv::button({.id = "go"}, lv::label({.text = "Go"})));
+// The call form and the subscript form build the same node.
+static_assert(std::same_as<std::remove_const_t<decltype(boxed)>, decltype(lv::column({.size = {100 * pct, lv::size_content}})[
+                                              lv::label({.text = "a"}), lv::label()])>);
+static_assert(std::same_as<std::remove_const_t<decltype(boxed_bare)>, decltype(lv::row[lv::label({.text = "a"}),
+                                                                   lv::button({.id = "go"})[lv::label({.text = "Go"})]])>);
+
 constinit lv::frame<320, 240> frame;
 constinit lv::band<320, 240, 10> band;
 static_assert(lv::frame<320, 240>::width == 320 && lv::frame<320, 240>::height == 240 && lv::frame<320, 240>::stride > 0);
@@ -516,6 +528,10 @@ constexpr auto track_row = lv::row[lv::label({.id = "title", .text = lv::bind(&t
                                    lv::label({.text = lv::bind(&track::plays, "{} plays")})];
 constexpr auto playlist = lv::column[
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)})[track_row]];
+constexpr auto playlist_call = lv::column(
+    {.size = {100 * pct, lv::size_content}},
+    lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
+constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
 
 static_assert(std::same_as<decltype(lv::bind(&track::title)), lv::detail::row_binding<const char*>>);
 static_assert(std::same_as<decltype(lv::bind(&track::plays, "{} plays")), lv::detail::row_formatted_binding<lv::counter>>);

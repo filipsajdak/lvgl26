@@ -1165,8 +1165,9 @@ struct each_node {
 }  // namespace detail
 
 // A row of the row template for each row of `rows`, named by the key `key`. See the top of this file.
-//   lv::each(tracks, &track::id)[row template]
-//   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)})[row template]
+//   lv::each(tracks, &track::id, row template)
+//   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)}, row template)
+// lv::each(tracks, &track::id)[row template] builds the same node.
 template <detail::row_source S, class T, class K>
   requires std::same_as<typename S::value_type, T>
 constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::each_options<T, K> options = {}) {
@@ -1176,6 +1177,23 @@ constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::eac
                 "set rules.raw_integer_state in the settings.");
   return {&rows, key, options, {}};
 }
+
+// The row template as the last argument: lv::each(tracks, &track::id, {...}, track_row).
+template <detail::row_source S, class T, class K, class R>
+  requires std::same_as<typename S::value_type, T> && tree_node<R>
+constexpr auto each(const S& rows, K T::* key, detail::each_options<T, K> options, const R& row_template) {
+  return each(rows, key, options)[row_template];
+}
+template <detail::row_source S, class T, class K, class R>
+  requires std::same_as<typename S::value_type, T> && tree_node<R>
+constexpr auto each(const S& rows, K T::* key, const R& row_template) {
+  return each(rows, key)[row_template];
+}
+template <detail::row_source S, class T, class K, class R>
+  requires std::same_as<typename S::value_type, T>
+void each(const S&, K T::*, detail::each_options<T, K>, const R&) = delete(
+    "lv: the last argument of lv::each is its row template, one widget: "
+    "lv::each(tracks, &track::id, {...}, track_row).");
 
 template <class S, class M, class... O>
 void each(const S&, M, O&&...) = delete(

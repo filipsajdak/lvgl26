@@ -70,6 +70,11 @@ inline constexpr bool sole_child_alone = !(sole_child<K> || ...) || sizeof...(K)
 template <class T>
 concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
 
+// A call that names at least one child, after the properties or alone. Its fallbacks below
+// take the calls where one of them is no child, so that no call matches both.
+template <class... A>
+concept children_given = sizeof...(A) > 0;
+
 template <class... Kids>
 struct kids_of {
   struct type;
@@ -185,8 +190,9 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
-// What lv::arc is: call it with properties, index it with children.
-//   lv::arc({.value = 1})      lv::button({...})[lv::label({...})]      lv::box[...]
+// What lv::arc is: call it with properties, then its children.
+//   lv::arc({.value = 1})      lv::button({...}, lv::label({...}))      lv::box(child, child)
+// Indexing with the children, lv::button({...})[lv::label({...})], builds the same node.
 template <fixed W>
 struct factory {
   template <class D = void>
@@ -198,6 +204,31 @@ struct factory {
   constexpr auto operator[](const Kids&... kids) const {
     return (*this)()[kids...];
   }
+
+  // The properties, then the children: lv::button({...}, lv::label({...})).
+  template <class D = void, tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(const lazy_props<W, D>& p, const Kids&... kids) const {
+    return make_node<W, D>(p)[kids...];
+  }
+
+  // The children alone: lv::button(lv::label({...})).
+  template <tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(const Kids&... kids) const {
+    return (*this)[kids...];
+  }
+
+  template <class D = void, class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(const lazy_props<W, D>&, const A&...) const = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+  template <class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(const A&...) const = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
 };
 
 // lv::group, lv::row and lv::column: a box that starts with the start style of S.
@@ -220,6 +251,31 @@ struct start_factory {
   constexpr auto operator[](const Kids&... kids) const {
     return this->operator()<std::void_t<Kids...>>()[kids...];
   }
+
+  // The properties, then the children: lv::column({...}, lv::label({...}), lv::arc({...})).
+  template <class D = void, tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(const lazy_props<"obj", D>& p, const Kids&... kids) const {
+    return this->operator()<D>(p)[kids...];
+  }
+
+  // The children alone: lv::column(lv::label({...}), lv::arc({...})).
+  template <tree_kid... Kids>
+    requires children_given<Kids...>
+  constexpr auto operator()(const Kids&... kids) const {
+    return (*this)[kids...];
+  }
+
+  template <class D = void, class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(const lazy_props<"obj", D>&, const A&...) const = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+  template <class... A>
+    requires(children_given<A...> && !(tree_kid<A> && ...))
+  void operator()(const A&...) const = delete(
+      "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+      "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
 };
 
 }  // namespace detail

@@ -92,4 +92,19 @@ constexpr detail::when_node<S> when(const S& flag) {
   return {&flag};
 }
 
+/// The arms as further arguments: lv::shown(current, lv::is<page::home>(home_ui), ...).
+template <detail::shown_source S, class... A>
+  requires(sizeof...(A) > 0)
+constexpr detail::shown_node<S, A...> shown(const S& state, const A&...) {
+  return {&state};
+}
+
+/// The tree as the second argument: lv::when(online, online_ui).
+template <detail::shown_source S, class T>
+  requires std::same_as<detail::value_of<S>, bool> && tree_node<T>
+constexpr detail::shown_node<S, detail::tree_arm<detail::one_of<true>, T>, detail::tree_arm<detail::one_of<false>, void>>
+when(const S& flag, const T&) {
+  return {&flag};
+}
+
 }  // namespace lv
