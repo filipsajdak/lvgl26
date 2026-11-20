@@ -59,7 +59,7 @@
     </div>
     <dl class="titleblock">
       <div><dt>Version</dt><dd>0.0.1</dd></div>
-      <div><dt>Compiler</dt><dd>GCC 16 or newer</dd></div>
+      <div><dt>Compiler</dt><dd>GCC 16.2 or newer</dd></div>
       <div><dt>LVGL</dt><dd>v9.6.0 and v10 pin</dd></div>
       <div><dt>Tested on</dt><dd>Linux host, in CI</dd></div>
     </dl>
@@ -389,8 +389,9 @@
       <div class="prose">
         <h3>Compiler and platform</h3>
         <ul class="yesno dot">
-          <li><strong>GCC 16 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
+          <li><strong>GCC 16.2 or newer only</strong>, with <code>-std=c++26 -freflection</code>. Reflection is a hard dependency. Clang cannot compile the code yet, so clang-tidy cannot analyze it either.</li>
           <li><strong>CMake 3.30 or newer</strong> and Ninja.</li>
+          <li><strong>No precompiled header with lvgl26's headers in it.</strong> With GCC 16.2 a precompiled header silently drops the precondition checks of templates, so a broken precondition goes unnoticed. This is <a href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128909">GCC bug 128909</a>; GCC's development branch has it too. CMake's <code>target_precompile_headers</code> on a target that includes lvgl26 is such a header.</li>
           <li><strong>Headers only.</strong> There is no <code>import lv;</code> yet.</li>
           <li><strong>One microcontroller is proven, in an emulator.</strong> The slice runs on a Cortex-M4 in QEMU. No real board, no display driver and no other processor family has been tried, and there is no size budget yet.</li>
           <li><strong>A run-time <code>.set({...})</code> needs about 3.5 KB of stack on a Cortex-M4.</strong> One <code>.set({.value = 60})</code> takes 3,504 bytes at <code>-Os</code> (LVGL v9.6.0; 3,528 with the v10 pin), and so does a <code>set</code> with a named style or a look. A style written inline as <code>lv::style({...})</code> is built in the call and adds about 2.6 KB: 6,120 bytes. The budget is 4 KB for a <code>set</code> of plain properties, a named style or a look, checked every night with <code>-fstack-usage</code> (<code>tools/stack_budget.py</code>); on a small stack, name the style or use a look. A tree built by the compiler and a property bound to a state are not affected.</li>
