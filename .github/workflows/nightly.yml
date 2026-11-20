@@ -482,6 +482,10 @@ jobs:
           HEADER: ${{ matrix.header }}
           TESTS: ${{ matrix.tests }}
           TARGETS: ${{ matrix.targets }}
+          # Per header, from tools/mutation_tests.json: only mutants that swap an operator or a number,
+          # and the share of the mutants that this shard judges (K/N).
+          LOGIC: ${{ matrix.logic && '--logic' || '' }}
+          PART: ${{ matrix.part }}
           SINCE: ${{ needs.mutation-plan.outputs.since }}
           # Two jobs at a time: a mutant is built and tested one after the other.
           CMAKE_BUILD_PARALLEL_LEVEL: 2
@@ -490,7 +494,7 @@ jobs:
           set -o pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 tools/mutation.py "$HEADER" --tests "$TESTS" ${TARGETS:+--targets "$TARGETS"} \
-            --since "$SINCE" --time-budget 17400 --accepted tools/mutation_accepted.json \
+            ${LOGIC:+"$LOGIC"} ${PART:+--part "$PART"} --since "$SINCE" --time-budget 17400 --accepted tools/mutation_accepted.json \
             --report mutation-report.json 2>&1 | tee mutation.log
       - name: Summary
         if: always()
