@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <type_traits>
 
 namespace lv {
 
@@ -58,11 +59,12 @@ class scaled_font {
   // The font of `file` at the size the typography token gives.
   template <std::size_t N>
   constexpr scaled_font(const unsigned char (&file)[N], const token<typography_token>& type)
-      : file_(file), px_(type->font_size.raw()) {}
+      : source_{&resolve<void>}, file_(file), px_(type->font_size.raw()) {}
 
   // The font at a size that no token names.
   template <std::size_t N>
-  constexpr scaled_font(const unsigned char (&file)[N], raw_value<length> size) : file_(file), px_(size.value.raw()) {}
+  constexpr scaled_font(const unsigned char (&file)[N], raw_value<length> size)
+      : source_{&resolve<void>}, file_(file), px_(size.value.raw()) {}
 
   template <std::size_t N>
   scaled_font(const unsigned char (&)[N], length) = delete(
@@ -102,8 +104,13 @@ class scaled_font {
   }
 
  private:
+  // What a style bound to this font calls: see detail::font_resolver, which the first member is,
+  // so that the address of the font is the address of its source.
   template <class D>
-  friend const lv_font_t* detail::bound_font(const void*);
+  static const lv_font_t* resolve(const void* font) {
+    static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));
+    return static_cast<const scaled_font*>(font)->made<D>();
+  }
 
   // The font, made on first use; null in a build without TinyTTF. A style's code is
   // compiled for every program, so this must compile there too: lv::bind and raw()
@@ -137,6 +144,7 @@ class scaled_font {
     }
   }
 
+  detail::font_resolver source_;
   std::span<const unsigned char> file_;
   std::int32_t px_;
   mutable lv_font_t* font_ = nullptr;
@@ -150,14 +158,5 @@ constexpr font_binding bind(const scaled_font& font) {
   detail::needs_tiny_ttf<D>();
   return {&font};
 }
-
-namespace detail {
-
-template <class D>
-const lv_font_t* bound_font(const void* source) {
-  return static_cast<const scaled_font*>(source)->made<D>();
-}
-
-}  // namespace detail
 
 }  // namespace lv

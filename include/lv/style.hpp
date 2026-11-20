@@ -240,17 +240,20 @@ template <class D = void>
 inline constexpr std::span<const std::meta::info> style_ids =
     std::define_static_array(style_column<D>(2));
 
-// The font of a font property that follows an lv::scaled_font. Defined in
-// lv/scaled_font.hpp, which a program that binds a font has included. A template, so that
-// TinyTTF's functions are searched for only in a file that binds a font.
-template <class D = void>
-const lv_font_t* bound_font(const void* source);
+// What a font property that follows an lv::scaled_font points at: the font, whose first member
+// is the function that makes it. The font sets the function where it is made, so that a style
+// needs nothing of lv/scaled_font.hpp, which only a program that binds a font includes.
+struct font_resolver {
+  const lv_font_t* (*resolve)(const void* font);
+};
 
 // Calls a style setter with the value of one member: what it holds, or the font it follows.
 template <class A, class Setter>
 void set_style_value(lv_obj_t* o, const A& a, Setter setter, lv_style_selector_t selector) {
   if constexpr (std::same_as<A, arg<styled<const lv_font_t*>>>) {
-    if (a.bound != nullptr) return setter(o, bound_font<A>(a.bound), selector);
+    if (a.bound != nullptr) {
+      return setter(o, static_cast<const font_resolver*>(a.bound)->resolve(a.bound), selector);
+    }
   }
   const auto& [... x] = a.v;
   setter(o, lower(x)..., selector);
