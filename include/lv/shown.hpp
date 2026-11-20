@@ -261,7 +261,7 @@ struct shown_slot;
 //   // pages.hpp
 //   extern const lv::page home_page;
 //   // home_page.cpp
-//   constinit const lv::page home_page = lv::page_of<ui>;  // or lv::page_of<ui, &start_home>
+//   constinit const lv::page home_page = lv::page_of<ui>;  // or lv::page_of<ui, {.on_shown = &start_home}>
 //   // shell.cpp
 //   lv::shown(current)[lv::is<page::home>(home_page), ...]
 //
@@ -336,40 +336,47 @@ mounted<Tree>* page_find(void* slot) {
   return tree->has_value() ? tree : nullptr;
 }
 
-template <const auto& Tree, auto F>
+// Calls the hook H (.on_shown or .on_front) of Hooks with a handle to the page in `slot`.
+template <const auto& Tree, arm_options Hooks, std::meta::info H>
 void page_call(shown_slot& slot) {
-  F(held_access::make<Tree>(&slot, &page_find<Tree>));
+  const auto handle = held_access::make<Tree>(&slot, &page_find<Tree>);
+  Hooks.[:H:].call(&handle);
 }
 
-// The function of a page that calls F, or null.
-template <const auto& Tree, auto F>
+// The function of a page that calls hook H of Hooks, or null.
+template <const auto& Tree, arm_options Hooks, std::meta::info H>
 consteval void (*page_hook_of())(shown_slot&) {
-  if constexpr (std::is_null_pointer_v<decltype(F)>) {
+  if constexpr (is_null(Hooks.[:H:].tree)) {
     return nullptr;
   } else {
-    static_assert(std::same_as<decltype(F), void (*)(held<Tree>)>,
-                  "lv::page_of<ui, on_shown, on_front>: each is called with a handle to the page, "
-                  "void f(lv::held<ui>), or is nullptr.");
-    return &page_call<Tree, F>;
+    if (std::meta::reflect_constant(Hooks.[:H:].tree) != std::meta::reflect_constant(static_cast<const void*>(&Tree)))
+      fail("lv::page_of<ui, {.on_shown = ..., .on_front = ...}>: the function of ." +
+           str(std::meta::identifier_of(H)) + " takes the lv::held of another tree than the page's. Write void f(lv::held<" +
+           str(std::meta::display_string_of(std::meta::reflect_object(Tree))) + ">).");
+    return &page_call<Tree, Hooks, H>;
   }
 }
 
-template <const auto& Tree, auto OnShown, auto OnFront>
+template <const auto& Tree, arm_options Hooks>
 consteval page page_for() {
-  return {sizeof(mounted<Tree>),         alignof(mounted<Tree>),       &Tree,
-          &page_mount<Tree>,             &page_end<Tree>,              &page_abandon<Tree>,
-          &page_root<Tree>,              page_hook_of<Tree, OnShown>(), page_hook_of<Tree, OnFront>()};
+  return {sizeof(mounted<Tree>),
+          alignof(mounted<Tree>),
+          &Tree,
+          &page_mount<Tree>,
+          &page_end<Tree>,
+          &page_abandon<Tree>,
+          &page_root<Tree>,
+          page_hook_of<Tree, Hooks, ^^arm_options::on_shown>(),
+          page_hook_of<Tree, Hooks, ^^arm_options::on_front>()};
 }
 
 }  // namespace detail
 
 // The page of the tree `Tree`, for lv::page: constinit const lv::page home_page = lv::page_of<ui>;
-// OnShown, if given, is called with a handle to the page each time it is built; OnFront each time
-// it comes to the front, after OnShown when it was just built:
-//   lv::page_of<ui, &start>, lv::page_of<ui, nullptr, &refresh>, lv::page_of<ui, &start, &refresh>
-template <const auto& Tree, auto OnShown = nullptr, auto OnFront = nullptr>
+// Its hooks are named as those of an arm: lv::page_of<ui, {.on_shown = &start, .on_front = &look}>.
+template <const auto& Tree, detail::arm_options Hooks = {}>
   requires tree_node<decltype(Tree)>
-inline constexpr page page_of = detail::page_for<Tree, OnShown, OnFront>();
+inline constexpr page page_of = detail::page_for<Tree, Hooks>();
 
 namespace detail {
 
@@ -795,7 +802,7 @@ struct shown_node {
     if constexpr (!is_null(hook.tree)) {
       if constexpr (has_page<K, Tree, Path...>())
         return "lv::shown: a page of another file takes its " + str(name) +
-               " in its own file: constinit const lv::page home_page = lv::page_of<ui, &on_shown, &on_front>;";
+               " in its own file: constinit const lv::page home_page = lv::page_of<ui, {" + str(name) + " = &f}>;";
       if (std::meta::reflect_constant(hook.tree) !=
           std::meta::reflect_constant(static_cast<const void*>(arm<K, Tree, Path...>().tree)))
         return "lv::shown: the function of " + str(name) + " takes the lv::held of another tree than its arm shows. " +

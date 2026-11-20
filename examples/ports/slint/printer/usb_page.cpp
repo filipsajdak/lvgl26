@@ -85,6 +85,6 @@ void start_usb(lv::held<ui> page) {
 
 }  // namespace
 
-constinit const lv::page usb_page = lv::page_of<ui, &start_usb>;
+constinit const lv::page usb_page = lv::page_of<ui, {.on_shown = &start_usb}>;
 
 }  // namespace printer

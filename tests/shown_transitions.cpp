@@ -202,7 +202,7 @@ void front_second(lv::held<second_ui> page) {
 
 // What another file would hold: the pages, defined there and declared where they are shown.
 constinit const lv::page first_page = lv::page_of<first_ui>;
-constinit const lv::page second_page = lv::page_of<second_ui, &on_second, &front_second>;
+constinit const lv::page second_page = lv::page_of<second_ui, {.on_shown = &on_second, .on_front = &front_second}>;
 
 constexpr auto pages_window = lv::group({.size = {width * px, 100 * px}})[
     lv::shown(current_page)[lv::is<screen_page::first>(first_page), lv::is<screen_page::second>(second_page)]];

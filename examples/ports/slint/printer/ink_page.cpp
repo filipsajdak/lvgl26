@@ -71,6 +71,6 @@ void start_ink(lv::held<ui> page) {
 
 }  // namespace
 
-constinit const lv::page ink_page = lv::page_of<ui, &start_ink>;
+constinit const lv::page ink_page = lv::page_of<ui, {.on_shown = &start_ink}>;
 
 }  // namespace printer

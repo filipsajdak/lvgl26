@@ -44,11 +44,6 @@ struct page {
   void (*on_front)(detail::shown_slot& slot);
 };
 
-/// The page of the tree `Tree`, for lv::page. OnShown, if given, is called with a handle to the page
-/// when it is built; OnFront each time it comes to the front, after OnShown on a build.
-template <const auto& Tree, auto OnShown = nullptr, auto OnFront = nullptr>
-  requires tree_node<decltype(Tree)>
-inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
 namespace detail {
 
@@ -79,6 +74,16 @@ struct arm_options {
   /// Called each time the page comes to the front: after .on_shown when it was just built.
   shown_hook on_front;
 };
+
+}  // namespace detail
+
+/// The page of the tree `Tree`, for lv::page. Its hooks are named as those of an arm:
+/// lv::page_of<ui, {.on_shown = &start, .on_front = &look}>.
+template <const auto& Tree, detail::arm_options Hooks = {}>
+  requires tree_node<decltype(Tree)>
+inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+namespace detail {
 
 template <class Pattern, class T>
   requires included<"lv/shown.hpp">

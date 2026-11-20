@@ -5,4 +5,4 @@ constinit lv::state<page> current{page::home};
 constexpr auto a = lv::label();
 constexpr auto b = lv::label();
 void look(lv::held<b>) {}
-constinit const lv::page home_page = lv::page_of<a, nullptr, &look>;
+constinit const lv::page home_page = lv::page_of<a, {.on_front = &look}>;
