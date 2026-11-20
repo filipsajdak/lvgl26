@@ -39,6 +39,10 @@ class styled;
 
 namespace detail {
 
+// A literal compared with a string_view is written "..."sv: a view made from a pointer alone
+// counts its characters in a loop that costs the compiler about 25,000 instructions each.
+using namespace std::string_view_literals;
+
 template <class T>
 concept integer = std::integral<T> && !std::same_as<T, bool> && !std::same_as<T, char> &&
                   !std::same_as<T, wchar_t> && !std::same_as<T, char8_t> &&
@@ -691,12 +695,12 @@ consteval void sort_by_name(std::vector<Item>& items) {
 
 // Names that cannot be used for a generated struct member.
 consteval bool is_keyword(std::string_view s) {
-  return is_one_of(s, {"auto",     "bool",   "break",  "case",     "char",      "class",  "const",
-                       "continue", "default", "delete", "do",       "double",    "else",   "enum",
-                       "export",   "false",  "float",  "for",      "if",        "inline", "int",
-                       "long",     "namespace", "new", "operator", "private",   "public", "return",
-                       "short",    "signed", "static", "struct",   "switch",    "template", "this",
-                       "true",     "union",  "unsigned", "using",  "virtual",   "void",   "while"});
+  return is_one_of(s, {"auto"sv,     "bool"sv,   "break"sv,  "case"sv,     "char"sv,      "class"sv,  "const"sv,
+                       "continue"sv, "default"sv, "delete"sv, "do"sv,       "double"sv,    "else"sv,   "enum"sv,
+                       "export"sv,   "false"sv,  "float"sv,  "for"sv,      "if"sv,        "inline"sv, "int"sv,
+                       "long"sv,     "namespace"sv, "new"sv, "operator"sv, "private"sv,   "public"sv, "return"sv,
+                       "short"sv,    "signed"sv, "static"sv, "struct"sv,   "switch"sv,    "template"sv, "this"sv,
+                       "true"sv,     "union"sv,  "unsigned"sv, "using"sv,  "virtual"sv,   "void"sv,   "while"sv});
 }
 
 // Whether the property or its parameter is named after one of these words.
@@ -709,18 +713,18 @@ consteval bool named_after(std::string_view prop, std::string_view parameter,
 
 // Whether the property or its parameter is named as LVGL names an angle.
 consteval bool is_angle_name(std::string_view prop, std::string_view parameter) {
-  return named_after(prop, parameter, {"angle", "rotation", "skew"});
+  return named_after(prop, parameter, {"angle"sv, "rotation"sv, "skew"sv});
 }
 
 // The unit type of a numeric setter parameter, judged by the names LVGL uses, or
 // a null reflection if they say nothing. An angle may still be decidegrees: see
 // value_type.
 consteval std::meta::info unit_of(std::string_view prop, std::string_view parameter) {
-  if (named_after(prop, parameter, {"opa"})) return ^^opa;
+  if (named_after(prop, parameter, {"opa"sv})) return ^^opa;
   if (is_angle_name(prop, parameter)) return ^^angle;
-  if (named_after(prop, parameter, {"duration", "time", "delay", "period"})) return ^^duration;
-  if (is_one_of(parameter, {"x", "w", "width"})) return ^^horizontal;
-  if (is_one_of(parameter, {"y", "h", "height"})) return ^^vertical;
+  if (named_after(prop, parameter, {"duration"sv, "time"sv, "delay"sv, "period"sv})) return ^^duration;
+  if (is_one_of(parameter, {"x"sv, "w"sv, "width"sv})) return ^^horizontal;
+  if (is_one_of(parameter, {"y"sv, "h"sv, "height"sv})) return ^^vertical;
   return {};
 }
 
