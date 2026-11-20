@@ -176,6 +176,51 @@ class Baseline(unittest.TestCase):
             mutation.run = old
 
 
+class TrackFiles(unittest.TestCase):
+    def test_the_copy_lists_its_files_to_git(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "tokens.json").write_text("{}")
+            mutation.track_files(tree)
+            listed = subprocess.run(["git", "ls-files", "*.json"], cwd=tree, capture_output=True, text=True, check=True)
+            self.assertEqual(listed.stdout.split(), ["tokens.json"])
+
+    def test_a_second_run_sees_a_file_that_is_gone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "a.json").write_text("{}")
+            mutation.track_files(tree)
+            (tree / "a.json").unlink()
+            mutation.track_files(tree)
+            listed = subprocess.run(["git", "ls-files"], cwd=tree, capture_output=True, text=True, check=True)
+            self.assertEqual(listed.stdout.split(), [])
+
+
+class CommentMutants(unittest.TestCase):
+    ORIGINAL = "int a = 1;\n  // a note\nint b = 2;\n"
+
+    def mutants(self, directory, texts):
+        out = []
+        for i, text in enumerate(texts):
+            path = pathlib.Path(directory, f"m{i}.hpp")
+            path.write_text(text)
+            out.append(path)
+        return out
+
+    def test_a_mutant_of_a_comment_line_is_dropped_and_one_of_code_is_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            comment = "int a = 1;\n  /*// a note*/\nint b = 2;\n"
+            code = "int a = 1;\n  // a note\nint b = 3;\n"
+            kept = mutation.without_comment_mutants(self.mutants(directory, [comment, code]), self.ORIGINAL)
+            self.assertEqual([m.name for m in kept], ["m1.hpp"])
+
+    def test_a_trailing_comment_does_not_make_a_line_a_comment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original = "int a = 1;  // one\n"
+            kept = mutation.without_comment_mutants(self.mutants(directory, ["int a = 2;  // one\n"]), original)
+            self.assertEqual(len(kept), 1)
+
+
 class Result(unittest.TestCase):
     def row(self, **kw):
         base = {"header": "include/lv/a.hpp", "since": "abc", "mutants": 10, "judged": 10, "complete": True,
