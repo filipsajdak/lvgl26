@@ -26,17 +26,12 @@ constexpr auto offline_banner = lv::label({.text = "Offline"});
 void greet(lv::held<home> page) { page->get<"greeting">().set({.text = "Welcome back"}); }
 //! [on-shown]
 
-template <page P>
-void go() {
-  current = P;
-}
-
 //! [tree]
 constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
     lv::column({.size = {80 * px, 240 * px}})[
-        lv::button({.on_clicked = &go<page::home>})[lv::label({.text = "Home"})],
-        lv::button({.on_clicked = &go<page::settings>})[lv::label({.text = "Settings"})],
-        lv::button({.on_clicked = &go<page::about>})[lv::label({.text = "About"})]],
+        lv::button({.on_clicked = [] { current = page::home; }})[lv::label({.text = "Home"})],
+        lv::button({.on_clicked = [] { current = page::settings; }})[lv::label({.text = "Settings"})],
+        lv::button({.on_clicked = [] { current = page::about; }})[lv::label({.text = "About"})]],
     lv::column({.size = {240 * px, 240 * px}})[
         lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
         lv::group({.size = {240 * px, 200 * px}})[
