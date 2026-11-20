@@ -60,6 +60,10 @@
       "logic": true,
       "parts": 2
     },
+    "include/lv/detail/missing.hpp": {
+      "tests": "fail_missing_header|^lists$|^look$|^one_of$|^theme$",
+      "targets": "lists look one_of theme"
+    },
     "include/lv/one_of.hpp": {
       "tests": "^one_of$|one_of_violation|fail_one_of|fail_visit",
       "targets": "one_of",
