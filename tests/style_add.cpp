@@ -68,6 +68,9 @@ void a_full_heap_refuses_the_add() {
   lv_obj_delete(o);
 }
 
+constexpr std::size_t percent = 100;
+constexpr std::size_t bound_slack_percent = 5;  // the measured growth is 984 of 1008 bytes: 2.4 percent under
+
 // What the bound relies on, measured: a full list of styles grows the heap by no more than the
 // probe, and LVGL refuses one style more than most_styles_of_a_widget.
 void the_bound_holds() {
@@ -81,6 +84,8 @@ void the_bound_holds() {
   std::printf("a full list of styles grew the heap by %zu bytes; the probe is %zu\n", grown,
               lv::detail::style_list_bound);
   check(grown <= lv::detail::style_list_bound);
+  // And the bound is close to what a full list takes: a bound of three pointers an entry would pass the check above.
+  check(lv::detail::style_list_bound * percent <= grown * (percent + bound_slack_percent));
   check(grown >= (lv::detail::most_styles_of_a_widget - 1) * sizeof(void*));  // an entry holds a pointer
   lv_obj_add_style(o, &marked, LV_PART_MAIN);  // C API: one more than LVGL keeps
   check(lv_obj_get_style_bg_opa(o, LV_PART_MAIN) != marked_opa);

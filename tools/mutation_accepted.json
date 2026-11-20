@@ -3,5 +3,10 @@
     "header": "include/lv/runtime.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. The tool inserts `continue;` before the `}` that closes the body of the `template for` counting the style members in make_style_slots (describe shows it as `}` -> `continue;`, the first line that differs). A `continue;` as the last statement of a loop body changes nothing; runtime_ui and json pass with it. A triage matches the text of the mutant, not its line, so it also covers another `continue;` inserted before a `}` in this header."
+  },
+  {
+    "header": "include/lv/detail/style_add.hpp",
+    "mutant": "return Add(o, style, selector) == LV_RESULT_OK;  ->  return Add(o, style, selector) >= LV_RESULT_OK;",
+    "reason": "Equivalent. lv_result_t has two values, LV_RESULT_INVALID (0) and LV_RESULT_OK (1), so >= LV_RESULT_OK and == LV_RESULT_OK accept the same results."
   }
 ]
