@@ -4,20 +4,66 @@ lvgl26 is a C++26 framework over LVGL for embedded user interfaces. The compiler
 
 ## The pages
 
-The groups are the layers of the framework, as the sidebar shows them. `docs.json` holds the sidebar.
+The groups are the layers of the framework, in the order of the sidebar. `docs.json` holds the sidebar. The [README](../README.md) tours the features, and `docs/reference/` holds the widgets, properties and settings as data.
 
-| Group | Pages |
+### Start
+
+| Page | What it gives you |
 |---|---|
-| Start | [Quick start](quick-start.md), [Which header](which-header.md), [Writing good lvgl26 code](rules.md) |
-| Core ideas | [State and bindings](state.md), [Where a tree lives](mounting.md) |
-| A screen that changes | [Lists](lists.md), [Repetition](repetition.md), [Option lists](options.md) |
-| How it looks | [Themes](themes.md), [Looks](looks.md), [Fonts](fonts.md), [Images](images.md) |
-| The program | [A pointer](input.md), [Project settings](settings.md) |
-| Growing | [Concepts for parts](concepts.md) |
-| Tools | [Editor support](editor-support.md) |
-| Coming from another framework | [Qt Quick](from-qt.md), [Slint](from-slint.md), [TouchGFX](from-touchgfx.md), [the Slint printer panel](port-slint-printer.md), [LVGL's own examples](port-lvgl-examples.md) |
+| [Quick start](quick-start.md) | A speedometer screen in ten minutes: a tree, a typed value, a picture |
+| [Which header](which-header.md) | The header of every name, and what to do when the build says one is missing |
+| [Writing good lvgl26 code](rules.md) | The rules every page teaches, each with an id, its example, its check and its measurement |
 
-[Writing good lvgl26 code](rules.md) holds the rules that every page teaches, each with an id.
+### Core ideas
+
+| Page | What it gives you |
+|---|---|
+| [State and bindings](state.md) | Values that widgets follow, values made from them, and actions that follow them |
+| [Where a tree lives](mounting.md) | Mounting a tree in a variable or a global, unmounting it, and one slot for one of several trees |
+
+### A screen that changes
+
+| Page | What it gives you |
+|---|---|
+| [Lists](lists.md) | Rows that change, with a fixed capacity: only the widgets of the changed row are touched |
+| [Repetition](repetition.md) | Parts that the compiler repeats, for each enumerator, each captioned member or each record |
+| [Option lists](options.md) | The options of a dropdown or a roller as a list, or from the enumerators of an enum |
+
+### How it looks
+
+| Page | What it gives you |
+|---|---|
+| [Themes](themes.md) | One look for every widget: the built-in Signal theme with its typefaces, and a theme of your own from a token file |
+| [Looks](looks.md) | A named group of design tokens used as a style, with parts, states and variants |
+| [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
+| [Images](images.md) | A PNG file becomes pixels in read-only memory, decoded by the compiler into the display's own format |
+
+### The program
+
+| Page | What it gives you |
+|---|---|
+| [A pointer](input.md) | A mouse or a touch panel, the application's loop, and a window that closes, hides and shows |
+| [Project settings](settings.md) | One JSON file for the whole program: what it may use, how strict the library is, and what the compiler may do |
+
+### Growing
+
+| Page | What it gives you |
+|---|---|
+| [Concepts for parts](concepts.md) | The concepts that constrain a part's parameters, and what a wrong argument looks like |
+
+### Tools
+
+| Page | What it gives you |
+|---|---|
+| [Editor support](editor-support.md) | Completion, documentation and marks on mistakes in editors that use clangd, from one CMake line |
+
+### Coming from another framework
+
+| Page | What it gives you |
+|---|---|
+| [Coming from Qt Quick](from-qt.md), [Slint](from-slint.md), [TouchGFX](from-touchgfx.md) | What you know, mapped to lvgl26; the steps of a port; the decisions you must make; what is not there yet |
+| [Port walkthrough: the Slint printer panel](port-slint-printer.md) | A whole application ported: the result, how it is organised, what differs, what it costs, and the choices made |
+| [Port LVGL's own examples](port-lvgl-examples.md) | How an example is ported and compared with the C original, pixel for pixel; what a skipped example means |
 
 ## For AI agents
 

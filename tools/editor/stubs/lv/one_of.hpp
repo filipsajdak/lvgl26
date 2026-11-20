@@ -9,11 +9,17 @@
 // The editor does not check that a tree is one of the slot's, nor that every tree has an
 // arm; GCC does.
 
+#include <lv/detail/missing.hpp>
 #include <lv/tree.hpp>
 
 #include <expected>
 #include <optional>
 #include <type_traits>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/one_of.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -69,8 +75,8 @@ using visit_type = std::conditional_t<std::is_same_v<Named, no_named_result>, Co
 
 /// One slot for one of the trees, alive one at a time, in the memory of the largest.
 template <const auto&... Trees>
-  requires(tree_node<decltype(Trees)> && ...)
-class one_of {
+  requires detail::tree_nodes<decltype(Trees)...> && detail::included<"lv/one_of.hpp">
+class one_of<Trees...> {
  public:
   /// Holds no tree: a constinit global, or a member.
   constexpr one_of() = default;

@@ -126,7 +126,7 @@
 <pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/all.hpp&gt;</span>
 <span class="k">#include</span> <span class="s">&lt;lv/mcp.hpp&gt;</span>
 
-<span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"arc"</span>&gt; agent{<span class="t">lv::screen_active</span>()};
+<span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"arc"</span>&gt; agent{display.screen()};
 agent.serve();   <span class="c">// answers requests on stdin until it is closed</span></code></pre>
       </figure>
       <div class="prose">
@@ -154,7 +154,7 @@ agent.serve();   <span class="c">// answers requests on stdin until it is closed
       <figure class="code">
         <figcaption><span>the server of the example host</span><span>examples/agent/mcp_host.cpp</span></figcaption>
 <pre tabindex="0"><code><span class="t">lv::mcp::server</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"button"</span>, <span class="s">"arc"</span>, <span class="s">"bar"</span>, <span class="s">"slider"</span>, <span class="s">"switch"</span>, <span class="s">"checkbox"</span>&gt; agent{
-    <span class="t">lv::screen_active</span>(),
+    display.screen(),
     {.name = <span class="s">"lvgl26 example host"</span>, .screenshot_directory = argc &gt; <span class="n">2</span> ? argv[<span class="n">2</span>] : <span class="s">""</span>}};
 agent.serve(in, stdout);</code></pre>
       </figure>
@@ -186,7 +186,7 @@ agent.serve(in, stdout);</code></pre>
   ]})"</span>;
 
 <span class="k">using</span> ui = <span class="t">lv::runtime</span>&lt;<span class="s">"obj"</span>, <span class="s">"label"</span>, <span class="s">"arc"</span>&gt;;      <span class="c">// the widgets a document may use</span>
-<span class="k">auto</span> screen = ui::load(doc, <span class="t">lv::screen_active</span>());   <span class="c">// std::expected</span>
+<span class="k">auto</span> screen = ui::load(doc, display.screen());   <span class="c">// std::expected</span>
 screen-&gt;apply(<span class="s">R"({"speedo": {"value": 60}})"</span>);      <span class="c">// change properties by id</span></code></pre>
       </figure>
       <div class="prose">

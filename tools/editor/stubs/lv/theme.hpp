@@ -2,10 +2,16 @@
 
 // Editor stub of lv/theme.hpp. The members of a theme are in lv/generated.hpp.
 
+#include <lv/detail/missing.hpp>
 #include <lv/detail/theme_styles.hpp>
 #include <lv/generated.hpp>
 #include <lv/props.hpp>
 #include <lv/style.hpp>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/theme.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 

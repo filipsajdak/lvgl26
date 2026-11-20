@@ -10,7 +10,7 @@ The compiler finds the group in the token file, matches each entry to the style 
 
 ## Name the token file once
 
-A project names its token file once, before the first look, as it sets `lv::cfg`. The file with the specialization is included by every file of the project.
+A project names its token file once, before the first look. The file with the specialization is included by every file of the project.
 
 <!-- snippet: examples/looks/screen.hpp registration -->
 ```cpp
@@ -30,7 +30,7 @@ inline constexpr lv::design_of<decltype(looks::tok)> lv::design<lv::override>{
     .tokens = looks::tok, .type = lv::typeface({{"Barlow", 500, looks::barlow}})};
 ```
 
-`lv::design_of` holds the tokens and the typeface that draws the fonts of the typography tokens. A project whose looks have no typography token leaves the typeface out: `{.tokens = tok}`. A registration that comes after the first look is a compile error, as it is for `lv::cfg`.
+`lv::design_of` holds the tokens and the typeface that draws the fonts of the typography tokens. A project whose looks have no typography token leaves the typeface out: `{.tokens = tok}`. A registration that comes after the first look is a compile error.
 
 ## Write what each element is
 
@@ -279,15 +279,15 @@ The token file is a plain Design Tokens file (Format 2025.10): a design tool ope
 | Token type | Style properties | Example entry |
 |---|---|---|
 | `color` | A color: `bg_color`, `text_color`, `border_color` | `"bg_color": {"$value": "{color.paper}"}` |
-| `color` written `#rrggbbaa` | The color, and the opacity of the same name | `"bg_color": {"$type": "color", "$value": "#2b7fff80"}` sets `bg_color` and `bg_opa` |
-| `dimension` | A length: `radius`, `width`, `pad_row`, `border_width` | `"radius": {"$type": "dimension", "$value": "16px"}` |
+| `color` with an `alpha` | The color, and the opacity of the same name | `"bg_color": {"$type": "color", "$value": {"hex": "#2b7fff", "colorSpace": "srgb", "components": [0.17, 0.5, 1], "alpha": 0.5}}` sets `bg_color` and `bg_opa` |
+| `dimension` | A length: `radius`, `width`, `pad_row`, `border_width` | `"radius": {"$type": "dimension", "$value": {"value": 16, "unit": "px"}}` |
 | `number`, 0 to 1 | An opacity: `bg_opa`, `text_opa` | `"bg_opa": {"$type": "number", "$value": 1}` |
 | `number`, whole | A whole number: `arc_rotation` | `"flex_grow": {"$type": "number", "$value": 1}` |
-| `duration` | A time: `anim_duration` | `"anim_duration": {"$type": "duration", "$value": "200ms"}` |
+| `duration` | A time: `anim_duration` | `"anim_duration": {"$type": "duration", "$value": {"value": 200, "unit": "ms"}}` |
 | `typography` on `text_font` | A font, drawn by the compiler through the typeface | `"text_font": {"$value": "{text.label}"}` |
 | `shadow`, `border`, `transition` | Merged as `style \| token` is, under any name | `"elevation": {"$value": "{elevation.card}"}` |
 
-A color with an alpha sets the opacity property of its color (`bg_color` with `bg_opa`, `text_color` with `text_opa`, `image_recolor` with `image_recolor_opa`). Only a color that carries an alpha does it: an opaque color sets no opacity, and an `bg_opa` entry in the same group wins. Colors written as objects (`colorSpace`, `components`, `alpha`) are not read for alpha yet.
+A color with an alpha sets the opacity property of its color (`bg_color` with `bg_opa`, `text_color` with `text_opa`, `image_recolor` with `image_recolor_opa`). Only a color that carries an alpha does it: an opaque color sets no opacity, and an `bg_opa` entry in the same group wins. The alpha is the `alpha` member of the color object, as the standard writes it.
 
 A shorthand such as `pad_all`, `pad_gap` or `margin_hor` is kept as the properties it stands for, so that the style is a constant and a state can override one of them. A JSON object has no order, so the order of the entries does not matter: an entry the group names itself (`pad_top`) beats a shorthand that covers it, and a narrower shorthand (`pad_hor`) beats a wider one (`pad_all`). This is the one rule of every style: a theme, `lv::on` and a node's `.style` follow it too (see [Themes](themes.md)). `size` takes two values, and a token holds one: write `width` and `height`.
 
@@ -297,8 +297,8 @@ An LVGL value by name (`flex_flow`, `text_align`, `layout`) and a size in percen
 
 ```json
 "tiles": {
-  "pad_column": {"$type": "dimension", "$value": "12px"},
-  "width": {"$type": "dimension", "$value": "288px"},
+  "pad_column": {"$type": "dimension", "$value": {"value": 12, "unit": "px"}},
+  "width": {"$type": "dimension", "$value": {"value": 288, "unit": "px"}},
   "$extensions": {
     "io.github.filipsajdak.lvgl26": {"layout": "flex", "flex_flow": "row", "width": "100%"}
   }

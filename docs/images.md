@@ -55,7 +55,7 @@ Measured once on one machine, as the work of the compiler:
 
 ## The size limit
 
-A picture is at most 128 x 128 pixels, because a large one makes the build slow. A whole 320 x 240 screen costs seven to fourteen seconds. A larger file stops the build:
+By default a picture is at most 16384 pixels (128 x 128), because a large one makes the build slow. A whole 320 x 240 screen costs seven to fourteen seconds. A larger file stops the build:
 
 ```text
 error: lv: this picture is 200 x 100 pixels, and the compiler decodes at most 16384 (a large
@@ -100,4 +100,3 @@ lv::image({.src = lv::encoded_image<photo_jpg>})
 - A picture is at most 65535 pixels each way, with rows of at most 65535 bytes: LVGL's own limits.
 - The picture keeps its size: see-through borders are not cut off.
 - Photos and whole-screen backgrounds are better kept as JPEG: see `lv::encoded_image` above.
-- A very large picture may not link on macOS, whose linker limits the length of a name. 128 x 128 links.
