@@ -367,6 +367,40 @@ It was built with the flags of the file and `-x c++-header`, and given to the fi
 | A low `-fconstexpr-ops-limit` made `large_tree` dearer, 81.5 G to 92.1 G; with fixes 3 to 7, 69.8 to 70.1 G | Same file, same tree, the option alone | `measured`; the cause is not known |
 | The back end is 2 to 11 G a file, 3 to 8 % | Full minus front end, every file above | `measured` |
 
+### The warm header in the build of the tests
+
+A spike in the branch `spike/warm-pch`: `LVGL26_WARM_PCH` (`cmake/warm_pch.cmake`, the preset `host-v96-warm-pch`) gives `tests/warm_pch.hpp` to every test executable through CMake's `target_precompile_headers(REUSE_FROM)`. The header includes `<lv/lv.hpp>` and mounts a box, a label and a button. Measured on 2026-11-20, on `main` at `61ac3e5`.
+
+| What | Without | With | Mark |
+|---|---|---|---|
+| 12 test files, instructions of `cc1plus`, sum | 1364.8 G | 909.5 G (−33 %) | `measured` |
+| `tests/large_tree.cpp` | 92.5 G | 28.8 G (−69 %) | `measured` |
+| `tests/mounted_storage.cpp`, `static_text.cpp` | 71.5 G, 69.5 G | 24.9 G, 23.9 G (−65 %) | `measured` |
+| Two examples of LVGL's widgets | 62.2 G each | 36.3 G each (−42 %) | `measured` |
+| `tests/look.cpp`, `font_bytes.cpp` (fonts) | 280.7 G, 179.6 G | 231.1 G, 162.9 G (−18 %, −9 %) | `measured` |
+| `tests/smoke.cpp` (no widget) | 18.5 G | 17.4 G | `measured` |
+| The whole `host-v96` build without ccache, 6 jobs, one run each | 440 s wall, 2332 s CPU | 327 s wall, 1676 s CPU (−28 %) | `measured`; another build shared the machine |
+| The `.gch` | | 268 MB | `measured` |
+| Peak memory of one compile | | 2.9 GB | `measured`, `/usr/bin/time` of the build |
+
+What works.
+
+- The sanitizer preset with the header: `large_tree`, `theme` and `look` build and pass. `measured`
+- The analyzer preset with the header: the analyzed tests build without a new warning, 15 to 22 % less CPU on four of them. `measured`
+- ccache 4.14 with `sloppiness=pch_defines,time_macros`: a second clean build in the same directory was 794 of 794 hits. After a header edit all 208 files that include it missed, as they must. `measured`
+
+What breaks.
+
+- **GCC 16.2 loses `pre` on a member of a class template from a precompiled header.** Fifteen contract tests (`*_violation_*`) then see no violation. A reproducer of four lines does the same; a plain function and a function template keep their `pre`. No Bugzilla report was found (`summary`). `measured`
+- GCC refuses the header in a file whose macros differ from the header's. `MP_UNITS_HOSTED` came from the test data, so the header links neither. `measured`
+- `no_exceptions` builds with `-fno-exceptions`, which the header does not serve: it is left out. `measured`
+- `editor_examples` copies a test's flags to Clang, which refuses GCC's `.gch` (`-Wignored-gch`). `measured`
+- The objects are no longer reproducible: two compiles of `large_tree.cpp` against one `.gch` give the same instructions in another order. Without the header they are byte-identical. `measured`
+- Each rebuild of the `.gch` gives a different file, so every file that uses it misses in ccache. Even a header changed back gave 24 of 208 hits. `measured`
+- Each object gets its own copy of the header's three mount functions, because they name variables of internal linkage. `measured`
+
+Until GCC keeps `pre` through a precompiled header, the header hides contract violations in every test that uses it.
+
 ## Inside GCC
 
 Why GCC 16.2 charges what it charges: the tools that see below our functions, and what they show.

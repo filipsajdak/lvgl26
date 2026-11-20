@@ -26,6 +26,7 @@ include(cmake/quality.cmake)
 include(cmake/lvgl.cmake)
 include(cmake/editor.cmake)
 include(cmake/settings.cmake)
+include(cmake/warm_pch.cmake)
 
 add_library(lvgl26 INTERFACE)
 add_library(lvgl26::lvgl26 ALIAS lvgl26)

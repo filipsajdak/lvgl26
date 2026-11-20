@@ -70,6 +70,13 @@
       }
     },
     {
+      "name": "host-v96-warm-pch",
+      "inherits": "host-v96",
+      "cacheVariables": {
+        "LVGL26_WARM_PCH": "ON"
+      }
+    },
+    {
       "name": "arm-m4",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
@@ -110,6 +117,10 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage"
+    },
+    {
+      "name": "host-v96-warm-pch",
+      "configurePreset": "host-v96-warm-pch"
     },
     {
       "name": "arm-m4",
@@ -166,6 +177,13 @@
     {
       "name": "host-v96-coverage",
       "configurePreset": "host-v96-coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "host-v96-warm-pch",
+      "configurePreset": "host-v96-warm-pch",
       "output": {
         "outputOnFailure": true
       }

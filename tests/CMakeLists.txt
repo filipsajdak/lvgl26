@@ -1155,3 +1155,9 @@ lvgl26_compile_fail(look_ext_text "the .extensions entry 'radius' of 'exttext' i
 lvgl26_compile_fail(look_ext_percent_digits "is '5x%', and a percentage is written as whole digits and %")
 lvgl26_compile_fail(look_alpha_wrong_kind "the look entry 'radius' of 'alpharadius' is a color with an alpha, but the style property 'radius' takes a dimension")
 lvgl26_compile_fail(look_ext_not_string "the value of 'width' in .extensions 'io.github.filipsajdak.lvgl26' is not a string")
+
+# The warm precompiled header (cmake/warm_pch.cmake). include_only measures a file without it;
+# no_exceptions builds with other flags, which a precompiled header does not serve.
+if(LVGL26_WARM_PCH)
+  lvgl26_warm_pch(SKIP include_only no_exceptions)
+endif()
