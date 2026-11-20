@@ -96,6 +96,34 @@ consteval std::meta::info token_cpp_type(token_type t) {
   fail("lv: design tokens: " + str(what));
 }
 
+// The path of the token that holds the text at `at`, as "group.token": made only for a message, by a search of the
+// document, so that reading a token costs nothing for it. A group on the way is part of the path; what lies inside
+// a token (its value, the parts of a shadow) is not.
+consteval bool locate_token(json::value group, const char* at, std::string& path) {
+  for (const json::member m : group.members()) {
+    if (m.key.starts_with("$") || at < m.text.data() || at >= m.text.data() + m.text.size()) continue;
+    const auto before = path.size();
+    if (!path.empty()) path += '.';
+    path.append(m.key);
+    if (json::value{m.text}["$value"] || locate_token(json::value{m.text}, at, path)) return true;
+    path.resize(before);
+  }
+  return false;
+}
+
+consteval std::string token_path(json::value root, std::string_view inside) {
+  std::string path;
+  locate_token(root, inside.data(), path);
+  return path;
+}
+
+// A message about the token that holds the text `inside`, which is part of the document `root`.
+[[noreturn]] consteval void token_fail_in(json::value root, std::string_view inside,
+                                          std::initializer_list<std::string_view> what) {
+  const auto path = token_path(root, inside);
+  fail(join({"lv: design tokens: ", path.empty() ? "" : "'", path, path.empty() ? "" : "': ", join(what)}));
+}
+
 // The key of the vendor data in "$extensions": reverse domain name, as the Design Tokens Format
 // recommends (5.2.3). The one place it is written.
 inline constexpr std::string_view vendor_key = "io.github.filipsajdak.lvgl26";
@@ -135,21 +163,55 @@ struct resolved_token {
 consteval resolved_token resolve_token(json::value root, json::value token, token_type inherited,
                                        int depth = 0);
 
+// The token that an alias names, or an empty value: the groups and the token, walked from the root.
+consteval json::value alias_target(json::value root, std::string_view alias) {
+  auto path = alias.substr(1, alias.size() - 2);
+  json::value at = root;
+  while (at.is(json::kind::object)) {
+    const auto dot = path.find('.');
+    at = at[path.substr(0, dot)];
+    if (dot == std::string_view::npos) return at;
+    path.remove_prefix(dot + 1);
+  }
+  return {};
+}
+
+// Whether the chain of aliases that starts at `alias` comes back to it: a real circle, and no chain that is only long.
+consteval bool alias_circles(json::value root, std::string_view alias) {
+  const auto most_hops = 64;
+  auto next = alias;
+  for (int hop = 0; hop < most_hops; ++hop) {
+    const auto value = alias_target(root, next)["$value"];
+    if (!value.is(json::kind::string) || !value.string().starts_with("{")) return false;
+    next = value.string();
+    if (next == alias) return true;
+  }
+  return false;
+}
+
+inline constexpr int most_aliases_in_a_row = 8;
+
+[[noreturn]] consteval void fail_alias_chain(json::value root, std::string_view alias) {
+  if (alias_circles(root, alias)) token_fail_in(root, alias, {"the alias ", alias, " goes in a circle."});
+  token_fail_in(root, alias, {"the alias ", alias, " follows more than ", decimal(most_aliases_in_a_row),
+                              " aliases in a row, the most lvgl26 follows. Point the first alias of the chain nearer its value."});
+}
+
 // Follows "{group.token}" from the root. The type is inherited along the way.
 consteval resolved_token follow_alias(json::value root, std::string_view alias, int depth) {
-  if (depth > 8) token_fail("the alias " + str(alias) + " goes in a circle");
+  if (depth > most_aliases_in_a_row) fail_alias_chain(root, alias);
   auto path = alias.substr(1, alias.size() - 2);
   json::value at = root;
   token_type type = token_type::none;
   while (true) {
     const auto dot = path.find('.');
     at = at[path.substr(0, dot)];
-    if (!at.is(json::kind::object)) token_fail("the alias " + str(alias) + " points at nothing");
+    if (!at.is(json::kind::object)) token_fail_in(root, alias, {"the alias ", alias, " points at nothing."});
     if (auto t = at["$type"]) type = token_type_of(t.string());
     if (dot == std::string_view::npos) break;
     path.remove_prefix(dot + 1);
   }
-  if (!at["$value"]) token_fail("the alias " + str(alias) + " points at a group, not a token");
+  if (!at["$value"]) token_fail_in(root, alias, {"the alias ", alias, " points at a group, not a token."});
   return resolve_token(root, at, type, depth + 1);
 }
 
@@ -308,19 +370,36 @@ struct token_group {
 
 // ---- reading values ---------------------------------------------------------
 
+// The value of a hex digit, or -1 for another character.
 consteval int hex_digit(char c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  token_fail("a color has a character that is not a hex digit");
+  return -1;
 }
 
-consteval lv_color_t color_from_hex(std::string_view s) {
-  if (s.starts_with("#") && s.size() == 9)
-    token_fail("the color '" + str(s) + "' has an alpha channel, which a color token does not "
-               "carry. Write it as #rrggbb and give the opacity its own token");
+// Stops at the first character of `s` after the # that is not a hex digit.
+consteval void check_hex_digits(json::value root, std::string_view s) {
+  for (std::size_t i = 1; i < s.size(); ++i)
+    if (hex_digit(s[i]) < 0)
+      token_fail_in(root, s, {"the color '", s, "' has the character '", s.substr(i, 1),
+                              "', which is not a hex digit. Write it as #rgb or #rrggbb."});
+}
+
+consteval lv_color_t color_from_hex(json::value root, std::string_view s);
+
+// A color that is not in a document: a message cannot say which token it is in.
+consteval lv_color_t color_from_hex(std::string_view s) { return color_from_hex(json::value{}, s); }
+
+consteval lv_color_t color_from_hex(json::value root, std::string_view s) {
+  if (s.starts_with("#") && s.size() == 9) {
+    check_hex_digits(root, s);
+    token_fail_in(root, s, {"the color '", s, "' has an alpha channel, which a color token does not carry. ",
+                            "Write it as #rrggbb and give the opacity its own token."});
+  }
   if (!s.starts_with("#") || (s.size() != 4 && s.size() != 7))
-    token_fail("the color '" + str(s) + "' is not #rgb or #rrggbb");
+    token_fail_in(root, s, {"the color '", s, "' is not #rgb or #rrggbb."});
+  check_hex_digits(root, s);
   const auto channel = [&](std::size_t i) {
     return s.size() == 4 ? hex_digit(s[1 + i]) * 17
                          : hex_digit(s[1 + 2 * i]) * 16 + hex_digit(s[2 + 2 * i]);
@@ -342,13 +421,13 @@ struct quantity {
   std::string_view unit;
 };
 
-consteval quantity read_quantity(json::value v) {
+consteval quantity read_quantity(json::value root, json::value v) {
   if (v.is(json::kind::object)) return {v["value"].number(), v["unit"].string()};
   if (v.is(json::kind::number)) return {v.number(), {}};
-  if (!v.is(json::kind::string)) token_fail("a dimension or duration must be a string or an object");
+  if (!v.is(json::kind::string)) token_fail_in(root, v.text(), {"a dimension or duration must be a string or an object."});
   const auto s = v.string();
   const auto n = json::detail::number_length(s);
-  if (n == 0) token_fail("'" + str(s) + "' has no number before its unit");
+  if (n == 0) token_fail_in(root, s, {"'", s, "' has no number before its unit."});
   return {json::value{s.substr(0, n)}.number(), s.substr(n)};
 }
 
@@ -357,11 +436,13 @@ consteval quantity read_quantity(json::value v) {
 template <class T>
 using read_as = std::type_identity<T>;
 
-consteval lv_color_t read_token(read_as<lv_color_t>, json::value, json::value v) {
-  if (v.is(json::kind::string)) return color_from_hex(v.string());
-  if (auto hex = v["hex"]) return color_from_hex(hex.string());
+consteval lv_color_t read_token(read_as<lv_color_t>, json::value root, json::value v) {
+  if (v.is(json::kind::string)) return color_from_hex(root, v.string());
+  if (auto hex = v["hex"]) return color_from_hex(root, hex.string());
   const auto parts = v["components"];
-  if (parts.size() != 3) token_fail("a color needs a hex string or three components");
+  if (parts.size() != 3)
+    token_fail_in(root, v.text(), {"a color needs a hex string or three components, and this one has ",
+                                   parts.size() == 0 ? "none" : decimal(parts.size()), "."});
   lv_color_t c{};
   c.red = static_cast<std::uint8_t>(rounded(parts.at(0).number() * 255));
   c.green = static_cast<std::uint8_t>(rounded(parts.at(1).number() * 255));
@@ -373,35 +454,36 @@ consteval rgba_color read_token(read_as<rgba_color>, json::value root, json::val
   if (v.is(json::kind::object))
     return {read_token(read_as<lv_color_t>{}, root, v), static_cast<std::uint8_t>(rounded(v["alpha"].number() * 255))};
   const auto s = v.string();
-  const auto rgb = color_from_hex(s.substr(0, 7));
+  check_hex_digits(root, s);
+  const auto rgb = color_from_hex(root, s.substr(0, 7));
   return {rgb, static_cast<std::uint8_t>(hex_digit(s[7]) * 16 + hex_digit(s[8]))};
 }
 
-consteval length read_token(read_as<length>, json::value, json::value v) {
-  const auto q = read_quantity(v);
+consteval length read_token(read_as<length>, json::value root, json::value v) {
+  const auto q = read_quantity(root, v);
   if (q.unit == "px" || q.unit.empty()) return length::px(rounded(q.value));
   if (q.unit == "rem") return length::px(rounded(q.value * 16));
   if (q.unit == "%") return length{percent{rounded(q.value)}};
-  token_fail("the dimension unit '" + str(q.unit) + "' is not px, rem or %");
+  token_fail_in(root, v.text(), {"the dimension unit '", q.unit, "' is not px, rem or %."});
 }
 
-consteval duration read_token(read_as<duration>, json::value, json::value v) {
-  const auto q = read_quantity(v);
+consteval duration read_token(read_as<duration>, json::value root, json::value v) {
+  const auto q = read_quantity(root, v);
   if (q.unit == "ms" || q.unit.empty()) return {static_cast<std::uint32_t>(rounded(q.value))};
   if (q.unit == "s") return {static_cast<std::uint32_t>(rounded(q.value * 1000))};
-  token_fail("the duration unit '" + str(q.unit) + "' is not ms or s");
+  token_fail_in(root, v.text(), {"the duration unit '", q.unit, "' is not ms or s."});
 }
 
-consteval double read_token(read_as<double>, json::value, json::value v) {
-  if (!v.is(json::kind::number)) token_fail("a number token must be a JSON number");
+consteval double read_token(read_as<double>, json::value root, json::value v) {
+  if (!v.is(json::kind::number)) token_fail_in(root, v.text(), {"a number token must be a JSON number."});
   return v.number();
 }
 
-consteval std::int32_t read_token(read_as<std::int32_t>, json::value, json::value v) {
+consteval std::int32_t read_token(read_as<std::int32_t>, json::value root, json::value v) {
   if (v.is(json::kind::number)) return rounded(v.number());
   if (v.string() == "normal") return 400;
   if (v.string() == "bold") return 700;
-  token_fail("the font weight '" + str(v.string()) + "' is not a number, normal or bold");
+  token_fail_in(root, v.text(), {"the font weight '", v.string(), "' is not a number, normal or bold."});
 }
 
 consteval std::string_view read_token(read_as<std::string_view>, json::value, json::value v) {
@@ -411,16 +493,19 @@ consteval std::string_view read_token(read_as<std::string_view>, json::value, js
   return v.string();
 }
 
-consteval bezier read_token(read_as<bezier>, json::value, json::value v) {
-  if (!v.is(json::kind::array) || v.size() != 4)
-    token_fail("a cubicBezier token must be a list of four numbers");
+consteval bezier read_token(read_as<bezier>, json::value root, json::value v) {
+  if (!v.is(json::kind::array))
+    token_fail_in(root, v.text(), {"a cubicBezier token must be a list of four numbers, and this one is not a list."});
+  if (v.size() != 4)
+    token_fail_in(root, v.text(), {"a cubicBezier token must be a list of four numbers, and this one has ", decimal(v.size()), "."});
   return {v.at(0).number(), v.at(1).number(), v.at(2).number(), v.at(3).number()};
 }
 
 // A part of a composite token. It may be a literal or an alias to another token.
 template <class T>
-consteval T read_part(json::value root, json::value v, std::string_view what) {
-  if (!v) token_fail("a composite token has no '" + str(what) + "'");
+consteval T read_part(json::value root, json::value owner, std::string_view what) {
+  const auto v = owner[what];
+  if (!v) token_fail_in(root, owner.text(), {"this composite token has no '", what, "'. Add it."});
   if (v.is(json::kind::string) && v.string().starts_with("{") && v.string().ends_with("}"))
     return read_token(read_as<T>{}, root, follow_alias(root, v.string(), 0).value);
   return read_token(read_as<T>{}, root, v);
@@ -428,41 +513,43 @@ consteval T read_part(json::value root, json::value v, std::string_view what) {
 
 consteval shadow_token read_token(read_as<shadow_token>, json::value root, json::value v) {
   const auto s = v.is(json::kind::array) ? v.at(0) : v;
-  return {read_part<lv_color_t>(root, s["color"], "color"),
-          read_part<length>(root, s["offsetX"], "offsetX"),
-          read_part<length>(root, s["offsetY"], "offsetY"),
-          read_part<length>(root, s["blur"], "blur"),
-          read_part<length>(root, s["spread"], "spread")};
+  return {read_part<lv_color_t>(root, s, "color"),
+          read_part<length>(root, s, "offsetX"),
+          read_part<length>(root, s, "offsetY"),
+          read_part<length>(root, s, "blur"),
+          read_part<length>(root, s, "spread")};
 }
 
 consteval border_token read_token(read_as<border_token>, json::value root, json::value v) {
-  return {read_part<lv_color_t>(root, v["color"], "color"),
-          read_part<length>(root, v["width"], "width"),
-          read_part<std::string_view>(root, v["style"], "style")};
+  return {read_part<lv_color_t>(root, v, "color"),
+          read_part<length>(root, v, "width"),
+          read_part<std::string_view>(root, v, "style")};
 }
 
 consteval typography_token read_token(read_as<typography_token>, json::value root, json::value v) {
-  return {read_part<std::string_view>(root, v["fontFamily"], "fontFamily"),
-          read_part<length>(root, v["fontSize"], "fontSize"),
-          read_part<std::int32_t>(root, v["fontWeight"], "fontWeight"),
-          read_part<length>(root, v["letterSpacing"], "letterSpacing"),
-          read_part<double>(root, v["lineHeight"], "lineHeight")};
+  return {read_part<std::string_view>(root, v, "fontFamily"),
+          read_part<length>(root, v, "fontSize"),
+          read_part<std::int32_t>(root, v, "fontWeight"),
+          read_part<length>(root, v, "letterSpacing"),
+          read_part<double>(root, v, "lineHeight")};
 }
 
 consteval transition_token read_token(read_as<transition_token>, json::value root, json::value v) {
-  return {read_part<duration>(root, v["duration"], "duration"),
-          read_part<duration>(root, v["delay"], "delay"),
-          read_part<bezier>(root, v["timingFunction"], "timingFunction")};
+  return {read_part<duration>(root, v, "duration"),
+          read_part<duration>(root, v, "delay"),
+          read_part<bezier>(root, v, "timingFunction")};
 }
 
 consteval gradient_token read_token(read_as<gradient_token>, json::value root, json::value v) {
   gradient_token g{};
-  if (!v.is(json::kind::array) || v.size() > g.stops.size())
-    token_fail("a gradient token must be a list of at most eight stops");
+  if (!v.is(json::kind::array))
+    token_fail_in(root, v.text(), {"a gradient token must be a list of at most eight stops, and this one is not a list."});
+  if (v.size() > g.stops.size())
+    token_fail_in(root, v.text(), {"a gradient token must be a list of at most eight stops, and this one has ", decimal(v.size()), "."});
   for (; g.count < v.size(); ++g.count) {
     const auto stop = v.at(g.count);
-    g.stops[g.count] = {read_part<lv_color_t>(root, stop["color"], "color"),
-                        read_part<double>(root, stop["position"], "position")};
+    g.stops[g.count] = {read_part<lv_color_t>(root, stop, "color"),
+                        read_part<double>(root, stop, "position")};
   }
   return g;
 }
@@ -493,19 +580,44 @@ consteval bool is_legacy_form(token_type kind, json::value v) {
   }
 }
 
-// What the standard writes in its place.
-consteval std::string_view standard_form(token_type kind) {
-  switch (kind) {
-    case token_type::color: return "{\"colorSpace\": \"srgb\", \"components\": [0.2, 0.4, 1], \"hex\": \"#3366ff\"}";
-    case token_type::duration: return "{\"value\": 200, \"unit\": \"ms\"}";
-    default: return "{\"value\": 8, \"unit\": \"px\"}";
-  }
+// A channel of a color as the standard writes it: 0 to 1, in at most three decimals ("0.2", "1", "0.133").
+consteval std::string channel_text(int channel) {
+  const int thousandths = (channel * 1000 + 127) / 255;
+  if (thousandths == 1000) return "1";
+  if (thousandths == 0) return "0";
+  std::string fraction = decimal(static_cast<std::size_t>(thousandths));
+  fraction.insert(0, 3 - fraction.size(), '0');
+  while (fraction.back() == '0') fraction.pop_back();
+  return join({"0.", fraction});
 }
 
-consteval void fail_legacy(std::string_view where, token_type kind, json::value v) {
-  token_fail("'" + str(where) + "' is written " + str(v.text()) + ", a form from before the Design Tokens Format 2025.10. "
-             "The standard writes it as " + str(standard_form(kind)) + ". Run python3 tools/dtcg_fix.py on the token file, "
-             "or set rules.tokens_legacy_values in the settings while the files convert");
+// A color written "#rrggbb" or "#rgb" as the standard writes it: its components, and the hex.
+consteval std::string standard_color(std::string_view hex) {
+  const auto short_form = hex.size() == 4;
+  std::string components;
+  for (std::size_t i = 0; i < 3; ++i) {
+    const int channel = short_form ? hex_digit(hex[1 + i]) * 17 : hex_digit(hex[1 + 2 * i]) * 16 + hex_digit(hex[2 + 2 * i]);
+    components += join({i ? ", " : "", channel_text(channel)});
+  }
+  return join({"{\"colorSpace\": \"srgb\", \"components\": [", components, "], \"hex\": \"", hex, "\"}"});
+}
+
+// What the standard writes in place of the form `v`, with the value of `v`: {"value": 16, "unit": "px"}.
+consteval std::string standard_form(token_type kind, json::value v) {
+  if (kind == token_type::color) return standard_color(v.string());
+  const std::string_view default_unit = kind == token_type::duration ? "ms" : "px";
+  if (v.is(json::kind::number)) return join({"{\"value\": ", v.text(), ", \"unit\": \"", default_unit, "\"}"});
+  const auto s = v.string();
+  const auto n = json::detail::number_length(s);
+  return join({"{\"value\": ", s.substr(0, n), ", \"unit\": \"", n < s.size() ? s.substr(n) : default_unit, "\"}"});
+}
+
+// `member` is empty for the value of a token, and the name of a part of a composite token otherwise.
+consteval void fail_legacy(json::value root, std::string_view member, token_type kind, json::value v) {
+  token_fail(join({"'", token_path(root, v.text()), "'", member.empty() ? "" : " member '", member, member.empty() ? "" : "'",
+                   " is written ", v.text(), ", a form from before the Design Tokens Format 2025.10. The standard writes it as ",
+                   standard_form(kind, v), ". Run python3 tools/dtcg_fix.py on the token file, or set rules.tokens_legacy_values "
+                   "in the settings while the files convert"}));
 }
 
 // The members of a composite token that hold a color, a dimension or a duration.
@@ -515,11 +627,11 @@ struct composite_part {
   token_type kind;
 };
 
-consteval void check_part(std::string_view where, std::string_view member, token_type kind, json::value v) {
-  if (is_legacy_form(kind, v)) fail_legacy(str(where) + "' member '" + str(member), kind, v);
+consteval void check_part(json::value root, std::string_view member, token_type kind, json::value v) {
+  if (is_legacy_form(kind, v)) fail_legacy(root, member, kind, v);
 }
 
-consteval void check_parts(std::string_view where, token_type owner, json::value v) {
+consteval void check_parts(json::value root, token_type owner, json::value v) {
   const std::initializer_list<composite_part> parts = {
       {token_type::border, "color", token_type::color}, {token_type::border, "width", token_type::dimension},
       {token_type::shadow, "color", token_type::color}, {token_type::shadow, "offsetX", token_type::dimension},
@@ -529,17 +641,17 @@ consteval void check_parts(std::string_view where, token_type owner, json::value
       {token_type::transition, "duration", token_type::duration}, {token_type::transition, "delay", token_type::duration},
       {token_type::gradient, "color", token_type::color}};
   for (const composite_part& part : parts)
-    if (part.owner == owner) check_part(where, part.member, part.kind, v[part.member]);
+    if (part.owner == owner) check_part(root, part.member, part.kind, v[part.member]);
 }
 
 // A shadow may be a list of shadows and a gradient is a list of stops: each element is checked.
-consteval void check_forms(std::string_view where, token_type kind, json::value v) {
+consteval void check_forms(json::value root, token_type kind, json::value v) {
   if (v.is(json::kind::array)) {
-    for (const json::value element : v.elements()) check_forms(where, kind, element);
+    for (const json::value element : v.elements()) check_forms(root, kind, element);
   } else if (is_legacy_form(kind, v)) {
-    fail_legacy(where, kind, v);
+    fail_legacy(root, {}, kind, v);
   } else if (v.is(json::kind::object) && kind >= token_type::shadow && kind <= token_type::gradient) {
-    check_parts(where, kind, v);
+    check_parts(root, kind, v);
   }
 }
 
@@ -562,8 +674,8 @@ consteval bool is_named(std::meta::info member, std::string_view name) {
 
 // One token: its value is checked for a form from before the standard (unless the settings allow it) and read.
 template <class M, bool Legacy>
-consteval M fill_leaf(json::value root, std::string_view key, const resolved_token& resolved) {
-  if constexpr (!Legacy) check_forms(key, resolved.type, resolved.value);
+consteval M fill_leaf(json::value root, const resolved_token& resolved) {
+  if constexpr (!Legacy) check_forms(root, resolved.type, resolved.value);
   return M{read_token(read_as<typename token_payload<M>::type>{}, root, resolved.value), from_design_tokens{}};
 }
 
@@ -590,7 +702,7 @@ consteval G fill_tokens(json::value group, token_type inherited) {
       const json::value child{member.text};
       ++walk;
       if constexpr (is_token_leaf<M>) {
-        out.[:m:] = fill_leaf<M, Legacy>(root, member.key, resolve_token(root, child, inherited));
+        out.[:m:] = fill_leaf<M, Legacy>(root, resolve_token(root, child, inherited));
       } else {
         out.[:m:] = fill_tokens<M, Doc, Legacy>(child, inherited);
       }

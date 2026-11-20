@@ -78,6 +78,22 @@ static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 // The forms from before the Design Tokens Format 2025.10 are read only when the settings allow them,
 // and give the same values as the object forms of tokens.json (the token file was rewritten by tools/dtcg_fix.py).
 struct legacy_settings {};
+// The example in the message about a form from before the standard shows the user's own value.
+consteval bool standard_form_is(lv::detail::token_type kind, std::string_view legacy, std::string_view expected) {
+  return lv::detail::standard_form(kind, *lv::json::value::parse(legacy)) == expected;
+}
+static_assert(standard_form_is(lv::detail::token_type::dimension, R"("16px")", R"({"value": 16, "unit": "px"})"));
+static_assert(standard_form_is(lv::detail::token_type::dimension, R"("1.5rem")", R"({"value": 1.5, "unit": "rem"})"));
+static_assert(standard_form_is(lv::detail::token_type::dimension, "8", R"({"value": 8, "unit": "px"})"));
+static_assert(standard_form_is(lv::detail::token_type::duration, R"("200ms")", R"({"value": 200, "unit": "ms"})"));
+static_assert(standard_form_is(lv::detail::token_type::duration, "300", R"({"value": 300, "unit": "ms"})"));
+static_assert(standard_form_is(lv::detail::token_type::color, R"("#3366ff")",
+                               R"({"colorSpace": "srgb", "components": [0.2, 0.4, 1], "hex": "#3366ff"})"));
+static_assert(standard_form_is(lv::detail::token_type::color, R"("#22201c")",
+                               R"({"colorSpace": "srgb", "components": [0.133, 0.125, 0.11], "hex": "#22201c"})"));
+static_assert(standard_form_is(lv::detail::token_type::color, R"("#f00")",
+                               R"({"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#f00"})"));
+
 }  // namespace
 template <>
 inline constexpr lv::config lv::cfg<legacy_settings>{.rules = {.tokens_legacy_values = true}};

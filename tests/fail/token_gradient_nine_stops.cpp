@@ -1,11 +1,4 @@
-#include <lv/lv.hpp>
-#include <string>
-template <class T>
-consteval T read_as(std::string_view text) {
-  const auto v = *lv::json::value::parse(text);
-  return lv::detail::read_token(lv::detail::read_as<T>{}, v, v);
-}
-constexpr auto d = read_as<lv::gradient_token>(R"([
-  {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0},
-  {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0},
-  {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}])");
+// A gradient of nine stops: eight at most.
+#include "legacy_tokens.hpp"
+constexpr char doc[] = R"({"fill": {"sky": {"$type": "gradient", "$value": [{"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}, {"color": "#102030", "position": 0}]}}})";
+constexpr auto tok = lv::tokens<doc, legacy_tokens>;
