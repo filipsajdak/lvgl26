@@ -1169,6 +1169,16 @@ if(Python3_FOUND)
                      -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} ${LVGL26_CONSUMER_CLANGD}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/consumer_test.cmake)
     set_tests_properties(editor_support PROPERTIES TIMEOUT 600)
+    # clangd's background index names the header of a name that a file misses. Indexing lvgl26
+    # takes minutes, so the test runs every night (ctest -L nightly) and the pull request run
+    # leaves it out (-LE nightly).
+    if(LVGL26_CLANGD)
+      add_test(NAME editor_quick_fix
+               COMMAND ${CMAKE_COMMAND} -DSOURCE=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/editor/quick_fix
+                       -DGENERATOR=${CMAKE_GENERATOR} -DOPTIONS=${LVGL26_CONSUMER_OPTIONS} -DCLANGD=${LVGL26_CLANGD}
+                       -DPYTHON=${Python3_EXECUTABLE} -P ${CMAKE_CURRENT_SOURCE_DIR}/editor/quick_fix_test.cmake)
+      set_tests_properties(editor_quick_fix PROPERTIES TIMEOUT 1800 LABELS nightly)
+    endif()
   endif()
 endif()
 
