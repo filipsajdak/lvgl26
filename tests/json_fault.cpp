@@ -9,7 +9,7 @@ using lv::json::detail::find_fault;
 using lv::json::detail::npos;
 using namespace std::string_view_literals;
 
-constexpr bool at(std::string_view doc, std::size_t where, std::string_view expected) {
+consteval bool at(std::string_view doc, std::size_t where, std::string_view expected) {
   const auto f = find_fault(doc);
   return f.at == where && f.expected == expected;
 }
