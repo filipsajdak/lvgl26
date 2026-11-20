@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 #include <string_view>
 
 namespace {
@@ -31,7 +32,15 @@ constexpr auto page_b = lv::column({.size = {width * px, 100 * px}})[lv::label({
 constexpr auto page_c = lv::column({.size = {width * px, 100 * px}})[lv::label({.text = "c"})];
 
 int a_built = 0;
-void on_a(lv::held<page_a>) { ++a_built; }
+std::string order;  // what ran for page a: s for .on_shown, f for .on_front
+void on_a(lv::held<page_a>) {
+  ++a_built;
+  order += 's';
+}
+void front_a(lv::held<page_a> page) {
+  check(page.has_value());
+  order += 'f';
+}
 
 constexpr auto slide_in = lv::transition({.x = {width * px, 0 * px}}, 200 * ms);
 constexpr auto slide_out = lv::transition({.x = {0 * px, width * px}}, 200 * ms);
@@ -39,7 +48,7 @@ constexpr auto slide_out = lv::transition({.x = {0 * px, width * px}}, 200 * ms)
 constexpr auto sliding = lv::group({.size = {width * px, 100 * px}})[
     lv::shown(current, {.enter = slide_in, .leave = slide_out})[
         lv::is<sub::none>(),
-        lv::is<sub::a>(page_a, {.on_shown = &on_a}),
+        lv::is<sub::a>(page_a, {.on_shown = &on_a, .on_front = &front_a}),
         lv::is<sub::b>(page_b),
         lv::is<sub::c>(page_c)]];
 
@@ -95,6 +104,7 @@ void slides_between_pages(lv::obj screen) {
 void comes_back_while_it_leaves(lv::obj screen) {
   current = sub::a;
   a_built = 0;
+  order.clear();
   auto w = lv::mount<sliding>(screen);
   lv_obj_t* holder = w.root().raw();
   current = sub::b;
@@ -105,6 +115,7 @@ void comes_back_while_it_leaves(lv::obj screen) {
   current = sub::a;
   lv::settle();
   check(a_built == 1 && root_of(holder, "a") == a);  // the same widgets
+  check(order == "sff");  // built: .on_shown, then .on_front; back to the front: .on_front alone
   lv_test_wait(20);
   check(lv_obj_get_x(a) < a_at);  // on its way back
   lv_test_wait(300);
@@ -178,14 +189,20 @@ constexpr auto second_ui = lv::column({.size = {width * px, 100 * px}})[
     lv::label({.id = "title", .text = "second"}), lv::label({.id = "extra", .text = "more"})];
 
 int second_shown = 0;
+int second_front = 0;
 void on_second(lv::held<second_ui> page) {
   ++second_shown;
+  check(second_front == second_shown - 1);  // .on_shown runs before .on_front
   check(page.has_value() && std::string_view{lv_label_get_text(page->get<"extra">().raw())} == "more");
+}
+void front_second(lv::held<second_ui> page) {
+  ++second_front;
+  check(page.has_value());
 }
 
 // What another file would hold: the pages, defined there and declared where they are shown.
 constinit const lv::page first_page = lv::page_of<first_ui>;
-constinit const lv::page second_page = lv::page_of<second_ui, &on_second>;
+constinit const lv::page second_page = lv::page_of<second_ui, &on_second, &front_second>;
 
 constexpr auto pages_window = lv::group({.size = {width * px, 100 * px}})[
     lv::shown(current_page)[lv::is<screen_page::first>(first_page), lv::is<screen_page::second>(second_page)]];
@@ -197,6 +214,7 @@ static_assert(lv::page_of<first_ui>.size == sizeof(lv::mounted<first_ui>) && lv:
 void pages_of_other_files(lv::obj screen) {
   current_page = screen_page::first;
   second_shown = 0;
+  second_front = 0;
   const std::size_t before = heap_used();
   {
     auto w = lv::mount<pages_window>(screen);
@@ -209,7 +227,7 @@ void pages_of_other_files(lv::obj screen) {
     lv::settle();
     current_page = screen_page::second;
     lv::settle();
-    check(second_shown == 2 && heap_used() == with_second);
+    check(second_shown == 2 && second_front == 2 && heap_used() == with_second);
   }
   check(heap_used() == before);
 }

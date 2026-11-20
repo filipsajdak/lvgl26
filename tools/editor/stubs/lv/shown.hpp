@@ -41,12 +41,14 @@ struct page {
   void (*abandon)(void* memory);
   lv_obj_t* (*root)(const void* memory);
   void (*on_shown)(detail::shown_slot& slot);
+  void (*on_front)(detail::shown_slot& slot);
 };
 
-/// The page of the tree `Tree`, for lv::page. OnShown, if given, is called with a handle to the page.
-template <const auto& Tree, auto OnShown = nullptr>
+/// The page of the tree `Tree`, for lv::page. OnShown, if given, is called with a handle to the page
+/// when it is built; OnFront each time it comes to the front, after OnShown on a build.
+template <const auto& Tree, auto OnShown = nullptr, auto OnFront = nullptr>
   requires tree_node<decltype(Tree)>
-inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr};
+inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
 namespace detail {
 
@@ -63,7 +65,7 @@ struct shown_options {
   transition_spec leave{};
 };
 
-/// What .on_shown takes: a function void f(lv::held<T>) of the arm's tree T.
+/// What .on_shown and .on_front take: a function void f(lv::held<T>) of the arm's tree T.
 struct shown_hook {
   constexpr shown_hook() = default;
   template <const auto& T>
@@ -74,6 +76,8 @@ struct shown_hook {
 struct arm_options {
   /// Called after the tree is built, with a handle to it.
   shown_hook on_shown;
+  /// Called each time the page comes to the front: after .on_shown when it was just built.
+  shown_hook on_front;
 };
 
 template <class Pattern, class T>

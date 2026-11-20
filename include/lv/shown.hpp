@@ -94,12 +94,20 @@ struct shown_hook {
       : call(std::meta::extract<void (*)(const void*)>(
             std::meta::substitute(^^call_on_shown, {std::meta::reflect_constant(f)}))),
         tree(&T) {}
+
+  // Any other function: the same signature without the constraint, to say what is wanted.
+  template <class F>
+  shown_hook(F) = delete("lv::shown: .on_shown and .on_front take a function void f(lv::held<tree>), "
+                         "where tree is the tree of the arm.");
 };
 
-// What an arm takes beside its tree: lv::is<page::home>(home_ui, {.on_shown = &start}).
+// What an arm takes beside its tree: lv::is<page::home>(home_ui, {.on_shown = &start, .on_front = &look}).
 struct arm_options {
   // Called after the tree is built, with a handle to it: its ids, a task tied to its root.
   shown_hook on_shown;
+  // Called each time the page comes to the front: when it was just built, after .on_shown, and
+  // when a page that was still built comes back.
+  shown_hook on_front;
 };
 
 // An arm: the pattern of lv::match, and the tree it shows (none for T = void).
@@ -268,6 +276,7 @@ struct page {
   void (*abandon)(void* memory);                  // leaves its widgets to LVGL, which deletes them next
   lv_obj_t* (*root)(const void* memory);
   void (*on_shown)(detail::shown_slot& slot);     // after it is built, or null
+  void (*on_front)(detail::shown_slot& slot);     // each time it comes to the front, or null
 };
 
 namespace detail {
@@ -327,30 +336,40 @@ mounted<Tree>* page_find(void* slot) {
   return tree->has_value() ? tree : nullptr;
 }
 
-template <const auto& Tree, auto OnShown>
-void page_shown(shown_slot& slot) {
-  OnShown(held_access::make<Tree>(&slot, &page_find<Tree>));
+template <const auto& Tree, auto F>
+void page_call(shown_slot& slot) {
+  F(held_access::make<Tree>(&slot, &page_find<Tree>));
 }
 
-template <const auto& Tree, auto OnShown>
-consteval page page_for() {
-  page p{sizeof(mounted<Tree>), alignof(mounted<Tree>),    &Tree,         &page_mount<Tree>,
-         &page_end<Tree>,       &page_abandon<Tree>,       &page_root<Tree>, nullptr};
-  if constexpr (!std::is_null_pointer_v<decltype(OnShown)>) {
-    static_assert(std::same_as<decltype(OnShown), void (*)(held<Tree>)>,
-                  "lv::page_of<ui, F>: F is called with a handle to the page, void f(lv::held<ui>).");
-    p.on_shown = &page_shown<Tree, OnShown>;
+// The function of a page that calls F, or null.
+template <const auto& Tree, auto F>
+consteval void (*page_hook_of())(shown_slot&) {
+  if constexpr (std::is_null_pointer_v<decltype(F)>) {
+    return nullptr;
+  } else {
+    static_assert(std::same_as<decltype(F), void (*)(held<Tree>)>,
+                  "lv::page_of<ui, on_shown, on_front>: each is called with a handle to the page, "
+                  "void f(lv::held<ui>), or is nullptr.");
+    return &page_call<Tree, F>;
   }
-  return p;
+}
+
+template <const auto& Tree, auto OnShown, auto OnFront>
+consteval page page_for() {
+  return {sizeof(mounted<Tree>),         alignof(mounted<Tree>),       &Tree,
+          &page_mount<Tree>,             &page_end<Tree>,              &page_abandon<Tree>,
+          &page_root<Tree>,              page_hook_of<Tree, OnShown>(), page_hook_of<Tree, OnFront>()};
 }
 
 }  // namespace detail
 
 // The page of the tree `Tree`, for lv::page: constinit const lv::page home_page = lv::page_of<ui>;
-// OnShown, if given, is called with a handle to the page each time it is built.
-template <const auto& Tree, auto OnShown = nullptr>
+// OnShown, if given, is called with a handle to the page each time it is built; OnFront each time
+// it comes to the front, after OnShown when it was just built:
+//   lv::page_of<ui, &start>, lv::page_of<ui, nullptr, &refresh>, lv::page_of<ui, &start, &refresh>
+template <const auto& Tree, auto OnShown = nullptr, auto OnFront = nullptr>
   requires tree_node<decltype(Tree)>
-inline constexpr page page_of = detail::page_for<Tree, OnShown>();
+inline constexpr page page_of = detail::page_for<Tree, OnShown, OnFront>();
 
 namespace detail {
 
@@ -419,7 +438,8 @@ namespace detail {
 // .on_shown is called.
 struct shown_plan {
   const page* const* pages;
-  void (*const* shown_hooks)(shown_slot&);  // for each arm, or null
+  void (*const* shown_hooks)(shown_slot&);  // .on_shown of each arm, or null
+  void (*const* front_hooks)(shown_slot&);  // .on_front of each arm, or null
   std::size_t arms;
   std::size_t slot_size;   // 0: the pages are in other files, and the size is found at mount
   std::size_t slot_align;
@@ -577,15 +597,24 @@ inline bool build_page(shown_core& c, shown_slot& s, std::size_t k) {
   return true;
 }
 
-// .on_shown of a page of another file, which the page carries.
-inline void page_hook(shown_slot& s) {
+// .on_shown and .on_front of a page of another file, which the page carries.
+inline void page_shown_hook(shown_slot& s) {
   if (s.holds->on_shown != nullptr) s.holds->on_shown(s);
 }
+inline void page_front_hook(shown_slot& s) {
+  if (s.holds->on_front != nullptr) s.holds->on_front(s);
+}
 
-// After a page is built: its .on_shown, and the focus if the old page had it.
+// A page comes to the front: its .on_front.
+inline void to_front(shown_core& c, shown_slot& s) {
+  if (c.plan->front_hooks[s.arm] != nullptr) c.plan->front_hooks[s.arm](s);
+}
+
+// After a page is built: the focus if the old page had it, its .on_shown, then its .on_front.
 inline void welcome(shown_core& c, shown_slot& s, lv_group_t* focus) {
   if (focus != nullptr) focus_first(focus, s.holds->root(s.memory));
   if (c.plan->shown_hooks[s.arm] != nullptr) c.plan->shown_hooks[s.arm](s);
+  to_front(c, s);
 }
 
 // The old page is deleted before the new one is built: the heap holds one page at a time.
@@ -605,6 +634,7 @@ inline bool come_back(shown_core& c, shown_slot& back) {
   if (shown_slot* front = front_slot(c)) start_leave(*front);
   start_enter(back, true);
   place_glass(c);
+  to_front(c, back);
   return true;
 }
 
@@ -757,20 +787,27 @@ struct shown_node {
     return std::meta::reflect_object(*arm<K, Tree, Path...>().tree);
   }
 
-  // A function of .on_shown that takes another tree than its arm shows, as an error, or nothing.
-  template <std::size_t K, const auto& Tree, std::size_t... Path>
-  static consteval std::string hook_problem() {
-    constexpr const auto& hook = arm<K, Tree, Path...>().options.on_shown;
+  // A function of .on_shown or .on_front (Hook) that takes another tree than its arm shows, as an
+  // error, or nothing.
+  template <std::size_t K, auto Hook, const auto& Tree, std::size_t... Path>
+  static consteval std::string one_hook_problem(std::string_view name) {
+    constexpr const auto& hook = arm<K, Tree, Path...>().options.[:Hook:];
     if constexpr (!is_null(hook.tree)) {
       if constexpr (has_page<K, Tree, Path...>())
-        return "lv::shown: a page of another file takes its .on_shown in its own file: "
-               "constinit const lv::page home_page = lv::page_of<ui, &start>;";
+        return "lv::shown: a page of another file takes its " + str(name) +
+               " in its own file: constinit const lv::page home_page = lv::page_of<ui, &on_shown, &on_front>;";
       if (std::meta::reflect_constant(hook.tree) !=
           std::meta::reflect_constant(static_cast<const void*>(arm<K, Tree, Path...>().tree)))
-        return "lv::shown: the function of .on_shown takes the lv::held of another tree than its arm shows. "
+        return "lv::shown: the function of " + str(name) + " takes the lv::held of another tree than its arm shows. " +
                "Write void f(lv::held<" + str(std::meta::display_string_of(tree_of<K, Tree, Path...>())) + ">).";
     }
     return {};
+  }
+
+  template <std::size_t K, const auto& Tree, std::size_t... Path>
+  static consteval std::string hook_problem() {
+    const auto shown = one_hook_problem<K, ^^arm_options::on_shown, Tree, Path...>(".on_shown");
+    return shown.empty() ? one_hook_problem<K, ^^arm_options::on_front, Tree, Path...>(".on_front") : shown;
   }
 
   // A tree shown by two arms, or a function of .on_shown for another tree, as an error, or nothing.
@@ -812,20 +849,22 @@ struct shown_node {
       return nullptr;
   }
 
-  // .on_shown of a tree of this file, given in its arm.
-  template <std::size_t K, const auto& Tree, std::size_t... Path>
+  // .on_shown or .on_front (Hook) of a tree of this file, given in its arm.
+  template <std::size_t K, auto Hook, const auto& Tree, std::size_t... Path>
   static void call_hook(shown_slot& s) {
     constexpr auto& T = *arm<K, Tree, Path...>().tree;
     const auto handle = held_access::make<T>(&s, &page_find<T>);
-    arm<K, Tree, Path...>().options.on_shown.call(&handle);
+    arm<K, Tree, Path...>().options.[:Hook:].call(&handle);
   }
 
-  template <std::size_t K, const auto& Tree, std::size_t... Path>
+  // The function that calls Hook of arm K: the page's own for a page of another file, read when it
+  // is shown since its value is in that file; the arm's for a tree of this file; or null.
+  template <std::size_t K, auto Hook, const auto& Tree, std::size_t... Path>
   static consteval void (*hook_at())(shown_slot&) {
     if constexpr (has_page<K, Tree, Path...>())
-      return &page_hook;  // the page's own, read when it is shown: its value is in another file
+      return Hook == ^^arm_options::on_shown ? &page_shown_hook : &page_front_hook;
     else if constexpr (has_tree<K, Tree, Path...>()) {
-      if constexpr (!is_null(arm<K, Tree, Path...>().options.on_shown.tree)) return &call_hook<K, Tree, Path...>;
+      if constexpr (!is_null(arm<K, Tree, Path...>().options.[:Hook:].tree)) return &call_hook<K, Hook, Tree, Path...>;
     }
     return nullptr;
   }
@@ -870,12 +909,16 @@ struct shown_node {
     static constexpr std::array<const page*, arm_count> pages = []<std::size_t... K>(std::index_sequence<K...>) {
       return std::array<const page*, arm_count>{page_at<K, Tree, Path...>()...};
     }(std::make_index_sequence<arm_count>{});
-    static constexpr std::array<void (*)(shown_slot&), arm_count> hooks = []<std::size_t... K>(std::index_sequence<K...>) {
-      return std::array<void (*)(shown_slot&), arm_count>{hook_at<K, Tree, Path...>()...};
+    static constexpr std::array<void (*)(shown_slot&), arm_count> shown_hooks = []<std::size_t... K>(std::index_sequence<K...>) {
+      return std::array<void (*)(shown_slot&), arm_count>{hook_at<K, ^^arm_options::on_shown, Tree, Path...>()...};
+    }(std::make_index_sequence<arm_count>{});
+    static constexpr std::array<void (*)(shown_slot&), arm_count> front_hooks = []<std::size_t... K>(std::index_sequence<K...>) {
+      return std::array<void (*)(shown_slot&), arm_count>{hook_at<K, ^^arm_options::on_front, Tree, Path...>()...};
     }(std::make_index_sequence<arm_count>{});
     static constexpr auto slot = slot_of<Tree, Path...>();
     static constexpr shown_plan plan{pages.data(),
-                                     hooks.data(),
+                                     shown_hooks.data(),
+                                     front_hooks.data(),
                                      arm_count,
                                      slot[0],
                                      slot[1],
