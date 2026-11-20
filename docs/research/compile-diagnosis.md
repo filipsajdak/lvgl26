@@ -1,7 +1,7 @@
 # Compile time: where it goes, and what to fix
 
 Why one file of lvgl26 costs GCC 16.2 so much, measured part by part, with the fixes ranked by what they save.
-Measured on 2026-11-19; every mark below has that date.
+Measured on 2026-11-19; every mark below has that date, except in "GCC built from source", which was measured on 2026-11-20.
 The marks are in [the README](README.md).
 [compile-time.md](compile-time.md) holds the tools and the earlier levers; this note does not repeat them.
 
@@ -501,7 +501,7 @@ Nothing was filed; the drafts of the reports are kept outside the repository unt
 - Runs of the same file differed by under 0.3 %. A probe of 45 G therefore has a noise of about 0.1 G, or 15 k a call over 4000 calls.
 - The probes are front end only: `-std=c++26 -freflection -fsyntax-only`.
 - A cost per call is the difference between two probes divided by the number of calls. The cheaper twin of each probe does the same work without the call.
-- The one-label file is the probe of "Attribution", on `main` at `9dccce2` with LVGL v9.6.0. It used the flags of `host-v96`, with the paths of that machine.
+- The one-label file is the probe of "Attribution", on `main` at `9dccce2` with LVGL v9.6.0. It used the defines, include paths and `-std` of `host-v96`, with `-Wall -Wextra -Wpedantic -Werror` but not the other warning flags.
 - Linux and macOS give different totals for the same file: 54.1 G here, 51.1 G on macOS for `perf/lazy-api`. Compare within one table only.
 
 The probes, written fresh on that machine:
@@ -1028,7 +1028,7 @@ libstdc++ walks a trivially destructible range in constant evaluation (`_Destroy
 - One label barely uses a vector of bytes. The gain is for the font and picture readers, which `CLAUDE.md` already steers to `reserve` and pointers.
 - Trunk changed `stl_vector.h` and `stl_uninitialized.h` (`acfdad706d`, `allocate_at_least`, 2026-04-03; `79e2956290`, `uninitialized_move`, 2026-02-26). Neither touches this path. `source`
 - The array placement new is only valid where the range is a whole array, as in `vector(n)`. libstdc++ would need a narrower condition than this experiment's.
-- Dropping the destroy loop loses the diagnosis of a read after `pop_back` in constant evaluation. That may be why libstdc++ has it.
+- Dropping the destroy loop loses one diagnosis: a read through a saved pointer after `clear()` compiles, where 16.2 says "outside its lifetime". After `pop_back()` it is still diagnosed. That may be why libstdc++ has the loop.
 
 This is an experiment, not a patch for review.
 
