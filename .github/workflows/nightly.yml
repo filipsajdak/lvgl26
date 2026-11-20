@@ -147,6 +147,52 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # clangd in a project with editor support: its background index of lvgl26 offers the quick fix
+  # that adds a missing header (tests/editor/quick_fix_test.cmake). The time of the index goes to
+  # the run's summary.
+  image-editor:
+    if: ${{ !inputs.web_only && !inputs.arm_only && !inputs.cost_only }}
+    uses: ./.github/workflows/image.yml
+    with:
+      name: ci-editor
+    permissions:
+      contents: read
+      packages: write
+
+  editor-quick-fix:
+    if: ${{ !inputs.web_only && !inputs.arm_only && !inputs.cost_only }}
+    runs-on: ubuntu-latest
+    needs: image-editor
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image-editor.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: host-v96-editor
+      - name: Configure
+        run: cmake --preset host-v96
+      - name: Test
+        shell: bash
+        run: |
+          set -o pipefail
+          ctest --preset host-v96 -L nightly -R '^editor_' --output-on-failure -V 2>&1 | tee quick-fix.txt
+      - name: Report the time of the index
+        if: always()
+        run: |
+          {
+            echo '### clangd quick fix for a missing header'
+            echo '```'
+            grep -E 'quick_fix:|Test +#' quick-fix.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # The experimental browser target: the two applications of examples/wasm (a counter that takes
   # pointer input, and the bouncing ball, which is a test of coroutines) built for WebAssembly by
   # GCC trunk with a third-party back end, in the image of its own. The host build of the same files
@@ -553,7 +599,7 @@ jobs:
 
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
-    needs: [host, fuzz-json, arm, web-host, web, web-browser, cost-plan, cost, cost-collect]
+    needs: [host, fuzz-json, arm, editor-quick-fix, web-host, web, web-browser, cost-plan, cost, cost-collect]
     if: ${{ failure() && github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     permissions:
