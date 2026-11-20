@@ -69,9 +69,25 @@ class Plan(unittest.TestCase):
         root = repository()
         shards = plan.plan("HEAD~1", CONFIG, root)["matrix"]["include"]
         self.assertEqual(shards[0], {"name": "a", "header": "include/lv/a.hpp", "tests": "^a$", "targets": "a",
-                                     "fallback": False})
+                                     "fallback": False, "logic": False, "part": ""})
         self.assertEqual(shards[1], {"name": "detail-b", "header": "include/lv/detail/b.hpp", "tests": ".",
-                                     "targets": "", "fallback": True})
+                                     "targets": "", "fallback": True, "logic": False, "part": ""})
+
+    def test_a_header_with_parts_is_one_shard_for_each_part_and_keeps_its_logic_flag(self):
+        config = {"default": CONFIG["default"], "headers": {
+            "include/lv/a.hpp": {"tests": "^a$", "targets": "a", "logic": True, "parts": 2}}}
+        shards = plan.plan("HEAD~1", config, repository())["matrix"]["include"]
+        self.assertEqual([(s["name"], s["part"], s["logic"]) for s in shards[:2]],
+                         [("a-1of2", "1/2", True), ("a-2of2", "2/2", True)])
+        self.assertEqual(len(shards), 3)  # and the unlisted detail/b.hpp
+
+    def test_the_real_config_splits_the_slow_headers_and_runs_five_headers_logic_only(self):
+        headers = json.loads(plan.CONFIG.read_text())["headers"]
+        logic = sorted(h for h, c in headers.items() if c.get("logic"))
+        self.assertEqual(logic, ["include/lv/look.hpp", "include/lv/one_of.hpp", "include/lv/style.hpp",
+                                 "include/lv/tree.hpp", "include/lv/values.hpp"])
+        self.assertEqual({h: c["parts"] for h, c in headers.items() if "parts" in c},
+                         {"include/lv/look.hpp": 2, "include/lv/props.hpp": 2, "include/lv/tokens.hpp": 2})
 
     def test_github_output_lines(self):
         root = repository()
@@ -194,6 +210,19 @@ class TrackFiles(unittest.TestCase):
             mutation.track_files(tree)
             listed = subprocess.run(["git", "ls-files"], cwd=tree, capture_output=True, text=True, check=True)
             self.assertEqual(listed.stdout.split(), [])
+
+
+class Parts(unittest.TestCase):
+    def test_the_parts_are_disjoint_and_cover_every_mutant(self):
+        mutants = list(range(7))
+        parts = [mutation.mutants_of_part(mutants, f"{k}/3") for k in (1, 2, 3)]
+        self.assertEqual(sorted(m for part in parts for m in part), mutants)
+        self.assertEqual(parts[0], [0, 3, 6])
+
+    def test_a_part_out_of_range_stops_the_run(self):
+        for bad in ("0/2", "3/2", "x/2", "1", "1/"):
+            with self.assertRaises(SystemExit):
+                mutation.mutants_of_part([1, 2], bad)
 
 
 class CommentMutants(unittest.TestCase):
