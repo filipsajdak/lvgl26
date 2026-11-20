@@ -71,11 +71,6 @@ constexpr auto ui = lv::group({.flex_flow = "column", .size = {320 * px, 240 * p
 
 <!-- snippet: examples/lists/main.cpp changes -->
 ```cpp
-bool fill() {
-  return tracks.push_back({{1}, "Intro", lv::counter{3}}) && tracks.push_back({{2}, "Northern Lights", lv::counter{1}}) &&
-         tracks.push_back({{3}, "Harbour", lv::counter{12}}) && tracks.insert(0, {{4}, "Overture", {}});
-}
-
 void play(std::size_t row) {
   tracks.update(row, [](track& t) { ++t.plays; });  // that row's labels are set again
 }
