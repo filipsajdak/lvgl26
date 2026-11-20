@@ -43,8 +43,13 @@ jobs:
       - name: Each reproducer and the test, under the analyzer
         shell: bash
         run: |
-          for t in repro_held_direct repro_held_one_of repro_held_shown_tree repro_held_shown_page repro_lambda_handler shown; do
-            echo "=== $t"
-            cmake --build --preset host-v96-analyze --target $t 2>&1 | grep -E "error|warning: .*analyzer|note: argument" | head -8 || true
-            echo "=== $t end"
-          done
+          run_all() {
+            for t in repro_held_after_spawn repro_held_after_call repro_one_of_after_call shown; do
+              echo "=== $1 $t"
+              cmake --build --preset host-v96-analyze --target $t 2>&1 | grep -E "error|note: argument" | head -6 || true
+            done
+          }
+          run_all before
+          python3 tests/analyzer_repro/patch_held.py
+          git diff --stat
+          run_all after
