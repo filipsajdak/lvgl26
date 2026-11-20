@@ -42,9 +42,36 @@ struct arm {
   F handler;
 };
 
+// An arm of lv::shown: a pattern and the tree it shows, or none (T = void). It and what an arm
+// takes are in <lv/shown.hpp>; lv/detail/missing.hpp names that header without it.
+template <class Pattern, class T>
+struct tree_arm;
+struct arm_options;
+
 // The pattern "equal to one of these values".
 template <auto... Values>
 struct one_of {
+  // An arm of lv::shown that shows `tree`: lv::is<page::home>(home_ui).
+  template <class T>
+  constexpr tree_arm<one_of, T> operator()(const T& tree) const {
+    return {&tree, {}};
+  }
+  // The same with what happens when it is shown: lv::is<page::home>(home_ui, {.on_shown = &start}).
+  template <class T>
+  constexpr tree_arm<one_of, T> operator()(const T& tree, const arm_options& options) const {
+    return {&tree, options};
+  }
+  // A tree made in the arm itself would be gone after the arm is made.
+  template <class T>
+  void operator()(const T&& tree) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class T>
+  void operator()(const T&& tree, const arm_options& options) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  // An arm of lv::shown that shows nothing: lv::is<page::none>().
+  template <class Nothing = void>
+  constexpr tree_arm<one_of, Nothing> operator()() const {
+    return {};
+  }
+
   // What to do when the value is one of these: lv::is<1, 2>.then([] { ... }).
   template <std::move_constructible F>
   constexpr arm<one_of, F> then(F handler) const {
@@ -54,6 +81,25 @@ struct one_of {
 
 // The pattern "anything else".
 struct anything {
+  // The last arm of lv::shown: lv::otherwise(tree), lv::otherwise(tree, {...}), lv::otherwise().
+  template <class T>
+  constexpr tree_arm<anything, T> operator()(const T& tree) const {
+    return {&tree, {}};
+  }
+  template <class T>
+  constexpr tree_arm<anything, T> operator()(const T& tree, const arm_options& options) const {
+    return {&tree, options};
+  }
+  // A tree made in the arm itself would be gone after the arm is made.
+  template <class T>
+  void operator()(const T&& tree) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class T>
+  void operator()(const T&& tree, const arm_options& options) const = delete("lv: the tree of an arm of lv::shown is a constexpr variable of its own, so that its arm can be found again: constexpr auto home = lv::column(...); lv::is<page::home>(home).");
+  template <class Nothing = void>
+  constexpr tree_arm<anything, Nothing> operator()() const {
+    return {};
+  }
+
   // What to do for every other value: lv::otherwise.then([] { ... }).
   template <std::move_constructible F>
   constexpr arm<anything, F> then(F handler) const {
@@ -203,10 +249,38 @@ consteval std::string_view coverage_problem(const std::vector<Subject>& covered,
   return {};
 }
 
+// Whether the value V may stand in a pattern on Subject: an enum takes only its own
+// enumerators, and a value of an enum stands only for that enum. Other values convert.
+template <class Subject, auto V>
+inline constexpr bool value_of_subject =
+    !(std::is_enum_v<Subject> || std::is_enum_v<decltype(V)>) || std::same_as<Subject, decltype(V)>;
+
+// The first value of an arm that names another type than Subject, as an error, or nothing.
+template <class Subject, auto... Values, class F>
+consteval std::string_view type_problem(std::type_identity<arm<one_of<Values...>, F>>) {
+  std::string_view problem;
+  ((problem.empty() && !value_of_subject<Subject, Values>
+        ? problem = std::define_static_string(
+              "lv::match on " + str(std::meta::display_string_of(^^Subject)) + " has an arm with a value of " +
+              str(std::meta::display_string_of(^^decltype(Values))) + ". Name a value of " +
+              str(std::meta::display_string_of(^^Subject)) + ": lv::is<" +
+              str(std::meta::display_string_of(^^Subject)) + "::...>.")
+        : problem),
+   ...);
+  return problem;
+}
+template <class Subject, class F>
+consteval std::string_view type_problem(std::type_identity<arm<anything, F>>) {
+  return {};
+}
+
 // What is wrong with the arms of a match on Subject, or an empty string.
 template <class Subject, class... Arms>
 consteval std::string_view match_problem() {
   if (const auto p = wildcard_problem<Arms...>(); !p.empty()) return p;
+  std::string_view wrong_type;
+  ((wrong_type = wrong_type.empty() ? type_problem<Subject>(std::type_identity<Arms>{}) : wrong_type), ...);
+  if (!wrong_type.empty()) return wrong_type;
   std::vector<Subject> covered;
   (add_values(covered, std::type_identity<Arms>{}), ...);
   if (const auto p = duplicate_problem(covered); !p.empty()) return p;

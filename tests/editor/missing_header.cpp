@@ -52,4 +52,16 @@ lv::one_of<a, b> slot;
 // expected-error@*:* {{lv::pointer is in <lv/pointer.hpp>: add #include <lv/pointer.hpp>}}
 void mouse(lv::display& display) { lv::pointer pointer{display}; }
 
+constinit lv::state<mode> current_mode{mode::a};
+constinit lv::state<bool> flag{false};
+
+// expected-error@+1 {{lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>}}
+auto by_mode_node = lv::shown(current_mode);
+
+// expected-error@+1 {{lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>}}
+auto while_flag = lv::when(flag);
+
+// expected-error@*:* {{lv::is<...>(tree) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>}}
+auto an_arm = lv::is<mode::a>(a);
+
 }  // namespace missing_header

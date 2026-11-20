@@ -98,6 +98,11 @@ class Plan(unittest.TestCase):
         self.assertEqual(lines[1], "since=HEAD~1")
         self.assertEqual(len(json.loads(lines[2].removeprefix("matrix="))["include"]), 2)
 
+    def test_every_header_of_include_lv_has_its_own_tests_and_none_falls_back_to_all_tests(self):
+        config = json.loads(plan.CONFIG.read_text())["headers"]
+        headers = sorted(p.relative_to(plan.ROOT).as_posix() for p in (plan.ROOT / "include/lv").rglob("*.hpp"))
+        self.assertEqual([h for h in headers if h not in config], [])
+
     def test_the_real_config_names_a_test_for_every_listed_header(self):
         config = json.loads(plan.CONFIG.read_text())
         for header, chosen in config["headers"].items():
@@ -111,7 +116,7 @@ def registered_tests():
     text = (plan.ROOT / "tests/CMakeLists.txt").read_text()
     targets = set(re.findall(r"^\s*(?:lvgl26_test|add_executable)\((\w+)", text, re.M))
     names = set(targets) | set(re.findall(r"add_test\(NAME (\w+)", text))
-    names |= {"fail_" + n for n in re.findall(r"^\s*lvgl26_compile_fail\((\w+)", text, re.M)}
+    names |= {"fail_" + n for n in re.findall(r"^\s*lvgl26_compile_fail(?:_message)?\((\w+)", text, re.M)}
     return names, targets
 
 

@@ -1,5 +1,6 @@
 // The settings reader: a JSON document becomes lv::config, key by key, in any order.
 // A misspelled key, a wrong type and an unknown unit are compile errors: tests/fail/settings_*.cpp.
+#include <lv/detail/json_fault.hpp>  // as the header that lvgl26_settings() writes does
 #include <lv/lv.hpp>
 
 #include "check.hpp"

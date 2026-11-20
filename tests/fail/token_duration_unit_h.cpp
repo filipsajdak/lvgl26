@@ -1,8 +1,4 @@
+// A duration in hours.
 #include <lv/lv.hpp>
-#include <string>
-template <class T>
-consteval T read_as(std::string_view text) {
-  const auto v = *lv::json::value::parse(text);
-  return lv::detail::read_token(lv::detail::read_as<T>{}, v, v);
-}
-constexpr auto d = read_as<lv::duration>(R"("2h")");
+constexpr char doc[] = R"({"time": {"fast": {"$type": "duration", "$value": {"value": 2, "unit": "h"}}}})";
+constexpr auto tok = lv::tokens<doc>;

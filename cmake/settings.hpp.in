@@ -1,6 +1,7 @@
 // Written by lvgl26_settings() from @LVGL26_SETTINGS_NAME@: change that file, not this one.
 // Every C++ file of the program is compiled with this header included first.
 #include <lv/config.hpp>
+#include <lv/detail/json_fault.hpp>  // what a mistake in the file below says, when it is no JSON
 
 constexpr char lvgl26_settings_json[] = {
 #embed "lvgl26.json"

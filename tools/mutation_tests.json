@@ -1,4 +1,5 @@
 {
+  "comment": "Each header names the tests that judge its mutants. A test is listed when it includes the header or is named after it, or when its source uses the most names that the header declares; compile-fail tests named after the header go in too. Heavy tests (ports, examples, fuzz, large_tree) are left out, and a header that nothing in tests names uses smoke and l1_views. Every header of include/lv must have an entry: test_mutation.py fails otherwise.",
   "default": {
     "tests": ".",
     "targets": null
@@ -59,10 +60,22 @@
       "logic": true,
       "parts": 2
     },
+    "include/lv/detail/missing.hpp": {
+      "tests": "fail_missing_header|^lists$|^look$|^one_of$|^theme$",
+      "targets": "lists look one_of theme"
+    },
     "include/lv/one_of.hpp": {
       "tests": "^one_of$|one_of_violation|fail_one_of|fail_visit",
       "targets": "one_of",
       "logic": true
+    },
+    "include/lv/shown.hpp": {
+      "tests": "^shown$|fail_shown|fail_when|^example_pages$",
+      "targets": "shown example_pages"
+    },
+    "include/lv/detail/deferred.hpp": {
+      "tests": "^shown$|^example_pages$",
+      "targets": "shown example_pages"
     },
     "include/lv/detail/one_of_region.hpp": {
       "tests": "^one_of$|one_of_violation",
@@ -87,6 +100,190 @@
     "include/lv/detail/png_reader.hpp": {
       "tests": "^image$|^image_alone$|fail_image",
       "targets": "image image_alone"
+    },
+    "include/lv/all.hpp": {
+      "tests": "^smoke$|^l1_views$|^fail_band_taller_than_screen$|^fail_font_glyph_too_tall$|^fail_part_handler_not_callable$|^fail_part_tree_handler_not_callable$|^fail_post_not_callable$|^fail_visit_arm_never_called$",
+      "targets": "smoke l1_views"
+    },
+    "include/lv/animate.hpp": {
+      "tests": "^animate$|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_animate_needs_unit$|^fail_animate_not_a_number$|^fail_animate_one_end$|^fail_animate_size_content$",
+      "targets": "animate"
+    },
+    "include/lv/application.hpp": {
+      "tests": "^application$|^app_loop$|^concepts$|^fail_loop_temporary_application$",
+      "targets": "application app_loop concepts"
+    },
+    "include/lv/but.hpp": {
+      "tests": "^options$|^fail_for_each_unknown_but$|^fail_options_but_other_enum$",
+      "targets": "options"
+    },
+    "include/lv/config.hpp": {
+      "tests": "^settings$|^state_plain$|^fail_config_too_late$",
+      "targets": "settings state_plain"
+    },
+    "include/lv/detail/angle_docs.hpp": {
+      "tests": "^angle_units$|^options_docs$",
+      "targets": "angle_units options_docs"
+    },
+    "include/lv/detail/api.hpp": {
+      "tests": "^api_table$|^smoke$|^fail_encoded_image_not_a_picture$",
+      "targets": "api_table smoke"
+    },
+    "include/lv/detail/checked.hpp": {
+      "tests": "^units$|^values$|^fail_each_selected_and_checked$",
+      "targets": "units values"
+    },
+    "include/lv/detail/coverage.hpp": {
+      "tests": "^font$|^signal_type$",
+      "targets": "font signal_type"
+    },
+    "include/lv/detail/embedded.hpp": {
+      "tests": "^image$|^font_bytes$",
+      "targets": "image font_bytes"
+    },
+    "include/lv/detail/enum_names.hpp": {
+      "tests": "^enum_names$|^options$",
+      "targets": "enum_names options"
+    },
+    "include/lv/detail/fixed_string.hpp": {
+      "tests": "^l2_tree$|^values$",
+      "targets": "l2_tree values"
+    },
+    "include/lv/detail/nearest.hpp": {
+      "tests": "^smoke$|^l1_views$",
+      "targets": "smoke l1_views"
+    },
+    "include/lv/detail/option_docs.hpp": {
+      "tests": "^options_docs$|^options$",
+      "targets": "options_docs options"
+    },
+    "include/lv/detail/png.hpp": {
+      "tests": "^image$|^encoded_image$|^fail_encoded_image_needs_png$|^fail_image_not_a_png$|^fail_restrict_encode_png$|^fail_restrict_write_png$",
+      "targets": "image encoded_image"
+    },
+    "include/lv/detail/settings.hpp": {
+      "tests": "^settings$|^settings_file$|^fail_settings_amount_plain$|^fail_settings_both_forms$|^fail_settings_fraction$|^fail_settings_negative$|^fail_settings_not_bool$|^fail_settings_not_json$",
+      "targets": "settings settings_file"
+    },
+    "include/lv/detail/source.hpp": {
+      "tests": "^task$|^app_loop$|^fail_loop_not_a_source$",
+      "targets": "task app_loop"
+    },
+    "include/lv/detail/theme_styles.hpp": {
+      "tests": "^theme$|^signal$",
+      "targets": "theme signal"
+    },
+    "include/lv/detail/ttf.hpp": {
+      "tests": "^scaled_font$|^font$|^fail_scaled_font_needs_ttf$|^fail_scaled_font_raw_needs_ttf$",
+      "targets": "scaled_font font"
+    },
+    "include/lv/detail/watch.hpp": {
+      "tests": "^watchers$|^app_loop$",
+      "targets": "watchers app_loop"
+    },
+    "include/lv/display.hpp": {
+      "tests": "^app_loop$|^application$|^fail_display_band_panel_without_pixels$|^fail_display_frame_temporary_panel$|^fail_pointer_temporary_display$",
+      "targets": "app_loop application"
+    },
+    "include/lv/dump.hpp": {
+      "tests": "^runtime_ui$|^fail_dump_loaded_not_a_sink$|^fail_dump_not_a_sink$",
+      "targets": "runtime_ui"
+    },
+    "include/lv/easing.hpp": {
+      "tests": "^animate$",
+      "targets": "animate"
+    },
+    "include/lv/encoded_image.hpp": {
+      "tests": "^encoded_image$|^fail_encoded_image_cut$|^fail_encoded_image_empty$|^fail_encoded_image_needs_jpeg$|^fail_encoded_image_needs_png$|^fail_encoded_image_not_a_picture$|^fail_encoded_image_progressive$",
+      "targets": "encoded_image"
+    },
+    "include/lv/event.hpp": {
+      "tests": "^handlers$|^l1_views$|^fail_part_event_handler_capturing_lambda$",
+      "targets": "handlers l1_views"
+    },
+    "include/lv/events.hpp": {
+      "tests": "^handlers$|^l1_views$",
+      "targets": "handlers l1_views"
+    },
+    "include/lv/font.hpp": {
+      "tests": "^concepts$|^font$|^font_bytes$|^look$|^fail_font_bitmap_too_large$|^fail_font_glyph_too_large$|^fail_font_glyph_too_tall$|^fail_font_lacks_table$|^fail_font_needs_token$|^fail_font_no_glyph$",
+      "targets": "concepts font font_bytes look"
+    },
+    "include/lv/host.hpp": {
+      "tests": "^application$|^app_loop$",
+      "targets": "application app_loop"
+    },
+    "include/lv/json.hpp": {
+      "tests": "^json$|^fail_settings_not_json$",
+      "targets": "json"
+    },
+    "include/lv/json_writer.hpp": {
+      "tests": "^json$|^runtime_ui$",
+      "targets": "json runtime_ui"
+    },
+    "include/lv/lv.hpp": {
+      "tests": "^smoke$|^l1_views$",
+      "targets": "smoke l1_views"
+    },
+    "include/lv/match.hpp": {
+      "tests": "^match$|^state$|^fail_match_bad_handler$|^fail_match_duplicate_case$|^fail_match_missing_case$|^fail_match_needs_otherwise$|^fail_match_not_an_arm$|^fail_match_not_an_enumerator$",
+      "targets": "match state"
+    },
+    "include/lv/mcp.hpp": {
+      "tests": "^agent_kit$|^fail_restrict_mcp_serve$|^fail_restrict_mcp_server$",
+      "targets": "agent_kit"
+    },
+    "include/lv/options.hpp": {
+      "tests": "^options$|^options_docs$|^fail_options_but_other_enum$|^fail_options_empty_item$|^fail_options_enum_state_elsewhere$|^fail_options_line_break$|^fail_options_not_an_enum$|^fail_options_other_enum$",
+      "targets": "options options_docs"
+    },
+    "include/lv/png.hpp": {
+      "tests": "^encoded_image$|^image$|^fail_encoded_image_needs_png$|^fail_image_not_a_png$|^fail_restrict_encode_png$|^fail_restrict_write_png$",
+      "targets": "encoded_image image"
+    },
+    "include/lv/repeat.hpp": {
+      "tests": "^concepts$|^for_each$|^look$|^lists$|^fail_part_repeat_capturing_lambda$",
+      "targets": "concepts for_each look lists"
+    },
+    "include/lv/scaled_font.hpp": {
+      "tests": "^scaled_font$|^fail_scaled_font_bound_to_number$|^fail_scaled_font_needs_ttf$|^fail_scaled_font_plain_size$|^fail_scaled_font_raw_needs_ttf$",
+      "targets": "scaled_font"
+    },
+    "include/lv/signal.hpp": {
+      "tests": "^signal$|^signal_lamps$|^signal_type$|^fail_signal_numerals_not_a_numeral$",
+      "targets": "signal signal_lamps signal_type"
+    },
+    "include/lv/signal_lamps.hpp": {
+      "tests": "^signal_lamps$",
+      "targets": "signal_lamps"
+    },
+    "include/lv/signal_type.hpp": {
+      "tests": "^signal_type$|^font_bytes$",
+      "targets": "signal_type font_bytes"
+    },
+    "include/lv/task.hpp": {
+      "tests": "^task$|^app_loop$",
+      "targets": "task app_loop"
+    },
+    "include/lv/theme.hpp": {
+      "tests": "^look$|^no_default_theme$|^start_style$|^style_selectors$|^signal$|^fail_theme_bound_font$|^fail_theme_needs_token$|^fail_theme_not_a_value$|^fail_theme_on_in_part_slot$",
+      "targets": "look no_default_theme start_style style_selectors signal"
+    },
+    "include/lv/token_types.hpp": {
+      "tests": "^tokens$|^concepts$",
+      "targets": "tokens concepts"
+    },
+    "include/lv/ui_scheduler.hpp": {
+      "tests": "^ui_scheduler$|^settings$|^fail_restrict_ui_scheduler$",
+      "targets": "ui_scheduler settings"
+    },
+    "include/lv/units.hpp": {
+      "tests": "^units$|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_units_bool_count$|^fail_units_count_too_large$|^fail_units_count_too_large_folded$|^fail_units_decidegrees_not_tenths$",
+      "targets": "units"
+    },
+    "include/lv/detail/json_fault.hpp": {
+      "tests": "^json_fault$|^settings$|^fail_settings_not_json$",
+      "targets": "json_fault settings"
     }
   }
 }

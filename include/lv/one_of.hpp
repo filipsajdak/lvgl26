@@ -47,6 +47,10 @@ struct not_mounted {};
 // break a precondition once the slot was unmounted or holds another tree, and hold again
 // when Tree is mounted again. if (page) and page.has_value() ask without breaking one.
 // A handle must not outlive its slot: a slot is a constinit global, or outlives its handles.
+namespace detail {
+struct held_access;
+}
+
 template <const auto& Tree>
   requires tree_node<decltype(Tree)>
 class held {
@@ -56,6 +60,7 @@ class held {
   template <const auto&... Trees>
     requires detail::tree_nodes<decltype(Trees)...>
   friend class one_of;
+  friend struct detail::held_access;
 
   constexpr held(void* slot, mounted<Tree>* (*find)(void*)) noexcept : slot_(slot), find_(find) {}
 
@@ -81,6 +86,14 @@ class held {
 };
 
 namespace detail {
+
+// What else hands out a handle: the arms of lv::shown (lv/shown.hpp).
+struct held_access {
+  template <const auto& Tree>
+  static constexpr held<Tree> make(void* slot, mounted<Tree>* (*find)(void*)) noexcept {
+    return held<Tree>{slot, find};
+  }
+};
 
 // The name of a tree, as it is written: "home".
 template <const auto& T>

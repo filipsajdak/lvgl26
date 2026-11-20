@@ -9,6 +9,7 @@
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/one_of.hpp>
+#include <lv/shown.hpp>
 #include <lv/pointer.hpp>
 #include <lv/repeat.hpp>
 #include <lv/runtime.hpp>
