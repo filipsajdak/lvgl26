@@ -10,7 +10,6 @@
 #include <lv/config.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
-#include <lv/detail/json_fault.hpp>
 #include <lv/detail/nearest.hpp>
 #include <lv/json.hpp>
 
@@ -157,6 +156,10 @@ struct settings_read {
   std::string_view mistake;  // empty, or a static string
 };
 
+// Where a text stops being JSON, as a sentence. Defined in lv/detail/json_fault.hpp, which the header that
+// lvgl26_settings() writes includes: a file that reads no settings file does not read the scan.
+consteval std::string json_fault_text(std::string_view document);
+
 template <settings_section S>
 consteval settings_read<S> read_settings(settings_text file) {
   const settings_place top{file.name, ""};
@@ -164,7 +167,7 @@ consteval settings_read<S> read_settings(settings_text file) {
   const auto document = json::value::parse(text);
   if (!document)
     return {S{}, std::define_static_string(mistake(top, "the file is not well-formed JSON. " +
-                                                            json::detail::describe_fault(text, json::detail::find_fault(text))))};
+                                                            json_fault_text(text)))};
   S out{};
   const std::string wrong = read_into(out, *document, top);
   return {out, std::define_static_string(wrong)};

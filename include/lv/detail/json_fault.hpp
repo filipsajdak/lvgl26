@@ -103,3 +103,12 @@ consteval std::string describe_fault(std::string_view s, const fault& f) {
 }
 
 }  // namespace lv::json::detail
+
+namespace lv::detail {
+
+// The sentence that settings.hpp puts in the message about a settings file that is no JSON.
+consteval std::string json_fault_text(std::string_view document) {
+  return json::detail::describe_fault(document, json::detail::find_fault(document));
+}
+
+}  // namespace lv::detail
