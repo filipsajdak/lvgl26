@@ -154,6 +154,41 @@ Why no compiler counter guards it, `measured` the same day:
 
 An open optimisation, not built: `detail/api.hpp` builds `api` (every `lv_*` function) at namespace scope, 9.0 G in every file (13.18 G with the header, 4.18 G with its includes). Every file that names a widget needs the scan, so only files without widgets would gain. Making it lazy turns `find`, `names_after`, `resolve*` and the loops over `api` in `props.hpp` and `style.hpp` into templates on D, about 30 call sites. With it lazy, the largest evaluation of an include-only file would fall under 1 M operations, and an operation limit on such a file would become a real guard. `tools/eager_allowed.json` lists `api` with this reason.
 
+## The nightly measure
+
+`nightly.yml` measures the compile cost of eight files every night, so that a change that made lvgl26 dearer shows within a day.
+`tools/metrics/probes.json` lists them. A new probe is one line there. `measured` 2026-11-20 on GitHub's hosted runners.
+
+- **The number is Valgrind's instruction count, `Ir`, of one `cc1plus` (callgrind).** The hosted runners have no hardware counter, and a peak-memory reading varies by 40 percent. `measured`
+- **It is the same on every run.** Two manual runs on two runners gave the same `Ir` to the instruction for all eleven rows. `measured`
+- **The cost is time, not accuracy.** A file takes 50 to 60 times its compile time under callgrind. The slowest probe, one page of the printer port, took 33 minutes; the whole run took 36 minutes. Each probe is a job of its own. `measured`
+- **`Ir` on a Mac is another counter.** `tools/compile_report.py` there counts retired arm64 instructions: use it to bisect, and compare a trend, not a number. A file counts 10 to 40 percent more there. `measured`
+- **`-fmem-report` and `-fstats` explain a change.** The still-allocated total and the element counts of the type and declaration tables go into each row. Wall time is a coarse check. Neither is a threshold. `measured`
+
+| Probe | What it stands for | Ir (G) | Time under Valgrind |
+|---|---|---:|---:|
+| `include_lv` | Every file: `<lv/lv.hpp>` and nothing else | 9.47 | 76 s |
+| `one_label` | The first widget of a program | 40.26 | 415 s |
+| `ten_kinds` | Ten widget kinds on one screen | 95.49 | 634 s |
+| `large_tree` | A screen of over a hundred widgets | 80.50 | 505 s |
+| `quick_start` | The quick start of the documentation | 114.97 | 596 s |
+| `signal` | `<lv/signal.hpp>` and its themes | 68.58 | 314 s |
+| `theme` | A theme that styles every widget of a kind | 88.19 | 588 s |
+| `port_page` | The print page of the printer port | 310.60 | 1985 s |
+
+Three more rows are not compile costs. `tools/probes/visibility.cpp` runs 24 animated arcs in LVGL for simulated seconds, and the run counts instructions a second.
+It gave 445.1 M visible, 0.553 M with the hidden flag, and 13.99 M with invalidation off, as `docs/research/visibility.md` found by hand.
+The stack of one run-time `set()` on a Cortex-M4 is read from the report of the Arm job: 3504 bytes against a budget of 4096 (`tools/stack_budget.py`).
+
+### Judging a night
+
+- **The threshold is 0.5 percent of `Ir` for a compile probe, 5 percent for a visibility row and 2 percent for the stack.** There is no noise to set it by, as `Ir` did not move between two runs. 0.5 percent of `include_lv` is 47 M instructions.
+- **The baseline of a probe is the last night that did not rise beyond the threshold.** It moves when the probe is new or got cheaper beyond the threshold. It stays while the probe is inside, so a slow creep adds up until it crosses.
+- **A rise must also stand against the median of the last seven nights**, by at least half the threshold, so that one odd baseline cannot raise it. Before three nights there is only the baseline.
+- **A rise beyond the threshold fails the job `cost-collect`, and the `report` job opens the issue of the night.** The summary of the job has the table and the `git log` range since the baseline. A fall beyond the threshold moves the baseline and shows in the summary.
+- **The history is `history.jsonl` on the branch `metrics`, with `baseline.json`.** Only a run on `main` writes it. `pages.yml` draws `site/metrics.html` from it. A manual run on another branch judges against what is there and writes nothing.
+- **Nothing is added to the pull-request run.** `tools/check_eager.py` and `tests/include_only.cpp` stay its guards; the nightly measure sees total work, which they cannot.
+
 ## What to measure first
 
 1. The analyzer on `font_bytes.cpp` with `-fanalyzer-call-summaries`, with `analyzer-supernode-explosion-factor=1`, and with the font array removed. The last one tests bug 110112.

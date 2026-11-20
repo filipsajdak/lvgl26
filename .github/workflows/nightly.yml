@@ -133,6 +133,10 @@ jobs:
         run: |
           set -o pipefail
           tools/arm-run.sh 2>&1 | tee arm-run.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stack-report
+          path: build/arm-m4/examples/mcu/CMakeFiles/set_stack_probe.dir/set_probe.cpp.su
       - name: Report what it printed and its sizes
         if: always()
         run: |
@@ -285,6 +289,132 @@ jobs:
             counter-click.txt
             bounce-run.txt
 
+  # What a file costs the compiler, measured as Valgrind's instruction count of one cc1plus
+  # (tools/compile_cost.py, probes in tools/metrics/probes.json). One job for each probe, in
+  # parallel. The collecting job compares the night with the baseline, appends it to the history
+  # on the branch `metrics` (only on main), and fails when a probe got dearer beyond its
+  # threshold, which the report job turns into the issue of the night. docs/research/compile-time.md, "The nightly measure".
+  cost-plan:
+    if: ${{ !inputs.web_only && !inputs.arm_only }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The compile probes
+        id: plan
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          probes = json.load(open("tools/metrics/probes.json"))["probes"]
+          print("matrix=" + json.dumps({"include": [{"probe": p["id"], "kind": p["kind"]} for p in probes if p["kind"] != "stack"]}))
+          PY
+
+  cost:
+    needs: [image, cost-plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.cost-plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure, to fetch LVGL and write the compile database
+        run: cmake --preset host-v96 > /dev/null
+      - name: Build the run-time probe
+        if: ${{ matrix.kind == 'run' }}
+        run: cmake --build --preset host-v96 --target visibility_probe
+      - name: Measure the probe
+        env:
+          PROBE: ${{ matrix.probe }}
+          KIND: ${{ matrix.kind }}
+        run: |
+          python3 tools/compile_cost.py "$KIND" build/host-v96 "$PROBE" > "row-$PROBE.json"
+          cat "row-$PROBE.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cost-${{ matrix.probe }}
+          path: row-${{ matrix.probe }}.json
+
+  cost-collect:
+    needs: [cost-plan, cost, arm]
+    if: ${{ always() && needs.cost-plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: metrics
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: cost-*
+          path: rows
+          merge-multiple: true
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        continue-on-error: true
+        with:
+          name: stack-report
+          path: stack
+      - name: The branch of the history
+        run: |
+          git fetch origin metrics:metrics || true
+          if git rev-parse --verify -q metrics > /dev/null; then
+            git worktree add metrics metrics
+          else
+            git worktree add --orphan -b metrics metrics
+          fi
+      - name: Judge the night
+        id: judge
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import glob, json, pathlib, sys
+          sys.path.insert(0, "tools")
+          import compile_cost
+          rows = [json.load(open(f)) for f in sorted(glob.glob("rows/row-*.json"))]
+          report = glob.glob("stack/*.su")
+          if report:
+              probe = [p for p in compile_cost.load_probes().values() if p["kind"] == "stack"][0]
+              rows.append(compile_cost.stack_row(pathlib.Path(report[0]).read_text(), probe))
+          json.dump(rows, open("rows.json", "w"))
+          print(len(rows), "rows")
+          PY
+          status=0
+          python3 tools/cost_history.py judge --rows rows.json --history metrics/history.jsonl \
+            --baseline metrics/baseline.json --commit "$GITHUB_SHA" --date "$(date -u +%F)" \
+            --run "$RUN_URL" > verdicts.json 2> summary.md || status=$?
+          { echo '### Compile cost, Valgrind instruction count'; cat summary.md; } >> "$GITHUB_STEP_SUMMARY"
+          echo "regression=$([ "$status" = 1 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Keep the history
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          cd metrics
+          git config user.name "github-actions"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history.jsonl baseline.json
+          git commit -m "metrics: the night of $(date -u +%F) at ${GITHUB_SHA::7}"
+          git push origin metrics
+      - name: Fail on a regression, so that the report job opens the issue of the night
+        if: ${{ steps.judge.outputs.regression == 'true' }}
+        run: |
+          echo "A probe got dearer beyond its threshold: see the summary of this job."
+          exit 1
+
   # Mutation testing of the lines of include/lv that changed since the last good run: one
   # shard for each changed header (tools/mutation_plan.py; tools/mutation_tests.json says
   # which tests judge it). Locally a fixed-seed sample is enough for a quick look.
@@ -423,7 +553,7 @@ jobs:
 
   # One issue for a failed night, so that it is not only an email to whoever pushed last.
   report:
-    needs: [host, fuzz-json, arm, web-host, web, web-browser]
+    needs: [host, fuzz-json, arm, web-host, web, web-browser, cost-plan, cost, cost-collect]
     if: ${{ failure() && github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     permissions:
