@@ -34,26 +34,71 @@ constinit lv::state current{track_id{0}};          // the selected row; no track
 //! [row]
 // One row: a button that is checked while it is the selected one. state_trickle hands that
 // state to the labels, which style themselves for it.
-constexpr auto track_row =
-    lv::button({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .state_trickle = true,
-                .style = {.bg_color = tok.color.row, .pad_all = tok.space.edge, .radius = tok.radius.row},
-                .style_checked = {.bg_color = tok.color.selected}})[
-        lv::label({.flex_grow = 1, .style = {.text_color = tok.color.text},
-                   .style_checked = {.text_color = tok.color.on_selected}, .text = lv::bind(&track::title)}),
-        lv::label({.style = {.text_color = tok.color.quiet}, .style_checked = {.text_color = tok.color.on_selected},
-                   .text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::title),
+  }),
+  lv::label({
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::plays, "{} plays"),
+  })
+);
 //! [row]
 
 //! [tree]
-constinit lv::computed has_tracks{[](lv::counter n) { return n.value > 0; }, tracks.count()};
+constinit lv::computed has_tracks{
+  [](lv::counter n) {
+    return n.value > 0;
+  },
+  tracks.count(),
+};
+
+// Shown while the list is empty.
+constexpr auto empty_note = lv::label({
+  .hidden = lv::bind(has_tracks),
+  .style  = {.text_color = tok.color.quiet},
+  .text   = "No tracks",
+});
+
+// One row per track; the selected one is checked.
+constexpr auto track_list = lv::group(
+  {
+    .flex_flow = "column",
+    .size      = {100 * pct, lv::size_content},
+    .style     = {.pad_gap = tok.space.gap},
+  },
+  lv::each(tracks, &track::id, {.selected = lv::bind(current)}, track_row)
+);
 
 // Groups: boxes without the theme's look, laid out as columns.
-constexpr auto ui = lv::group({.flex_flow = "column", .size = {320 * px, 240 * px},
-                               .style = {.bg_color = tok.color.screen, .bg_opa = tok.opacity.opaque,
-                                         .pad_all = tok.space.edge, .pad_gap = tok.space.gap}})[
-    lv::label({.hidden = lv::bind(has_tracks), .style = {.text_color = tok.color.quiet}, .text = "No tracks"}),
-    lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
-        lv::each(tracks, &track::id, {.selected = lv::bind(current)})[track_row]]];
+constexpr auto ui = lv::group(
+  {
+    .flex_flow = "column",
+    .size      = {320 * px, 240 * px},
+    .style = {
+      .bg_color = tok.color.screen,
+      .bg_opa   = tok.opacity.opaque,
+      .pad_all  = tok.space.edge,
+      .pad_gap  = tok.space.gap,
+    },
+  },
+  empty_note, track_list
+);
 //! [tree]
 
 constinit lv::frame<320, 240> frame;
