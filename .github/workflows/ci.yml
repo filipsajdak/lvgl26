@@ -65,6 +65,8 @@ jobs:
   # The compile-fail tests: each compiles one file that must be refused, and checks the
   # message. They are most of the suite and each is a whole compile, so they are spread
   # over three runners for each LVGL version. They only need the project configured.
+  # They also run with the sanitizers' flags: GCC 16.2 then refuses constant expressions it
+  # accepts otherwise, and a message built in constant evaluation turns into the compiler's own.
   compile-errors:
     needs: image
     permissions:
@@ -79,7 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [host-v96, host-v10]
+        preset: [host-v96, host-v10, host-v96-asan]
         part: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
