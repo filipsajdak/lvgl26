@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <span>
 #include <concepts>
 #include <initializer_list>
 #include <string>
@@ -201,47 +202,62 @@ consteval std::string given_name(std::meta::info t) {
   return str(std::meta::display_string_of(t));
 }
 
+// What the properties of a message take (ts) and what was given (us), as types.
+using type_list = std::span<const std::meta::info>;
+
+// "a width or x (...), then a color": what the property takes.
+consteval std::string takes_text(type_list ts) {
+  std::string m;
+  for (std::size_t i = 0; i < ts.size(); ++i) m += (i ? ", then " : "") + how_to_write(ts[i]);
+  return m;
+}
+
 // A style value that was given as the plain value inside the token or lv::raw that the property wants.
-template <class T, class U>
-inline constexpr bool bare_payload =
-    is_made_from(^^T, ^^styled) && std::meta::template_arguments_of(^^T)[0] == std::meta::dealias(^^std::remove_cvref_t<U>);
+consteval bool is_bare_payload(std::meta::info wanted, std::meta::info given) {
+  return is_made_from(wanted, ^^styled) && std::meta::template_arguments_of(wanted)[0] == given;
+}
+
+// The text of the message of a wrong value. A function of its own, so that the instance of
+// wrong_value::message that every argument type needs holds a call and no more.
+consteval std::string_view wrong_value_text(type_list ts, type_list us) {
+  std::string m = "lv: wrong value for this property. It takes " + takes_text(ts) + ". You gave ";
+  for (std::size_t i = 0; i < us.size(); ++i) m += (i ? ", " : "") + given_name(us[i]);
+  m += us.empty() ? "nothing." : ".";
+  if (ts.size() == 1 && us.size() == 1) {
+    if (is_bare_payload(ts[0], us[0])) m += " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
+  } else if (!us.empty() && ts.size() != us.size()) {
+    m += " The property takes " + decimal(ts.size()) + " values in braces, and this has " + decimal(us.size()) + ".";
+  }
+  return std::define_static_string(m);
+}
+
+consteval std::string_view bound_text(type_list ts, std::meta::info state) {
+  return std::define_static_string("lv: this property takes " + takes_text(ts) + ", and the state holds " + given_name(state) +
+                                   ". A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.");
+}
+
+consteval std::string_view format_text(type_list ts) {
+  return std::define_static_string("lv: lv::bind(state, format) is for text properties only, and this property takes " +
+                                   takes_text(ts) + ". Bind the state without a format: lv::bind(state).");
+}
 
 template <class... Ts>
 struct wrong_value {
-  // "a width or x (...), then a color": what the property takes.
-  static consteval std::string takes() {
-    std::string m, sep;
-    ((m += sep + how_to_write(^^Ts), sep = ", then "), ...);
-    return m;
-  }
-
   template <class... U>
   static consteval std::string_view message() {
-    std::string m = "lv: wrong value for this property. It takes " + takes() + ". You gave ";
-    std::string sep;
-    ((m += sep + given_name(std::meta::dealias(^^std::remove_cvref_t<U>)), sep = ", "), ...);
-    if (sizeof...(U) == 0) m += "nothing";
-    m += ".";
-    if constexpr (sizeof...(Ts) == 1 && sizeof...(U) == 1) {
-      if (bare_payload<Ts..., U...>) m += " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
-    } else if constexpr (sizeof...(U) != 0 && sizeof...(Ts) != sizeof...(U)) {
-      m += " The property takes " + decimal(sizeof...(Ts)) + " values in braces, and this has " + decimal(sizeof...(U)) + ".";
-    }
-    return std::define_static_string(m);
+    return wrong_value_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...},
+                            std::array<std::meta::info, sizeof...(U)>{std::meta::dealias(^^std::remove_cvref_t<U>)...});
   }
 
   // A state of type T that the property cannot follow.
   template <class T>
   static consteval std::string_view bound_message() {
-    return std::define_static_string("lv: this property takes " + takes() + ", and the state holds " +
-                                     given_name(std::meta::dealias(^^T)) +
-                                     ". A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.");
+    return bound_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...}, std::meta::dealias(^^T));
   }
 
   // lv::bind(state, format) on a property that is not a text.
   static consteval std::string_view format_message() {
-    return std::define_static_string("lv: lv::bind(state, format) is for text properties only, and this property takes " +
-                                     takes() + ". Bind the state without a format: lv::bind(state).");
+    return format_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...});
   }
 };
 

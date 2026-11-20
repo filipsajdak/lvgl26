@@ -263,12 +263,16 @@ const source_ops& source_ops_of() {
 // O is the settings tag; leave it out.
 namespace detail {
 
-template <class T>
-consteval std::string_view bad_state_type() {
+consteval std::string_view bad_state_type_text(std::meta::info type) {
   return std::define_static_string(
       "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one integer, bool or enum member, a "
       "bool, an enum, an lv_color_t or a pointer (for text: const char*). This state's type is " +
-      str(std::meta::display_string_of(std::meta::dealias(^^T))) + ".");
+      str(std::meta::display_string_of(type)) + ".");
+}
+
+template <class T>
+consteval std::string_view bad_state_type() {
+  return bad_state_type_text(std::meta::dealias(^^T));
 }
 
 }  // namespace detail
