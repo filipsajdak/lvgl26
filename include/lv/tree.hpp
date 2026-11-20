@@ -209,13 +209,18 @@ struct takes_children {
   template <class D = void, class Self, class... Kids>
   constexpr auto operator()(this const Self& self, const lazy_props<Self::props_kind, D>& p = {},
                             const Kids&... kids) {
-    static_assert((tree_kid<Kids> && ...),
-                  "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
-                  "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
     if constexpr (sizeof...(Kids) == 0) {
-      auto n = make_node<Self::props_kind, D>(p);
-      n.how = Self::starts_with;
-      return n;
+      if constexpr (Self::starts_with == start{}) {
+        return make_node<Self::props_kind, D>(p);
+      } else {
+        auto n = make_node<Self::props_kind, D>(p);
+        n.how = Self::starts_with;
+        return n;
+      }
+    } else if constexpr (!(tree_kid<Kids> && ...)) {
+      static_assert(false,
+                    "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+                    "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
     } else if constexpr ((is_repeated<Kids> || ...)) {
       return splice(self.template operator()<D>(p), kids...);
     } else {
