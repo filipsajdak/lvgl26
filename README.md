@@ -76,7 +76,8 @@ How it works:
 - **A small core header.** `#include <lv/lv.hpp>` is what nearly every program writes. A theme, a look,
   fonts, pictures, lists, repetition, documents, slots and the pointer each have a header of their own,
   and `#include <lv/all.hpp>` gives everything. [Which header](docs/which-header.md) lists the names of
-  each, and `tools/check_includes.py` tells a file which header it is missing.
+  each. A build through lvgl26's CMake stops at a missing header with
+  `main.cpp:12: lv::list needs #include <lv/list.hpp>`, and clangd offers the include as a quick fix.
 - **Coming from another framework.** Guides for [Qt Quick](docs/from-qt.md), [Slint](docs/from-slint.md) and [TouchGFX](docs/from-touchgfx.md) map what you know, and the [examples](examples/README.md) hold the ports.
 
 State is typed and lives in ordinary globals. Widgets follow it. Measures are
