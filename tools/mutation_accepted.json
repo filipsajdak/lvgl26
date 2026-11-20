@@ -8,5 +8,35 @@
     "header": "include/lv/detail/style_add.hpp",
     "mutant": "return Add(o, style, selector) == LV_RESULT_OK;  ->  return Add(o, style, selector) >= LV_RESULT_OK;",
     "reason": "Equivalent. lv_result_t has two values, LV_RESULT_INVALID (0) and LV_RESULT_OK (1), so >= LV_RESULT_OK and == LV_RESULT_OK accept the same results."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 0; i != Size; ++i) to[i] = from[i];",
+    "reason": "Equivalent. The loop counts up by one from below Size, so it stops at Size either way."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 1; i < Size; ++i) to[i] = from[i];",
+    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = (0+1); i < Size; ++i) to[i] = from[i];",
+    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "if (depth != 16) {  ->  if (depth > 16) {",
+    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "if (depth == 16)  ->  if (depth <= 16)",
+    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
+  },
+  {
+    "header": "include/lv/image.hpp",
+    "mutant": "write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());  ->  write_rgb565(p, form.format >= LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());",
+    "reason": "Equivalent. In the 16-bit branch the format is RGB565 or RGB565A8, and RGB565A8 is the larger enumerator, so >= and == pick the same one."
   }
 ]
