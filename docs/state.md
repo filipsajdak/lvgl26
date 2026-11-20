@@ -63,11 +63,11 @@ constinit lv::state beans{60 * g};  // a measure: a quantity with its unit
 | A switch | `bool` |
 | A text | `const char*` |
 
-A text binding shows a quantity with its unit, such as "60 g". A count or a named value shows its number.
+A text binding without a format shows a quantity with its unit, such as "60 g". A count or a named value shows its number.
 
 ### Make widgets follow it
 
-`lv::bind(state)` is the value of a property. A text property takes `lv::bind(state, "{} cups")`, with one `{}` for the value.
+`lv::bind(state)` is the value of a property. A text property also takes a format, `lv::bind(state, "{} cups")`, with one `{}` for the number.
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
@@ -75,8 +75,8 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .s
     lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
     stepper<cups>(cups_text),
     lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose, "{} a cup")}),
-    lv::label({.text = lv::bind(needed, "{} in all")}),
+    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
     lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
 ```
 
@@ -240,6 +240,7 @@ These mistakes stop the build too, each with a test of its own in `tests/fail/`:
 - A quantity in a state has an integer number: `0 * km / h`, not `0.0 * km / h`.
 - A style property, a position and a size do not follow a state; a `set` at run time changes them.
 - A text binding shows one value. A text made of two values is not a binding.
+- A format shows the number of a quantity without its unit, so the format writes the unit: `"{} g in all"`.
 - Two changes are two changes: between `a = x;` and `b = y;`, a computed of both sees the new `a` and the old `b`.
 - A state is changed from the UI thread only.
 

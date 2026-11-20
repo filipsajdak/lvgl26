@@ -70,8 +70,8 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .s
     lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
     stepper<cups>(cups_text),
     lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose, "{} a cup")}),
-    lv::label({.text = lv::bind(needed, "{} in all")}),
+    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
     lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
 //! [tree]
 
