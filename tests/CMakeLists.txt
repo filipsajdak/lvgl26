@@ -645,7 +645,7 @@ target_compile_options(fail_restrict_from_file PRIVATE -include ${CMAKE_CURRENT_
 # Each mistake in a settings file, with the message that names it.
 # A settings file and a specialization of lv::cfg at once: the compiler shows the line of the
 # file's header that says what to do.
-lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json; use the file or a specialization of lv::cfg, not both")
+lvgl26_compile_fail(settings_both_forms "lv: the settings of this project are in settings/project.json\\; use the file or a specialization of lv::cfg, not both")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/project.json settings/project.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail both_forms_hash)
 target_compile_options(fail_settings_both_forms PRIVATE -include ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/fail/settings.hpp)
@@ -996,6 +996,9 @@ if(Python3_FOUND)
   # The word counts that docs/looks.md states are those of the code it shows.
   add_test(NAME looks_words COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/code_words.py
                                     --check ${PROJECT_SOURCE_DIR}/docs/looks.md)
+  # A regular expression of a test is one text: CTest splits it at an unescaped ';' and accepts any part.
+  add_test(NAME ctest_regex_lists COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_regex_lists.py ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND})
+  add_test(NAME ctest_regex_lists_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_regex_lists.py)
   # The compile cost report: its parsing and rewriting, and one real file when the build is configured.
   add_test(NAME compile_report_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_compile_report.py)
   # The nightly compile-cost measure: its parsing, the judging of a night and the trend page.
