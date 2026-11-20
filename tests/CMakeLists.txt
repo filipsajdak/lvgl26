@@ -762,6 +762,12 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
 endif()
 
+# The example of docs/state.md: states, what follows them, and an effect.
+add_executable(example_state ${PROJECT_SOURCE_DIR}/examples/state/main.cpp)
+target_link_libraries(example_state PRIVATE lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+add_test(NAME example_state COMMAND example_state WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+
 # The example of docs/repetition.md: it runs, and tests/for_each.cpp checks what it repeats.
 add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
 target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
