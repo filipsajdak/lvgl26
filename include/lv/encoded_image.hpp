@@ -20,6 +20,7 @@
 // `set(LVGL26_PNG ON)`, `set(LVGL26_JPEG ON)`. A picture that the compiler decodes
 // needs neither: see lv/image.hpp.
 
+#include <lv/detail/missing.hpp>
 #include <lv/detail/api.hpp>
 #include <lv/detail/embedded.hpp>
 #include <lv/values.hpp>
@@ -29,6 +30,12 @@
 #include <meta>
 #include <span>
 #include <vector>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/encoded_image.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -133,7 +140,7 @@ inline constexpr const lv_image_dsc_t* encoded_of = make_encoded<D>(File);
 // The embedded PNG or JPEG file `File`, kept as it is and decoded on the device:
 // what an image widget takes as its `.src`.
 template <const auto& File>
-  requires detail::embedded_bytes<decltype(File)>
-inline constexpr const lv_image_dsc_t* encoded_image = detail::encoded_of<File>;
+  requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/encoded_image.hpp">
+inline constexpr const lv_image_dsc_t* encoded_image<File> = detail::encoded_of<File>;
 
 }  // namespace lv

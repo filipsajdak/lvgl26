@@ -37,6 +37,7 @@
 // A part returns a widget. It sets no .id: the widgets of a repetition are not reached by
 // id, and a repeated id would be used twice. For rows that change at run time use lv::each.
 
+#include <lv/detail/missing.hpp>
 #include <lv/but.hpp>
 #include <lv/list.hpp>
 #include <lv/tree.hpp>
@@ -50,6 +51,12 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/repeat.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 

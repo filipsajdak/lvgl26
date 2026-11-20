@@ -955,6 +955,8 @@ if(Python3_FOUND)
   # (docs/which-header.md); tools/check_examples.py holds the examples to their exact headers.
   file(GLOB_RECURSE lvgl26_checked_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp ${PROJECT_SOURCE_DIR}/fuzz/*.cpp)
+  # These leave out a header on purpose: the compiler must name it (lv/detail/missing.hpp).
+  list(FILTER lvgl26_checked_sources EXCLUDE REGEX "/fail/missing_header_")
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
@@ -1192,3 +1194,17 @@ lvgl26_compile_fail(look_ext_text "the .extensions entry 'radius' of 'exttext' i
 lvgl26_compile_fail(look_ext_percent_digits "is '5x%', and a percentage is written as whole digits and %")
 lvgl26_compile_fail(look_alpha_wrong_kind "the look entry 'radius' of 'alpharadius' is a color with an alpha, but the style property 'radius' takes a dimension")
 lvgl26_compile_fail(look_ext_not_string "the value of 'width' in .extensions 'io.github.filipsajdak.lvgl26' is not a string")
+
+# A name of an opt-in header used with lv/lv.hpp alone names its header (lv/detail/missing.hpp).
+lvgl26_compile_fail(missing_header_list "lv::list is in <lv/list.hpp>: add #include <lv/list.hpp>")
+lvgl26_compile_fail(missing_header_each "lv::each is in <lv/list.hpp>: add #include <lv/list.hpp>")
+lvgl26_compile_fail(missing_header_for_each "lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_for_each_items "lv::for_each is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
+lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
+lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
+lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
+lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")
+lvgl26_compile_fail(missing_header_runtime "lv::runtime is in <lv/runtime.hpp>: add #include <lv/runtime.hpp>")
+lvgl26_compile_fail(missing_header_one_of "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>")
+lvgl26_compile_fail(missing_header_pointer "lv::pointer is in <lv/pointer.hpp>: add #include <lv/pointer.hpp>")

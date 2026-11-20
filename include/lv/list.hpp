@@ -61,6 +61,7 @@
 // Like all of LVGL, a list must only be changed from the UI thread, and not while one of its
 // views follows a change (from an .on_row function).
 
+#include <lv/detail/missing.hpp>
 #include <lv/computed.hpp>
 #include <lv/state.hpp>
 #include <lv/tree.hpp>
@@ -79,6 +80,12 @@
 #include <utility>
 #include <vector>
 
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/list.hpp"> = true;
+}  // namespace lv::detail
+
 namespace lv {
 
 // Why a change to an lv::list did not happen, or is not shown.
@@ -87,8 +94,6 @@ enum class list_error {
   out_of_memory,  // LVGL had no memory for a row's widgets; see the function
 };
 
-template <class T, std::size_t N>
-class list;
 
 namespace detail {
 
@@ -225,7 +230,8 @@ using cell_index = std::conditional_t<(N <= 0xff), std::uint8_t, std::uint16_t>;
 // It is not copied or moved: views hold its address. Make it a constant-initialized global
 // (`constinit`), as a state is.
 template <class T, std::size_t N>
-class list {
+  requires detail::included<"lv/list.hpp">
+class list<T, N> {
   static_assert(N > 0, "lv: a list holds at least one row: lv::list<track, 8>.");
   static_assert(N <= 0xffff, "lv: a list holds at most 65535 rows.");
 

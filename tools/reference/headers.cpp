@@ -23,8 +23,18 @@ consteval std::string_view header_of(std::meta::info m) {
   const auto at = file.rfind("/include/lv/");
   if (at == std::string_view::npos) return {};
   const auto header = file.substr(at + 9);
+  if (header == "lv/detail/missing.hpp") return header;
   if (header.starts_with("lv/detail/")) return {};
   return header;
+}
+
+// The header of a name that lv/detail/missing.hpp declares as a fallback: its specialization is in
+// that header, where reflection does not look.
+consteval std::string_view header_of_fallback(std::string_view name) {
+  for (const auto& f : lv::detail::fallbacks)
+    if (f.name == name) return f.header;
+  lv::detail::fail("lv::" + lv::detail::str(name) + " is declared in lv/detail/missing.hpp and has no header in detail::fallbacks.");
+  return {};
 }
 
 struct entry {
@@ -40,8 +50,9 @@ consteval std::vector<entry> entries() {
     if (!std::meta::has_identifier(m) || std::meta::is_namespace(m)) continue;
     const std::string_view name = std::meta::identifier_of(m);
     if (name.empty() || name[0] == '_') continue;
-    const auto header = header_of(m);
+    auto header = header_of(m);
     if (header.empty()) continue;
+    if (header == "lv/detail/missing.hpp") header = header_of_fallback(name);
     bool seen = false;
     for (const auto& e : out) seen = seen || (e.name.size() == name.size() && e.name == name && e.header == header);
     if (!seen) out.push_back({header, name});
@@ -49,7 +60,7 @@ consteval std::vector<entry> entries() {
   return out;
 }
 
-// The headers in the order their first name was declared, each with its names.
+// The headers in alphabetical order, each with its names in the order of declaration.
 consteval std::string document() {
   const auto all = entries();
   std::vector<std::string_view> headers;
@@ -58,6 +69,9 @@ consteval std::string document() {
     for (const auto h : headers) seen = seen || h == e.header;
     if (!seen) headers.push_back(e.header);
   }
+  // In alphabetical order, so that moving a declaration within the headers moves no line.
+  for (std::size_t i = 1; i < headers.size(); ++i)
+    for (std::size_t j = i; j > 0 && headers[j] < headers[j - 1]; --j) std::swap(headers[j], headers[j - 1]);
   std::string out = "{";
   for (std::size_t i = 0; i < headers.size(); ++i) {
     out += i == 0 ? "\n  \"" : ",\n  \"";

@@ -19,6 +19,7 @@
 // of a whole screen. So a picture is at most limits.compile_time_image of the settings
 // pixels (128 x 128 by default); a larger one stops the build and names the setting.
 
+#include <lv/detail/missing.hpp>
 #include <lv/config.hpp>
 #include <lv/detail/settings.hpp>
 #include <lv/detail/embedded.hpp>
@@ -31,6 +32,12 @@
 #include <meta>
 #include <span>
 #include <vector>
+
+namespace lv::detail {
+// This header is read: see lv/detail/missing.hpp.
+template <>
+inline constexpr bool included<"lv/image.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -207,7 +214,7 @@ inline constexpr const lv_image_dsc_t* image_of = make_image(File, LV_COLOR_DEPT
 // The picture of the embedded PNG file `File`, decoded by the compiler: what an
 // image widget takes as its `.src`.
 template <const auto& File>
-  requires detail::embedded_bytes<decltype(File)>
-inline constexpr const lv_image_dsc_t* image_file = detail::image_of<File>;
+  requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/image.hpp">
+inline constexpr const lv_image_dsc_t* image_file<File> = detail::image_of<File>;
 
 }  // namespace lv
