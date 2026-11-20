@@ -71,6 +71,8 @@ You need GCC 16.2 or newer, CMake 3.30 and Ninja. There are three ways to get th
 - **The image.** `ghcr.io/filipsajdak/lvgl26-toolchain:16` has GCC 16.2, CMake, Ninja, ccache and git, for amd64 and arm64: `docker run --rm -it -v "$PWD":/w -w /w ghcr.io/filipsajdak/lvgl26-toolchain:16 bash`.
 - **macOS.** `brew install gcc cmake ninja`.
 
+Do not put lvgl26's headers into a precompiled header, which CMake's `target_precompile_headers` does. With GCC 16.2 a precompiled header silently drops the precondition checks of templates ([GCC bug 128909](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128909)).
+
 Put this `CMakeLists.txt` next to `main.cpp`:
 
 <!-- snippet: examples/quick_start/CMakeLists.txt -->

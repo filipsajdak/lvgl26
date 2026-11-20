@@ -213,6 +213,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 | Bad input from outside (a document, a file) | `std::expected`, never a contract |
 
 - A function with a precondition is not `noexcept`.
+- No target of the repository precompiles a header that includes lvgl26's headers. With GCC 16.2 and trunk a precompiled header silently drops the `pre` and `post` of templates, depending on addresses (GCC bug 128909). The README, the quick start and the status page warn users.
 - GCC 16.2 cannot compile `pre` on a function with a deduced return type, or a fold over the
   parameters inside `pre`. Use `contract_assert` as the first statement there, with a comment that
   says so.
