@@ -82,6 +82,40 @@ Qt and Slint: a short fragment in their own language, written by us, beside the 
 - A pilot the owner reads first: the rules page, one existing guide in the new outline (Lists), one new guide (State and bindings).
 - After his comments: batches, merged when CI is green. Start, Core ideas and The program first. "How it looks" after the fonts and theme designs are decided. Message sections after the compile-fail tests pin whole messages.
 
+### Projects split into files (2026-11-20)
+
+The owner asked: "ensure our examples show how to split big projects into multiple files to make them managable."
+
+- Where it is shown: the coffee machine tutorial, which starts as one file and splits in one of its steps; a small layout example of its own for the guide "An application that grows"; the two ports (printer, treadmill), brought to the same layout; and the project template repository.
+- The layout is by screen, with shared folders:
+
+```
+coffee/
+  main.cpp            starts the app, mounts shell
+  shell.cpp .hpp      the frame, lv::shown of pages
+  state.hpp           what several screens share
+  screens/
+    drinks.cpp .hpp   a screen and its own states
+    brewing.cpp .hpp
+    service.cpp .hpp
+  parts/
+    tile.hpp          functions that return a tree
+  design/
+    tokens.json       the design tokens
+    design.hpp        names the token file, looks
+    fonts.hpp         declares the drawn fonts
+    font_title.cpp    one file per font
+    font_body.cpp
+  platform/
+    window.cpp        the only file that knows SDL
+  lvgl26.json         project settings
+  CMakeLists.txt
+```
+
+- Enforcement: a layout check that users can run too. It ships as a tool that a project switches on in CMake, as the include check does, with an option to turn it off. It refuses a file that defines more than one screen, a font drawn outside `design/`, a platform name outside `platform/`, and a screen that includes another screen's header. The repository's own multi-file examples run it.
+- It depends on two features built first: pages that live in other files under `lv::shown`, with no size number written by hand, and fonts drawn once, with one file per font.
+- The rule is `extendable-1`. Its data names the layout check in `check_planned`, which the page shows as not built yet, until the check exists.
+
 ### The owner's steer on the first rule list (2026-11-20)
 
 - "Fast at run time" covers processor time, not only memory: a display nobody sees, a hidden widget, a binding against polling, changing only what changed, and the cost of an animation. Every rule of run time ends up resting on a nightly probe; until it does, its data says `probe_needed`, and the tool fails a rule of run time that has neither.
@@ -149,7 +183,7 @@ State: "pilot" is done in the pilot; "rewrite" is an existing page; "new" is a p
 | Quick start | `quick-start.md` | rewrite | `examples/quick_start` (a lambda for `reset`) | | 1 |
 | Which header | `which-header.md` | rewrite | generated table | | 1 |
 | Writing good lvgl26 code | `rules.md` | pilot | `rules.json` | the owner's pass; then the ids freeze | pilot |
-| A coffee machine (tutorial) | `tutorial.md` | new | new, one program per step | `lv::shown`; Tasks | 4 |
+| A coffee machine (tutorial) | `tutorial.md` | new | new, one program per step; it starts as one file, and a step splits it into the layout | `lv::shown` with pages in other files; fonts drawn once; Tasks | 4 |
 | The tree and its widgets | `tree.md` | new | `examples/state` tree, `tests/l2_tree.cpp` | | 1 |
 | State and bindings | `state.md` | pilot | `examples/state` | its picture | pilot |
 | Views and ids | `views.md` | new | `examples/mounting` local, without test code | | 1 |
@@ -176,7 +210,7 @@ State: "pilot" is done in the pilot; "rewrite" is an existing page; "new" is a p
 | Keeping builds fast | `build-fast.md` | new | the fast-build rules | the nightly metrics page | 2 |
 | Testing a screen | `testing.md` | new | `lv::write_png`, the example tests | | 1 |
 | Targets | `targets.md` | new | `examples/mcu`, `examples/wasm` | | 1 |
-| An application that grows | `growing.md` | new | a small program of several files | | 4 |
+| An application that grows | `growing.md` | new | a small layout example of its own, in the layout above, which runs the layout check | `lv::shown` with pages in other files; fonts drawn once, one file per font; the layout check | 4 |
 | Parts and concepts | `concepts.md` | rewrite | `examples/parts`, with `--Count` | | 4 |
 | Extending lvgl26 | `extending.md` | new | `examples/platform/sdl_window.hpp`, `lv::widget` | | 4 |
 | Run-time documents | `runtime.md` | new | `examples/agent` | | 4 |
@@ -185,7 +219,7 @@ State: "pilot" is done in the pilot; "rewrite" is an existing page; "new" is a p
 | For AI agents | `for-agents.md` | new | `llms.txt`, the skills | | 4 |
 | Coming from Qt, Slint, TouchGFX | `from-qt.md`, `from-slint.md`, `from-touchgfx.md` | rewrite | ports | components | 5 |
 | LVGL in C | `from-lvgl.md` | new | `examples/lvgl` | | 5 |
-| Two ports | `port-slint-printer.md`, `port-lvgl-examples.md` | rewrite, the printer split | the ports | `lv::shown` for the pager | 5 |
+| Two ports | `port-slint-printer.md`, `port-lvgl-examples.md` | rewrite, the printer split | the printer and the treadmill, brought to the layout above | `lv::shown` for the pager and for pages in other files; fonts drawn once | 5 |
 
 Batch 1 is Start, Core ideas and The program, the stable layers. Batch 2 is the rest of the screen and the performance pages, once their probes exist. Batch 3 is "How it looks", after the redesign. Batch 4 is Growing and Tools; batch 5 the migration pages.
 
@@ -209,6 +243,7 @@ The guides of the pilot say "not measured yet" for these too: the processor time
 
 ### Checks that do not exist yet
 
+- The layout check of a project split into files, switched on in CMake like the include check (`extendable-1`). It waits for `lv::shown` with pages in other files and for fonts drawn once.
 - Everything has a page (decision, check 3).
 - The lint for plumbing in examples (check 4).
 - A rule whose example is pending fails once a marked region exists for it: today the data only says why there is none.
@@ -219,5 +254,7 @@ The guides of the pilot say "not measured yet" for these too: the processor time
 - `no-boilerplate-9`: lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only.
 
 ### Later work outside the pages
+
+The project template repository, brought to the layout of a project split into files.
 
 Per-widget reference pages written when the site is built, the live browser examples with a picture underneath, the rewrite of `README.md` and the site pages, and the coffee machine tutorial.
