@@ -6,10 +6,16 @@
 //   mouse.press({60, 35}); mouse.release();
 //   lv::pointer panel{display, &read};   // LVGL asks lv::pointer_sample read()
 
+#include <lv/detail/missing.hpp>
 #include <lv/display.hpp>
 
 #include <cstddef>
 #include <type_traits>
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/pointer.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv {
 
@@ -41,13 +47,10 @@ concept pointer_feeder = requires(F& f, pointer_feed feed) {
   f.detach(feed);
 };
 
-/// The largest queue of a pointer.
-inline constexpr std::size_t most_pointer_samples = 256;
-
 /// A pointer fed by the platform through a queue of `Capacity` samples.
-template <std::size_t Capacity = 16>
-  requires(Capacity <= most_pointer_samples)
-class pointer {
+template <std::size_t Capacity>
+  requires detail::pointer_capacity<Capacity> && detail::included<"lv/pointer.hpp">
+class pointer<Capacity> {
  public:
   explicit pointer(display&) {}
   /// A pointer that `feeder`, a platform object such as a window, feeds.
