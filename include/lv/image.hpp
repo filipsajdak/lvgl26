@@ -147,8 +147,11 @@ consteval std::array<std::uint8_t, Size> pixels_of(png_source file, const unsign
   return out;
 }
 
+// Aligned as LVGL wants the data of a draw buffer: it reads RGB565 pixels as 16-bit words, and an
+// RGB565A8 picture of an odd number of pixels has an odd size, so the next one would start at an
+// odd address. tests/image.cpp checks the alignment.
 template <png_source File, int Depth, std::uint32_t Align, std::size_t Size>
-inline constexpr std::array<std::uint8_t, Size> stored_pixels =
+alignas(LV_DRAW_BUF_ALIGN) inline constexpr std::array<std::uint8_t, Size> stored_pixels =
     pixels_of<Size>(File, decoded_rows<File>.data(), layout<File, Depth, Align>, Depth);
 
 template <png_source File, int Depth, std::uint32_t Align, std::size_t Size>

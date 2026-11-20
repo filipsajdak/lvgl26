@@ -7,6 +7,8 @@
 #include "check.hpp"
 
 #include <cstdint>
+#include <initializer_list>
+#include <meta>
 #include <cstdio>
 #include <span>
 
@@ -132,6 +134,26 @@ void honours_a_see_through_colour() {
   check(keyed_grey->data[6] == 255 && keyed_grey->data[7] == 0 && keyed_grey->data[8] == 255);
 }
 
+// The pixels of a picture start where LVGL wants the data of a draw buffer to start, a multiple of
+// LV_DRAW_BUF_ALIGN: it reads RGB565 pixels as 16-bit words. keyed_grey is RGB565A8 of 3 pixels,
+// 9 bytes, so whatever the linker puts after it would start at an odd address without that.
+// The compiler checks the alignment declared for the pixels, the same on every platform.
+static_assert(std::meta::alignment_of(std::meta::substitute(
+                  ^^lv::detail::stored_pixels,
+                  {std::meta::reflect_constant(lv::detail::png_source{keyed_grey_png, sizeof keyed_grey_png}),
+                   std::meta::reflect_constant(LV_COLOR_DEPTH),
+                   std::meta::reflect_constant(std::uint32_t{LV_DRAW_BUF_STRIDE_ALIGN}),
+                   std::meta::reflect_constant(std::size_t{9})})) %
+                  LV_DRAW_BUF_ALIGN ==
+              0);
+
+// And where the linker put them.
+void starts_pixels_where_lvgl_wants() {
+  for (const lv_image_dsc_t* image : {ring, flag, grey, grey_alpha, palette, noise, corner, solid, keyed_rgb,
+                                      keyed_grey, grey_by_4, flag_by_4, flag_by_8, ring32, flag32, palette32})
+    check(reinterpret_cast<std::uintptr_t>(image->data) % LV_DRAW_BUF_ALIGN == 0);
+}
+
 // LVGL copies a picture to its heap when its rows are not as long as it wants them.
 void pads_rows_to_what_lvgl_wants() {
   check(is(flag_by_4, LV_COLOR_FORMAT_RGB565, 3, 2, 8, 16));
@@ -189,6 +211,7 @@ int main(int argc, char** argv) {
   stores_for_16_bits();
   stores_for_32_bits();
   honours_a_see_through_colour();
+  starts_pixels_where_lvgl_wants();
   pads_rows_to_what_lvgl_wants();
   decodes_long_codes_and_finds_alpha_anywhere();
   draws(argv[1]);
