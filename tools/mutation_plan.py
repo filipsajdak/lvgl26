@@ -6,7 +6,8 @@
 Prints the plan as JSON: {"since": ..., "any": bool, "matrix": {"include": [shard, ...]}}.
 A shard names the header, the ctest expression of its tests and the targets to build, from
 tools/mutation_tests.json (a header that is not listed there gets the default, and its shard
-says so: "fallback"). With
+says so: "fallback"). A header may also say "logic": true (only mutants that swap an operator or a
+number) and "parts": n (n shards that each judge every n-th mutant): `logic` and `part` of the shard. With
 --github-output the same values are written as `any=`, `since=` and `matrix=` lines.
 """
 
@@ -47,13 +48,17 @@ def shard_name(header):
 
 
 def shard_for(header, config):
+    """The shards of a header: one, or `parts` of them that each judge every n-th mutant."""
     chosen = config["headers"].get(header, config["default"])
-    return {"name": shard_name(header), "header": header, "tests": chosen["tests"],
-            "targets": chosen.get("targets") or "", "fallback": header not in config["headers"]}
+    parts = chosen.get("parts", 1)
+    return [{"name": shard_name(header) + (f"-{part}of{parts}" if parts > 1 else ""), "header": header,
+             "tests": chosen["tests"], "targets": chosen.get("targets") or "",
+             "fallback": header not in config["headers"], "logic": bool(chosen.get("logic", False)),
+             "part": f"{part}/{parts}" if parts > 1 else ""} for part in range(1, parts + 1)]
 
 
 def plan(since, config, root=ROOT):
-    shards = [shard_for(h, config) for h in changed_headers(since, root)]
+    shards = [shard for h in changed_headers(since, root) for shard in shard_for(h, config)]
     return {"since": since, "any": bool(shards), "matrix": {"include": shards}}
 
 

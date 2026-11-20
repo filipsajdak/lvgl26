@@ -230,6 +230,7 @@ def parse_args(argv=None):
     parser.add_argument("--lines", help="only mutate these lines, e.g. 60-120,200")
     parser.add_argument("--sample", type=int, help="judge a random sample of this many mutants")
     parser.add_argument("--seed", type=int, default=1, help="seed of the sample")
+    parser.add_argument("--part", help="K/N: judge every N-th mutant, from the K-th (N shards share a header)")
     parser.add_argument("--logic", action="store_true",
                         help="only mutants that swap one operator or one number on a line of "
                              "statements; use it for template and reflection headers")
@@ -296,12 +297,23 @@ def result_row(args, counts, survivors, triaged, judged, total):
             "invalid": counts["invalid"], "survivors": survivors}
 
 
+def mutants_of_part(mutants, part):
+    """The mutants of shard K of N, written K/N: every N-th one from the K-th, so that the parts are
+    the same size and each covers the whole header."""
+    number, _, count = part.partition("/")
+    if not (number.isdigit() and count.isdigit() and 1 <= int(number) <= int(count)):
+        sys.exit(f"--part is K/N with 1 <= K <= N, not {part!r}")
+    return mutants[int(number) - 1::int(count)]
+
+
 def choose_mutants(args, lines, original):
     """The mutants to judge: all of the chosen lines, the logic ones, or a sample."""
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / (TREE / args.header).stem)
     mutants = without_comment_mutants(mutants, original)
     if args.logic:
         mutants = logic_only(mutants, original)
+    if args.part:
+        mutants = mutants_of_part(mutants, args.part)
     total = len(mutants)
     if args.sample and args.sample < total:
         mutants = sorted(random.Random(args.seed).sample(mutants, args.sample))
