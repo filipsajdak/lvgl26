@@ -687,6 +687,7 @@ lvgl26_compile_fail(animate_then_bad_handler "no matching function for call to .
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail(match_missing_case "lv::match does not cover: sport. Add an arm for each")
 lvgl26_compile_fail(match_duplicate_case "lv::match has two arms for eco")
+lvgl26_compile_fail(match_other_enum "lv::match on page has an arm with a value of look. Name a value of page: lv::is<page::...>.")
 lvgl26_compile_fail(match_redundant_otherwise "already covers every value, so its lv::otherwise arm can never match")
 lvgl26_compile_fail(match_needs_otherwise "cannot list every value, so it needs a last arm")
 lvgl26_compile_fail(match_two_otherwise "lv::match has more than one lv::otherwise arm")

@@ -203,10 +203,38 @@ consteval std::string_view coverage_problem(const std::vector<Subject>& covered,
   return {};
 }
 
+// Whether the value V may stand in a pattern on Subject: an enum takes only its own
+// enumerators, and a value of an enum stands only for that enum. Other values convert.
+template <class Subject, auto V>
+inline constexpr bool value_of_subject =
+    !(std::is_enum_v<Subject> || std::is_enum_v<decltype(V)>) || std::same_as<Subject, decltype(V)>;
+
+// The first value of an arm that names another type than Subject, as an error, or nothing.
+template <class Subject, auto... Values, class F>
+consteval std::string_view type_problem(std::type_identity<arm<one_of<Values...>, F>>) {
+  std::string_view problem;
+  ((problem.empty() && !value_of_subject<Subject, Values>
+        ? problem = std::define_static_string(
+              "lv::match on " + str(std::meta::display_string_of(^^Subject)) + " has an arm with a value of " +
+              str(std::meta::display_string_of(^^decltype(Values))) + ". Name a value of " +
+              str(std::meta::display_string_of(^^Subject)) + ": lv::is<" +
+              str(std::meta::display_string_of(^^Subject)) + "::...>.")
+        : problem),
+   ...);
+  return problem;
+}
+template <class Subject, class F>
+consteval std::string_view type_problem(std::type_identity<arm<anything, F>>) {
+  return {};
+}
+
 // What is wrong with the arms of a match on Subject, or an empty string.
 template <class Subject, class... Arms>
 consteval std::string_view match_problem() {
   if (const auto p = wildcard_problem<Arms...>(); !p.empty()) return p;
+  std::string_view wrong_type;
+  ((wrong_type = wrong_type.empty() ? type_problem<Subject>(std::type_identity<Arms>{}) : wrong_type), ...);
+  if (!wrong_type.empty()) return wrong_type;
   std::vector<Subject> covered;
   (add_values(covered, std::type_identity<Arms>{}), ...);
   if (const auto p = duplicate_problem(covered); !p.empty()) return p;
