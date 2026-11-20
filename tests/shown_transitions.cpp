@@ -229,9 +229,17 @@ void no_room_for_the_slots(lv::obj screen) {
   lv_log_register_print_cb(nullptr);
 }
 
+// A transition made at run time, from values the compiler cannot fold.
+void a_transition_at_run_time(int argc) {
+  const std::int32_t from = 100 + argc;
+  const auto t = lv::transition({.y = {from * px, 0 * px}}, (150 + argc) * ms);
+  check(t.from == from && t.to == 0 && t.ms == static_cast<std::uint32_t>(150 + argc) && t.step != nullptr);
+  check(t.step != slide_in.step);  // y, not x
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char**) {
   lv_init();
   lv_display_t* display = lv_test_display_create(320, 240);
   lv_display_set_theme(display, nullptr);
@@ -245,6 +253,7 @@ int main() {
   the_peak_holds_two_pages(screen);
   pages_of_other_files(screen);
   no_room_for_the_slots(screen);
+  a_transition_at_run_time(argc);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
