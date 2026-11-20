@@ -958,6 +958,20 @@ if(Python3_FOUND)
   add_test(NAME includes_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
+  # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
+  # the check of tests/smoke.cpp left its stamp.
+  if(LVGL26_CHECK_INCLUDES)
+    # A program of its own that misses an include fails to build with the line, passes with
+    # it, and checks nothing twice (tests/include_check/run.cmake).
+    add_test(NAME include_check_build
+             COMMAND ${CMAKE_COMMAND} -DROOT=${PROJECT_SOURCE_DIR} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/include_check
+                     -DLVGL=${lvgl_SOURCE_DIR} -DMP_UNITS=${mp-units_SOURCE_DIR} -DGENERATOR=${CMAKE_GENERATOR}
+                     -DC_COMPILER=${CMAKE_C_COMPILER} -DCXX_COMPILER=${CMAKE_CXX_COMPILER}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/include_check/run.cmake)
+    add_test(NAME includes_build_check
+             COMMAND Python3::Interpreter -c "import pathlib, sys; sys.exit(0 if list(pathlib.Path(sys.argv[1]).glob('smoke.cpp.*.stamp')) else 1)"
+                     ${CMAKE_BINARY_DIR}/lvgl26_includes/smoke)
+  endif()
   add_test(NAME which_header_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
                                           --check-page ${PROJECT_SOURCE_DIR}/docs/which-header.md)
   # The token files of the Signal theme are written from the design system.

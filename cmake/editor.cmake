@@ -70,6 +70,10 @@ function(lvgl26_editor_clangd result stubs)
     "    - \"${stubs}/overlay.yaml\"\n"
     "    - \"-idirafter\"\n"
     "    - \"${stubs}/fallback\"\n"
+    "    # The stubs as a search path too, so that clangd can write <lv/list.hpp> in its quick fix\n"
+    "    # for a name whose header a file misses.\n"
+    "    - \"-idirafter\"\n"
+    "    - \"${stubs}\"\n"
     "    - \"-Wno-c23-extensions\"\n"
     "    - \"-Werror=reorder-init-list\"\n"
     "  # What only GCC understands.\n"
@@ -113,10 +117,22 @@ function(lvgl26_editor_support)
   file(STRINGS "${stubs}/token_files.txt" found)
   set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${found})
 
+  # A file that includes every header of lvgl26, in the compile database and never built: clangd
+  # indexes it, so that a name whose header a file misses gets the quick fix "Include
+  # <lv/list.hpp> for symbol lv::list" (docs/which-header.md).
+  if(NOT TARGET lvgl26_editor_index)
+    file(WRITE "${stubs}/index.cpp"
+         "// Written by lvgl26_editor_support(): every header of lvgl26, for clangd's index.\n"
+         "#include <lv/all.hpp>\n")
+    add_library(lvgl26_editor_index OBJECT EXCLUDE_FROM_ALL "${stubs}/index.cpp")
+    target_link_libraries(lvgl26_editor_index PRIVATE lvgl26::lvgl26)
+  endif()
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Write compile_commands.json, which clangd reads" FORCE)
   lvgl26_editor_export_commands("${CMAKE_SOURCE_DIR}")
 
   lvgl26_editor_clangd(text "${stubs}")
+  # The file that clangd indexes lies in the build directory, outside the project's .clangd.
+  file(WRITE "${stubs}/.clangd" "${text}")
   set(file "${CMAKE_SOURCE_DIR}/.clangd")
   if(NOT EXISTS "${file}")
     file(WRITE "${file}" "${text}")

@@ -54,6 +54,22 @@ The compiler says that the name does not exist. It does not say which header dec
 
 Any of these messages for a name `lv::X` means: find `lv::X` in the table and include its header.
 
+## The build says which header
+
+A program that takes lvgl26 through CMake (`FetchContent`, `add_subdirectory`) gets a check of its includes with no line of its own. Before a target links, every file of it that names something of lvgl26 is read, and a missing header stops the build with the line:
+
+```text
+src/parts.hpp:4: lv::list needs #include <lv/list.hpp>
+```
+
+It checks the headers of the program that a file includes with quotes too, skips comments and strings, and reads a file again only when it, or a header it includes, changes. `-DLVGL26_CHECK_INCLUDES=OFF` turns it off; `lvgl26_check_includes(target)` checks one target when it is off. It needs Python 3; without it CMake says so and the build goes on.
+
+## The editor says which header
+
+With [editor support](editor-support.md), clangd offers a quick fix at the name: `Include <lv/list.hpp> for symbol lv::list`. It finds the header in its index of lvgl26, which it builds in the background the first time it opens the project.
+
+## By hand
+
 `tools/check_includes.py` finds every such name in a list of files and says which header it needs:
 
 ```sh

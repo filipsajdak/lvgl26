@@ -142,6 +142,20 @@ Each option was tried on GCC 16.2 and clangd 23, with the real `lv::list`, `lv::
 - In the compiler, every opt-in header must include the core's declarations first, because a file may include `lv/list.hpp` before `lv/lv.hpp`. `measured`
 - A guarded fallback keeps the compile-fail messages of the real functions; an unguarded one replaces them. `measured`
 
+### (v) The check and the quick fix, built (2026-11-20)
+
+The owner chose the check at build time, the editor and the page, and the fallbacks in the compiler for a later pull request.
+
+| What | Result | Mark |
+|---|---|---|
+| The check found with no line of the program's own | A call deferred to the top directory (`cmake_language(DEFER DIRECTORY ${CMAKE_SOURCE_DIR} ...)`) finds every target that links lvgl26, also one made before lvgl26 was added and one that links it through an interface library | `measured` with `add_subdirectory` and `FetchContent`, Ninja and Unix Makefiles |
+| What it says | `app/parts.hpp:4: lv::list needs #include <lv/list.hpp>`, for a name in a header of the program that a source includes with quotes | `measured` |
+| What it checks again | Nothing when nothing changed (`ninja: no work to do`); one file when the file or a header it includes changed, through a depfile | `measured` |
+| What it costs | 518 files of the repository: 28 s of CPU when all are checked, against 2160 s for the build; about 34 ms a file, nearly all of it Python starting. With Ninja the files compile while they are checked and only the link waits, so a full build took 425 s with it and 427 s without, within the noise | `measured`, one run each |
+| A generated source | Not checked: it does not exist when CMake runs | `measured` |
+| clangd's quick fix | `Include <lv/list.hpp> for symbol lv::list`, also for a plain class (`lv::scaled_font`) and for `lv::theme({...})`, once its background index holds a file that includes `lv/all.hpp` and the stub directory is on its search path | `measured` with clangd 23 and the stubs |
+| Without those two | No fix: the index had no file with the opt-in headers, and then could not write the header's name | `measured` |
+
 ## Other libraries
 
 The rows of the first table were read by a fetch agent and checked by its links; marks as it gave them.
