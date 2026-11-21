@@ -11,12 +11,12 @@ constexpr auto framed = lv::style({.border_width = tok.label.frame_width});
 // The same two lines, aligned left, in the middle and right.
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::label({.style = framed | lv::style({.text_align = "left"}),
-               .text = "Left aligned\nSecond line", .width = 220 * px}),
-    lv::label({.style = framed | lv::style({.text_align = "center"}),
-               .text = "Centered\nSecond line", .width = 220 * px}),
-    lv::label({.style = framed | lv::style({.text_align = "right"}),
-               .text = "Right aligned\nSecond line", .width = 220 * px})];
+    lv::label({.text = "Left aligned\nSecond line",
+               .width = 220 * px, .style = framed | lv::style({.text_align = "left"})}),
+    lv::label({.text = "Centered\nSecond line",
+               .width = 220 * px, .style = framed | lv::style({.text_align = "center"})}),
+    lv::label({.text = "Right aligned\nSecond line",
+               .width = 220 * px, .style = framed | lv::style({.text_align = "right"})})];
 
 }  // namespace
 

@@ -49,7 +49,7 @@ void to_settings();
 
 constexpr auto home = lv::column({.size = {320 * px, 240 * px}})[
     lv::label({.id = "title", .text = "Home"}),
-    lv::button({.id = "next", .on_clicked = &to_settings, .size = {80 * px, 40 * px}})[lv::label({.text = "Next"})],
+    lv::button({.id = "next", .size = {80 * px, 40 * px}, .on_clicked = &to_settings})[lv::label({.text = "Next"})],
     stamp{}];
 constexpr auto settings = lv::column[lv::label({.id = "heading", .text = "Settings"}), lv::row[stamp{}], lv::box[stamp{}]];
 constexpr auto dialog = lv::column[lv::label({.id = "question", .text = "Discard?"})];

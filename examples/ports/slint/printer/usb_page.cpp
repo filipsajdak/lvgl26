@@ -57,13 +57,13 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
     back_header("USB", "Choose Settings", title_font, body_font),
     lv::image({.id = "photo", .size = {photo_width * px, photo_height * px}, .src = photos[0],
-               .style = {.radius = tok.window.radius}, .x = side * px, .y = y_file * px}),
+               .x = side * px, .y = y_file * px, .style = {.radius = tok.window.radius}}),
     lv::group({.x = (column + side) * px, .y = y_file * px})[
         choice("Select File:", "cat.jpg\ndog.jpg\nelephant.jpg\nsnake.jpg", label_font, control_width, "file")],
     lv::group({.x = (column + side) * px, .y = y_copies * px})[
         spin_box("Copies", options::count, &options::fewer, &options::more, body_font)],
-    lv::label({.style = {.text_color = tok.label.primary, .text_font = label_font}, .text = "Color",
-               .x = (column + side) * px, .y = y_color * px}),
+    lv::label({.text = "Color", .x = (column + side) * px,
+               .y = y_color * px, .style = {.text_color = tok.label.primary, .text_font = label_font}}),
     lv::group({.x = (column + side) * px, .y = (y_color + 26) * px})[
         color_button(options::color_label, control_width, 50, &options::toggle_color, body_font)],
     lv::group({.x = (column + side) * px, .y = (y_start + 26) * px})[

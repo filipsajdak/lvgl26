@@ -403,7 +403,7 @@
       <div class="prose">
         <h3>Language and library</h3>
         <ul class="yesno dot">
-          <li><strong>Designated initializers must be in alphabetical order</strong> (<code>.id</code>, <code>.range</code>, <code>.value</code>). This is a C++ rule for members in declaration order.</li>
+          <li><strong>Designated initializers must be in the order of the props</strong>: the id, the properties, the styles, then the handlers, each group alphabetical (<code>.id</code>, <code>.range</code>, <code>.value</code>, <code>.style</code>, <code>.on_clicked</code>). This is a C++ rule for members in declaration order, and <code>tools/order_properties.py</code> moves the properties of existing code.</li>
           <li><strong>A misspelled or misordered member</strong> is reported as <code>could not convert '{...}' to props&lt;"arc"&gt;</code>. GCC does not name the member in that case.</li>
           <li><strong>A quantity in a state needs an integer number</strong> for now.</li>
           <li><strong>mp-units is yours to add.</strong> lvgl26 has no unit system for application values and does not include one.</li>

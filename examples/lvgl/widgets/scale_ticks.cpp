@@ -16,13 +16,13 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                                    .pad_row = tok.scale.row_gap})})[
     lv::widget<"scale">({.label_show = true, .major_tick_every = 2, .max_value = 100, .min_value = 0,
                .mode = "horizontal_bottom", .size = {260 * px, 30 * px},
-               .style_indicator = major, .total_tick_count = 5}),
+               .total_tick_count = 5, .style_indicator = major}),
     lv::widget<"scale">({.label_show = true, .major_tick_every = 5, .max_value = 100, .min_value = 0,
                .mode = "horizontal_bottom", .size = {260 * px, 30 * px},
-               .style_indicator = major, .total_tick_count = 11}),
+               .total_tick_count = 11, .style_indicator = major}),
     lv::widget<"scale">({.label_show = true, .major_tick_every = 4, .max_value = 100, .min_value = 0,
                .mode = "horizontal_bottom", .size = {260 * px, 30 * px},
-               .style_indicator = major, .total_tick_count = 21})];
+               .total_tick_count = 21, .style_indicator = major})];
 
 }  // namespace
 

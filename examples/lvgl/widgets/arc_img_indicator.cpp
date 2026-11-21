@@ -20,12 +20,12 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.none})})[
     lv::arc({.bg_end_angle = 41 * deg, .bg_start_angle = 138 * deg, .max_value = 22,
              .min_value = 0, .size = {200 * px, 200 * px},
+             .value = lv::bind(lit),
              .style = {.arc_image_src = &img_arc_bg, .arc_rounded = false,
                        .arc_width = tok.arc.image.width},
              .style_indicator = {.arc_image_src = &img_arc_indicator, .arc_rounded = false,
                                  .arc_width = tok.arc.image.width},
-             .style_knob = {.opa = tok.opacity.none},
-             .value = lv::bind(lit)})[
+             .style_knob = {.opa = tok.opacity.none}})[
         lv::label({.align = "center", .text = lv::bind(lit, "{}")})]];
 
 }  // namespace

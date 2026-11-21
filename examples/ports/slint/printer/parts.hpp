@@ -49,8 +49,8 @@ constexpr auto picture(const auto& tint) {
 // The line under a header of `height`.
 constexpr auto header_rule(int height) {
   return lv::group({.size = {100 * pct, 2 * px},
-                    .style = {.bg_color = tok.header.separator, .bg_opa = tok.solid},
-                    .y = (height - 2) * px});
+                    .y = (height - 2) * px,
+                    .style = {.bg_color = tok.header.separator, .bg_opa = tok.solid}});
 }
 
 // The look of a header's ground.
@@ -59,15 +59,15 @@ constexpr auto header_look = lv::style({.bg_color = tok.header.background, .bg_o
 // The header of a page that has no way back: its title, and a line under it.
 constexpr auto plain_header(const char* title, const auto& title_font) {
   return lv::group({.size = {100 * pct, plain_header_height * px}, .style = header_look})[
-      lv::label({.style = {.text_color = tok.label.primary, .text_font = title_font}, .text = title,
-                 .x = margin * px, .y = 28 * px}),
+      lv::label({.text = title, .x = margin * px,
+                 .y = 28 * px, .style = {.text_color = tok.label.primary, .text_font = title_font}}),
       header_rule(plain_header_height)];
 }
 
 // A square button with a picture: back, fewer, more.
 template <const auto& Icon>
 constexpr auto icon_button(int size, const auto& fill, const auto& tint, void (*clicked)()) {
-  return lv::button({.on_clicked = clicked, .size = {size * px, size * px}, .style = flat_look(fill)})[
+  return lv::button({.size = {size * px, size * px}, .style = flat_look(fill), .on_clicked = clicked})[
       picture<Icon>(tint)];
 }
 
@@ -76,10 +76,10 @@ constexpr auto back_header(const char* title, const char* subtitle, const auto& 
   return lv::group({.size = {100 * pct, header_height * px}, .style = header_look})[
       lv::group({.size = {36 * px, 36 * px}, .x = margin * px, .y = 8 * px})[
           icon_button<icons::back>(36, tok.header.background, tok.label.primary, &close_subpage)],
-      lv::label({.style = {.text_color = tok.label.primary, .text_font = title_font},
-                 .text = title, .x = (margin + 48) * px, .y = 8 * px}),
-      lv::label({.style = {.text_color = tok.label.tertiary, .text_font = line_font},
-                 .text = subtitle, .x = (margin + 48) * px, .y = 54 * px}),
+      lv::label({.text = title,
+                 .x = (margin + 48) * px, .y = 8 * px, .style = {.text_color = tok.label.primary, .text_font = title_font}}),
+      lv::label({.text = subtitle,
+                 .x = (margin + 48) * px, .y = 54 * px, .style = {.text_color = tok.label.tertiary, .text_font = line_font}}),
       header_rule(header_height)];
 }
 
@@ -92,12 +92,12 @@ constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), v
   return lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
                     .size = {item_width * px, control_height * px}})[
       lv::group({.size = {spin_name_width * px, control_height * px}})[
-          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
-                     .text = name})],
+          lv::label({.align = "left_mid", .text = name,
+                     .style = {.text_color = tok.label.primary, .text_font = font}})],
       icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer),
       lv::group({.size = {spin_value_width * px, control_height * px}, .style = {.pad_left = tok.space.card}})[
-          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
-                     .text = lv::bind(count, "{}")})],
+          lv::label({.align = "left_mid", .text = lv::bind(count, "{}"),
+                     .style = {.text_color = tok.label.primary, .text_font = font}})],
       icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)];
 }
 //! [spin_box]
@@ -106,31 +106,31 @@ constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), v
 constexpr auto choice(const char* name, const char* options, const auto& font, int width = item_width,
                       std::string_view id = "") {
   return lv::group({.size = {width * px, choice_height * px}})[
-      lv::label({.style = {.text_color = tok.label.primary, .text_font = font}, .text = name}),
+      lv::label({.text = name, .style = {.text_color = tok.label.primary, .text_font = font}}),
       lv::dropdown({.id = id,
                     .options = options,
                     .size = {width * px, 52 * px},
-                    .style = dropdown_look(font),
                     .symbol = lv::image_file<icons::down>,
-                    .y = 26 * px})];
+                    .y = 26 * px,
+                    .style = dropdown_look(font)})];
 }
 
 // A button with a name that fills its width, in the colors `from` to `to`.
 constexpr auto wide_button(const char* name, int width, int height, void (*clicked)(), const auto& from,
                            const auto& to, const auto& font) {
-  return lv::button({.on_clicked = clicked, .size = {width * px, height * px}, .style = across_look(from, to)})[
-      lv::label({.align = "center", .style = {.text_color = tok.label.on_button, .text_font = font}, .text = name})];
+  return lv::button({.size = {width * px, height * px}, .style = across_look(from, to), .on_clicked = clicked})[
+      lv::label({.align = "center", .text = name, .style = {.text_color = tok.label.on_button, .text_font = font}})];
 }
 
 // The button that switches between color and grayscale, and says which it is.
 template <class ColorName>
 constexpr auto color_button(const ColorName& color_name, int width, int height, void (*clicked)(),
                             const auto& font) {
-  return lv::button({.on_clicked = clicked,
-                     .size = {width * px, height * px},
-                     .style = across_look(tok.button.color.from, tok.button.color.to)})[
-      lv::label({.align = "center", .style = {.text_color = tok.label.on_button, .text_font = font},
-                 .text = lv::bind(color_name)})];
+  return lv::button({.size = {width * px, height * px},
+                     .style = across_look(tok.button.color.from, tok.button.color.to),
+                     .on_clicked = clicked})[
+      lv::label({.align = "center", .text = lv::bind(color_name),
+                 .style = {.text_color = tok.label.on_button, .text_font = font}})];
 }
 
 // A button with a picture and a name, side by side: "Pause", "Delete".
@@ -138,14 +138,14 @@ template <const auto& Icon>
 constexpr auto icon_text_button(std::string_view id, const char* name, void (*clicked)(), const auto& fill,
                                 const auto& font) {
   return lv::button({.id = id,
-                     .on_clicked = clicked,
                      .size = {110 * px, control_height * px},
-                     .style = flat_look(fill)})[
+                     .style = flat_look(fill),
+                     .on_clicked = clicked})[
       lv::group({.flex_align = {"center", "center", "center"}, .flex_flow = "row", .size = {100 * pct, 100 * pct},
                .style = {.pad_gap = tok.space.gap}})[
           lv::image({.src = lv::image_file<Icon>,
                      .style = {.image_recolor = tok.label.on_button, .image_recolor_opa = tok.tint}}),
-          lv::label({.style = {.text_color = tok.label.on_button, .text_font = font}, .text = name})]];
+          lv::label({.text = name, .style = {.text_color = tok.label.on_button, .text_font = font}})]];
 }
 
 }  // namespace printer

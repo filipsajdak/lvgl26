@@ -21,7 +21,7 @@ void show_value(lv::event e) {
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = {.flex_cross_place = "center",
                                          .pad_row = tok.gap.md}})[
-    lv::arc({.id = "dial", .on_value_changed = &show_value, .size = {150 * px, 150 * px}}),
+    lv::arc({.id = "dial", .size = {150 * px, 150 * px}, .on_value_changed = &show_value}),
     lv::label({.text = lv::bind(reading, "Value: {}")})];
 
 }  // namespace

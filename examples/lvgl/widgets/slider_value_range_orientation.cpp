@@ -12,14 +12,14 @@ constexpr auto ui = lv::group({.flex_flow = "column",
     // Horizontal, with a range that does not start at zero.
     lv::slider({.max_value = 80, .min_value = -20, .size = {90 * pct, 20 * px},
                 .value = {35, false}})[
-        lv::label({.align = "center", .style = caption, .text = "Horizontal"})],
+        lv::label({.align = "center", .text = "Horizontal", .style = caption})],
     // Vertical because it says so.
     lv::slider({.max_value = 100, .min_value = 0,
                 .orientation = "vertical", .size = {20 * px, 130 * px},
                 .value = {60, false}})[
         lv::label({.align = "center",
-                   .style = caption | lv::style({.text_align = "center"}),
-                   .text = "V\ne\nr"})]];
+                   .text = "V\ne\nr",
+                   .style = caption | lv::style({.text_align = "center"})})]];
 
 }  // namespace
 

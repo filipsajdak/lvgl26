@@ -17,7 +17,7 @@ constinit lv::computed some{[](lv::counter c) { return c.value > 0; }, ticks};
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::label({.id = "count", .text = lv::bind(ticks, "{} ticks")}),
     lv::arc({.id = "dial", .range = {0, 240}, .value = 120}),
-    lv::label({.hidden = lv::bind(some), .id = "note", .text = "none yet"})];
+    lv::label({.id = "note", .hidden = lv::bind(some), .text = "none yet"})];
 
 lv::task<> run(lv::view<"arc"> dial) {
   co_await lv::sleep(50 * ms);

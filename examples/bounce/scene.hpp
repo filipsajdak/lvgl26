@@ -62,17 +62,17 @@ constexpr auto scene = lv::group()[
                .style = {.bg_color = tok.sky.top, .bg_grad_color = tok.sky.bottom, .bg_grad_dir = "ver",
                          .bg_opa = tok.solid}}),
     lv::group({.size = {100 * pct, 50 * pct},
+               .y = 50 * pct,
                .style = {.bg_color = tok.ground.top, .bg_grad_color = tok.ground.bottom, .bg_grad_dir = "ver",
-                         .bg_opa = tok.solid},
-               .y = 50 * pct}),
+                         .bg_opa = tok.solid}}),
     // A soft shadow, as under the sun: a dark oval, and over it a clear widget that blurs
     // what is behind it. (LVGL's blur works on a widget's own drawing or on its backdrop,
     // not on its children.)
     lv::group({.id = "shadow",
                .size = {shadow_box * px, (shadow_height + 2 * margin) * px},
                .y = (ground - shadow_height / 2 - margin) * px})[
-        lv::group({.align = "center",
-                   .id = "oval",
+        lv::group({.id = "oval",
+                   .align = "center",
                    .size = {ball * px, shadow_height * px},
                    .style = {.bg_color = tok.shadow.fill, .bg_opa = tok.shadow.strength, .radius = tok.ball.round}}),
         lv::group({.id = "frost",
@@ -156,8 +156,8 @@ inline void shape_shadow(const parts& p, int x, int y) {
   const int above = landing - y;
   const int shade = ball * 3 / 4 + ball * above / drop_height * 2 / 5;
   p.shadow.set({.x = (x + (box - shadow_box) / 2) * px});
-  p.oval.set({.style = lv::style({.bg_opa = lv::raw((shade_near - shade_fade * above / drop_height) * pct)}),
-              .width = shade * px});
+  p.oval.set({.width = shade * px,
+              .style = lv::style({.bg_opa = lv::raw((shade_near - shade_fade * above / drop_height) * pct)})});
   p.frost.set({.style = lv::style({.blur_radius = lv::raw((blur_near + blur_grow * above / drop_height) * px)})});
 }
 

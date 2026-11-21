@@ -12,25 +12,25 @@ constexpr auto sample = lv::style({.bg_opa = tok.opacity.opaque, .radius = tok.l
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.md})})[
     lv::label({.long_mode = "wrap",
-               .style = sample | lv::style({.bg_color = tok.label.sample.wrap}),
                .text = "Wrap keeps all text visible by splitting long lines into multiple rows.",
-               .width = 170 * px}),
+               .width = 170 * px,
+               .style = sample | lv::style({.bg_color = tok.label.sample.wrap})}),
     lv::label({.long_mode = "dots",
                .size = {170 * px, 32 * px},
-               .style = sample | lv::style({.bg_color = tok.label.sample.dots}),
-               .text = "Dots shortens overflowing text and replaces the tail with '...'"}),
+               .text = "Dots shortens overflowing text and replaces the tail with '...'",
+               .style = sample | lv::style({.bg_color = tok.label.sample.dots})}),
     lv::label({.long_mode = "scroll",
-               .style = sample | lv::style({.bg_color = tok.label.sample.scroll}),
                .text = "Scroll moves overflowing text back and forth inside the label area.",
-               .width = 170 * px}),
+               .width = 170 * px,
+               .style = sample | lv::style({.bg_color = tok.label.sample.scroll})}),
     lv::label({.long_mode = "scroll_circular",
-               .style = sample | lv::style({.bg_color = tok.label.sample.circular}),
                .text = "Scroll circular continuously loops overflowing text forever.",
-               .width = 170 * px}),
+               .width = 170 * px,
+               .style = sample | lv::style({.bg_color = tok.label.sample.circular})}),
     lv::label({.long_mode = "clip",
-               .style = sample | lv::style({.bg_color = tok.label.sample.clip}),
                .text = "Clip simply cuts any part that falls outside the label width.",
-               .width = 170 * px})];
+               .width = 170 * px,
+               .style = sample | lv::style({.bg_color = tok.label.sample.clip})})];
 
 }  // namespace
 

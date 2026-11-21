@@ -23,15 +23,15 @@ constexpr auto indicator = lv::style({.bg_color = tok.bar.indicator.from,
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.xl})})[
     // A tall bar with a named style for each part.
-    lv::bar({.max_value = 100, .min_value = 0, .size = {90 * pct, 22 * px}, .style = track,
-             .style_indicator = indicator, .value = {65, false}}),
+    lv::bar({.max_value = 100, .min_value = 0, .size = {90 * pct, 22 * px}, .value = {65, false},
+             .style = track, .style_indicator = indicator}),
     // A thin, flat bar with a style written in place.
     lv::bar({.max_value = 100, .min_value = 0, .size = {90 * pct, 10 * px},
+             .value = {35, false},
              .style = lv::style({.bg_color = tok.bar.flat.fill,
                                  .bg_opa = tok.opacity.opaque,
                                  .radius = tok.bar.flat.radius}) |
-                      tok.bar.flat.border,
-             .value = {35, false}})];
+                      tok.bar.flat.border})];
 
 }  // namespace
 

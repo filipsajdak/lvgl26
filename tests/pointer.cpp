@@ -19,7 +19,7 @@ int clicks = 0;
 void clicked() { ++clicks; }
 
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::button({.id = "go", .on_clicked = &clicked, .size = {100 * px, 50 * px}})[lv::label({.text = "Go"})],
+    lv::button({.id = "go", .size = {100 * px, 50 * px}, .on_clicked = &clicked})[lv::label({.text = "Go"})],
     lv::slider({.id = "level", .range = {0, 100}, .size = {200 * px, 20 * px}})];
 
 constinit lv::frame<320, 240> frame;

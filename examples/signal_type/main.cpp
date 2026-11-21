@@ -23,8 +23,8 @@ constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the si
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
                                 .size = {320 * px, 240 * px},
                                 .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
-    lv::label({.style = lv::style({.text_font = title}) | text.title, .text = "LIVING ROOM"}),  // and its spacing
-    lv::label({.style = {.text_font = reading}, .text = "21.5°"}),
+    lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
+    lv::label({.text = "21.5°", .style = {.text_font = reading}}),
     lv::label({.text = "Heating to 22 degrees."}),
     lv::button[lv::label({.text = "HOLD"})]];
 //! [tree]

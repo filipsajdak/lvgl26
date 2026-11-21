@@ -6,9 +6,10 @@
 //
 //   lv::props<"arc"> p{.id = "speedo", .range = {0, 240}, .rotation = 90 * lv::deg, .value = 120};
 //
-// Members are in alphabetical order, which is the order designated initializers
-// must follow. Every member is typed: a wrong name, a wrong unit, a bool where an
-// integer is expected and a narrowing conversion are all compile errors.
+// Members are in four groups: the id, the properties, the styles and the handlers, each in
+// alphabetical order. That is the order designated initializers must follow. Every member is
+// typed: a wrong name, a wrong unit, a bool where an integer is expected and a narrowing
+// conversion are all compile errors.
 //
 // A props struct is made with braces, also an empty one: `lv::props<"arc"> p{};`.
 // `lv::props<"arc"> p;` does not compile: see detail::made_with_braces.
@@ -169,6 +170,25 @@ consteval std::vector<named_style_slot> named_style_slots() {
   return slots;
 }
 
+// The group of a property by its name: the id, then the properties, then the styles (`style` and
+// `style_pressed`, ...), then the handlers (`on_clicked`, ...). The order of a props struct is by
+// group, then by name, and designated initializers must follow it.
+consteval int property_group(std::string_view name) {
+  if (name == "id"sv) return 0;
+  if (name == "style"sv || has_prefix(name, "style_"sv)) return 2;
+  if (has_prefix(name, "on_"sv)) return 3;
+  return 1;
+}
+
+// Whether property `a` comes before property `b`.
+struct property_order {
+  template <class Item>
+  consteval bool operator()(const Item& a, const Item& b) const {
+    const int ga = property_group(a.name), gb = property_group(b.name);
+    return ga != gb ? ga < gb : a.name < b.name;
+  }
+};
+
 // What every widget has: `id`, `style`, the lv_obj_set_* properties and the events.
 // `prefix` is "lv_obj_set_". It is a parameter, and the scans are handed on as
 // arguments, because of GCC 16.2: a call whose arguments are all constants, written
@@ -183,7 +203,7 @@ consteval std::vector<member_item> scan_base(std::string_view prefix) {
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
       items.push_back({std::define_static_string(name), ^^arg<handler>, e});
-  sort_by_name(items);
+  sort_by_name(items, property_order{});
   return items;
 }
 
@@ -211,7 +231,7 @@ consteval std::vector<member_item> own_members(std::string_view widget) {
   if (widget == "obj"sv) return own;
   const std::string prefix = "lv_" + str(widget) + "_set_";
   for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item<D>(f, prefix.size()));
-  sort_by_name(own);
+  sort_by_name(own, property_order{});
   return own;
 }
 
@@ -227,7 +247,7 @@ consteval std::vector<member_item> members(std::string_view widget) {
   std::size_t o = 0;
   for (std::size_t b = 0; b < base<D>.size(); b += 3) {
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
-    while (o < own.size() && own[o].name < name) items.push_back(own[o++]);
+    while (o < own.size() && property_order{}(own[o], member_item{name, {}, {}})) items.push_back(own[o++]);
     const bool overridden = o < own.size() && own[o].name == name;
     items.push_back(overridden ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2]});
   }

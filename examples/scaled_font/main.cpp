@@ -20,7 +20,7 @@ constexpr auto tok = lv::tokens<tokens_json>;
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};  // the size of the token: 16 px
 
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "reading", .style = {.text_font = lv::bind(reading)}, .text = "21.5"})];
+    lv::label({.id = "reading", .text = "21.5", .style = {.text_font = lv::bind(reading)}})];
 //! [font]
 
 constinit lv::frame<320, 240> frame;

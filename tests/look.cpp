@@ -82,15 +82,15 @@ static_assert(lv::look<"tile tile-print">.bg_color.set && lv::look<"tile-print" 
 constexpr auto tile_ui = lv::button({.id = "tile", .style = lv::look<"tile"> | lv::look<"tile-print">})[
     lv::group({.id = "inner", .style = lv::look<"tile-inner">})];
 
-constexpr auto status_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status">, .text = "PRINTING"});
-constexpr auto later_wins_ui = lv::label({.checked = true, .id = "status", .style = lv::look<"status status-loud">, .text = "X"});
-constexpr auto padded_ui = lv::box({.checked = true, .id = "padded", .style = lv::look<"padded">});
+constexpr auto status_ui = lv::label({.id = "status", .checked = true, .text = "PRINTING", .style = lv::look<"status">});
+constexpr auto later_wins_ui = lv::label({.id = "status", .checked = true, .text = "X", .style = lv::look<"status status-loud">});
+constexpr auto padded_ui = lv::box({.id = "padded", .checked = true, .style = lv::look<"padded">});
 constexpr auto gauge_ui = lv::slider({.id = "gauge", .style = lv::look<"gauge">});
 constexpr auto card_ui = lv::box({.id = "card", .style = lv::look<"card">});
 constexpr auto inherit_ui = lv::group({.id = "parent", .style = lv::look<"plain">})[lv::label({.id = "child", .text = "text"})];
 
 // A look merged with lv::on and with a style: the later one wins, the layers are kept.
-constexpr auto combined_ui = lv::label({.checked = true, .id = "combined",
+constexpr auto combined_ui = lv::label({.id = "combined", .checked = true,
                                         .style = lv::look<"status"> | lv::on("pressed", {.text_color = tok.color.ink}) |
                                                  lv::style({.radius = tok.flat.pad_all})});
 
@@ -108,20 +108,20 @@ constexpr auto main_then_wide_ui = lv::box({.id = "main_then_wide", .style = lv:
 // A node's own style, lv::on and a theme follow the rule of a look: a long form beats a shorthand, and a narrower
 // shorthand (pad_hor) beats a wider one (pad_all).
 constexpr auto shorthands_style = lv::style({.pad_all = tok.flat.pad_all, .pad_hor = tok.tile.radius, .pad_right = tok.tile.width});
-constexpr auto on_shorthands_ui = lv::box({.checked = true, .id = "on_shorthands", .style = lv::on("checked", shorthands_style)});
+constexpr auto on_shorthands_ui = lv::box({.id = "on_shorthands", .checked = true, .style = lv::on("checked", shorthands_style)});
 constexpr auto own_shorthands_ui = lv::box({.id = "own_shorthands", .style = shorthands_style});
 constexpr auto shorthand_theme = lv::theme({.obj = {.style = shorthands_style}});
 constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
-constexpr auto ext_layer_ui = lv::label({.checked = true, .id = "ext", .style = lv::look<"flex-ext">, .text = "x"});
+constexpr auto ext_layer_ui = lv::label({.id = "ext", .checked = true, .text = "x", .style = lv::look<"flex-ext">});
 
 // Defaults of a factory give way to a look that says it.
 constexpr auto fills_ui = lv::group({.id = "fills"});
 constexpr auto sized_ui = lv::group({.id = "sized", .style = lv::look<"tile">});
 constexpr auto wide_ui = lv::group({.id = "wide", .style = lv::look<"wide">});
 constexpr auto own_ui = lv::group({.id = "own", .size = {30 * px, 20 * px}, .style = lv::look<"tile">});
-constexpr auto own_width_ui = lv::group({.id = "own_width", .style = lv::look<"tall">, .width = 30 * px});
-constexpr auto own_height_ui = lv::group({.height = 20 * px, .id = "own_height", .style = lv::look<"wide">});
-constexpr auto checked_wide_ui = lv::group({.checked = true, .id = "checked_wide", .style = lv::look<"checked-wide">});
+constexpr auto own_width_ui = lv::group({.id = "own_width", .width = 30 * px, .style = lv::look<"tall">});
+constexpr auto own_height_ui = lv::group({.id = "own_height", .height = 20 * px, .style = lv::look<"wide">});
+constexpr auto checked_wide_ui = lv::group({.id = "checked_wide", .checked = true, .style = lv::look<"checked-wide">});
 constexpr auto width_only_ui = lv::group({.id = "width_only", .width = 30 * px});
 constexpr auto flow_ui = lv::row({.id = "flow", .style = lv::look<"tile">});
 constexpr auto row_ui = lv::row({.id = "row"});

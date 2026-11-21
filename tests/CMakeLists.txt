@@ -524,6 +524,7 @@ lvgl26_compile_fail_message(set_constexpr_props deleted "lv: pass the properties
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail_message(props_needs_unit static_assert "lv: wrong value for this property. It takes a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length). You gave int.")
 lvgl26_compile_fail_message(props_wrong_unit static_assert "lv: wrong value for this property. It takes an angle in whole degrees (90 * lv::deg). You gave lv::length.")
+lvgl26_compile_fail(props_wrong_order "designator order for field .*::id. does not match declaration order")
 lvgl26_compile_fail_message(props_bool_as_int static_assert "lv: wrong value for this property. It takes a whole number (not bool, not floating point). You gave bool.")
 lvgl26_compile_fail_message(props_narrowing static_assert "lv: wrong value for this property. It takes a whole number (not bool, not floating point). You gave double.")
 lvgl26_compile_fail(units_negative_time "contract predicate is false in constant expression")

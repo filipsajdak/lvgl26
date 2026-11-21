@@ -37,14 +37,14 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                          .pad_row = tok.page.pad_row,
                                          .text_color = tok.page.text_color,
                                          .text_font = type(tok.page.text_font)}})[
-    lv::label({.style = {.text_font = type(tok.title.text_font)}, .text = "Printer"}),
+    lv::label({.text = "Printer", .style = {.text_font = type(tok.title.text_font)}}),
     lv::group({.flex_flow = "row",
                .style = {.height = tok.tiles.height, .pad_column = tok.tiles.pad_column, .width = tok.tiles.width}})[
         tile(names::print, tok.tile_print), tile(names::scan, tok.tile_scan), tile(names::copy, tok.tile_copy)],
     lv::label({.checked = true,
+               .text = "Ready to print",
                .style = {.text_color = tok.status.text_color},
-               .style_checked = {.text_color = tok.status.checked.text_color},
-               .text = "Ready to print"})];
+               .style_checked = {.text_color = tok.status.checked.text_color}})];
 //! [before]
 
 }  // namespace looks::before

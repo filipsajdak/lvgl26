@@ -58,7 +58,7 @@ static_assert(!lv::dependency<bool> && !lv::dependency<lv::state<bool>*>);
 
 constexpr auto ui = lv::column({.flex_flow = lv::bind(flow), .size = {320 * px, 240 * px}})[
     lv::label({.id = "advice", .text = lv::bind(advice)}),
-    lv::label({.hidden = lv::bind(over_limit), .id = "warning", .text = "!"}),
+    lv::label({.id = "warning", .hidden = lv::bind(over_limit), .text = "!"}),
     lv::label({.id = "gap", .text = lv::bind(gap)}),  // shown with its unit
     lv::label({.id = "gap_text", .text = lv::bind(gap, "{} over")}),
     lv::bar({.id = "bar", .range = {-240, 240}, .value = lv::bind(gap)}),

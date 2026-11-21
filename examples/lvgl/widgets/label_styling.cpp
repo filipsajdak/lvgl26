@@ -27,8 +27,8 @@ constexpr auto callout = lv::style({.bg_color = tok.label.callout.fill,
 
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::label({.style = badge, .text = "NEW"}),
-    lv::label({.style = callout, .text = "Heads up"})];
+    lv::label({.text = "NEW", .style = badge}),
+    lv::label({.text = "Heads up", .style = callout})];
 
 }  // namespace
 

@@ -13,10 +13,10 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::slider({.max_value = 100, .min_value = 0, .size = {90 * pct, 20 * px},
                 .value = {30, false}})[
-        lv::label({.align = "center", .style = caption, .text = "0..100"})],
+        lv::label({.align = "center", .text = "0..100", .style = caption})],
     lv::slider({.max_value = 0, .min_value = 100, .size = {90 * pct, 20 * px},
                 .value = {30, false}})[
-        lv::label({.align = "center", .style = caption, .text = "100..0"})]];
+        lv::label({.align = "center", .text = "100..0", .style = caption})]];
 
 }  // namespace
 

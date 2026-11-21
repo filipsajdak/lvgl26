@@ -138,12 +138,21 @@ def enum_struct(enum: str, names: list[str]) -> str:
             f"}};")
 
 
+def property_group(name: str) -> int:
+    """0 for the id, 1 for properties, 2 for styles, 3 for handlers: include/lv/props.hpp, property_group."""
+    if name == "id":
+        return 0
+    if name == "style" or name.startswith("style_"):
+        return 2
+    return 3 if name.startswith("on_") else 1
+
+
 def members_of(reference: dict, widget: str) -> list[dict]:
-    """The members of props<widget>, in alphabetical order: its own win over the base's."""
+    """The members of props<widget>: by group, then by name. Its own win over the base's."""
     own = reference["widgets"].get(widget, [])
     own_names = {member["name"] for member in own}
     kept = [member for member in reference["base"] if member["name"] not in own_names] + own
-    return sorted(kept, key=lambda member: member["name"])
+    return sorted(kept, key=lambda member: (property_group(member["name"]), member["name"]))
 
 
 def widgets_of(reference: dict) -> list[str]:
@@ -161,7 +170,7 @@ def style_struct(reference: dict) -> str:
 def props_struct(reference: dict, widget: str) -> str:
     members = "\n".join(props_member(member, reference["enums"]) for member in members_of(reference, widget))
     name = identifier(widget)
-    return (f'/// The properties of the LVGL widget "{widget}", in alphabetical order.\n'
+    return (f'/// The properties of the LVGL widget "{widget}": the id, the properties, the styles, the handlers, each in alphabetical order.\n'
             f"struct props_{name} {{\n{members}\n}};\n"
             f'template <>\nstruct props_for<"{widget}"> {{\n  using type = props_{name};\n}};')
 

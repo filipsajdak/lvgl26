@@ -66,10 +66,10 @@ static_assert(lv::detail::characters_of("\xF0\x9F\x98\x80") == std::vector<std::
 static_assert(lv::detail::hex(0xb0) == "00B0" && lv::detail::hex(0x1f600) == "1F600");
 
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "body", .style = {.text_font = body}, .text = "The quick brown fox, AVATAR To."}),
-    lv::label({.id = "title", .style = {.text_font = title}, .text = "Speed 120 km/h"}),
-    lv::label({.id = "odd", .style = {.text_font = lv::raw(odd)}, .text = "Reset {}[]@#"}),
-    lv::label({.id = "digits", .style = {.text_font = lv::raw(digits)}, .text = "12:45"})];
+    lv::label({.id = "body", .text = "The quick brown fox, AVATAR To.", .style = {.text_font = body}}),
+    lv::label({.id = "title", .text = "Speed 120 km/h", .style = {.text_font = title}}),
+    lv::label({.id = "odd", .text = "Reset {}[]@#", .style = {.text_font = lv::raw(odd)}}),
+    lv::label({.id = "digits", .text = "12:45", .style = {.text_font = lv::raw(digits)}})];
 
 struct glyph {
   bool found;

@@ -28,7 +28,7 @@ constinit lv::scaled_font title{barlow_ttf, tok.text.title};  // 20 px
 constinit lv::scaled_font odd{barlow_ttf, lv::raw(31 * px)};
 
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .style = {.text_color = tok.color.text, .text_font = lv::bind(title)}, .text = "Wake up"}),
+    lv::label({.id = "title", .text = "Wake up", .style = {.text_color = tok.color.text, .text_font = lv::bind(title)}}),
     lv::label({.id = "plain", .text = "Wake up"})];
 
 std::size_t used_bytes() {

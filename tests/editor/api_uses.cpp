@@ -274,15 +274,15 @@ static_assert(requires { lv::option_text<quality>::of(quality::best); });
 // ---- the tree ---------------------------------------------------------------------
 
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "start"}, .size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .style = {.text_font = label_font}, .text = "Speed"}),
-    lv::label({.style = {.text_font = lv::raw(odd_font)}, .text = lv::bind(speed)}),
-    lv::label({.style = {.text_font = lv::bind(reading)}, .text = lv::bind(clicks, "{} clicks")}),
+    lv::label({.id = "title", .text = "Speed", .style = {.text_font = label_font}}),
+    lv::label({.text = lv::bind(speed), .style = {.text_font = lv::raw(odd_font)}}),
+    lv::label({.text = lv::bind(clicks, "{} clicks"), .style = {.text_font = lv::bind(reading)}}),
     lv::arc({.id = "speedo", .range = {0, 240}, .rotation = 90 * deg, .value = lv::bind(speed)}),
     lv::bar({.id = "level", .value = {10, false}, .width = 50 * pct}),
-    lv::slider({.id = "volume", .style_knob = card, .value = {3, false}}),
-    lv::toggle({.checked = true, .id = "power"}),
+    lv::slider({.id = "volume", .value = {3, false}, .style_knob = card}),
+    lv::toggle({.id = "power", .checked = true}),
     lv::checkbox({.id = "agree", .text = "Yes"}),
-    lv::image({.align = "center", .id = "picture", .rotation = 22.5 * deg, .src = dot}),
+    lv::image({.id = "picture", .align = "center", .rotation = 22.5 * deg, .src = dot}),
     lv::image({.src = kept_dot}),
     lv::textarea({.id = "note", .one_line = true}),
     lv::dropdown({.id = "choice", .options = "a\nb"}),
@@ -292,8 +292,8 @@ constexpr auto ui = lv::column({.flex_align = {"center", "center", "start"}, .si
     lv::roller({.id = "wheel", .options = {{"Mon", "Tue", "Wed"}, "infinite"}}),
     lv::spinner({.id = "busy"}),
     lv::widget<"spinbox">({.id = "count", .range = {0, 9}}),
-    lv::row[lv::box({.hidden = lv::bind(over_limit), .id = "card", .style = loud})],
-    lv::group[lv::button({.id = "reset", .on_clicked = &reset, .on_pressed = &seen, .style_pressed = {.bg_color = tok.color.ink}})[
+    lv::row[lv::box({.id = "card", .hidden = lv::bind(over_limit), .style = loud})],
+    lv::group[lv::button({.id = "reset", .style_pressed = {.bg_color = tok.color.ink}, .on_clicked = &reset, .on_pressed = &seen})[
         lv::label({.text = "Reset"})]]];
 
 static_assert(ui.id().empty());
@@ -623,7 +623,7 @@ constexpr lv::easing eases[] = {
 // ---- parts: the concepts that constrain their parameters --------------------------
 
 constexpr auto heading(const char* name, const lv::font_value auto& font) {
-  return lv::label({.style = {.text_font = font}, .text = name});
+  return lv::label({.text = name, .style = {.text_font = font}});
 }
 constexpr auto filled(lv::token_of<lv_color_t> auto fill, lv::style_value auto extra) {
   return lv::box({.style = extra | lv::style({.bg_color = fill})});

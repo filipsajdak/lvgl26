@@ -359,10 +359,10 @@ speed = <span class="n">3</span> * m;          <span class="c">// error: not a s
                 .style = <span class="t">lv::style</span>({.bg_color = T.color.card, .bg_opa = T.opacity.opaque,
                                     .pad_all = T.card.padding, .radius = T.card.radius}) |
                          T.card.border | T.card.shadow})[
-        <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .style = <span class="t">lv::style</span>({.text_color = T.color.text}) | T.text.title,
-                   .text = <span class="s">"Speed"</span>}),
-        <span class="t">lv::label</span>({.style = {.text_color = T.color.primary, .text_opa = T.opacity.muted},
-                   .text = <span class="s">"120 km/h"</span>})]];
+        <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .text = <span class="s">"Speed"</span>,
+                   .style = <span class="t">lv::style</span>({.text_color = T.color.text}) | T.text.title}),
+        <span class="t">lv::label</span>({.text = <span class="s">"120 km/h"</span>,
+                   .style = {.text_color = T.color.primary, .text_opa = T.opacity.muted}})]];
 
 <span class="k">auto</span> d = <span class="t">lv::mount</span>&lt;themed&lt;dark&gt;&gt;(screen);
 <span class="k">auto</span> l = <span class="t">lv::mount</span>&lt;themed&lt;light&gt;&gt;(screen);</code></pre>

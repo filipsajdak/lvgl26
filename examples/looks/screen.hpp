@@ -45,9 +45,9 @@ constexpr auto tile = []<action Action> {
 };
 
 constexpr auto ui = lv::group({.style = lv::look<"page">})[
-    lv::label({.style = lv::look<"title">, .text = "Printer"}),
+    lv::label({.text = "Printer", .style = lv::look<"title">}),
     lv::group({.style = lv::look<"tiles">})[lv::for_each<action, lv::but<action::none>>(tile)],
-    lv::label({.checked = true, .style = lv::look<"status">, .text = "Ready to print"})];
+    lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})];
 //! [tree]
 
 }  // namespace looks

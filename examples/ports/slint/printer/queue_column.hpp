@@ -24,8 +24,8 @@ constexpr auto detail_font = type(tok.text.detail);
 // One line of the details: the name of a value, and the value.
 constexpr auto detail_line(const char* name, auto value) {
   return lv::group({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
-      lv::label({.style = {.text_color = tok.label.detail, .text_font = detail_font}, .text = name}),
-      lv::label({.style = {.text_color = tok.label.value, .text_font = detail_font}, .text = value})];
+      lv::label({.text = name, .style = {.text_color = tok.label.detail, .text_font = detail_font}}),
+      lv::label({.text = value, .style = {.text_color = tok.label.value, .text_font = detail_font}})];
 }
 
 //! [card]
@@ -43,13 +43,13 @@ constexpr auto card =
                        .style = {.bg_color = tok.label.tertiary, .bg_opa = tok.solid, .radius = tok.queue.dot},
                        .style_checked = {.bg_color = tok.label.secondary}}),
             lv::label({.checked = lv::bind(&job::printing),
+                       .text = lv::bind(&job::status),
                        .style = {.text_color = tok.label.tertiary, .text_font = status_font},
-                       .style_checked = {.text_color = tok.label.secondary},
-                       .text = lv::bind(&job::status)})],
+                       .style_checked = {.text_color = tok.label.secondary}})],
         lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .state_trickle = true})[
             lv::label({.size = {100 * pct, lv::size_content},
-                       .style = {.text_color = tok.label.primary, .text_font = small_font},
-                       .text = lv::bind(&job::title)}),
+                       .text = lv::bind(&job::title),
+                       .style = {.text_color = tok.label.primary, .text_font = small_font}}),
             lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
                        .style = {.max_height = tok.space.none},
                        .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap}})[
@@ -58,13 +58,13 @@ constexpr auto card =
 //! [card]
 
 constexpr auto queue_column = lv::group({.size = {column_width * px, 100 * pct},
-                               .style = {.bg_color = tok.queue.background, .bg_opa = tok.solid},
-                               .x = (page_width - column_width) * px})[
+                               .x = (page_width - column_width) * px,
+                               .style = {.bg_color = tok.queue.background, .bg_opa = tok.solid}})[
     lv::group({.size = {1 * px, 100 * pct}, .style = {.bg_color = tok.queue.separator, .bg_opa = tok.solid}}),
-    lv::label({.style = {.text_color = tok.label.primary, .text_font = heading_font},
-               .text = "Printing Queue", .x = margin * px, .y = margin * px}),
+    lv::label({.text = "Printing Queue",
+               .x = margin * px, .y = margin * px, .style = {.text_color = tok.label.primary, .text_font = heading_font}}),
     lv::group({.flex_flow = "column", .size = {100 * pct, (window_height - list_top) * px},
-               .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}, .y = list_top * px})[
+               .y = list_top * px, .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}})[
         lv::each(queue, &job::id)[card]]];
 
 }  // namespace printer::queue_part

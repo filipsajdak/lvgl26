@@ -100,7 +100,7 @@ int clicks = 0;
 void clicked() { ++clicks; }
 
 constexpr auto ui = lv::column({.size = {160 * px, 120 * px}})[
-    lv::button({.id = "go", .on_clicked = &clicked, .size = {80 * px, 40 * px}})[lv::label({.id = "text", .text = "Go"})]];
+    lv::button({.id = "go", .size = {80 * px, 40 * px}, .on_clicked = &clicked})[lv::label({.id = "text", .text = "Go"})]];
 
 lv::point middle(lv::obj widget) {
   lv_area_t at;

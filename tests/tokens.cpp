@@ -203,10 +203,10 @@ constexpr auto themed = lv::column(
                 .style = lv::style({.bg_color = T.color.card, .bg_opa = T.opacity.opaque,
                                     .pad_all = T.card.padding, .radius = T.card.radius}) |
                          T.card.border | T.card.shadow})[
-        lv::label({.id = "title", .style = lv::style({.text_color = T.color.text}) | T.text.title,
-                   .text = "Speed"}),
-        lv::label({.style = {.text_color = T.color.primary, .text_opa = T.opacity.muted},
-                   .text = "120 km/h"})]];
+        lv::label({.id = "title", .text = "Speed",
+                   .style = lv::style({.text_color = T.color.text}) | T.text.title}),
+        lv::label({.text = "120 km/h",
+                   .style = {.text_color = T.color.primary, .text_opa = T.opacity.muted}})]];
 
 bool same(lv_color_t a, lv_color_t b) {
   return a.red == b.red && a.green == b.green && a.blue == b.blue;

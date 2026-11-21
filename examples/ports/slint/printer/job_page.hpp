@@ -25,7 +25,7 @@ constexpr auto job_page(const char* title, const char* second_name, const char* 
                     .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
       back_header(title, "Choose Settings", fonts.title, fonts.body),
       lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
-                  .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}, .y = header_height * px})[
+                  .y = header_height * px, .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}})[
           lv::group({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.card}})[
               spin_box("Copies", options::count, &options::fewer, &options::more, fonts.body),
               color_button(options::color_label, item_width, control_height, &options::toggle_color, fonts.body)],

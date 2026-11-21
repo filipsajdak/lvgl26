@@ -26,7 +26,7 @@ constexpr auto group_ui = lv::group({.id = "g"});
 constexpr auto row_ui = lv::row({.id = "r"});
 constexpr auto column_ui = lv::column({.id = "c"});
 constexpr auto own_width_ui = lv::group({.id = "g", .width = 30 * px});
-constexpr auto own_flow_ui = lv::row({.flex_flow = "column", .id = "r"});
+constexpr auto own_flow_ui = lv::row({.id = "r", .flex_flow = "column"});
 constexpr auto plain_ui = lv::box({});
 
 // The start of each kind, as the cascade sees it.

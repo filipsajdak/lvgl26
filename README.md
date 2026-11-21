@@ -404,7 +404,7 @@ constexpr unsigned char barlow_ttf[] = {
 constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
 constexpr auto title = type(tok.text.title);          // family, weight and size from the token
 
-lv::label({.style = {.text_font = title}, .text = "Wake up"})
+lv::label({.text = "Wake up", .style = {.text_font = title}})
 ```
 
 Where the size is only known on the device, `lv::scaled_font` lets the device draw the glyphs, and a
@@ -429,7 +429,7 @@ A photo or a large picture can stay a file that the device decodes: `lv::encoded
 
 Rules to know:
 
-- Designated initializers must be in alphabetical order (`.id`, `.range`, `.value`). This is a C++ rule.
+- Designated initializers must be in the order of the props: the id, then the properties, then the styles, then the handlers, each group alphabetical (`.id`, `.range`, `.value`, `.style`, `.on_clicked`). This is a C++ rule for members in declaration order, and `python3 tools/order_properties.py <files>` moves the properties of existing code.
 - A misspelled or misordered member is reported as `could not convert '{...}' to props<"arc">`.
   GCC does not name the member in that case.
 - `lv::widget<"spinbox">({...})` reaches any widget that has no short name.

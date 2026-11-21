@@ -21,8 +21,8 @@ constexpr auto accent = lv::style({.line_color = tok.scale.accent,
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::widget<"scale">({.label_show = true, .major_tick_every = 4, .max_value = 100, .min_value = 0,
-               .mode = "horizontal_bottom", .size = {280 * px, 80 * px}, .style = axis,
-               .style_indicator = accent, .style_items = minor, .total_tick_count = 21})];
+               .mode = "horizontal_bottom", .size = {280 * px, 80 * px}, .total_tick_count = 21,
+               .style = axis, .style_indicator = accent, .style_items = minor})];
 
 }  // namespace
 

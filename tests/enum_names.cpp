@@ -54,7 +54,7 @@ constexpr auto look = lv::style({.bg_grad_dir = "ver", .text_align = "right"});
 
 constexpr auto ui = lv::column({.flex_align = {"center", "end", "space_between"},
                                 .size = {200 * px, 100 * px}})[
-    lv::label({.align = "bottom_right", .id = "corner", .style = look, .text = "x"}),
+    lv::label({.id = "corner", .align = "bottom_right", .text = "x", .style = look}),
     lv::label({.id = "plain", .text = "y"}),
     lv::image({.id = "picture", .inner_align = "top_left"}),
     // A name beside a value of another kind: lv_roller_set_options takes a text, then a mode.
