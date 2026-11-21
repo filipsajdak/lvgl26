@@ -15,8 +15,9 @@ int main() {
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
   lv::pointer mouse{display, window};       // the window's mouse feeds it
 
-  app::running application{display.screen()};
-  if (!application.ok()) return 2;
+  auto root = lv::mount<app::ui>(display.screen());
+  if (!root) return 2;
+  app::start(root);                         // the application's task, on the mounted tree
   return app.run();                         // until the window is closed
 }
 ```
@@ -52,7 +53,7 @@ A lambda without captures works as well. A lambda that captures is a compile err
 
 ## One application, three platforms
 
-The applications of `examples/wasm` (`counter/app.hpp`, `bounce/app.hpp`) know no platform: a tree, states, handlers and a task, and the three things a platform needs, `app::width`, `app::height` and `app::running`. Each platform gives them an `lv::display` and an `lv::pointer`:
+The applications of `examples/wasm` (`counter/app.hpp`, `bounce/app.hpp`) know no platform: a tree, states, handlers and a task, and what a platform needs: `app::width`, `app::height`, the tree `app::ui` and `app::start(root)`, which starts its task on the mounted tree. The platform mounts the tree and checks the result. Each platform gives them an `lv::display` and an `lv::pointer`:
 
 - The browser page: `examples/wasm/platform.cpp` feeds the pointer with each event of the page as it comes, a press, a move or a release; a press and a release within one frame both wait in the queue for the next step.
 - The desktop window: `examples/window/main.cpp`, shown above, through `examples/platform/sdl_window.hpp`, a window that shows the frame and a mouse that feeds the pointer. It is the one file that names SDL.

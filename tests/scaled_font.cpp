@@ -89,6 +89,13 @@ void is_made_on_first_use_and_given_back() {
   check(used_bytes() == before);
 }
 
+// A font that was never used has made nothing, and gives nothing back.
+void gives_back_nothing_when_never_made() {
+  const auto before = used_bytes();
+  { lv::scaled_font unused{barlow_ttf, lv::raw(18 * px)}; }
+  check(used_bytes() == before);
+}
+
 // A size the compiler cannot see, so that the contract is checked when the program runs.
 volatile int no_size = 0, less_than_none = -5;
 
@@ -103,6 +110,7 @@ int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   is_made_on_first_use_and_given_back();
+  gives_back_nothing_when_never_made();
   follows_its_font();
   binds_through_a_view();
   title.reset();

@@ -230,6 +230,29 @@ class Parts(unittest.TestCase):
                 mutation.mutants_of_part([1, 2], bad)
 
 
+class GitInTheCopy(unittest.TestCase):
+    def test_a_failure_of_git_stops_the_run_and_shows_what_git_printed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "a.json").write_text("{}")
+            mutation.track_files(tree)
+            (tree / ".git" / "index.lock").write_text("")  # a second git at work: add -A cannot go on
+            with self.assertRaises(SystemExit) as stopped:
+                mutation.track_files(tree)
+            self.assertIn("index.lock", str(stopped.exception))
+            self.assertIn("ended with 128", str(stopped.exception))
+
+    def test_git_is_told_to_trust_the_directory(self):
+        calls = []
+        saved = mutation.subprocess.run
+        mutation.subprocess.run = lambda command, **kw: calls.append(command) or subprocess.CompletedProcess(command, 0, "", "")
+        try:
+            mutation.git_in("somewhere", "status")
+        finally:
+            mutation.subprocess.run = saved
+        self.assertEqual(calls, [["git", "-c", "safe.directory=*", "status"]])
+
+
 class CommentMutants(unittest.TestCase):
     ORIGINAL = "int a = 1;\n  // a note\nint b = 2;\n"
 
@@ -245,13 +268,21 @@ class CommentMutants(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             comment = "int a = 1;\n  /*// a note*/\nint b = 2;\n"
             code = "int a = 1;\n  // a note\nint b = 3;\n"
-            kept = mutation.without_comment_mutants(self.mutants(directory, [comment, code]), self.ORIGINAL)
+            kept = mutation.without_unjudgeable_mutants(self.mutants(directory, [comment, code]), self.ORIGINAL)
+            self.assertEqual([m.name for m in kept], ["m1.hpp"])
+
+    def test_a_guard_is_dropped_and_a_static_assert_taken_out_is_judged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original = "#pragma once\nstatic_assert(sizeof(int) == 4);\nint b;\n"
+            guard = original.replace("#pragma once", "/*#pragma once*/")
+            gone = original.replace("static_assert(sizeof(int) == 4);", "/*static_assert(sizeof(int) == 4);*/")
+            kept = mutation.without_unjudgeable_mutants(self.mutants(directory, [guard, gone]), original)
             self.assertEqual([m.name for m in kept], ["m1.hpp"])
 
     def test_a_trailing_comment_does_not_make_a_line_a_comment(self):
         with tempfile.TemporaryDirectory() as directory:
             original = "int a = 1;  // one\n"
-            kept = mutation.without_comment_mutants(self.mutants(directory, ["int a = 2;  // one\n"]), original)
+            kept = mutation.without_unjudgeable_mutants(self.mutants(directory, ["int a = 2;  // one\n"]), original)
             self.assertEqual(len(kept), 1)
 
 
