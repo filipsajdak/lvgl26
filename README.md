@@ -46,6 +46,8 @@ How it works:
   A wrong name is a compile error that lists the names.
 - **Mistakes are compile errors.** A wrong value says what the property takes and what you gave.
   A wrong id lists the ids of the tree.
+- **Properties first, then the children.** `lv::group({...}, lv::label({...}), lv::each(tracks, &track::id, row))`:
+  each child is an argument, so a formatter lays the tree out as nested blocks. `lv::group({...})[...]` builds the same node.
 - **The tree costs nothing at run time.** `lv::mount<ui>` reads it at compile time; an optimized build
   contains only the LVGL calls for the properties that are set.
 - **Views never delete.** `lv::view<"arc">` is one pointer. `lv::mount` and `lv::owned<T>` own widgets;
@@ -55,9 +57,9 @@ How it works:
   carries its own failure: `if (!root) return root.error();`. It lives in a variable, in a `constinit`
   global with `page.mount(parent)` and `page.unmount()`, for a window that opens and closes in the
   same memory. See [Where a tree lives](docs/mounting.md).
-- **Pages that follow a state** (`#include <lv/shown.hpp>`). `lv::shown(current)[lv::is<page::home>(home), lv::otherwise()]`
-  shows the tree of the value of a state of an enum or a bool, and `lv::when(offline)[banner]` a tree while a flag is
-  true. Every value has one arm, checked by the compiler. `lv::shown(current, {.enter = slide_in, .leave = slide_out})`
+- **Pages that follow a state** (`#include <lv/shown.hpp>`). `lv::shown(current, lv::is<page::home>(home), lv::otherwise())`
+  shows the tree of the value of a state of an enum or a bool, and `lv::when(offline, banner)` a tree while a flag is
+  true. Every value has one arm, checked by the compiler. `lv::shown(current, {.enter = slide_in, .leave = slide_out}, arms...)`
   slides pages with `lv::transition`: the new page is built before the old one leaves. A page of another file is
   `extern const lv::page home_page;`, defined there as `lv::page_of<ui>`, with no size to write. A switch allocates
   nothing of lvgl26's; `lv::settle()` switches at once. See `examples/pages`.

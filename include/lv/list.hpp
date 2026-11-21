@@ -1165,21 +1165,42 @@ struct each_node {
 }  // namespace detail
 
 // A row of the row template for each row of `rows`, named by the key `key`. See the top of this file.
-//   lv::each(tracks, &track::id)[row template]
-//   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)})[row template]
-template <detail::row_source S, class T, class K>
+//   lv::each(tracks, &track::id, row template)
+//   lv::each(tracks, &track::id, {.on_row = &start, .selected = lv::bind(current)}, row template)
+// lv::each(tracks, &track::id)[row template] builds the same node. One template for every form,
+// so that a call has as few candidates to try as before the row template became an argument: the
+// first argument after the key is the options in braces (`O` keeps its default), or the row template.
+template <detail::row_source S, class T, class K, class O = detail::each_options<T, K>, class... R>
   requires std::same_as<typename S::value_type, T>
-constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::each_options<T, K> options = {}) {
+constexpr auto each(const S& rows, K T::* key, const O& first = {}, const R&... row_template) {
   static_assert(detail::row_key<K>,
                 "lv: a key names one row, and is compared as a state compares its value. Give it a "
                 "named type, `struct track_id { int value; };`, or an enum. To allow plain integers, "
                 "set rules.raw_integer_state in the settings.");
-  return {&rows, key, options, {}};
+  if constexpr (tree_node<O>) {
+    static_assert(sizeof...(R) == 0,
+                  "lv: the last argument of lv::each is its row template, one widget: "
+                  "lv::each(tracks, &track::id, {...}, track_row).");
+    return detail::each_node<S, T, K, O>{&rows, key, {}, {first}};
+  } else {
+    static_assert(std::same_as<O, detail::each_options<T, K>>,
+                  "lv: lv::each takes the options in braces, then the row template: "
+                  "lv::each(tracks, &track::id, {...}, track_row).");
+    if constexpr (sizeof...(R) == 0) {
+      return detail::each_node<S, T, K>{&rows, key, first, {}};
+    } else {
+      static_assert(sizeof...(R) == 1 && (tree_node<R> && ...),
+                    "lv: the last argument of lv::each is its row template, one widget: "
+                    "lv::each(tracks, &track::id, {...}, track_row).");
+      // Built in one step, as each(rows, key, options)[row_template] would be in two.
+      return detail::each_node<S, T, K, R...>{&rows, key, first, {row_template...}};
+    }
+  }
 }
 
 template <class S, class M, class... O>
 void each(const S&, M, O&&...) = delete(
     "lv: lv::each takes an lv::list and the member of its rows that holds the key: "
-    "lv::each(tracks, &track::id)[...].");
+    "lv::each(tracks, &track::id, track_row).");
 
 }  // namespace lv

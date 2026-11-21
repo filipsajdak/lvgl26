@@ -99,12 +99,26 @@ template <const auto& Tree, detail::fixed Name>
 using view_of_id =
     view<detail::fixed<kind_of_id<Tree, Name>.size() + 1>{kind_of_id<Tree, Name>.data(), kind_of_id<Tree, Name>.size()}>;
 
-/// What lv::arc is: call it with properties, index it with children.
-///   lv::arc({.value = 1})      lv::button({...})[lv::label({...})]      lv::box[...]
+/// What lv::arc is: call it with properties, then its children.
+///   lv::arc({.value = 1})      lv::button({...}, lv::label({...}))      lv::box(child, child)
 template <detail::fixed W>
 struct factory {
   /// A node with these properties. They are in alphabetical order.
   constexpr node<W> operator()(const props<W>& p = {}) const { return {p.id}; }
+
+  /// A node with these properties and these children: lv::group({...}, lv::label({...})).
+  template <detail::tree_child... Kids>
+    requires(sizeof...(Kids) > 0)
+  constexpr node<W, Kids...> operator()(const props<W>& p, const Kids&... kids) const {
+    return {p.id, {kids...}};
+  }
+
+  /// A node without properties, with these children: lv::column(lv::label({...})).
+  template <detail::tree_child... Kids>
+    requires(sizeof...(Kids) > 0)
+  constexpr node<W, Kids...> operator()(const Kids&... kids) const {
+    return {{}, {kids...}};
+  }
 
   /// A node without properties, with these children.
   template <detail::tree_child... Kids>
