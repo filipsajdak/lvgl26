@@ -727,37 +727,28 @@ consteval bool is_one_of(std::string_view s, std::initializer_list<std::string_v
   return false;
 }
 
-// The order of items that have a `name`: by that name.
-struct by_name {
-  template <class Item>
-  consteval bool operator()(const Item& a, const Item& b) const {
-    return a.name < b.name;
-  }
-};
-
 // Merges the sorted runs from[lo, mid) and from[mid, hi) of indices into items into to[lo, hi),
-// in the order `before`. On equal items the first run goes first, so the sort is stable.
-template <class Item, class Before>
-consteval void merge_sorted(const std::vector<Item>& items, const std::vector<std::size_t>& from,
-                            std::vector<std::size_t>& to, std::size_t lo, std::size_t mid, std::size_t hi,
-                            Before before) {
+// by name. On equal names the first run goes first, so the sort is stable.
+template <class Item>
+consteval void merge_by_name(const std::vector<Item>& items, const std::vector<std::size_t>& from,
+                             std::vector<std::size_t>& to, std::size_t lo, std::size_t mid, std::size_t hi) {
   std::size_t i = lo, j = mid, k = lo;
-  while (i < mid && j < hi) to[k++] = before(items[from[j]], items[from[i]]) ? from[j++] : from[i++];
+  while (i < mid && j < hi) to[k++] = items[from[j]].name < items[from[i]].name ? from[j++] : from[i++];
   while (i < mid) to[k++] = from[i++];
   while (j < hi) to[k++] = from[j++];
 }
 
-// Sorts items stably in the order `before`, by default by their `name`. A merge sort of indices:
-// the compiler's cost is the comparisons of names, which an insertion sort does n * n / 4 times.
-// std::sort and std::stable_sort do not compile for an item that holds a std::meta::info.
-template <class Item, class Before = by_name>
-consteval void sort_by_name(std::vector<Item>& items, Before before = {}) {
+// Sorts items that have a `name` by it, stably. A merge sort of indices: the compiler's cost
+// is the comparisons of names, which an insertion sort does n * n / 4 times. std::sort and
+// std::stable_sort do not compile for an item that holds a std::meta::info.
+template <class Item>
+consteval void sort_by_name(std::vector<Item>& items) {
   const std::size_t n = items.size();
   std::vector<std::size_t> order(n), merged(n);
   for (std::size_t i = 0; i < n; ++i) order[i] = i;
   for (std::size_t width = 1; width < n; width *= 2) {
     for (std::size_t lo = 0; lo < n; lo += 2 * width)
-      merge_sorted(items, order, merged, lo, std::min(lo + width, n), std::min(lo + 2 * width, n), before);
+      merge_by_name(items, order, merged, lo, std::min(lo + width, n), std::min(lo + 2 * width, n));
     order.swap(merged);
   }
   std::vector<Item> sorted;
