@@ -275,8 +275,8 @@ constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
     lv::column({.size = {240 * px, 240 * px}})[
         lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
         lv::group({.size = {240 * px, 200 * px}})[
-            lv::shown(current)[
-                lv::is<page::home>(home, {.on_shown = &greet}),
+            lv::shown(current, {.enter = slide_in, .leave = slide_out})[
+                lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
                 lv::is<page::settings>(settings),
                 lv::is<page::about>(about)]]]];
 ```
