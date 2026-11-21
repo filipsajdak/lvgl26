@@ -112,8 +112,19 @@ class Checks(unittest.TestCase):
         shown = "error: constexpr message: lv: there is no widget 'lable'. Valid: obj, arc, label, slider."
         self.assertIsNone(rules.message_problem("unknown_widget", shown, rules.all_pins()))
 
-    def test_the_pins_of_the_repository_are_read(self):
-        self.assertEqual(rules.pins()["each_two_rows"], "lv::each takes one row template")
+    def test_a_pinned_part_is_read_from_its_line(self):
+        line = 'lvgl26_compile_fail(each_two_rows "lv::each takes one row \\\\(template\\\\)")'
+        [(name, quoted)] = rules.COMPILE_FAIL.findall(line)
+        self.assertEqual((name, rules.cmake_text(quoted)), ("each_two_rows", r"lv::each takes one row \(template\)"))
+
+    def test_a_whole_message_is_read_from_its_line(self):
+        line = 'lvgl26_compile_fail_message(each_two_rows static_assert "lv: one row template (\\"a\\").")'
+        [(name, form, quoted)] = rules.WHOLE_MESSAGE.findall(line)
+        self.assertEqual((name, form, rules.cmake_text(quoted)), ("each_two_rows", "static_assert", 'lv: one row template ("a").'))
+
+    def test_every_test_a_rule_names_is_read(self):
+        named = {r["check"]["test"] for r in DATA["rules"] if r["check"] and r["check"].get("test")}
+        self.assertLessEqual(named, rules.test_names())
 
     def test_a_message_shows_what_its_test_pins(self):
         self.assertIsNone(rules.message_problem("plain", "lv: a key names one row, and more.", self.pinned))

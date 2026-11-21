@@ -4,6 +4,7 @@
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import docs  # noqa: E402
@@ -94,7 +95,15 @@ class CompilerChecks(unittest.TestCase):
 
     def test_a_message_must_show_what_its_test_pins(self):
         text = guide().replace("a key names one row", "a key is one row")
-        self.assertTrue(any("differs from what the test each_plain_key pins" in p for p in problems(text)))
+        with mock.patch.object(rules, "all_pins", return_value={"each_plain_key": "a key names one row"}):
+            self.assertTrue(any("differs from what the test each_plain_key pins" in p for p in problems(text)))
+
+    def test_a_message_pinned_whole_must_be_shown_whole(self):
+        text = guide().replace("a key names one row", "a key is one row")
+        pinned = {"each_plain_key": "whole:" + MESSAGE.strip().replace(".", "\\.")}
+        with mock.patch.object(rules, "all_pins", return_value=pinned):
+            self.assertEqual(problems(guide()), [])
+            self.assertTrue(any("not the whole message that the test each_plain_key pins" in p for p in problems(text)))
 
     def test_a_message_names_a_test_that_exists(self):
         text = guide().replace("message: each_plain_key", "message: no_such_test")
