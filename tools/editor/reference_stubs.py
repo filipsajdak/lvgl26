@@ -29,6 +29,7 @@ UNITS = [
     ("an angle", "lv::decidegrees"),
     ("a time", "lv::duration"),
     ("an opacity", "lv::opa"),
+    ("a color", "lv_color_t"),
 ]
 FONT = "a font from a typography token"
 TOKEN = "a design token"
