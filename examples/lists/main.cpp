@@ -53,7 +53,7 @@ constexpr auto ui = lv::group({.flex_flow = "column", .size = {320 * px, 240 * p
                                          .pad_all = tok.space.edge, .pad_gap = tok.space.gap}})[
     lv::label({.hidden = lv::bind(has_tracks), .style = {.text_color = tok.color.quiet}, .text = "No tracks"}),
     lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
-        lv::each(tracks, &track::id, {.selected = lv::bind(current)})[track_row]]];
+        lv::each(tracks, &track::id, {.selected = lv::bind(current)}, track_row)]];
 //! [tree]
 
 constinit lv::frame<320, 240> frame;
