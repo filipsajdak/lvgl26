@@ -341,6 +341,26 @@ Valgrind `Ir` of one `cc1plus` on CI, the nightly's method (run 44894359807, 202
 - A handler in a constexpr tree is a function or a lambda without captures (`CLAUDE.md`). With `AllowShortLambdasOnASingleLine: None` its body gets lines of its own. `measured`
 - `320 * px` is already as short as a unit literal would be; a user-defined literal (`320_px`) would add a second spelling. Not proposed.
 
+#### What the call form costs on CI
+
+Valgrind `Ir` of one `cc1plus` for #189, on the head before the last merge with main (runs 44904117230 and 44904122739, 2026-11-21, main at 31dfe10). The owner accepted `port_page` +0.32 %; about 0.1 % of it is the band of a change that does nothing. `measured`
+
+| Probe | main | With the call form | Change |
+|---|---|---|---|
+| include_lv | 6,064,317,233 | 6,065,407,613 | +0.018 % |
+| one_label | 29,306,951,956 | 29,257,264,266 | -0.170 % |
+| ten_kinds | 74,020,175,327 | 73,963,554,409 | -0.076 % |
+| large_tree | 58,640,820,013 | 58,641,206,683 | +0.001 % |
+| quick_start | 92,922,801,007 | 92,909,465,105 | -0.014 % |
+| signal | 50,942,404,365 | 50,988,842,690 | +0.091 % |
+| theme | 64,551,773,065 | 64,547,874,604 | -0.006 % |
+| port_page | 297,110,167,730 | 298,072,629,729 | +0.324 % |
+| lists example, call form and named pieces | 44,599,484,935 | 44,723,132,878 | +0.277 % |
+
+- `lv::each` in one template, with the plain form `lv::each(tracks, &track::id, row)`, costs +0.05 % on `port_page`. Two more overloads cost +0.19 %.
+- The parts do not add: on an older base the tree changes alone gave -0.11 % and the list change alone +0.26 %.
+- The nightly of 2026-11-21 measures main after the merge.
+
 ## 4. A declarative file
 
 A QML-like or JSON file, embedded with `#embed` and read at compile time, would give QML's look exactly. The parts exist: `lv::tokens` reads JSON in the compiler, and `lv::runtime` builds a tree from a document at run time. `source`
