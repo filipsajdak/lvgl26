@@ -13,10 +13,11 @@ set(LVGL26_PLACEHOLDER_names "[a-z_0-9]+(, [a-z_0-9]+)*")  # a list of identifie
 set(LVGL26_PLACEHOLDER_widgets "obj, ([a-z_]+, )*label, ([a-z_]+, )*[a-z_]+")  # LVGL's widgets: obj first, label among them
 set(LVGL26_PLACEHOLDER_number "-?[0-9]+(\\.[0-9]+)?")
 
-# The text that each kind of message follows on its line of GCC's output.
-set(LVGL26_FORM_constexpr "constexpr message: ")
-set(LVGL26_FORM_static_assert "static assertion failed: ")
-set(LVGL26_FORM_deleted "use of deleted function '[^\n]*': ")
+# The text that each kind of message follows on its line of GCC's output: the severity too, so that a message
+# that becomes a warning fails the test.
+set(LVGL26_FORM_constexpr "error: constexpr message: ")
+set(LVGL26_FORM_static_assert "error: static assertion failed: ")
+set(LVGL26_FORM_deleted "error: use of deleted function '[^\n]*': ")
 
 # lvgl26_message_regex(<result> <form> <text>)
 function(lvgl26_message_regex result form text)
