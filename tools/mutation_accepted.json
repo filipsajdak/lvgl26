@@ -80,6 +80,71 @@
     "reason": "Arid. The assertion checks the layout of scaled_font itself: its first member is the source, so that the address of the font is the address of its source. No code of a user can make it fire; only a change to the members of the class in this header can, and then the assertion is the test."
   },
   {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. The mutant puts `continue;` as the last statement of a loop body: it changes nothing."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "std::vector<std::size_t> row(b.size() + 1);  ->  std::vector<std::size_t> row(b.size() + (1+1));",
+    "reason": "Arid. The row has one element more than it uses; row[b.size()] is still the one that is read."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (const auto& n : names) far.push_back(distance_between(wanted, n));  ->  for (const auto& n : names) far.push_back(distance_between ( n,wanted));",
+    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k != names_offered && k < names.size(); ++k) {",
+    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k < names_offered && k != names.size(); ++k) {",
+    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 1; i != names.size(); ++i)",
+    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 0; i < names.size(); ++i)",
+    "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = (1-1); i < names.size(); ++i)",
+    "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "far[best] = static_cast<std::size_t>(-1);  ->  far[best] = static_cast<std::size_t>(-(1+1));",
+    "reason": "Arid. The sentinel only has to be larger than any distance, and -2 as a size_t is."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = 1; j <= b.size(); ++j) row[j] = j;",
+    "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "return distance_between(wanted, closest) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};  ->  return distance_between ( closest,wanted) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};",
+    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = (0+1); j <= b.size(); ++j) row[j] = j;",
+    "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."
+  },
+  {
+    "header": "include/lv/detail/nearest.hpp",
+    "mutant": "consteval std::size_t distance_between(std::string_view a, std::string_view b) {  ->  consteval std::size_t distance_between ( std::string_view b,std::string_view a) {",
+    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
+  },
+  {
     "header": "include/lv/detail/api.hpp",
     "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() >= 1; }",
     "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."

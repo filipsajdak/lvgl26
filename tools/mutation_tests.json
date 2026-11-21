@@ -153,8 +153,8 @@
       "targets": "l2_tree values"
     },
     "include/lv/detail/nearest.hpp": {
-      "tests": "^smoke$|^l1_views$",
-      "targets": "smoke l1_views"
+      "tests": "^nearest$|^smoke$|^l1_views$",
+      "targets": "nearest smoke l1_views"
     },
     "include/lv/detail/option_docs.hpp": {
       "tests": "^options_docs$|^options$",

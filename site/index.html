@@ -671,7 +671,7 @@ cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ct
       </div></li>
       <li><div>
         <h3>Write a screen</h3>
-        <p>One header. Properties go in <code>()</code>, children in <code>[]</code>. Link the CMake target <code>lvgl26::lvgl26</code>.</p>
+        <p>One header. Properties go in <code>({...})</code>, and the children follow them as arguments. Link the CMake target <code>lvgl26::lvgl26</code>.</p>
         <figure class="code">
           <figcaption><span>README.md</span><span>C++26</span></figcaption>
 <pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/all.hpp&gt;</span>
