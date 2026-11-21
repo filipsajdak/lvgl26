@@ -381,6 +381,119 @@ The trailing commas are not added by clang-format. They are written by hand once
 3. Reformat `examples/` in one pull request with no other change, and add the CI check.
 4. Then rewrite the docs, so that every snippet is written once.
 
+## 6. Properties in an order a person reads
+
+The owner asked on 2026-11-20 whether properties can follow the order a person reads: the id first, then size and position, style, content and handlers. Editor completion and compile-time checks must stay. Measured on 2026-11-20 unless a row says otherwise.
+
+### Short answers
+
+| Question | Answer | Mark |
+|---|---|---|
+| Can C++ take designators in any order? | Not in C++26. P3405R0, "Out-of-order designated initializers" (2024), proposes it; it was not found adopted | `summary` |
+| Can the generated struct have another order? | Yes. The order is one sort in `props.hpp`; a prototype sorts by group, then by name, and the lists example compiles | `measured` |
+| What does it cost the compiler? | Nothing measurable on the Mac: 47.72 G against 47.73 G for the lists example. The nightly probes were not run | `measured` |
+| Can a wrong order get a better message? | Not from lvgl26. GCC rejects the list before any of our code runs, and names one field | `measured` |
+| How much code moves? | 195 of 1407 property lists in examples, tests and docs, by a script | `measured` |
+
+### What C++ and the compilers say
+
+- C++20 made designated initializers follow declaration order (P0329R4). [P0329R4](https://isocpp.org/files/papers/p0329r4.pdf) `summary`
+- [P3405R0](https://open-std.org/JTC1/SC22/WG21/docs/papers/2024/p3405r0.html) proposes out-of-order designators, `{.y = 1, .x = 2}`. It is a first revision of October 2024; no later one was found. `summary`
+- A WG21 liaison message of 2020 called a change of the order rule incompatible, needing a strong rationale. [liaison list](https://lists.isocpp.org/liaison/2020/08/0159.php) `summary`
+- [P2287](https://open-std.org/JTC1/SC22/WG21/docs/papers/2025/p2287r4.html) adds designators for base classes and keeps the order rule. `summary`
+
+GCC 16.2 on `lv::label({.text = "x", .hidden = true})`, verbatim: `measured`
+
+```
+error: designator order for field 'lv::detail::props_of<lv::detail::fixed<6>{"label"}, void>::type::hidden' does not match declaration order in 'lv::detail::lazy_props<lv::detail::fixed<6>{"label"}, void>' {aka 'const lv::detail::props_of<lv::detail::fixed<6>{"label"}, void>::type'}
+```
+
+Clang 23 on the same shape only warns, and names both fields: `measured`
+
+```
+warning: ISO C++ requires field designators to be specified in declaration order; field 'text' will be initialized after field 'hidden' [-Wreorder-init-list]
+```
+
+- The error comes from GCC's reading of the braced list, before any code of ours sees the values. No `static_assert`, constructor or concept can replace it.
+- The editor shows Clang's warning at the user's line, and completion lists the members in declaration order. So the order a user must follow is the order completion offers.
+
+### Option O1: alphabetical, as today
+
+```cpp
+constexpr auto empty_note = lv::label({
+  .hidden = lv::bind(has_tracks),
+  .style  = {.text_color = tok.color.quiet},
+  .text   = "No tracks",
+});
+```
+
+- A reader can guess it without a list. The style falls between the state and the content.
+- Handlers sort among properties: `.on_clicked` comes before `.size`.
+
+### Option O2: four groups by name, alphabetical inside each
+
+The id, then the properties, then the styles, then the handlers. The group follows from the name alone: `id`, `style` and `style_...`, `on_...`, and everything else.
+
+```cpp
+constexpr auto empty_note = lv::label({
+  .hidden = lv::bind(has_tracks),
+  .text   = "No tracks",
+  .style  = {.text_color = tok.color.quiet},
+});
+
+constexpr auto track_row = lv::button(
+  {
+    .id            = "row",
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style         = {...},
+    .style_checked = {.bg_color = tok.color.selected},
+    .on_clicked    = &pick,
+  },
+  ...
+);
+```
+
+| Check | Result | Mark |
+|---|---|---|
+| The change | One comparison, by group and then by name. It replaces the sorts of `props.hpp` and the merge of a widget's own setters into the base's | `measured` (prototype) |
+| Compiles | The lists example in this order compiles | `measured` |
+| Compile time | 47.72 G in O2, 47.73 G in O1, the same file otherwise; inside the noise of about 0.2 % | `measured` |
+| Stable across LVGL versions | Yes: the groups come from the names, which reflection reads from LVGL's setters and events | `source` |
+| Reference data | Written again: `tools/reference/reference.cpp` prints the members in struct order | `source` |
+| Editor stubs | `tools/editor/reference_stubs.py` sorts members by name (line 145); it takes the same key | `source` |
+| Existing code | 195 of 1407 property lists change, most because a style comes before `.text` or a handler before `.size`. A script moves designators within a list | `measured` |
+| The rule to teach | "id, properties, styles, handlers; each group alphabetical" | reasoned |
+
+### Option O3: five groups, the widget's own properties first
+
+The id, then what the widget is for (its own setters: `text`, `value`, `src`). Then what every widget has (`align`, `size`, `hidden`), then styles, then handlers.
+
+```cpp
+constexpr auto empty_note = lv::label({
+  .text   = "No tracks",
+  .hidden = lv::bind(has_tracks),
+  .style  = {.text_color = tok.color.quiet},
+});
+```
+
+- Reflection knows the difference: own setters are `lv_label_set_*`, the base's are `lv_obj_set_*`. `source` (`own_members` in `props.hpp`)
+- The reader does not: whether `checked` belongs to the button or to every widget is LVGL's choice. The order then needs completion to be found.
+- Not prototyped. Its cost would be that of O2: one more group in the same comparison.
+
+### Option O4: a fixed human order from a table
+
+A hand-written order per property (id, size, position, layout, content, style, handlers) reads best. It breaks the rule against hand-written per-property code, and every new LVGL setter needs a place in it. Not recommended.
+
+### Option O5: free order with named values
+
+`lv::label("text"_p = "No tracks", "hidden"_p = lv::bind(has_tracks))` takes any order: section 3 D shows a sketch that compiles. It loses completion inside the string and adds a second way to write properties. Not recommended, unless P3405 is adopted and a future GCC accepts any order, which would make every option here unnecessary.
+
+### Recommendation
+
+O2. It gives the owner's order for the parts that matter most to a reader: the id first, content before style, handlers last. The rule fits in one sentence, the compiler pays nothing, and the change is a sort key and a one-time script. O3 is the next step if the owner wants content before layout too.
+
 ## The owner's decisions, 2026-11-20
 
 The owner read the candidates below and decided.
@@ -391,7 +504,7 @@ The owner read the candidates below and decided.
 | Layout switch | A trailing comma, with clang-format and the small pass after it |
 | Indent | Two spaces, so examples, docs and `include/` share one indent. `include/` is not reformatted in this work |
 | Readability | Named pieces of at most about three levels per constant, taught as a rule with an id |
-| Property order | Alphabetical stays for now. More research into an order a person reads comes first |
+| Property order | Four groups by name, alphabetical inside each: the id, the properties, the styles, the handlers (option O2 of section 6). A wrong order is a compile error, and a script moves the properties of existing code |
 | A declarative file | No |
 
 The work follows in two pull requests: the call form in the library, then the format and its check over `examples/`.
