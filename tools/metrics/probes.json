@@ -7,6 +7,12 @@
       "kind": "compile",
       "file": "examples/ports/slint/printer/print_page.cpp",
       "stands_for": "one page of a real port: the printer demo's print page"
+    },
+    {
+      "id": "lists_arg",
+      "kind": "compile",
+      "file": "examples/lists/main.cpp",
+      "stands_for": "temporary: the lists example with the row template as an argument"
     }
   ]
 }
