@@ -504,7 +504,7 @@ The owner read the candidates below and decided.
 | Layout switch | A trailing comma, with clang-format and the small pass after it |
 | Indent | Two spaces, so examples, docs and `include/` share one indent. `include/` is not reformatted in this work |
 | Readability | Named pieces of at most about three levels per constant, taught as a rule with an id |
-| Property order | Alphabetical stays for now. More research into an order a person reads comes first |
+| Property order | Four groups by name, alphabetical inside each: the id, the properties, the styles, the handlers (option O2 of section 6). A wrong order is a compile error, and a script moves the properties of existing code |
 | A declarative file | No |
 
 The work follows in two pull requests: the call form in the library, then the format and its check over `examples/`.
