@@ -164,17 +164,26 @@ def run(command, cwd=TREE):
     return r.returncode, r.stdout + r.stderr
 
 
+def git_in(tree, *args):
+    """Runs git in `tree` and says what git printed when it fails. The directory is trusted whoever owns it:
+    in the CI container the checkout belongs to another user than the one that runs the job."""
+    command = ["git", "-c", "safe.directory=*", *args]
+    done = subprocess.run(command, cwd=tree, capture_output=True, text=True)
+    if done.returncode != 0:
+        sys.exit(f"mutation.py: {' '.join(command)} in {tree} ended with {done.returncode}:\n{done.stdout}{done.stderr}")
+
+
 def track_files(tree):
     """Makes the copy a git repository of its own, so that a test that asks git for the tracked
     files (tools/check_tokens.py) finds the same files as in the working tree."""
-    for command in (["git", "init", "-q"], ["git", "add", "-A"]):
-        subprocess.run(command, cwd=tree, check=True, capture_output=True)
+    git_in(tree, "init", "-q")
+    git_in(tree, "add", "-A")
 
 
 def make_copy(preset, cmake_args):
     """Copies the working tree (without build/ and .git), makes it a repository and configures it."""
     TREE.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["rsync", "-a", "--delete", "--exclude", "/build", "--exclude", "/.git",
+    subprocess.run(["rsync", "-a", "--no-owner", "--no-group", "--delete", "--exclude", "/build", "--exclude", "/.git",
                     "./", str(TREE) + "/"], check=True)
     track_files(TREE)
     code, output = run(f"cmake --preset {preset} {cmake_args}")
