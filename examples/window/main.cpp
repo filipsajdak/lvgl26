@@ -25,8 +25,9 @@ int main() {
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
   lv::pointer mouse{display, window};       // the window's mouse feeds it
 
-  app::running application{display.screen()};
-  if (!application.ok()) return 2;
+  auto root = lv::mount<app::ui>(display.screen());
+  if (!root) return 2;
+  app::start(root);                         // the application's task, on the mounted tree
   return app.run();                         // until the window is closed
 }
 //! [main]

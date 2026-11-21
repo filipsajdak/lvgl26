@@ -45,11 +45,16 @@ struct world {
   lv::application app{{.clock = &clock}};
   lv::display display{app, picture, &changed};
   lv::pointer<> mouse{display};
-  app::running application{display.screen()};
+  decltype(lv::mount<app::ui>(lv::obj{})) root{lv::mount<app::ui>(display.screen())};
   lv::pointer_sample last{};  // what the page said in its last step
 
   world() {
-    if (!application.ok()) std::abort();
+    // There is no one to report to but the console of the page or the terminal: say it and stop, as before.
+    if (!root) {
+      std::fputs("the application could not be mounted\n", stderr);
+      std::abort();
+    }
+    app::start(root);
   }
 
   // A press, a release or a move becomes a sample in the pointer's queue, so a press shorter
