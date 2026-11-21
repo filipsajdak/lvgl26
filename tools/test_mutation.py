@@ -69,9 +69,9 @@ class Plan(unittest.TestCase):
         root = repository()
         shards = plan.plan("HEAD~1", CONFIG, root)["matrix"]["include"]
         self.assertEqual(shards[0], {"name": "a", "header": "include/lv/a.hpp", "tests": "^a$", "targets": "a",
-                                     "fallback": False, "logic": False, "part": ""})
+                                     "fallback": False, "logic": False, "part": "", "jobs": 2})
         self.assertEqual(shards[1], {"name": "detail-b", "header": "include/lv/detail/b.hpp", "tests": ".",
-                                     "targets": "", "fallback": True, "logic": False, "part": ""})
+                                     "targets": "", "fallback": True, "logic": False, "part": "", "jobs": 2})
 
     def test_a_header_with_parts_is_one_shard_for_each_part_and_keeps_its_logic_flag(self):
         config = {"default": CONFIG["default"], "headers": {
@@ -87,7 +87,9 @@ class Plan(unittest.TestCase):
         self.assertEqual(logic, ["include/lv/look.hpp", "include/lv/one_of.hpp", "include/lv/style.hpp",
                                  "include/lv/tree.hpp", "include/lv/values.hpp"])
         self.assertEqual({h: c["parts"] for h, c in headers.items() if "parts" in c},
-                         {"include/lv/look.hpp": 2, "include/lv/props.hpp": 2, "include/lv/tokens.hpp": 2})
+                         {"include/lv/look.hpp": 3, "include/lv/props.hpp": 3, "include/lv/tokens.hpp": 4,
+                          "include/lv/shown.hpp": 3, "include/lv/detail/missing.hpp": 2})
+        self.assertEqual({h: c["jobs"] for h, c in headers.items() if "jobs" in c}, {"include/lv/look.hpp": 1})
 
     def test_github_output_lines(self):
         root = repository()
@@ -215,6 +217,13 @@ class TrackFiles(unittest.TestCase):
             mutation.track_files(tree)
             listed = subprocess.run(["git", "ls-files"], cwd=tree, capture_output=True, text=True, check=True)
             self.assertEqual(listed.stdout.split(), [])
+
+
+class Decoding(unittest.TestCase):
+    def test_a_byte_that_is_no_utf8_in_the_output_of_a_test_does_not_end_the_run(self):
+        code, output = mutation.run("printf '\\216 end'", cwd=".")
+        self.assertEqual(code, 0)
+        self.assertTrue(output.endswith(" end"))
 
 
 class Parts(unittest.TestCase):

@@ -23,6 +23,9 @@ ROOT = TOOLS.parent
 CONFIG = TOOLS / "mutation_tests.json"
 HEADER_DIR = "include/lv"
 HEADER_SUFFIX = ".hpp"
+# Builds and tests that a shard runs at once. A header whose tests are big (look) says "jobs": 1: two of its
+# compiles at once ran a 7 GB runner out of memory (exit 137) on 2026-11-21.
+DEFAULT_JOBS = 2
 # The name of a header goes into the matrix of a workflow. It holds letters, digits and
 # the signs of a path only, so that no part of it can be read as a command.
 HEADER_NAME = re.compile(r"include/lv/[A-Za-z0-9_/.-]+\.hpp")
@@ -54,7 +57,7 @@ def shard_for(header, config):
     return [{"name": shard_name(header) + (f"-{part}of{parts}" if parts > 1 else ""), "header": header,
              "tests": chosen["tests"], "targets": chosen.get("targets") or "",
              "fallback": header not in config["headers"], "logic": bool(chosen.get("logic", False)),
-             "part": f"{part}/{parts}" if parts > 1 else ""} for part in range(1, parts + 1)]
+             "part": f"{part}/{parts}" if parts > 1 else "", "jobs": chosen.get("jobs", DEFAULT_JOBS)} for part in range(1, parts + 1)]
 
 
 def plan(since, config, root=ROOT):
