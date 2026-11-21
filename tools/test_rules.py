@@ -25,6 +25,13 @@ def first_problems(data: dict) -> list[str]:
 
 
 class Data(unittest.TestCase):
+    def test_every_form_starts_at_the_severity(self):
+        forms = rules.message_forms()
+        kinds = {kind: value for (group, kind), value in forms.items() if group == "FORM"}
+        self.assertTrue(kinds)
+        for kind, value in kinds.items():
+            self.assertTrue(value.startswith("error: "), kind)
+
     def test_the_rules_of_the_repository_are_valid(self):
         self.assertEqual(rules.problems(DATA), [])
 
