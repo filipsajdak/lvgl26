@@ -129,8 +129,8 @@
       "targets": "angle_units options_docs"
     },
     "include/lv/detail/api.hpp": {
-      "tests": "^api_table$|^smoke$|^fail_encoded_image_not_a_picture$",
-      "targets": "api_table smoke"
+      "tests": "^api_helpers$|^api_table$|^smoke$|^fail_encoded_image_not_a_picture$|^fail_unknown_property$|^fail_unknown_widget$",
+      "targets": "api_helpers api_table smoke"
     },
     "include/lv/detail/checked.hpp": {
       "tests": "^units$|^values$|^fail_each_selected_and_checked$",

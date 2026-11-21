@@ -143,5 +143,65 @@
     "header": "include/lv/detail/nearest.hpp",
     "mutant": "consteval std::size_t distance_between(std::string_view a, std::string_view b) {  ->  consteval std::size_t distance_between ( std::string_view b,std::string_view a) {",
     "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() >= 1; }",
+    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() != 1; }",
+    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 0; }",
+    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1+1); }",
+    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1-1); }",
+    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "while ((n /= 10) > 0);  ->  while ((n /= 10) != 0);",
+    "reason": "Equivalent. n is unsigned, so n > 0 and n != 0 are the same."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] > prefix[3]) return false;",
+    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] < prefix[3]) return false;",
+    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > (3+1) && id[3] != prefix[3]) return false;",
+    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  /*if (prefix.size() > 3 && id[3] != prefix[3]) return false;*/",
+    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (0==1) return false;",
+    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
+  },
+  {
+    "header": "include/lv/detail/api.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
   }
 ]
