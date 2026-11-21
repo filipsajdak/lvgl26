@@ -271,14 +271,13 @@ class CommentMutants(unittest.TestCase):
             kept = mutation.without_unjudgeable_mutants(self.mutants(directory, [comment, code]), self.ORIGINAL)
             self.assertEqual([m.name for m in kept], ["m1.hpp"])
 
-    def test_a_guard_and_a_whole_static_assert_taken_out_are_dropped(self):
+    def test_a_guard_is_dropped_and_a_static_assert_taken_out_is_judged(self):
         with tempfile.TemporaryDirectory() as directory:
-            original = "#pragma once\nstatic_assert(sizeof(int) == 4);\nstatic_assert(a, \"m\");\nint b;\n"
+            original = "#pragma once\nstatic_assert(sizeof(int) == 4);\nint b;\n"
             guard = original.replace("#pragma once", "/*#pragma once*/")
             gone = original.replace("static_assert(sizeof(int) == 4);", "/*static_assert(sizeof(int) == 4);*/")
-            changed = original.replace("sizeof(int) == 4", "sizeof(int) != 4")
-            kept = mutation.without_unjudgeable_mutants(self.mutants(directory, [guard, gone, changed]), original)
-            self.assertEqual([m.name for m in kept], ["m2.hpp"])
+            kept = mutation.without_unjudgeable_mutants(self.mutants(directory, [guard, gone]), original)
+            self.assertEqual([m.name for m in kept], ["m1.hpp"])
 
     def test_a_trailing_comment_does_not_make_a_line_a_comment(self):
         with tempfile.TemporaryDirectory() as directory:

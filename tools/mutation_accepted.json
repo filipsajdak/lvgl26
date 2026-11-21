@@ -73,5 +73,10 @@
     "header": "include/lv/scaled_font.hpp",
     "mutant": "if (font_ != nullptr && destroy_ != nullptr && lv_is_initialized()) destroy_(font_);  ->  if (font_ != nullptr && (1==1) && lv_is_initialized()) destroy_(font_);",
     "reason": "Equivalent. made() sets font_ and destroy_ together, so a font that exists always has the function that gives it back; the destroy_ test is a guard that no input reaches."
+  },
+  {
+    "header": "include/lv/scaled_font.hpp",
+    "mutant": "static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));  ->  /*static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));*/",
+    "reason": "Arid. The assertion checks the layout of scaled_font itself: its first member is the source, so that the address of the font is the address of its source. No code of a user can make it fire; only a change to the members of the class in this header can, and then the assertion is the test."
   }
 ]

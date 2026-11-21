@@ -133,13 +133,10 @@ def changed_line(original_lines, mutant_text):
 
 
 def is_unjudgeable(before, after):
-    """A mutant that no test can tell from the original: a comment line, the line #pragma once (a
-    header that is read once needs no guard), or a static_assert taken out whole (it holds in every
-    build; its failing is a compile error that only a changed type would show)."""
-    text = before.strip()
-    if text.startswith(("//", "#pragma once")):
-        return True
-    return text.startswith("static_assert(") and text.endswith(");") and after.strip() == f"/*{text}*/"
+    """A mutant that no test can tell from the original: a comment line, or the line #pragma once
+    (a header that is read once needs no guard). A static_assert taken out is judged: if it survives,
+    no test makes the assertion fire."""
+    return before.strip().startswith(("//", "#pragma once"))
 
 
 def without_unjudgeable_mutants(mutants, original):
