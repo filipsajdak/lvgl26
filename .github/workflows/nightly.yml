@@ -533,9 +533,9 @@ jobs:
           LOGIC: ${{ matrix.logic && '--logic' || '' }}
           PART: ${{ matrix.part }}
           SINCE: ${{ needs.mutation-plan.outputs.since }}
-          # Two jobs at a time: a mutant is built and tested one after the other.
-          CMAKE_BUILD_PARALLEL_LEVEL: 2
-          CTEST_PARALLEL_LEVEL: 2
+          # Two jobs at a time unless the plan says fewer (tools/mutation_tests.json): a mutant is built and tested one after the other.
+          CMAKE_BUILD_PARALLEL_LEVEL: ${{ matrix.jobs }}
+          CTEST_PARALLEL_LEVEL: ${{ matrix.jobs }}
         run: |
           set -o pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"

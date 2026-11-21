@@ -43,7 +43,7 @@
     "include/lv/props.hpp": {
       "tests": "^l1_views$|^l2_tree$|^smoke$|^values$|^options$|fail_options",
       "targets": "l1_views l2_tree smoke values options",
-      "parts": 2
+      "parts": 3
     },
     "include/lv/runtime.hpp": {
       "tests": "^runtime_ui$|^json$",
@@ -52,17 +52,19 @@
     "include/lv/tokens.hpp": {
       "tests": "^tokens$|fail_token|^look$",
       "targets": "tokens look",
-      "parts": 2
+      "parts": 4
     },
     "include/lv/look.hpp": {
       "tests": "^look$|^looks_example$|fail_look_",
       "targets": "look looks_example",
       "logic": true,
-      "parts": 2
+      "parts": 3,
+      "jobs": 1
     },
     "include/lv/detail/missing.hpp": {
       "tests": "fail_missing_header|^lists$|^look$|^one_of$|^theme$",
-      "targets": "lists look one_of theme"
+      "targets": "lists look one_of theme",
+      "parts": 2
     },
     "include/lv/one_of.hpp": {
       "tests": "^one_of$|one_of_violation|fail_one_of|fail_visit",
@@ -70,8 +72,9 @@
       "logic": true
     },
     "include/lv/shown.hpp": {
-      "tests": "^shown$|^shown_transitions$|fail_shown|fail_when|fail_page_of|^example_pages$|^printer_cost$",
-      "targets": "shown shown_transitions example_pages printer_cost"
+      "tests": "^shown$|^shown_transitions$|^shown_kept$|fail_shown|fail_when|fail_page_of|^example_pages$|^printer_cost$",
+      "targets": "shown shown_transitions shown_kept example_pages printer_cost",
+      "parts": 3
     },
     "include/lv/detail/deferred.hpp": {
       "tests": "^shown$|^example_pages$",
@@ -266,8 +269,8 @@
       "targets": "task app_loop"
     },
     "include/lv/theme.hpp": {
-      "tests": "^look$|^no_default_theme$|^start_style$|^style_selectors$|^signal$|^fail_theme_bound_font$|^fail_theme_needs_token$|^fail_theme_not_a_value$|^fail_theme_on_in_part_slot$",
-      "targets": "look no_default_theme start_style style_selectors signal"
+      "tests": "^look$|^start_style$|^style_selectors$|^signal$|^fail_theme_bound_font$|^fail_theme_needs_token$|^fail_theme_not_a_value$|^fail_theme_on_in_part_slot$",
+      "targets": "look start_style style_selectors signal"
     },
     "include/lv/token_types.hpp": {
       "tests": "^tokens$|^concepts$",
