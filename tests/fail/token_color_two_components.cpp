@@ -1,3 +1,4 @@
+// A color of two components.
 #include <lv/lv.hpp>
-constexpr auto v = *lv::json::value::parse(R"({"components": [1, 0]})");
-constexpr auto c = lv::detail::read_token(lv::detail::read_as<lv_color_t>{}, v, v);
+constexpr char doc[] = R"({"color": {"brand": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [0.2, 0.4]}}}})";
+constexpr auto tok = lv::tokens<doc>;

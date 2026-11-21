@@ -685,7 +685,8 @@ consteval look_style_of<D> look_value() {
     static_assert(registered_design<D>,
                   "lv: no design is registered for lv::look. Name the token file once, before the first look, in a header "
                   "that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr "
-                  "lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};");
+                  "lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok}; If you did name it, the naming "
+                  "comes after a look that has already read the design: move it above every lv::look, as lv::cfg must come first.");
     return {};
   }
 }

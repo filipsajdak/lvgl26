@@ -156,11 +156,18 @@ struct settings_read {
   std::string_view mistake;  // empty, or a static string
 };
 
+// Where a text stops being JSON, as a sentence. Defined in lv/detail/json_fault.hpp, which the header that
+// lvgl26_settings() writes includes: a file that reads no settings file does not read the scan.
+consteval std::string json_fault_text(std::string_view document);
+
 template <settings_section S>
 consteval settings_read<S> read_settings(settings_text file) {
   const settings_place top{file.name, ""};
-  const auto document = json::value::parse(std::string_view{file.text, file.size});
-  if (!document) return {S{}, std::define_static_string(mistake(top, "the file is no well-formed JSON."))};
+  const std::string_view text{file.text, file.size};
+  const auto document = json::value::parse(text);
+  if (!document)
+    return {S{}, std::define_static_string(mistake(top, "the file is not well-formed JSON. " +
+                                                            json_fault_text(text)))};
   S out{};
   const std::string wrong = read_into(out, *document, top);
   return {out, std::define_static_string(wrong)};

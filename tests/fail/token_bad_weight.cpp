@@ -1,8 +1,4 @@
+// A font weight that is no number and no name.
 #include <lv/lv.hpp>
-#include <string>
-template <class T>
-consteval T read_as(std::string_view text) {
-  const auto v = *lv::json::value::parse(text);
-  return lv::detail::read_token(lv::detail::read_as<T>{}, v, v);
-}
-constexpr auto d = read_as<std::int32_t>(R"("thin")");
+constexpr char doc[] = R"({"type": {"weight": {"$type": "fontWeight", "$value": "thin"}}})";
+constexpr auto tok = lv::tokens<doc>;
