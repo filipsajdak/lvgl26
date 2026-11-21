@@ -314,6 +314,27 @@ constexpr auto ui = lv::group(
 - It works today, with `[]` too: `track_row` in the lists example is already such a piece. `source`
 - The docs should teach it as the main way to keep a screen readable: a screen of pieces, each under a page of code.
 
+#### What a named piece costs
+
+Valgrind `Ir` of one `cc1plus` on CI, the nightly's method (run 44894359807, 2026-11-21, base: main at 31dfe10). A small piece is 4 nodes; a large one is 41 nodes (eight rows of a row, a label, a button with a label, and a slider). `measured`
+
+| Probe | G instructions | Against the same tree written in place |
+|---|---|---|
+| Small piece, in place | 38.422 | |
+| Small piece, a named constant used once | 38.442 | +0.05 % |
+| Large piece, in place | 50.460 | |
+| Large piece, a named constant used once, by value | 50.757 | +0.30 G, +0.59 % |
+| The same constant passed to a part as `const auto&` | 50.456 | about 0 |
+| The same constant passed to a part as a template argument | 50.457 | about 0 |
+| The tree written in place as the argument of that part | 51.197 | +1.5 % |
+| Two copies of the large tree in place | 57.717 | |
+| One named constant used twice | 51.716 | -10.4 %, 6.0 G less |
+
+- A named piece costs about 0.3 G once. That is 0.3 % of the quick start (92.9 G) and 0.1 % of one page of the printer port (297 G).
+- A piece used twice is cheaper than two copies in place: the compiler builds the node once.
+- A part that takes the piece as `const auto&`, or as a template argument, adds nothing; a part that takes a freshly written tree costs more than a named constant.
+- One node costs about 0.5 G in this file, so the rule of at most three levels per piece is a rule for readers, not for the compiler.
+
 ### F. Looks, handlers, units
 
 - `.style` blocks shrink most when the look moves to the token file: `lv::look<"queue.card">` holds a whole style in one name. See [less-boilerplate.md](less-boilerplate.md), lever 1. `source`
