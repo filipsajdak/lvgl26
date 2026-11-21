@@ -44,6 +44,7 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(all_header)
 # The settings reader, and a program whose settings come from a file.
 lvgl26_test(settings)
 lvgl26_test(json_fault)
@@ -130,6 +131,7 @@ add_test(NAME pointer_violation_no_function
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
 lvgl26_test(shown)
+lvgl26_test(shown_transitions)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
 foreach(case unmount_empty get_other held_after_remount error_of_mounted)
@@ -777,6 +779,19 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
 endif()
 
+# The example of docs/state.md: states, what follows them, and an effect.
+add_executable(example_state ${PROJECT_SOURCE_DIR}/examples/state/main.cpp)
+target_link_libraries(example_state PRIVATE lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+add_test(NAME example_state COMMAND example_state WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+set_tests_properties(example_state PROPERTIES FIXTURES_SETUP example_state_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_state_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_state_out/state.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/state.png)
+  set_tests_properties(example_state_picture PROPERTIES FIXTURES_REQUIRED example_state_picture)
+endif()
+
 # The example of docs/repetition.md: it runs, and tests/for_each.cpp checks what it repeats.
 add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
 target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -969,6 +984,12 @@ target_link_libraries(visibility_probe PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+  # The outline of a guide, its messages tied to compile-fail tests, and its rules.
+  add_test(NAME docs_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_docs.py)
+  # The rules of good code are data; the page "Writing good lvgl26 code" is written from it.
+  add_test(NAME rules_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/rules.py
+                                   --check-page ${PROJECT_SOURCE_DIR}/docs/rules.md)
+  add_test(NAME rules_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_rules.py)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # Every test and fuzz target includes the header of each name of lvgl26 it uses
@@ -1277,6 +1298,14 @@ lvgl26_compile_fail(shown_sibling "lv::shown is the only child of its widget. Gi
 lvgl26_compile_fail(shown_on_shown_other_tree "the function of .on_shown takes the lv::held of another tree than its arm shows. Write void f\\(lv::held<.*a>\\)")
 lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a constexpr variable of its own")
 lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
+lvgl26_compile_fail(shown_alive_three "lv::shown keeps one or two pages alive for now: .alive = 1 or 2")
+lvgl26_compile_fail(shown_alive_one_with_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
+lvgl26_compile_fail(shown_page_on_shown_in_arm "a page of another file takes its .on_shown in its own file: constinit const lv::page home_page = lv::page_of<ui, \\{.on_shown = &f\\}>")
+lvgl26_compile_fail(shown_transition_two_properties "contract predicate is false in constant expression")
+lvgl26_compile_fail(page_of_wrong_hook "lv::page_of<ui, \\{.on_shown = ..., .on_front = ...\\}>: the function of .on_shown takes the lv::held of another tree than the page.s. Write void f\\(lv::held<.*a>\\)")
+lvgl26_compile_fail(shown_on_front_wrong_shape "lv::shown: .on_shown and .on_front take a function void f\\(lv::held<tree>\\), where tree is the tree of the arm")
+lvgl26_compile_fail(shown_on_front_other_tree "the function of .on_front takes the lv::held of another tree than its arm shows. Write void f\\(lv::held<.*a>\\)")
+lvgl26_compile_fail(page_of_wrong_front "the function of .on_front takes the lv::held of another tree than the page.s")
 lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::computed of a bool")
 # The children as arguments: a wrong one is named, with the form that works.
 lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")

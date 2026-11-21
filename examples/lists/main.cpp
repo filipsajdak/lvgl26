@@ -3,8 +3,10 @@
 //
 //   lists    writes lists.png
 
+//! [includes]
 #include <lv/list.hpp>
 #include <lv/lv.hpp>
+//! [includes]
 #include <lv/png.hpp>
 
 using namespace lv::units;
@@ -103,12 +105,15 @@ constexpr auto ui = lv::group(
 
 constinit lv::frame<320, 240> frame;
 
-//! [changes]
-bool fill() {
-  return tracks.push_back({{1}, "Intro", lv::counter{3}}) && tracks.push_back({{2}, "Northern Lights", lv::counter{1}}) &&
-         tracks.push_back({{3}, "Harbour", lv::counter{12}}) && tracks.insert(0, {{4}, "Overture", {}});
-}
+//! [rows]
+// The playlist to start with, in one constant.
+constexpr track playlist[] = {{{4}, "Overture", lv::counter{0}},
+                              {{1}, "Intro", lv::counter{3}},
+                              {{2}, "Northern Lights", lv::counter{1}},
+                              {{3}, "Harbour", lv::counter{12}}};
+//! [rows]
 
+//! [changes]
 void play(std::size_t row) {
   tracks.update(row, [](track& t) { ++t.plays; });  // that row's labels are set again
 }
@@ -120,10 +125,15 @@ int main() {
   lv::application app;
   lv::display display{app, frame};
   auto root = lv::mount<ui>(display.screen());
-  if (!root || !fill()) return 1;
+  if (!root) return 1;
+  //! [fill]
+  if (!tracks.assign(playlist)) return 2;  // builds a row for each track: full, or no memory
+  //! [fill]
+  //! [move]
   play(2);
-  tracks.move(3, 1);         // Harbour moves up, with its widgets
-  current = track_id{2};     // selects Northern Lights
+  tracks.move(3, 1);      // Harbour moves up, with its widgets
+  current = track_id{2};  // selects Northern Lights
+  //! [move]
   app.step();
-  return lv::write_png(display.screen(), "lists.png") ? 0 : 2;
+  return lv::write_png(display.screen(), "lists.png") ? 0 : 3;
 }

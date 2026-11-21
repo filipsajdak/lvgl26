@@ -132,13 +132,20 @@ def changed_line(original_lines, mutant_text):
     return pairs[0] if len(pairs) == 1 else None
 
 
-def without_comment_mutants(mutants, original):
-    """The mutants that change code. A mutant of a comment line changes nothing the compiler reads."""
+def is_unjudgeable(before, after):
+    """A mutant that no test can tell from the original: a comment line, or the line #pragma once
+    (a header that is read once needs no guard). A static_assert taken out is judged: if it survives,
+    no test makes the assertion fire."""
+    return before.strip().startswith(("//", "#pragma once"))
+
+
+def without_unjudgeable_mutants(mutants, original):
+    """The mutants that a test can judge."""
     original_lines = original.splitlines()
     kept = []
     for m in mutants:
         pair = changed_line(original_lines, m.read_text())
-        if not (pair and pair[0].lstrip().startswith("//")):
+        if not (pair and is_unjudgeable(*pair)):
             kept.append(m)
     return kept
 
@@ -164,17 +171,26 @@ def run(command, cwd=TREE):
     return r.returncode, r.stdout + r.stderr
 
 
+def git_in(tree, *args):
+    """Runs git in `tree` and says what git printed when it fails. The directory is trusted whoever owns it:
+    in the CI container the checkout belongs to another user than the one that runs the job."""
+    command = ["git", "-c", "safe.directory=*", *args]
+    done = subprocess.run(command, cwd=tree, capture_output=True, text=True)
+    if done.returncode != 0:
+        sys.exit(f"mutation.py: {' '.join(command)} in {tree} ended with {done.returncode}:\n{done.stdout}{done.stderr}")
+
+
 def track_files(tree):
     """Makes the copy a git repository of its own, so that a test that asks git for the tracked
     files (tools/check_tokens.py) finds the same files as in the working tree."""
-    for command in (["git", "init", "-q"], ["git", "add", "-A"]):
-        subprocess.run(command, cwd=tree, check=True, capture_output=True)
+    git_in(tree, "init", "-q")
+    git_in(tree, "add", "-A")
 
 
 def make_copy(preset, cmake_args):
     """Copies the working tree (without build/ and .git), makes it a repository and configures it."""
     TREE.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["rsync", "-a", "--delete", "--exclude", "/build", "--exclude", "/.git",
+    subprocess.run(["rsync", "-a", "--no-owner", "--no-group", "--delete", "--exclude", "/build", "--exclude", "/.git",
                     "./", str(TREE) + "/"], check=True)
     track_files(TREE)
     code, output = run(f"cmake --preset {preset} {cmake_args}")
@@ -309,7 +325,7 @@ def mutants_of_part(mutants, part):
 def choose_mutants(args, lines, original):
     """The mutants to judge: all of the chosen lines, the logic ones, or a sample."""
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / (TREE / args.header).stem)
-    mutants = without_comment_mutants(mutants, original)
+    mutants = without_unjudgeable_mutants(mutants, original)
     if args.logic:
         mutants = logic_only(mutants, original)
     if args.part:

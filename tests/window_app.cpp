@@ -63,8 +63,9 @@ int main() {
   lv::application run;
   lv::display display{run, frame};
   lv::pointer mouse{display};
-  app::running application{display.screen()};
-  if (!application.ok()) return 1;
+  auto root = lv::mount<app::ui>(display.screen());
+  if (!root) return 1;
+  app::start(root);
   frame_step(run);
 
   two_clicks(run, mouse, display.screen());

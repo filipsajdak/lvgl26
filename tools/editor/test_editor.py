@@ -253,6 +253,13 @@ class Check(unittest.TestCase):
         self.assertIn(ROOT / "examples" / "quick_start" / "main.cpp", sources)
         self.assertTrue(all(source.suffix == ".cpp" for source in sources))
 
+    def test_a_mistake_a_page_shows_is_not_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            docs = pathlib.Path(folder) / "docs"
+            docs.mkdir()
+            (docs / "page.md").write_text("<!-- snippet: tests/fail/wrong.cpp -->\n<!-- snippet: examples/a/main.cpp x -->\n")
+            self.assertEqual(check.snippet_sources(docs), [pathlib.Path(folder).resolve() / "examples" / "a" / "main.cpp"])
+
 
 class Inventory(unittest.TestCase):
     stubs = {"a.hpp": "namespace lv {\nstruct state;\n}", "b.hpp": "namespace lv::ease {\ninline constexpr easing in{};\n}"}

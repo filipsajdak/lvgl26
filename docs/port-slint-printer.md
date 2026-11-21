@@ -49,7 +49,7 @@ A window needs SDL2: the [README of the port](../examples/ports/slint/printer/RE
 | Components in `components/`, such as `SpinBox` | `parts.hpp`: C++ functions that return a piece of tree |
 | `DemoPalette` and `ComponentTheme` in `common.slint` | `tokens.json` |
 | The global `PrinterState` | `state.hpp` |
-| `if page == ...` in the window | `pager.hpp` and an `lv::effect` in `shell.cpp` |
+| `if page == ...` in the window | `lv::shown` in `shell.cpp` |
 | The global `PrinterQueue` | `queue.cpp` and `queue_column.hpp` |
 
 ### Tokens
@@ -99,7 +99,7 @@ It keeps its value while the page is away.
 ### One file for each page
 
 A page is a constant tree in its own `.cpp` file.
-The file gives the shell one function, and the shell owns what the function returns.
+The file gives the shell one `lv::page`, which says how to build the page and how much memory it needs.
 
 <!-- snippet: examples/ports/slint/printer/copy.cpp page -->
 ```cpp
@@ -109,52 +109,16 @@ constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "
 
 }  // namespace
 
-lv::owned<lv::obj> mount_copy(lv::obj parent) { return mount_page<ui>(parent); }
+constinit const lv::page copy_page = lv::page_of<ui>;
 ```
 
-`mount_page` in `pages.hpp` mounts the tree under the given parent and hands its widgets over as one `lv::owned`.
-The owner deletes them.
+`pages.hpp` declares every page as `extern const lv::page copy_page;`, so the shell compiles none of their trees.
+The page's widgets live while the page is shown.
 Copy and Scan share `job_page` in `job_page.hpp`, and differ in a few texts.
 Their state is `job_options<Kind>`: one template, one state for each kind of page.
 
 The compiler works on one page at a time, with the project's normal limit for constant evaluation.
 A change to one page recompiles one file.
-
-### The pager
-
-A pager is a place on the screen where one page is mounted.
-Showing another page deletes the one before it, and only then builds the new one.
-The order matters, although `owned` does delete the old page when it is assigned over.
-The new page is built before the assignment runs, so the host would hold two pages for a while.
-The test `printer_cost` switches from the home page to the settings page both ways.
-The peak heap is 102728 bytes when the old page goes first, and 132440 bytes when it does not.
-One page is left either way.
-A page that follows the state, planned as `lv::shown`, will replace this pager.
-
-<!-- snippet: examples/ports/slint/printer/pager.hpp pager -->
-```cpp
-// Replaces the page in `slot` with the one `make` builds under `host`.
-// The page before is deleted first, so two pages never exist at once.
-inline void replace_page(lv::owned<lv::obj>& slot, lv::obj host, make_page make) {
-  slot.reset();
-  slot = make(host);
-}
-
-class pager {
- public:
-  void host(lv::obj where) { host_ = where; }
-  void show(make_page make) { replace_page(current_, host_, make); }
-  void clear() { current_.reset(); }
-
- protected:
-  lv::obj host_;
-  lv::owned<lv::obj> current_;
-};
-```
-
-`slide_pager` in the same file adds the slide.
-The new page moves in from the right.
-The old page moves out in a task of its own, and its widgets are deleted when it is out of sight.
 
 ### The shell follows the state
 
@@ -167,34 +131,40 @@ if PrinterState.active-page == Page.settings: settings-page := SettingsPage { }
 ```
 
 In Slint, such an element exists only while its condition holds.
-In the port an `lv::effect` runs a function when a state changes.
-The function is an `lv::match` with an arm for every page, so a new page without an arm stops the build, and each arm asks a pager to show its page.
+In the port `lv::shown` follows the state and shows the page of its value, with an arm for every page, so a new page without an arm stops the build.
+The sub-pages slide in over the page and out again: `.enter` and `.leave` are transitions of the page's root.
+The holder of the sub-pages takes no clicks itself, so with no sub-page shown a tap reaches the page below.
 
-<!-- snippet: examples/ports/slint/printer/shell.cpp follow -->
+<!-- snippet: examples/ports/slint/printer/shell.cpp shown -->
 ```cpp
-void show_page(page p) {
-  main_pager.show(lv::match(p)(lv::is<page::home>.then([] { return &mount_home; }),
-                               lv::is<page::settings>.then([] { return &mount_settings; }),
-                               lv::is<page::ink>.then([] { return &mount_ink; })));
-}
+// A sub-page slides in from the right over the page, and out again.
+constexpr auto slide_in = lv::transition({.x = {page_width * px, 0 * px}}, tok.motion.slide_time, tok.motion.slide);
+constexpr auto slide_out = lv::transition({.x = {0 * px, page_width * px}}, tok.motion.slide_time, tok.motion.slide);
 
-// The host of the sub-pages catches taps again, and the page slides in.
-void open_subpage(make_page make) {
-  if (sub_host) sub_host.get().set({.hidden = false});
-  sub_pager.show(make);
-}
-
-void show_subpage(subpage s) {
-  lv::match(s)(lv::is<subpage::none>.then([] { sub_pager.leave(); }),
-               lv::is<subpage::print>.then([] { open_subpage(&mount_print); }),
-               lv::is<subpage::scan>.then([] { open_subpage(&mount_scan); }),
-               lv::is<subpage::copy>.then([] { open_subpage(&mount_copy); }),
-               lv::is<subpage::usb>.then([] { open_subpage(&mount_usb); }));
-}
-
-constinit lv::effect follow_page{&show_page, active_page};
-constinit lv::effect follow_subpage{&show_subpage, active_subpage};
+constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
+                               .style = {.bg_color = tok.window.background, .bg_opa = tok.solid,
+                                         .clip_corner = true, .radius = tok.window.radius}})[
+    lv::group({.size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
+        lv::shown(active_page)[
+            lv::is<page::home>(home_page), lv::is<page::settings>(settings_page), lv::is<page::ink>(ink_page)]],
+    // Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
+    lv::group({.clickable = false, .size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
+        lv::shown(active_subpage, {.enter = slide_in, .leave = slide_out})[
+            lv::is<subpage::none>(), lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
+            lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)]],
+    lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "column",
+               .size = {sidebar_width * px, 100 * pct},
+                .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid, .pad_gap = tok.space.edge,
+                          .pad_top = tok.space.edge}})[
+        side_icon<icons::home>(is_home, &go<page::home>), side_icon<icons::settings>(is_settings, &go<page::settings>),
+        side_icon<icons::ink>(is_ink, &go<page::ink>)]];
 ```
+
+A switch deletes the old page before it builds the new one, unless a transition needs both.
+The test `printer_cost` switches from the home page to the settings page this way, and builds both pages at once for comparison.
+The peak heap is 102592 bytes with `lv::shown`, and 132312 bytes with both pages.
+One page is left after the switch.
+During a slide the leaving and the entering sub-page are both alive, in two slots of the size of the largest page, which `lv::shown` takes once from LVGL's heap when the window is mounted.
 
 ### The queue
 
@@ -411,7 +381,7 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 | Gradients run vertically or horizontally. The original's tiles run at 135 degrees, and its color button has four stops. | A style takes two colors and a direction. |
 | Only the Gradient theme is ported, and the side bar has no theme menu. The original has three more themes. | A theme cannot change at run time yet. |
 | The settings page has no translations. | `@tr` has no counterpart yet. |
-| Every sub-page slides in. In the original source only the Print page animates its position. | One pager serves all four sub-pages. |
+| Every sub-page slides in. In the original source only the Print page animates its position. | One `lv::shown` serves all four sub-pages. |
 | The ink tubes have no line at the surface of the ink. | The port does not draw it. |
 | Pause does nothing. | It does nothing in the original either. |
 

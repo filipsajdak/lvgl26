@@ -27,6 +27,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace lv::detail {
@@ -76,12 +77,16 @@ class held {
   mounted<Tree>* operator->() const
     pre(has_value())
   {
-    return find_(slot_);
+    mounted<Tree>* tree = find_(slot_);
+    if (tree == nullptr) std::unreachable();  // ruled out by the precondition
+    return tree;
   }
   mounted<Tree>& operator*() const
     pre(has_value())
   {
-    return *find_(slot_);
+    mounted<Tree>* tree = find_(slot_);
+    if (tree == nullptr) std::unreachable();  // ruled out by the precondition
+    return *tree;
   }
 };
 
