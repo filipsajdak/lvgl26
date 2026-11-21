@@ -78,6 +78,9 @@ static_assert(is_rgb(color_token(R"("#102030")"), 0x10, 0x20, 0x30));
 // The forms from before the Design Tokens Format 2025.10 are read only when the settings allow them,
 // and give the same values as the object forms of tokens.json (the token file was rewritten by tools/dtcg_fix.py).
 struct legacy_settings {};
+// A color with an alpha is opaque unless the file says otherwise.
+static_assert(lv::rgba_color{}.alpha == 255);
+
 // The example in the message about a form from before the standard shows the user's own value.
 consteval bool standard_form_is(lv::detail::token_type kind, std::string_view legacy, std::string_view expected) {
   return lv::detail::standard_form(kind, *lv::json::value::parse(legacy)) == expected;
