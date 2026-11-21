@@ -230,6 +230,29 @@ class Parts(unittest.TestCase):
                 mutation.mutants_of_part([1, 2], bad)
 
 
+class GitInTheCopy(unittest.TestCase):
+    def test_a_failure_of_git_stops_the_run_and_shows_what_git_printed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree = pathlib.Path(directory)
+            (tree / "a.json").write_text("{}")
+            mutation.track_files(tree)
+            (tree / ".git" / "index.lock").write_text("")  # a second git at work: add -A cannot go on
+            with self.assertRaises(SystemExit) as stopped:
+                mutation.track_files(tree)
+            self.assertIn("index.lock", str(stopped.exception))
+            self.assertIn("ended with 128", str(stopped.exception))
+
+    def test_git_is_told_to_trust_the_directory(self):
+        calls = []
+        saved = mutation.subprocess.run
+        mutation.subprocess.run = lambda command, **kw: calls.append(command) or subprocess.CompletedProcess(command, 0, "", "")
+        try:
+            mutation.git_in("somewhere", "status")
+        finally:
+            mutation.subprocess.run = saved
+        self.assertEqual(calls, [["git", "-c", "safe.directory=*", "status"]])
+
+
 class CommentMutants(unittest.TestCase):
     ORIGINAL = "int a = 1;\n  // a note\nint b = 2;\n"
 
