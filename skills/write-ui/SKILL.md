@@ -14,7 +14,8 @@ Read the page of a feature before writing code that uses it.
 
 1. Read [docs/quick-start.md](../../docs/quick-start.md): a state, a tree, a mount and a `main`, in one file that the tests build.
 2. Copy its shape: [examples/quick_start/main.cpp](../../examples/quick_start/main.cpp) and its [CMakeLists.txt](../../examples/quick_start/CMakeLists.txt).
-3. For a feature beyond it, open that feature's page from the list below.
+3. Read [docs/rules.md](../../docs/rules.md), "Writing good lvgl26 code": the rules every page teaches, each with an id. Follow them, and cite the id when a review or a commit applies one.
+4. For a feature beyond it, open that feature's page from the list below.
 
 The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other compiler builds the code.
 
@@ -31,6 +32,7 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 
 | To write | Read |
 |---|---|
+| Values that widgets follow, values made from them, an action that follows them | [docs/state.md](../../docs/state.md) |
 | Mounting a tree, unmounting, one of several trees in a slot | [docs/mounting.md](../../docs/mounting.md) |
 | A look for all widgets of a kind | [docs/themes.md](../../docs/themes.md) |
 | A look named by the design, from the token file | [docs/looks.md](../../docs/looks.md) |
