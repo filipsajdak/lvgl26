@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <span>
 #include <concepts>
 #include <initializer_list>
 #include <string>
@@ -164,16 +165,15 @@ consteval std::string_view how_to_write_unit(std::meta::info t) {
         entry{^^decidegrees, "an angle (90 * lv::deg, or 22.5 * lv::deg with tenths of a degree)"},
         entry{^^duration, "a time (300 * lv::ms)"},
         entry{^^opa, "an opacity (50 * lv::pct)"},
+        entry{std::meta::dealias(^^lv_color_t), "a color (lv::rgb(0x1b2430))"},
         entry{^^strict<bool>, "true or false"}})
     if (e.type == t) return e.text;
   return {};
 }
 
-consteval std::string how_to_write(std::meta::info t) {
-  if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
-  if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
-  if (is_made_from(t, ^^nonnegative))
-    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+// How to write a value that is no number with a unit: a list of options, a handler, a font, an LVGL value by name.
+// Empty for another type.
+consteval std::string how_to_write_kind(std::meta::info t) {
   if (t == ^^option_list)
     return "a list of options ({\"100%\", \"75%\", \"50%\"}, or lv::options_of<an enum>), or a text with a line "
            "break between the options";
@@ -186,25 +186,91 @@ consteval std::string how_to_write(std::meta::info t) {
   if (t == ^^styled<const lv_font_t*>)
     return "a font from a typography token (`type(tok.text.title)` with an lv::typeface, see "
            "lv/font.hpp), or lv::raw(font) for a font that no token names";
+  if (std::meta::is_enum_type(t)) return "the name of an LVGL value in quotes, such as \"center\"";
+  return {};
+}
+
+consteval std::string how_to_write(std::meta::info t) {
+  if (const auto unit = how_to_write_unit(t); !unit.empty()) return str(unit);
+  if (is_made_from(t, ^^strict)) return "a whole number (not bool, not floating point)";
+  if (is_made_from(t, ^^nonnegative))
+    return how_to_write(std::meta::template_arguments_of(t)[0]) + ", not negative";
+  if (auto kind = how_to_write_kind(t); !kind.empty()) return kind;
   if (is_made_from(t, ^^styled))
     return "a design token (for example tok.space.md) or lv::raw(...), holding " +
            how_to_write(std::meta::template_arguments_of(t)[0]);
   return str(std::meta::display_string_of(t));
 }
 
+// What a value that was given is called in a message: lvgl26's words, not LVGL's or the compiler's.
+consteval std::string given_name(std::meta::info t) {
+  if (t == std::meta::dealias(^^lv_color_t)) return "a color";
+  if (std::meta::is_array_type(t) && std::meta::remove_extent(t) == ^^char) return "a text";
+  return str(std::meta::display_string_of(t));
+}
+
+// What the properties of a message take (ts) and what was given (us), as types.
+using type_list = std::span<const std::meta::info>;
+
+// "a width or x (...), then a color": what the property takes.
+consteval std::string takes_text(type_list ts) {
+  std::string m;
+  for (std::size_t i = 0; i < ts.size(); ++i) m += (i ? ", then " : "") + how_to_write(ts[i]);
+  return m;
+}
+
+// A style value that was given as the plain value inside the token or lv::raw that the property wants.
+consteval bool is_bare_payload(std::meta::info wanted, std::meta::info given) {
+  return is_made_from(wanted, ^^styled) && std::meta::template_arguments_of(wanted)[0] == given;
+}
+
+// The sentence after "You gave ...": what to write instead, when the mistake is one of two known ones.
+consteval std::string wrong_value_hint(type_list ts, type_list us) {
+  if (ts.size() == 1 && us.size() == 1) {
+    if (is_bare_payload(ts[0], us[0])) return " A bare value is no token: write lv::raw(...) around it, or take it from the token file.";
+    return {};
+  }
+  if (!us.empty() && ts.size() != us.size())
+    return " The property takes " + decimal(ts.size()) + " values in braces, and this has " + decimal(us.size()) + ".";
+  return {};
+}
+
+// The text of the message of a wrong value. A function of its own, so that the instance of
+// wrong_value::message that every argument type needs holds a call and no more.
+consteval std::string_view wrong_value_text(type_list ts, type_list us) {
+  std::string m = "lv: wrong value for this property. It takes " + takes_text(ts) + ". You gave ";
+  for (std::size_t i = 0; i < us.size(); ++i) m += (i ? ", " : "") + given_name(us[i]);
+  m += us.empty() ? "nothing." : ".";
+  return std::define_static_string(m + wrong_value_hint(ts, us));
+}
+
+consteval std::string_view bound_text(type_list ts, std::meta::info state) {
+  return std::define_static_string("lv: this property takes " + takes_text(ts) + ", and the state holds " + given_name(state) +
+                                   ". A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.");
+}
+
+consteval std::string_view format_text(type_list ts) {
+  return std::define_static_string("lv: lv::bind(state, format) is for text properties only, and this property takes " +
+                                   takes_text(ts) + ". Bind the state without a format: lv::bind(state).");
+}
+
 template <class... Ts>
 struct wrong_value {
   template <class... U>
   static consteval std::string_view message() {
-    std::string m = "lv: wrong value for this property. It takes ";
-    std::string sep;
-    ((m += sep + how_to_write(^^Ts), sep = ", then "), ...);
-    m += ". You gave ";
-    sep.clear();
-    ((m += sep + str(std::meta::display_string_of(std::meta::dealias(^^std::remove_cvref_t<U>))), sep = ", "),
-     ...);
-    if (sizeof...(U) == 0) m += "nothing";
-    return std::define_static_string(m + ".");
+    return wrong_value_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...},
+                            std::array<std::meta::info, sizeof...(U)>{std::meta::dealias(^^std::remove_cvref_t<U>)...});
+  }
+
+  // A state of type T that the property cannot follow.
+  template <class T>
+  static consteval std::string_view bound_message() {
+    return bound_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...}, std::meta::dealias(^^T));
+  }
+
+  // lv::bind(state, format) on a property that is not a text.
+  static consteval std::string_view format_message() {
+    return format_text(std::array<std::meta::info, sizeof...(Ts)>{^^Ts...});
   }
 };
 
@@ -571,9 +637,7 @@ struct arg {
     static_assert(text_of_quantity<T> || std::convertible_to<T, first> ||
                       std::convertible_to<typename detail::state_payload<T>::type, first> ||
                       (std::is_enum_v<T> && detail::is_strict<first>),
-                  "lv: this property cannot be bound to a state of that type. The state's "
-                  "type, or the number inside its quantity or named type, must be what the "
-                  "property takes.");
+                  detail::wrong_value<Ts...>::template bound_message<T>());
     // A subject carries a plain number, and the property would read whole degrees
     // as tenths.
     static_assert(!(std::same_as<T, angle> && std::same_as<first, decidegrees>),
@@ -605,7 +669,7 @@ struct arg {
   constexpr arg(formatted_binding<T> b)
       : set(true), follows(detail::follows_state), v{}, bound(b.source), bound_ops(b.ops), bound_format(b.format) {
     static_assert(sizeof...(Ts) == 1 && (std::same_as<Ts, const char*> && ...),
-                  "lv: lv::bind(state, format) is for text properties only.");
+                  detail::wrong_value<Ts...>::format_message());
   }
 
  private:

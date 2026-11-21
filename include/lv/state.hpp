@@ -261,15 +261,28 @@ const source_ops& source_ops_of() {
 
 // A value that widgets can follow. See the top of this file.
 // O is the settings tag; leave it out.
+namespace detail {
+
+consteval std::string_view bad_state_type_text(std::meta::info type) {
+  return std::define_static_string(
+      "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one integer, bool or enum member, a "
+      "bool, an enum, an lv_color_t or a pointer (for text: const char*). This state's type is " +
+      str(std::meta::display_string_of(type)) + ".");
+}
+
+template <class T>
+consteval std::string_view bad_state_type() {
+  return bad_state_type_text(std::meta::dealias(^^T));
+}
+
+}  // namespace detail
+
 template <class T, class O = override>
 class state : detail::watched<T> {
   static_assert(!detail::unit_quantity<T> || detail::integer_quantity<T>,
                 "lv: a quantity in a state needs an integer number for now, for example "
                 "`0 * km / h` rather than `0.0 * km / h`.");
-  static_assert(state_value<T>,
-                "lv: a state holds a quantity (`0 * km / h`, with mp-units), a struct with one "
-                "integer, bool or enum member, a bool, an enum, an lv_color_t or a pointer "
-                "(for text: const char*).");
+  static_assert(state_value<T>, detail::bad_state_type<T>());
   static_assert(!detail::integer<T> || detail::project<O>.rules.raw_integer_state,
                 "lv: a state of a plain integer does not say what the number is. If it is a "
                 "measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it "
