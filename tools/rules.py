@@ -80,14 +80,14 @@ def message_forms() -> dict[tuple[str, str], str]:
 
 def whole_pins() -> dict[str, str]:
     """Each test of lvgl26_compile_fail_message, with the regular expression that its whole line matches,
-    from `error: ` on, as cmake/compile_fail.cmake builds it."""
+    from `error: ` on: the forms of cmake/compile_fail.cmake start with it."""
     forms = message_forms()
     found = {}
     for name, form, quoted in WHOLE_MESSAGE.findall((TESTS / "CMakeLists.txt").read_text()):
         pattern = re.escape(cmake_text(quoted))
         for (kind, placeholder), value in forms.items():
             pattern = pattern.replace(re.escape(f"<<{placeholder}>>"), f"(?:{value})") if kind == "PLACEHOLDER" else pattern
-        found[name] = "error: " + forms[("FORM", form)] + pattern
+        found[name] = forms[("FORM", form)] + pattern
     return found
 
 
