@@ -1292,7 +1292,7 @@ lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #inc
 lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 
 # Reproducers of an analyzer finding (throwaway branch).
-foreach(repro held_shown_tree held_shown_page held_one_of lambda_handler held_after_spawn held_after_call one_of_after_call)
+foreach(repro held_shown_tree held_shown_page held_one_of lambda_handler held_after_spawn held_after_call one_of_after_call held_stored held_like_test)
   add_executable(repro_${repro} analyzer_repro/${repro}.cpp)
   target_link_libraries(repro_${repro} PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 endforeach()

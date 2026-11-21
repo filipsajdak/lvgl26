@@ -44,12 +44,11 @@ jobs:
         shell: bash
         run: |
           run_all() {
-            for t in repro_held_after_spawn repro_held_after_call repro_one_of_after_call shown; do
+            for t in repro_held_stored repro_held_like_test shown; do
               echo "=== $1 $t"
               cmake --build --preset host-v96-analyze --target $t 2>&1 | grep -E "error|note: argument" | head -6 || true
             done
           }
           run_all before
           python3 tests/analyzer_repro/patch_held.py
-          git diff --stat
           run_all after
