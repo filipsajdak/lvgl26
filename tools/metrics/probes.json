@@ -79,6 +79,12 @@
       "unit": "bytes",
       "stands_for": "the stack of one run-time set({...}) on a Cortex-M4 (the budget is in tools/stack_budget.py)",
       "threshold_percent": 2
+    },
+    {
+      "id": "lists",
+      "kind": "compile",
+      "file": "examples/lists/main.cpp",
+      "stands_for": "temporary: the lists example"
     }
   ]
 }
