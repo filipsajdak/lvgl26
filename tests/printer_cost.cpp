@@ -6,7 +6,8 @@
 #include "check.hpp"
 
 #include <lv/lv.hpp>
-#include <pager.hpp>
+#include <lv/shown.hpp>
+#include <pages.hpp>
 #include <queue.hpp>
 #include <scenes.hpp>
 #include <shell.hpp>
@@ -80,31 +81,43 @@ void a_second(lv::application& app) {
   }
 }
 
-// The heap in use at the moment the settings page is complete: the peak of a switch to it.
+// The heap in use at the moment the settings page is complete: the peak of a switch to it. The
+// settings page of the port, with this probe as what runs when it is shown.
 std::size_t peak_of_switch = 0;
+void probe(lv::detail::shown_slot&) { peak_of_switch = used_bytes(); }
+constinit lv::page probed_settings{};
 
-lv::owned<lv::obj> settings_probed(lv::obj host) {
-  lv::owned<lv::obj> page = mount_settings(host);
-  peak_of_switch = used_bytes();
-  return page;
+enum class probe_page { home, settings };
+constinit lv::state<probe_page> probe_current{probe_page::home};
+constexpr auto probe_ui = lv::group({.size = {page_width * lv::px, window_height * lv::px}})[
+    lv::shown(probe_current)[lv::is<probe_page::home>(home_page), lv::is<probe_page::settings>(probed_settings)]];
+
+// Switches from the home page to the settings page with lv::shown, which deletes the old page
+// first, and tells the peak heap above the empty host. One page is left.
+void switch_home_to_settings(lv::obj screen, std::size_t& before, std::size_t& peak, std::size_t& left) {
+  probed_settings = settings_page;
+  probed_settings.on_shown = &probe;
+  probe_current = probe_page::home;
+  lv::mounted<probe_ui> host;
+  before = used_bytes();
+  check(host.mount(screen).has_value());
+  probe_current = probe_page::settings;
+  lv::settle();
+  peak = peak_of_switch;
+  left = lv_obj_get_child_count(host.root().raw());
 }
 
-// Switches from the home page to the settings page in a host of its own, and tells the peak heap.
-// `delete_first` is how the pager does it; the other way is the plain assignment of the new page.
-// Either way one page is left in the host: the owner deletes the old page in both.
-void switch_home_to_settings(lv::obj screen, bool delete_first, std::size_t& before, std::size_t& peak,
-                             std::size_t& left) {
+// Both pages built at once, as a switch that builds before it deletes would hold them.
+void both_pages(lv::obj screen, std::size_t& before, std::size_t& peak) {
   lv::owned<lv::obj> host{lv::obj{lv_obj_create(screen.raw())}};
+  alignas(std::max_align_t) static std::byte first[512];
+  alignas(std::max_align_t) static std::byte second[512];
+  check(home_page.size <= sizeof first && settings_page.size <= sizeof second);
   before = used_bytes();
-  lv::owned<lv::obj> slot = mount_home(host.get());
-  if (delete_first) {
-    replace_page(slot, host.get(), &settings_probed);
-  } else {
-    slot = settings_probed(host.get());
-  }
-  peak = peak_of_switch;
-  left = lv_obj_get_child_count(host.get().raw());
-  check(left == 1 && slot);
+  check(home_page.mount(first, host.get().raw()) && settings_page.mount(second, host.get().raw()));
+  peak = used_bytes();
+  settings_page.end(second);
+  home_page.end(first);
 }
 
 }  // namespace
@@ -144,20 +157,20 @@ int main() {
   }
   check(queue.size() == jobs_before);
 
-  // The switch from the home page to the settings page, both ways, in a host of its own. The heap
-  // before it is taken with the host empty, so the peak above it is what the pages need at once.
-  std::size_t before_first = 0, before_plain = 0, peak_first = 0, peak_plain = 0, left_first = 0, left_plain = 0;
+  // The switch from the home page to the settings page, and both pages at once. The heap before
+  // each is taken with the host empty, so the peak above it is what the pages need at once.
+  std::size_t before_switch = 0, before_both = 0, peak_switch = 0, peak_both = 0, left = 0;
   // Twice: the first run makes what later runs share (the decoded pictures, for one).
   for (int round = 0; round < 2; ++round) {
-    switch_home_to_settings(screen, true, before_first, peak_first, left_first);
-    switch_home_to_settings(screen, false, before_plain, peak_plain, left_plain);
+    switch_home_to_settings(screen, before_switch, peak_switch, left);
+    both_pages(screen, before_both, peak_both);
   }
-  std::printf("home to settings, deleting first: peak heap %zu bytes, %zu above the empty host\n", peak_first,
-              peak_first - before_first);
-  std::printf("home to settings, assigning: peak heap %zu bytes, %zu above the empty host\n", peak_plain,
-              peak_plain - before_plain);
-  check(left_first == 1 && left_plain == 1);
-  check(peak_plain - before_plain > peak_first - before_first);
+  std::printf("home to settings with lv::shown: peak heap %zu bytes, %zu above the empty host\n", peak_switch,
+              peak_switch - before_switch);
+  std::printf("home and settings at once: peak heap %zu bytes, %zu above the empty host\n", peak_both,
+              peak_both - before_both);
+  check(left == 1);
+  check(peak_both - before_both > peak_switch - before_switch);
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }

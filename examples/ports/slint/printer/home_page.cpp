@@ -45,6 +45,6 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct}})[
 
 }  // namespace
 
-lv::owned<lv::obj> mount_home(lv::obj parent) { return mount_page<ui>(parent); }
+constinit const lv::page home_page = lv::page_of<ui>;
 
 }  // namespace printer

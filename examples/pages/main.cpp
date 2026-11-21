@@ -1,5 +1,6 @@
-// Pages that follow a state: lv::shown shows the tree of the current page, and lv::when a
-// banner while the device is offline. The side bar sets the state; nothing else switches.
+// Pages that follow a state: lv::shown shows the tree of the current page, sliding the new one in
+// and the old one out, and lv::when a banner while the device is offline. The side bar sets the
+// state; nothing else switches.
 
 #include <lv/lv.hpp>
 #include <lv/shown.hpp>
@@ -23,8 +24,18 @@ constexpr auto offline_banner = lv::label({.text = "Offline"});
 
 //! [on-shown]
 // Called each time the home page is built, with a handle to it.
-void greet(lv::held<home> page) { page->get<"greeting">().set({.text = "Welcome back"}); }
+void greet(lv::held<home> page) { page->get<"greeting">().set({.text = "Welcome"}); }
+
+// Called each time the home page comes to the front, after greet when it was just built.
+int visits = 0;
+void count_visit(lv::held<home>) { ++visits; }
 //! [on-shown]
+
+//! [transitions]
+// A page slides in from the right, and the old one slides out to the left.
+constexpr auto slide_in = lv::transition({.x = {240 * px, 0 * px}}, 250 * ms, lv::ease::out);
+constexpr auto slide_out = lv::transition({.x = {0 * px, -240 * px}}, 250 * ms, lv::ease::in);
+//! [transitions]
 
 //! [tree]
 constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
@@ -35,8 +46,8 @@ constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
     lv::column({.size = {240 * px, 240 * px}})[
         lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
         lv::group({.size = {240 * px, 200 * px}})[
-            lv::shown(current)[
-                lv::is<page::home>(home, {.on_shown = &greet}),
+            lv::shown(current, {.enter = slide_in, .leave = slide_out})[
+                lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
                 lv::is<page::settings>(settings),
                 lv::is<page::about>(about)]]]];
 //! [tree]
@@ -60,5 +71,5 @@ int main() {
   lv::settle();  // or at once, where code needs the new page in the same step
   current = page::home;
   app.advance(50 * ms), app.step();
-  return 0;
+  return visits == 2 ? 0 : 2;  // home was in front at the start and once more
 }

@@ -62,15 +62,15 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 }
 //! [rise]
 
+// Each time the page is shown, its levels rise.
+void start_ink(lv::held<ui> page) {
+  lv::spawn(rise(lv::obj{page->get<"yellow">().raw()}, lv::obj{page->get<"cyan">().raw()},
+                 lv::obj{page->get<"magenta">().raw()}, lv::obj{page->get<"black">().raw()}),
+            page->root());
+}
+
 }  // namespace
 
-lv::owned<lv::obj> mount_ink(lv::obj parent) {
-  auto built = lv::mount<ui>(parent);
-  if (!built) return {};
-  lv::spawn(rise(lv::obj{built->get<"yellow">().raw()}, lv::obj{built->get<"cyan">().raw()},
-                 lv::obj{built->get<"magenta">().raw()}, lv::obj{built->get<"black">().raw()}),
-            built->root());
-  return lv::owned<lv::obj>{built->detach()};
-}
+constinit const lv::page ink_page = lv::page_of<ui, {.on_shown = &start_ink}>;
 
 }  // namespace printer

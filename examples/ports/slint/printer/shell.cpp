@@ -2,8 +2,10 @@
 // is shown, and the place where a sub-page slides in over it.
 
 #include <lv/image.hpp>
+#include <lv/shown.hpp>
 
-#include "pager.hpp"
+#include "pages.hpp"
+#include "ui.hpp"
 #include "parts.hpp"
 #include "queue.hpp"
 #include "shell.hpp"
@@ -41,71 +43,40 @@ constexpr auto side_icon(const Current& current, void (*go_to)()) {
                  .style_checked = {.image_recolor = tok.sidebar.icon_active}})];
 }
 
+// ---- the pages -------------------------------------------------------------------
+
+//! [shown]
+// A sub-page slides in from the right over the page, and out again.
+constexpr auto slide_in = lv::transition({.x = {page_width * px, 0 * px}}, tok.motion.slide_time, tok.motion.slide);
+constexpr auto slide_out = lv::transition({.x = {0 * px, page_width * px}}, tok.motion.slide_time, tok.motion.slide);
+
 constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid,
                                          .clip_corner = true, .radius = tok.window.radius}})[
-    lv::group({.id = "main", .size = {page_width * px, 100 * pct}, .x = sidebar_width * px}),
-    lv::group({.hidden = true, .id = "sub", .size = {page_width * px, 100 * pct}, .x = sidebar_width * px}),
+    lv::group({.size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
+        lv::shown(active_page)[
+            lv::is<page::home>(home_page), lv::is<page::settings>(settings_page), lv::is<page::ink>(ink_page)]],
+    // Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
+    lv::group({.clickable = false, .size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
+        lv::shown(active_subpage, {.enter = slide_in, .leave = slide_out})[
+            lv::is<subpage::none>(), lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
+            lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)]],
     lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "column",
                .size = {sidebar_width * px, 100 * pct},
                 .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid, .pad_gap = tok.space.edge,
                           .pad_top = tok.space.edge}})[
         side_icon<icons::home>(is_home, &go<page::home>), side_icon<icons::settings>(is_settings, &go<page::settings>),
         side_icon<icons::ink>(is_ink, &go<page::ink>)]];
-
-// ---- the pages -------------------------------------------------------------------
-
-pager main_pager;
-slide_pager sub_pager;
-lv::weak<lv::obj> sub_host;
-
-//! [follow]
-void show_page(page p) {
-  main_pager.show(lv::match(p)(lv::is<page::home>.then([] { return &mount_home; }),
-                               lv::is<page::settings>.then([] { return &mount_settings; }),
-                               lv::is<page::ink>.then([] { return &mount_ink; })));
-}
-
-// The host of the sub-pages catches taps again, and the page slides in.
-void open_subpage(make_page make) {
-  if (sub_host) sub_host.get().set({.hidden = false});
-  sub_pager.show(make);
-}
-
-void show_subpage(subpage s) {
-  lv::match(s)(lv::is<subpage::none>.then([] { sub_pager.leave(); }),
-               lv::is<subpage::print>.then([] { open_subpage(&mount_print); }),
-               lv::is<subpage::scan>.then([] { open_subpage(&mount_scan); }),
-               lv::is<subpage::copy>.then([] { open_subpage(&mount_copy); }),
-               lv::is<subpage::usb>.then([] { open_subpage(&mount_usb); }));
-}
-
-constinit lv::effect follow_page{&show_page, active_page};
-constinit lv::effect follow_subpage{&show_subpage, active_subpage};
-//! [follow]
-
-// The sub-page host stops catching taps once the page has slid out.
-lv::task<> hide_when_empty(lv::obj host) {
-  for (;;) {
-    co_await lv::changed(active_subpage);
-    if (active_subpage.get() != subpage::none) continue;
-    co_await lv::sleep(tok.motion.slide_time);
-    if (active_subpage.get() == subpage::none) host.set({.hidden = true});
-  }
-}
+//! [shown]
 
 }  // namespace
 
 bool start(lv::obj screen) {
   static auto window = lv::mount<ui>(screen);
   if (!window) return false;
-  main_pager.host(window->get<"main">());
-  sub_pager.host(window->get<"sub">());
-  sub_host = lv::weak<lv::obj>{window->get<"sub">()};
-  lv::spawn(hide_when_empty(window->get<"sub">()), window->get<"sub">());
   load_demo_queue();
-  lv::spawn(run_queue());
-  return follow_page.start() && follow_subpage.start();
+  lv::spawn(run_queue());  // the queue runs as long as the program
+  return true;
 }
 
 }  // namespace printer

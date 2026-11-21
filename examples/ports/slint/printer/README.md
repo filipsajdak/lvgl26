@@ -40,8 +40,7 @@ The compiler works on one page at a time, with the project's normal limit for co
 
 | File | What it holds |
 |---|---|
-| `shell.cpp` | The window, the side bar, and the effects that follow `active_page` and `active_subpage` |
-| `pager.hpp` | The page switch: `pager` replaces a page, `slide_pager` slides it in and out |
+| `shell.cpp` | The window, the side bar, and the `lv::shown` nodes that follow `active_page` and `active_subpage` |
 | `home_page.cpp`, `settings_page.cpp`, `ink_page.cpp` | The three pages of the side bar |
 | `print_page.cpp`, `copy.cpp`, `scan.cpp`, `usb_page.cpp` | The four sub-pages |
 | `queue.cpp`, `queue_column.hpp` | The jobs, and the column of cards that the home page nests |

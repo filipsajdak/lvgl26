@@ -14,7 +14,7 @@ constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "
 
 }  // namespace
 
-lv::owned<lv::obj> mount_copy(lv::obj parent) { return mount_page<ui>(parent); }
+constinit const lv::page copy_page = lv::page_of<ui>;
 //! [page]
 
 }  // namespace printer

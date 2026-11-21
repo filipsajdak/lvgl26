@@ -77,14 +77,14 @@ lv::task<> show_chosen(lv::view<"image"> photo, lv::view<"dropdown"> file) {
   }
 }
 
+// Each time the page is shown: the dropdown that Start printing reads, and the photo that follows it.
+void start_usb(lv::held<ui> page) {
+  file_choice = lv::weak<lv::view<"dropdown">>{page->get<"file">()};
+  lv::spawn(show_chosen(page->get<"photo">(), page->get<"file">()), page->root());
+}
+
 }  // namespace
 
-lv::owned<lv::obj> mount_usb(lv::obj parent) {
-  auto built = lv::mount<ui>(parent);
-  if (!built) return {};
-  file_choice = lv::weak<lv::view<"dropdown">>{built->get<"file">()};
-  lv::spawn(show_chosen(built->get<"photo">(), built->get<"file">()), built->root());
-  return lv::owned<lv::obj>{built->detach()};
-}
+constinit const lv::page usb_page = lv::page_of<ui, {.on_shown = &start_usb}>;
 
 }  // namespace printer
