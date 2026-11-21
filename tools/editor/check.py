@@ -89,10 +89,11 @@ def snippet_sources(docs: pathlib.Path) -> list[pathlib.Path]:
     """The sources that the pages under `docs` show a part of. A path is from the repository's root.
 
     A header is not read alone: a source that includes it is, and the headers a page shows are read there.
+    A file of tests/fail/ is a mistake on purpose, which a page shows with its message: it is not read.
     """
     root = docs.resolve().parent
     shown = (root / path for page in sorted(docs.glob("*.md")) for path in SNIPPET.findall(page.read_text()))
-    return [path for path in shown if path.suffix == ".cpp"]
+    return [path for path in shown if path.suffix == ".cpp" and not path.is_relative_to(root / "tests" / "fail")]
 
 
 def files_of(options: argparse.Namespace) -> list[pathlib.Path]:

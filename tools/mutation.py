@@ -132,13 +132,20 @@ def changed_line(original_lines, mutant_text):
     return pairs[0] if len(pairs) == 1 else None
 
 
-def without_comment_mutants(mutants, original):
-    """The mutants that change code. A mutant of a comment line changes nothing the compiler reads."""
+def is_unjudgeable(before, after):
+    """A mutant that no test can tell from the original: a comment line, or the line #pragma once
+    (a header that is read once needs no guard). A static_assert taken out is judged: if it survives,
+    no test makes the assertion fire."""
+    return before.strip().startswith(("//", "#pragma once"))
+
+
+def without_unjudgeable_mutants(mutants, original):
+    """The mutants that a test can judge."""
     original_lines = original.splitlines()
     kept = []
     for m in mutants:
         pair = changed_line(original_lines, m.read_text())
-        if not (pair and pair[0].lstrip().startswith("//")):
+        if not (pair and is_unjudgeable(*pair)):
             kept.append(m)
     return kept
 
@@ -318,7 +325,7 @@ def mutants_of_part(mutants, part):
 def choose_mutants(args, lines, original):
     """The mutants to judge: all of the chosen lines, the logic ones, or a sample."""
     mutants = make_mutants(args.header, lines, pathlib.Path("build/mutation/mutants") / (TREE / args.header).stem)
-    mutants = without_comment_mutants(mutants, original)
+    mutants = without_unjudgeable_mutants(mutants, original)
     if args.logic:
         mutants = logic_only(mutants, original)
     if args.part:

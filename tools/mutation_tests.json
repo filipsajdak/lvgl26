@@ -102,8 +102,8 @@
       "targets": "image image_alone"
     },
     "include/lv/all.hpp": {
-      "tests": "^smoke$|^l1_views$|^fail_band_taller_than_screen$|^fail_font_glyph_too_tall$|^fail_part_handler_not_callable$|^fail_part_tree_handler_not_callable$|^fail_post_not_callable$|^fail_visit_arm_never_called$",
-      "targets": "smoke l1_views"
+      "tests": "^all_header$|^smoke$|^l1_views$|^fail_band_taller_than_screen$|^fail_font_glyph_too_tall$|^fail_part_handler_not_callable$|^fail_part_tree_handler_not_callable$|^fail_post_not_callable$|^fail_visit_arm_never_called$",
+      "targets": "all_header smoke l1_views"
     },
     "include/lv/animate.hpp": {
       "tests": "^animate$|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_animate_needs_unit$|^fail_animate_not_a_number$|^fail_animate_one_end$|^fail_animate_size_content$",
@@ -274,7 +274,7 @@
       "targets": "tokens concepts"
     },
     "include/lv/ui_scheduler.hpp": {
-      "tests": "^ui_scheduler$|^settings$|^fail_restrict_ui_scheduler$",
+      "tests": "^ui_scheduler$|^settings$|^fail_restrict_ui_scheduler$|^fail_restrict_post$",
       "targets": "ui_scheduler settings"
     },
     "include/lv/units.hpp": {

@@ -5,6 +5,7 @@ name: docs
 on:
   pull_request:
     paths: ['docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
+            'tools/rules.py', 'tools/check_includes.py', 'tools/test_docs.py', 'tools/test_rules.py',
             'tools/check_site.py', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
             '.github/workflows/docs.yml']
 
@@ -15,8 +16,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Check the snippets, the links and the code for C names
+      - name: Check the snippets, the links, the code for C names, the messages and the outline
         run: python3 tools/docs.py check
+      - name: Check the rules and their page
+        run: python3 tools/rules.py --check-page docs/rules.md
+      - name: Test the tools that check the pages
+        run: |
+          python3 tools/test_docs.py
+          python3 tools/test_rules.py
       - name: Render the documentation
         run: |
           sudo apt-get update

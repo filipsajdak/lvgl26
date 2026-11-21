@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths: ['site/**', 'docs/**', 'examples/quick_start/**', 'tools/check_site.py', 'tools/docs.py',
-            'tools/docs_page.html', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
+            'tools/rules.py', 'tools/docs_page.html', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
             '.github/workflows/pages.yml']
   # The trend of the compile cost is written from the branch `metrics`, which the nightly run adds to.
   schedule:

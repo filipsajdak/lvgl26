@@ -44,6 +44,7 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(all_header)
 # The settings reader, and a program whose settings come from a file.
 lvgl26_test(settings)
 lvgl26_test(json_fault)
@@ -779,6 +780,19 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_lists_picture PROPERTIES FIXTURES_REQUIRED example_lists_picture)
 endif()
 
+# The example of docs/state.md: states, what follows them, and an effect.
+add_executable(example_state ${PROJECT_SOURCE_DIR}/examples/state/main.cpp)
+target_link_libraries(example_state PRIVATE lvgl26::lvgl26 lvgl26_warnings mp-units::mp-units)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+add_test(NAME example_state COMMAND example_state WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_state_out)
+set_tests_properties(example_state PROPERTIES FIXTURES_SETUP example_state_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_state_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_state_out/state.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/state.png)
+  set_tests_properties(example_state_picture PROPERTIES FIXTURES_REQUIRED example_state_picture)
+endif()
+
 # The example of docs/repetition.md: it runs, and tests/for_each.cpp checks what it repeats.
 add_executable(example_repeat ${PROJECT_SOURCE_DIR}/examples/repeat/main.cpp)
 target_link_libraries(example_repeat PRIVATE lvgl26::lvgl26 lvgl26_warnings)
@@ -971,6 +985,12 @@ target_link_libraries(visibility_probe PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 
 if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
+  # The outline of a guide, its messages tied to compile-fail tests, and its rules.
+  add_test(NAME docs_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_docs.py)
+  # The rules of good code are data; the page "Writing good lvgl26 code" is written from it.
+  add_test(NAME rules_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/rules.py
+                                   --check-page ${PROJECT_SOURCE_DIR}/docs/rules.md)
+  add_test(NAME rules_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_rules.py)
   # An example names nothing of LVGL's C API.
   add_test(NAME examples_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_examples.py)
   # Every test and fuzz target includes the header of each name of lvgl26 it uses
