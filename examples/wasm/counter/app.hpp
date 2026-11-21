@@ -56,25 +56,21 @@ inline lv::task<> tick() {
 
 }  // namespace demo
 
-// What platform.cpp needs of an application: its size, a way to start it on a screen, and the
-// values of its states for a test. The other application, bounce/, gives the same three.
+// What platform.cpp and main need of an application: its size, its tree, a way to start its task on the
+// mounted tree, and the values of its states for a test. The other application, bounce/, gives the same.
+// The platform mounts the tree and checks the result.
 namespace app {
 
 inline constexpr std::int32_t width = demo::width;
 inline constexpr std::int32_t height = demo::height;
+inline constexpr const auto& ui = demo::ui;
 
-class running {
- public:
-  // The task belongs to the screen: it ends when the tree is unmounted, so mounting it again
-  // starts exactly one.
-  explicit running(lv::obj screen) : root_(lv::mount<demo::ui>(screen)) {
-    if (root_) lv::spawn(demo::tick(), root_.root());
-  }
-  bool ok() const { return root_.has_value(); }
-
- private:
-  decltype(lv::mount<demo::ui>(lv::obj{})) root_;
-};
+// The task belongs to the mounted tree: it ends when the tree is unmounted, so mounting it again
+// starts exactly one.
+template <class Mounted>
+void start(const Mounted& root) {
+  lv::spawn(demo::tick(), root->root());
+}
 
 // 0 the dial, 1 the clicks, 2 the ticks, 3 the slider, 4 the switch (1 when on). Else -1.
 inline std::int32_t state(std::int32_t which) {

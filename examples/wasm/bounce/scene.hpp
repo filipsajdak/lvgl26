@@ -140,10 +140,8 @@ lv::task<> shape(lv::view<"obj"> box_view, lv::view<"obj"> body, lv::view<"obj">
   }
 }
 
-void start(lv::obj screen) {
-  const lv::obj root = lv::place<scene>(screen);
-  // The tree is placed, so its widgets live as long as the screen. Its children are
-  // in the order the tree lists them.
+void start_scene(lv::obj root) {
+  // The tree is mounted: its children are in the order the tree lists them.
   const lv::view<"obj"> shadow{lv_obj_get_child(root.raw(), 2)}; // C API
   const lv::view<"obj"> box_view{lv_obj_get_child(root.raw(), 3)}; // C API
   const lv::view<"obj"> body{lv_obj_get_child(box_view.raw(), 0)}; // C API
