@@ -288,7 +288,8 @@ template <class Pattern>
 inline constexpr bool arm_shows_page<tree_arm<Pattern, page>> = true;
 
 // One place for a page: its memory, which page is there, and what it is doing.
-enum class slot_phase : unsigned char { empty, shown, entering, leaving };
+// A kept page is built and hidden: it was shown, and may come back without being built again.
+enum class slot_phase : unsigned char { empty, shown, entering, leaving, kept };
 
 struct shown_core;
 
@@ -300,6 +301,7 @@ struct shown_slot {
   shown_core* owner = nullptr;
   lv_anim_exec_xcb_t moving = nullptr;  // the setter that a transition of the page runs
   std::int32_t at = 0;                 // where that transition stands
+  std::uint32_t in_front_at = 0;       // when it was last at the front: the kept page shown longest ago goes first
 };
 
 template <const auto& Tree>
@@ -393,7 +395,8 @@ struct transition_spec {
 
 // What lv::shown takes beside its state: lv::shown(current, {.enter = slide_in, .leave = slide_out}).
 struct shown_options {
-  // How many pages may be alive at once: the one shown and the one that leaves.
+  // How many pages may be built at once: the one shown and the one that leaves, and above 2 the
+  // pages shown most recently, kept hidden so that they come back without being built again.
   std::size_t alive = 2;
   // How the new page comes in, and how the old one goes. Without them the old page is deleted
   // before the new one is built.
@@ -461,11 +464,16 @@ struct shown_core : watch_node, deferred_node {
   const shown_plan* plan = nullptr;
   lv_obj_t* holder = nullptr;
   lv_obj_t* glass = nullptr;  // over a leaving page, so that it takes no clicks
-  std::array<shown_slot, 2> slots{};
-  std::byte* block = nullptr;  // the slots from LVGL's heap, for pages of other files
+  std::span<shown_slot> slots;  // .alive of them, in the storage
+  std::byte* block = nullptr;   // the memory of the slots from LVGL's heap, for pages of other files
   std::size_t slot_size = 0;
   std::size_t current = no_arm;  // the arm asked for last, also one that shows nothing
+  std::uint32_t clock = 0;       // counts the pages that come to the front
 };
+
+// How many pages may stay built and hidden: the slots that the page in front and a leaving page
+// do not need.
+inline std::size_t keep_room(const shown_core& c) { return c.slots.size() > 2 ? c.slots.size() - 2 : 0; }
 
 inline bool has_transitions(const shown_plan& p) { return p.enter.step != nullptr || p.leave.step != nullptr; }
 
@@ -480,6 +488,27 @@ inline shown_slot* slot_in(shown_core& c, slot_phase p) {
   for (auto& s : c.slots)
     if (s.phase == p) return &s;
   return nullptr;
+}
+
+// The kept page of arm `k`, or null.
+inline shown_slot* kept_slot(shown_core& c, std::size_t k) {
+  for (auto& s : c.slots)
+    if (s.phase == slot_phase::kept && s.arm == k) return &s;
+  return nullptr;
+}
+
+// The kept page that was at the front longest ago, or null.
+inline shown_slot* oldest_kept(shown_core& c) {
+  shown_slot* oldest = nullptr;
+  for (auto& s : c.slots)
+    if (s.phase == slot_phase::kept && (oldest == nullptr || s.in_front_at < oldest->in_front_at)) oldest = &s;
+  return oldest;
+}
+
+inline std::size_t kept_count(const shown_core& c) {
+  std::size_t n = 0;
+  for (const auto& s : c.slots) n += s.phase == slot_phase::kept ? 1 : 0;
+  return n;
 }
 
 // The glass lies over the leaving pages and under the others, while a page leaves.
@@ -522,6 +551,29 @@ inline void end_page(shown_slot& s) {
   s.phase = slot_phase::empty;
 }
 
+// A page that is no longer at the front: kept and hidden while there is room for kept pages, the
+// one at the front longest ago dropped when there is not; else its widgets go.
+inline void retire(shown_slot& s) {
+  shown_core& c = *s.owner;
+  if (keep_room(c) == 0) {
+    end_page(s);
+    return;
+  }
+  stop_transition(s);
+  lv_obj_set_hidden(s.holds->root(s.memory), true);
+  s.phase = slot_phase::kept;
+  while (kept_count(c) > keep_room(c)) end_page(*oldest_kept(c));
+}
+
+// A slot for a new page: an empty one, or the one of the kept page at the front longest ago.
+inline shown_slot* free_slot(shown_core& c) {
+  for (auto& s : c.slots)
+    if (s.phase == slot_phase::empty) return &s;
+  shown_slot* oldest = oldest_kept(c);
+  if (oldest != nullptr) end_page(*oldest);
+  return oldest;
+}
+
 void transition_done(lv_anim_t* a);
 
 // The time of the part of `t` that is left when it starts at `from` instead of at its start.
@@ -553,7 +605,7 @@ inline void run_transition(shown_slot& s, const transition_spec& t, std::int32_t
   // Without memory for the animation the page takes its end at once.
   t.step(root, t.to);
   if (s.phase == slot_phase::leaving)
-    end_page(s);
+    retire(s);
   else
     s.phase = slot_phase::shown;
 }
@@ -571,7 +623,7 @@ inline void start_leave(shown_slot& s) {
   if (p.leave.step != nullptr)
     run_transition(s, p.leave, from);
   else
-    end_page(s);
+    retire(s);
 }
 
 inline void start_enter(shown_slot& s, bool backwards) {
@@ -589,7 +641,7 @@ inline void transition_done(lv_anim_t* a) {
   if (s.phase == slot_phase::entering) {
     s.phase = slot_phase::shown;
   } else if (s.phase == slot_phase::leaving) {
-    end_page(s);
+    retire(s);
     place_glass(*s.owner);
   }
 }
@@ -614,7 +666,16 @@ inline void page_front_hook(shown_slot& s) {
 
 // A page comes to the front: its .on_front.
 inline void to_front(shown_core& c, shown_slot& s) {
+  s.in_front_at = ++c.clock;
   if (c.plan->front_hooks[s.arm] != nullptr) c.plan->front_hooks[s.arm](s);
+}
+
+// A kept page comes back to the front: shown again, not built again.
+inline void reveal(shown_core& c, shown_slot& s, lv_group_t* focus) {
+  lv_obj_set_hidden(s.holds->root(s.memory), false);
+  start_enter(s, false);
+  if (focus != nullptr) focus_first(focus, s.holds->root(s.memory));
+  to_front(c, s);
 }
 
 // After a page is built: the focus if the old page had it, its .on_shown, then its .on_front.
@@ -626,9 +687,16 @@ inline void welcome(shown_core& c, shown_slot& s, lv_group_t* focus) {
 
 // The old page is deleted before the new one is built: the heap holds one page at a time.
 inline bool switch_at_once(shown_core& c, std::size_t k, lv_group_t* focus) {
-  if (shown_slot* old = front_slot(c)) end_page(*old);
+  shown_slot* old = front_slot(c);
+  // A kept page comes back first, so that the old page, kept in its turn, cannot push it out.
+  if (shown_slot* kept = kept_slot(c, k)) {
+    reveal(c, *kept, focus);
+    if (old != nullptr) retire(*old);
+    return true;
+  }
+  if (old != nullptr) retire(*old);
   if (c.plan->pages[k] == nullptr) return true;
-  shown_slot& s = c.slots[0];
+  shown_slot& s = *free_slot(c);
   if (!build_page(c, s, k)) return false;
   s.phase = slot_phase::shown;
   welcome(c, s, focus);
@@ -645,24 +713,31 @@ inline bool come_back(shown_core& c, shown_slot& back) {
   return true;
 }
 
+// Brings the page of arm `k` in: a kept one comes back, any other is built in a free slot.
+inline bool bring_in(shown_core& c, std::size_t k, lv_group_t* focus) {
+  if (shown_slot* kept = kept_slot(c, k)) {
+    reveal(c, *kept, focus);
+    return true;
+  }
+  shown_slot& s = *free_slot(c);
+  if (!build_page(c, s, k)) return false;
+  start_enter(s, false);
+  welcome(c, s, focus);
+  return true;
+}
+
 // The new page is built in a free slot before the old one leaves. A page that still leaves
 // is cut, so that two pages at most are alive.
 inline bool switch_with_transition(shown_core& c, std::size_t k, lv_group_t* focus) {
   if (shown_slot* leaving = slot_in(c, slot_phase::leaving)) {
     if (leaving->arm == k) return come_back(c, *leaving);
-    end_page(*leaving);
+    // Cut: kept if there is room, without pushing out the page that is asked for.
+    if (shown_slot* kept = kept_slot(c, k)) kept->in_front_at = ++c.clock;
+    retire(*leaving);
   }
   shown_slot* front = front_slot(c);
   if (front != nullptr) start_leave(*front);
-  bool ok = true;
-  if (c.plan->pages[k] != nullptr) {
-    shown_slot& s = *slot_in(c, slot_phase::empty);
-    ok = build_page(c, s, k);
-    if (ok) {
-      start_enter(s, false);
-      welcome(c, s, focus);
-    }
-  }
+  const bool ok = c.plan->pages[k] == nullptr || bring_in(c, k, focus);
   place_glass(c);
   return ok;
 }
@@ -687,7 +762,8 @@ inline void shown_run(deferred_node& d) {
 
 // The memory of the slots: in the storage when the compiler knows every page's size, else one
 // block of LVGL's heap of two slots of the largest page. False when LVGL had none.
-inline bool give_slots(shown_core& c, std::byte* room) {
+inline bool give_slots(shown_core& c, std::span<shown_slot> slots, std::byte* room) {
+  c.slots = slots;
   std::size_t size = c.plan->slot_size;
   std::size_t align = c.plan->slot_align;
   if (size == 0) {
@@ -722,8 +798,8 @@ inline bool make_glass(shown_core& c) {
 }
 
 // Starts the node: its slots, its glass, the page of the state's value, and its watcher.
-inline bool start_shown(shown_core& c, std::byte* room, watch_list& watchers) {
-  if (!give_slots(c, room) || !make_glass(c)) return false;
+inline bool start_shown(shown_core& c, std::span<shown_slot> slots, std::byte* room, watch_list& watchers) {
+  if (!give_slots(c, slots, room) || !make_glass(c)) return false;
   c.changed = &shown_changed;
   c.run = &shown_run;
   watchers.append(c);
@@ -838,8 +914,7 @@ struct shown_node {
   template <const auto& Tree, std::size_t... Path>
   static consteval std::string_view options_problem() {
     constexpr const auto& o = descend<Path...>(Tree).options;
-    if (o.alive != 1 && o.alive != 2)
-      return "lv::shown keeps one or two pages alive for now: .alive = 1 or 2. More pages kept built come later.";
+    if (o.alive == 0) return "lv::shown needs a slot for the page it shows: .alive = 1 or more.";
     if (o.alive == 1 && (!is_null(o.enter.step) || !is_null(o.leave.step)))
       return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2.";
     return {};
@@ -939,7 +1014,9 @@ struct shown_node {
   // the compiler knows the size of every page; else they come from LVGL's heap at mount.
   template <const auto& Tree, std::size_t... Path>
   struct storage : shown_core {
-    alignas(parts<Tree, Path...>::slot[1]) std::byte room[std::max<std::size_t>(1, parts<Tree, Path...>::slot[0] * 2)];
+    static constexpr std::size_t alive = descend<Path...>(Tree).options.alive;
+    std::array<shown_slot, alive> places{};
+    alignas(parts<Tree, Path...>::slot[1]) std::byte room[std::max<std::size_t>(1, parts<Tree, Path...>::slot[0] * alive)];
 
     storage() = default;
     storage(const storage&) = delete;
@@ -954,7 +1031,7 @@ struct shown_node {
     auto& s = storage_of<Tree, Path...>(st);
     s.plan = &parts<Tree, Path...>::plan;
     s.holder = parent;
-    if (!start_shown(s, s.room, graph_access::watchers(*descend<Path...>(Tree).source))) st.ok = false;
+    if (!start_shown(s, s.places, s.room, graph_access::watchers(*descend<Path...>(Tree).source))) st.ok = false;
     return parent;
   }
 };
