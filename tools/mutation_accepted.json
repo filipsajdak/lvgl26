@@ -63,5 +63,15 @@
     "header": "include/lv/detail/png_reader.hpp",
     "mutant": "// The rows: for each its filter byte, then its pixels.  ->  /*// The rows: for each its filter byte, then its pixels.*/",
     "reason": "Equivalent. The mutant turns a comment into a comment."
+  },
+  {
+    "header": "include/lv/encoded_image.hpp",
+    "mutant": "requires detail::embedded_bytes<decltype(File)> && detail::included<\"lv/encoded_image.hpp\">  ->  requires detail::embedded_bytes<decltype(File)> && (1==1)",
+    "reason": "Equivalent. This header specializes detail::included<\"lv/encoded_image.hpp\"> to true a few lines above, so wherever this template is visible the condition is already true; it only makes the real template more constrained than the fallback in lv/detail/missing.hpp."
+  },
+  {
+    "header": "include/lv/scaled_font.hpp",
+    "mutant": "if (font_ != nullptr && destroy_ != nullptr && lv_is_initialized()) destroy_(font_);  ->  if (font_ != nullptr && (1==1) && lv_is_initialized()) destroy_(font_);",
+    "reason": "Equivalent. made() sets font_ and destroy_ together, so a font that exists always has the function that gives it back; the destroy_ test is a guard that no input reaches."
   }
 ]

@@ -44,6 +44,7 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(all_header)
 # The settings reader, and a program whose settings come from a file.
 lvgl26_test(settings)
 lvgl26_test(json_fault)

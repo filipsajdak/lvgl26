@@ -45,6 +45,9 @@ static_assert(!is_marked("lv_dropdown_set_text") && !is_marked("lv_dropdown_set_
 
 static_assert(lv::detail::takes_option_list(^^lv_dropdown_set_options, "options"));
 static_assert(lv::detail::takes_option_list(^^lv_roller_set_options, "options"));
+// A parameter that sorts before or after "options" is not "options".
+static_assert(!lv::detail::takes_option_list(^^lv_dropdown_set_options, "a") &&
+              !lv::detail::takes_option_list(^^lv_dropdown_set_options, "text"));
 static_assert(!lv::detail::takes_option_list(^^lv_dropdown_set_text, "txt"));
 static_assert(!lv::detail::takes_option_list(^^lv_label_set_text, "text"));
 
