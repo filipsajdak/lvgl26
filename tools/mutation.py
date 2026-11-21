@@ -167,7 +167,9 @@ CHILD_ENV = {**os.environ, "LC_ALL": "C"}
 
 
 def run(command, cwd=TREE):
-    r = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=cwd, env=CHILD_ENV)
+    # errors="replace": a test may print a byte that is no UTF-8 (a PNG written to the output), and a mutant that
+    # does must not end the run with UnicodeDecodeError, as tokens-2of2 did on 2026-11-21.
+    r = subprocess.run(command, shell=True, capture_output=True, text=True, errors="replace", cwd=cwd, env=CHILD_ENV)
     return r.returncode, r.stdout + r.stderr
 
 
