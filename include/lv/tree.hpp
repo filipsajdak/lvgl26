@@ -70,6 +70,12 @@ inline constexpr bool sole_child_alone = !(sole_child<K> || ...) || sizeof...(K)
 template <class T>
 concept tree_child = tree_node<T> || is_structural<std::remove_cvref_t<T>>;
 
+// A call that names at least one child, after the properties or alone. Its fallbacks below
+// take the calls where one of them is no child, so that no call matches both.
+template <class... A>
+concept children_given = sizeof...(A) > 0;
+
+
 template <class... Kids>
 struct kids_of {
   struct type;
@@ -108,6 +114,10 @@ inline constexpr bool is_repeated<repeated<Nodes...>> = true;
 template <class T>
 concept tree_kid = tree_child<T> || is_repeated<std::remove_cvref_t<T>>;
 
+// Every argument is a child.
+template <class... A>
+concept all_kids = (tree_kid<A> && ...);
+
 // References to the children that a value gives its parent: itself, or each widget of a
 // repetition.
 template <class K>
@@ -141,6 +151,22 @@ constexpr auto splice(const Node& self, const K&... k) {
 
 }  // namespace detail
 
+namespace detail {
+
+// What every way of giving a widget its children checks.
+template <class... K>
+constexpr void check_children() {
+  // Its rows are the widget's children from a fixed place on.
+  static_assert((std::size_t{0} + ... + std::size_t{is_structural<K>}) <= 1,
+                "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
+                "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
+  static_assert(sole_child_alone<K...>,
+                "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
+                "lv::group({...})[lv::shown(page)[...]].");
+}
+
+}  // namespace detail
+
 // One widget of a tree: its properties and its children.
 template <detail::fixed W, class... Kids>
 struct node {
@@ -153,13 +179,7 @@ struct node {
   template <detail::tree_child... K>
     requires(sizeof...(Kids) == 0)
   constexpr node<W, K...> operator[](const K&... k) const {
-    // Its rows are the widget's children from a fixed place on.
-    static_assert((std::size_t{0} + ... + std::size_t{detail::is_structural<K>}) <= 1,
-                  "lv: a widget holds at most one lv::each. Put each one in a widget of its own: "
-                  "lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].");
-    static_assert(detail::sole_child_alone<K...>,
-                  "lv: lv::shown is the only child of its widget. Give it a widget of its own: "
-                  "lv::group({...})[lv::shown(page)[...]].");
+    detail::check_children<K...>();
     return {p, {k...}, how};
   }
 
@@ -185,14 +205,54 @@ constexpr node<W> make_node(const lazy_props<W, D>& p) {
   return {keep<W, D>(p)};
 }
 
-// What lv::arc is: call it with properties, index it with children.
-//   lv::arc({.value = 1})      lv::button({...})[lv::label({...})]      lv::box[...]
-template <fixed W>
-struct factory {
-  template <class D = void>
-  constexpr auto operator()(const lazy_props<W, D>& p = {}) const {
-    return make_node<W, D>(p);
+// The calls of every factory, in one class that is no template: the compiler reads them once,
+// not once for each kind of widget. A factory names its props as `props_kind` and its start as
+// `starts_with`. Two templates and no constrained overloads, so that a call of the common
+// shape, lv::label({...}), has two candidates to try: each one more cost every node of a file.
+struct takes_children {
+  // The properties, then the children: lv::arc({.value = 1}), lv::button({...}, lv::label({...})).
+  template <class D = void, class Self, class... Kids>
+  constexpr auto operator()(this const Self& self, const lazy_props<Self::props_kind, D>& p = {},
+                            const Kids&... kids) {
+    if constexpr (sizeof...(Kids) == 0) {
+      if constexpr (Self::starts_with == start{}) {
+        return make_node<Self::props_kind, D>(p);
+      } else {
+        auto n = make_node<Self::props_kind, D>(p);
+        n.how = Self::starts_with;
+        return n;
+      }
+    } else if constexpr (!all_kids<Kids...>) {
+      static_assert(false,
+                    "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+                    "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+    } else if constexpr ((is_repeated<Kids> || ...)) {
+      return splice(self.template operator()<D>(p), kids...);
+    } else {
+      // Built in place, as one step: a call that returned the node without children
+      // would copy its properties once more in constant evaluation.
+      check_children<Kids...>();
+      return node<Self::props_kind, Kids...>{keep<Self::props_kind, D>(p), {kids...}, Self::starts_with};
+    }
   }
+
+  // The children alone: lv::column(lv::label({...}), lv::arc({...})).
+  template <class Self, class First, class... Rest>
+  constexpr auto operator()(this const Self& self, const First& first, const Rest&... rest) {
+    static_assert(all_kids<First, Rest...>,
+                  "lv: after the properties come the children, each a widget or an lv::each, lv::shown, "
+                  "lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).");
+    return self.template operator()<std::void_t<First, Rest...>>({}, first, rest...);
+  }
+};
+
+// What lv::arc is: call it with properties, then its children.
+//   lv::arc({.value = 1})      lv::button({...}, lv::label({...}))      lv::box(child, child)
+// Indexing with the children, lv::button({...})[lv::label({...})], builds the same node.
+template <fixed W>
+struct factory : takes_children {
+  static constexpr auto props_kind = W;
+  static constexpr start starts_with{};
 
   template <tree_kid... Kids>
   constexpr auto operator[](const Kids&... kids) const {
@@ -205,13 +265,9 @@ struct factory {
 // fills its parent; it groups widgets without drawing anything itself. lv::row and lv::column are
 // flex containers. The node's own properties and its looks beat the start: see start_style.
 template <start S>
-struct start_factory {
-  template <class D = void>
-  constexpr auto operator()(const lazy_props<"obj", D>& p = {}) const {
-    auto n = make_node<"obj", D>(p);
-    n.how = S;
-    return n;
-  }
+struct start_factory : takes_children {
+  static constexpr fixed props_kind = "obj";
+  static constexpr start starts_with = S;
 
   // The call names a type that depends on Kids. A plain (*this)() does not depend on
   // anything, so the compiler would work it out, and generate props<"obj">, while it

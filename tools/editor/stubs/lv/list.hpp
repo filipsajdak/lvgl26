@@ -134,6 +134,20 @@ constexpr detail::each_node<S, T, K> each(const S& rows, K T::* key, detail::eac
   return {};
 }
 
+/// The row template as the last argument: lv::each(tracks, &track::id, {...}, track_row).
+template <class S, class T, class K, class R>
+  requires std::same_as<typename S::value_type, T> && tree_node<R>
+constexpr detail::each_node<S, T, K, R> each(const S& rows, K T::* key, detail::each_options<T, K> options, const R& row) {
+  return {};
+}
+
+/// Without options: lv::each(tracks, &track::id, track_row).
+template <class S, class T, class K, class R>
+  requires std::same_as<typename S::value_type, T> && tree_node<R>
+constexpr detail::each_node<S, T, K, R> each(const S& rows, K T::* key, const R& row) {
+  return {};
+}
+
 /// The widgets of one row, by the ids of its row template: lv::row_view<card>{row}.get<"title">().
 template <const auto& Template>
   requires tree_node<decltype(Template)>

@@ -133,15 +133,44 @@ The list builds, moves and deletes the widgets of one row at a time. A loop that
 
 <!-- snippet: examples/lists/main.cpp tree -->
 ```cpp
-constinit lv::computed has_tracks{[](lv::counter n) { return n.value > 0; }, tracks.count()};
+constinit lv::computed has_tracks{
+  [](lv::counter n) {
+    return n.value > 0;
+  },
+  tracks.count(),
+};
+
+// Shown while the list is empty.
+constexpr auto empty_note = lv::label({
+  .hidden = lv::bind(has_tracks),
+  .style  = {.text_color = tok.color.quiet},
+  .text   = "No tracks",
+});
+
+// One row per track; the selected one is checked.
+constexpr auto track_list = lv::group(
+  {
+    .flex_flow = "column",
+    .size      = {100 * pct, lv::size_content},
+    .style     = {.pad_gap = tok.space.gap},
+  },
+  lv::each(tracks, &track::id, {.selected = lv::bind(current)}, track_row)
+);
 
 // Groups: boxes without the theme's look, laid out as columns.
-constexpr auto ui = lv::group({.flex_flow = "column", .size = {320 * px, 240 * px},
-                               .style = {.bg_color = tok.color.screen, .bg_opa = tok.opacity.opaque,
-                                         .pad_all = tok.space.edge, .pad_gap = tok.space.gap}})[
-    lv::label({.hidden = lv::bind(has_tracks), .style = {.text_color = tok.color.quiet}, .text = "No tracks"}),
-    lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
-        lv::each(tracks, &track::id, {.selected = lv::bind(current)})[track_row]]];
+constexpr auto ui = lv::group(
+  {
+    .flex_flow = "column",
+    .size      = {320 * px, 240 * px},
+    .style = {
+      .bg_color = tok.color.screen,
+      .bg_opa   = tok.opacity.opaque,
+      .pad_all  = tok.space.edge,
+      .pad_gap  = tok.space.gap,
+    },
+  },
+  empty_note, track_list
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -346,14 +375,30 @@ A list keeps each row at one address, so a label shows the row's text where it i
 ```cpp
 // One row: a button that is checked while it is the selected one. state_trickle hands that
 // state to the labels, which style themselves for it.
-constexpr auto track_row =
-    lv::button({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .state_trickle = true,
-                .style = {.bg_color = tok.color.row, .pad_all = tok.space.edge, .radius = tok.radius.row},
-                .style_checked = {.bg_color = tok.color.selected}})[
-        lv::label({.flex_grow = 1, .style = {.text_color = tok.color.text},
-                   .style_checked = {.text_color = tok.color.on_selected}, .text = lv::bind(&track::title)}),
-        lv::label({.style = {.text_color = tok.color.quiet}, .style_checked = {.text_color = tok.color.on_selected},
-                   .text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::title),
+  }),
+  lv::label({
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::plays, "{} plays"),
+  })
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -667,14 +712,30 @@ The names are read from LVGL's headers, so they are complete, and the same on bo
 ```cpp
 // One row: a button that is checked while it is the selected one. state_trickle hands that
 // state to the labels, which style themselves for it.
-constexpr auto track_row =
-    lv::button({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .state_trickle = true,
-                .style = {.bg_color = tok.color.row, .pad_all = tok.space.edge, .radius = tok.radius.row},
-                .style_checked = {.bg_color = tok.color.selected}})[
-        lv::label({.flex_grow = 1, .style = {.text_color = tok.color.text},
-                   .style_checked = {.text_color = tok.color.on_selected}, .text = lv::bind(&track::title)}),
-        lv::label({.style = {.text_color = tok.color.quiet}, .style_checked = {.text_color = tok.color.on_selected},
-                   .text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::title),
+  }),
+  lv::label({
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::plays, "{} plays"),
+  })
+);
 ```
 
 Checked by the compiler. The test `enumerator_unknown_name` pins the message.
@@ -695,14 +756,30 @@ The design then lives in one token file, and a value typed straight into a style
 ```cpp
 // One row: a button that is checked while it is the selected one. state_trickle hands that
 // state to the labels, which style themselves for it.
-constexpr auto track_row =
-    lv::button({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .state_trickle = true,
-                .style = {.bg_color = tok.color.row, .pad_all = tok.space.edge, .radius = tok.radius.row},
-                .style_checked = {.bg_color = tok.color.selected}})[
-        lv::label({.flex_grow = 1, .style = {.text_color = tok.color.text},
-                   .style_checked = {.text_color = tok.color.on_selected}, .text = lv::bind(&track::title)}),
-        lv::label({.style = {.text_color = tok.color.quiet}, .style_checked = {.text_color = tok.color.on_selected},
-                   .text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::title),
+  }),
+  lv::label({
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::plays, "{} plays"),
+  })
+);
 ```
 
 Checked by the compiler. The test `style_needs_token` pins the message.
@@ -912,14 +989,30 @@ A semantic name says why the value is there, and survives a new palette or a dar
 ```cpp
 // One row: a button that is checked while it is the selected one. state_trickle hands that
 // state to the labels, which style themselves for it.
-constexpr auto track_row =
-    lv::button({.flex_flow = "row", .size = {100 * pct, lv::size_content}, .state_trickle = true,
-                .style = {.bg_color = tok.color.row, .pad_all = tok.space.edge, .radius = tok.radius.row},
-                .style_checked = {.bg_color = tok.color.selected}})[
-        lv::label({.flex_grow = 1, .style = {.text_color = tok.color.text},
-                   .style_checked = {.text_color = tok.color.on_selected}, .text = lv::bind(&track::title)}),
-        lv::label({.style = {.text_color = tok.color.quiet}, .style_checked = {.text_color = tok.color.on_selected},
-                   .text = lv::bind(&track::plays, "{} plays")})];
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::title),
+  }),
+  lv::label({
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+    .text          = lv::bind(&track::plays, "{} plays"),
+  })
+);
 ```
 
 Checked: no tool checks this rule yet.
