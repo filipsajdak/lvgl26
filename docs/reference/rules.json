@@ -316,7 +316,7 @@
       "rule": "Give a style design tokens, and mark a value that no token should name with `lv::raw(...)`.",
       "why": "The design then lives in one token file, and a value typed straight into a style stops the build.",
       "example": "examples/lists/main.cpp row",
-      "check": {"by": "compiler", "test": "style_needs_token", "message": "error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length."},
+      "check": {"by": "compiler", "test": "style_needs_token", "message": "error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length. A bare value is no token: write lv::raw(...) around it, or take it from the token file."},
       "guide": "tokens.md",
       "evidence": null,
       "wins_over": "the shorter raw value: one source for the design is worth the name of a token."

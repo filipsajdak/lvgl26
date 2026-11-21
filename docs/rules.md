@@ -248,8 +248,9 @@ int main() {
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
   lv::pointer mouse{display, window};       // the window's mouse feeds it
 
-  app::running application{display.screen()};
-  if (!application.ok()) return 2;
+  auto root = lv::mount<app::ui>(display.screen());
+  if (!root) return 2;
+  app::start(root);                         // the application's task, on the mounted tree
   return app.run();                         // until the window is closed
 }
 ```
@@ -696,7 +697,7 @@ constexpr auto track_row =
 Checked by the compiler. The test `style_needs_token` pins the message.
 
 ```text
-error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length.
+error: static assertion failed: lv: wrong value for this property. It takes a design token (for example tok.space.md) or lv::raw(...), holding a length (120 * lv::px, 50 * lv::pct or lv::size_content). You gave lv::length. A bare value is no token: write lv::raw(...) around it, or take it from the token file.
 ```
 
 Wins over the shorter raw value: one source for the design is worth the name of a token.
@@ -1034,8 +1035,9 @@ int main() {
   lv::display display{app, frame, window};  // LVGL draws into the frame; the window shows it
   lv::pointer mouse{display, window};       // the window's mouse feeds it
 
-  app::running application{display.screen()};
-  if (!application.ok()) return 2;
+  auto root = lv::mount<app::ui>(display.screen());
+  if (!root) return 2;
+  app::start(root);                         // the application's task, on the mounted tree
   return app.run();                         // until the window is closed
 }
 ```
