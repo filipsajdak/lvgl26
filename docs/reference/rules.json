@@ -105,13 +105,12 @@
     {
       "id": "no-boilerplate-9",
       "quality": "no-boilerplate",
-      "rule": "Show one of several dialogs or screens in an `lv::one_of` slot; never write a pager of `mount` and `unmount` calls.",
-      "why": "The slot keeps one tree at a time in the memory of the largest, ends the old tree first, and allocates nothing.",
-      "example": "examples/mounting/main.cpp slot",
+      "rule": "Switch the pages of a tree with `lv::shown(state)`, and one of several dialogs at a root with an `lv::one_of` slot; never write a pager.",
+      "why": "The library builds the page or the dialog that is current and ends the one before, in memory of the tree's own, and allocates nothing for the switch.",
+      "example": "examples/pages/main.cpp tree",
       "check": null,
       "guide": "mounting.md",
-      "evidence": null,
-      "revisit": "lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only"
+      "evidence": null
     },
     {
       "id": "fast-run-1",

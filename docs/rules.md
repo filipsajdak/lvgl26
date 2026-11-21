@@ -20,7 +20,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`no-boilerplate-6`](#no-boilerplate-6) | Give a dropdown or a roller its options as a list, `{"Cut", "Copy"}`, or as `lv::options_of<E>`, never as one text with line breaks. |
 | [`no-boilerplate-7`](#no-boilerplate-7) | Give all widgets of a kind their look in a theme, not in a style on each node. |
 | [`no-boilerplate-8`](#no-boilerplate-8) | Start the program with `lv::application`, take the screen from an `lv::display`, and end `main` with `return app.run();`. |
-| [`no-boilerplate-9`](#no-boilerplate-9) | Show one of several dialogs or screens in an `lv::one_of` slot; never write a pager of `mount` and `unmount` calls. |
+| [`no-boilerplate-9`](#no-boilerplate-9) | Switch the pages of a tree with `lv::shown(state)`, and one of several dialogs at a root with an `lv::one_of` slot; never write a pager. |
 | [`fast-run-1`](#fast-run-1) | Keep states, lists and mounted trees in `constinit` globals or in variables: lvgl26 takes no heap for them. |
 | [`fast-run-2`](#fast-run-2) | Change one row with `insert`, `erase`, `move` or `update`; never clear and fill a list again to change it. |
 | [`fast-run-3`](#fast-run-3) | Show a text field of a row through `lv::bind`; do not copy it into a buffer of your own. |
@@ -261,13 +261,24 @@ Guide: Application and loop (not written yet).
 
 ### no-boilerplate-9
 
-**Show one of several dialogs or screens in an `lv::one_of` slot; never write a pager of `mount` and `unmount` calls.**
+**Switch the pages of a tree with `lv::shown(state)`, and one of several dialogs at a root with an `lv::one_of` slot; never write a pager.**
 
-The slot keeps one tree at a time in the memory of the largest, ends the old tree first, and allocates nothing.
+The library builds the page or the dialog that is current and ends the one before, in memory of the tree's own, and allocates nothing for the switch.
 
-<!-- snippet: examples/mounting/main.cpp slot -->
+<!-- snippet: examples/pages/main.cpp tree -->
 ```cpp
-constinit lv::one_of<saving, failed> status;  // a window that shows one of two dialogs
+constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
+    lv::column({.size = {80 * px, 240 * px}})[
+        lv::button({.on_clicked = [] { current = page::home; }})[lv::label({.text = "Home"})],
+        lv::button({.on_clicked = [] { current = page::settings; }})[lv::label({.text = "Settings"})],
+        lv::button({.on_clicked = [] { current = page::about; }})[lv::label({.text = "About"})]],
+    lv::column({.size = {240 * px, 240 * px}})[
+        lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
+        lv::group({.size = {240 * px, 200 * px}})[
+            lv::shown(current)[
+                lv::is<page::home>(home, {.on_shown = &greet}),
+                lv::is<page::settings>(settings),
+                lv::is<page::about>(about)]]]];
 ```
 
 Checked: no tool checks this rule yet.

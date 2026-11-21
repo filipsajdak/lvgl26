@@ -134,7 +134,7 @@ The owner did not like the dense form of trees, and asked for one that reads lik
 - "Fast at run time" covers processor time, not only memory: a display nobody sees, a hidden widget, a binding against polling, changing only what changed, and the cost of an animation. Every rule of run time ends up resting on a nightly probe; until it does, its data says `probe_needed`, and the tool fails a rule of run time that has neither.
 - A widget is reached by an id that the compiler resolves, `root->get<"title">()`, not through a stored pointer or a search at run time (`checked-9`).
 - Where two qualities pull apart, clarity wins over build time: choose the widget that says what the element is. The rule "take a widget kind the file already uses" (`fast-build-3`) is gone; its number stays unused. What a new kind costs a file (5.6 G instructions against 0.2 G for a node, 2026-11-19) is a fact for the page "Keeping builds fast".
-- `no-boilerplate-9` (one of several trees in an `lv::one_of` slot) changes when `lv::shown` is built. Its data says so in `revisit`, which the page does not show.
+- `no-boilerplate-9` (one of several trees in an `lv::one_of` slot) changes when `lv::shown` is built. `lv::shown` was built on 2026-11-20 (pull request 182), and the rule now names both: `lv::shown` for the pages of a tree, the slot for dialogs at a root.
 
 ## The audit (2026-11-20)
 
@@ -169,7 +169,7 @@ These need a feature first. They are not rules, and no page describes them.
 | Three lines that embed the token file and read it, in every file that uses tokens | The token file named once, in the settings |
 | No way to reach the widgets of `lv::for_each`, so a task per widget is started by hand | A task started on each repeated widget |
 | An `lv::list` filled by `assign` from a constant array | An `lv::list` built from a braced list |
-| A pager of `lv::owned` trees in the printer port | `lv::shown` |
+| A pager of `lv::owned` trees in the printer port | `lv::shown`, built on 2026-11-20; the port does not use it yet |
 | A part with its own state and slots | Components and `lv::use` |
 
 ## What the pilot found (2026-11-20)
@@ -202,7 +202,7 @@ State: "pilot" is done in the pilot; "rewrite" is an existing page; "new" is a p
 | Views and ids | `views.md` | new | `examples/mounting` local, without test code | | 1 |
 | Values and units | `values.md` | new | `examples/state` typed, `examples/quick_start` | | 1 |
 | Events | `events.md` | new | `examples/lvgl/widgets/button_event.cpp` | | 1 |
-| Mounting and slots | `mounting.md` | rewrite | `examples/mounting` | `lv::shown` for pages inside a tree | 1 |
+| Mounting and slots | `mounting.md` | rewrite | `examples/mounting`, `examples/pages` (`lv::shown`) | | 1 |
 | Lists | `lists.md` | pilot | `examples/lists` | an example of `.on_row` | pilot |
 | Repetition | `repetition.md` | rewrite | `examples/repeat` | one table of enumerator texts | 2 |
 | Options | `options.md` | rewrite | `examples/options` | the same | 2 |
@@ -267,7 +267,6 @@ The guides of the pilot say "not measured yet" for these too: the processor time
 ### Rules to revisit
 
 - `no-boilerplate-1`: the call form of a tree, lv::column({...}, child, child), with the reformat of all examples: the sentence shows [...] children and changes with it, and the snippet follows its file.
-- `no-boilerplate-9`: lv::shown: pages that take turns inside a tree get a form of their own; the rule then covers roots only.
 - `expressive-6`: the reformat of all examples to the call form: the example of this rule comes with it.
 
 ### Later work outside the pages
