@@ -73,6 +73,7 @@ Every widget folder of LVGL v9.6.0 has been tried. [ported-examples.md](https://
 - Styles use design tokens, and each example group has its own `tokens.json`.
 - States are strongly typed: a measure has a unit, and a count is `lv::counter`.
 - An example calls no C function of LVGL, and `tools/check_examples.py` fails when it does.
+- A port names, in the comment at its top, each call of the C example that it makes in another order. A node sets its properties in the order of their names, and LVGL needs some calls in an order of its own.
 - The sources of Qt for MCUs are under a commercial licence, so they are not read into this repository.
 
 To port a whole application from another framework, read [Port walkthrough: the Slint printer panel](port-slint-printer.md).

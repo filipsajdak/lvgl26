@@ -54,6 +54,9 @@ A group in the screen's place has no gap, and the pictures differ.
 - The examples keep the framework's defaults: styles use design tokens, states are
   strongly typed. Each example group has its own `tokens.json`.
 - A port that differs from the original says so in a comment at the top of the file.
+  It names there each call of the C example that it makes in another order:
+  a node sets its properties in the order of their names, and LVGL needs some
+  calls in an order of its own.
 - Qt for MCUs sources are under a commercial licence: they are not read into this
   repository and no asset is copied from them.
 
