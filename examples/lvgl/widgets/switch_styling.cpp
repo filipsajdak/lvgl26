@@ -1,3 +1,6 @@
+// Ports lv_example_switch_styling. Re-ordered: on the second switch, lv_obj_set_state runs
+// before lv_obj_set_size.
+
 #include "widgets.hpp"
 
 namespace {

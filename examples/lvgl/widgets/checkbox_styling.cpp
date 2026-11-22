@@ -1,3 +1,6 @@
+// Ports lv_example_checkbox_styling. Re-ordered: lv_checkbox_set_text runs last, after the
+// styles and, on the second checkbox, after lv_obj_set_state.
+
 #include "widgets.hpp"
 
 namespace {

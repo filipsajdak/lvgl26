@@ -1,3 +1,6 @@
+// Ports lv_example_slider_styling. Re-ordered: lv_slider_set_max_value runs before
+// lv_slider_set_min_value, lv_obj_set_size after both, and the styles before lv_slider_set_value.
+
 #include "widgets.hpp"
 
 namespace {

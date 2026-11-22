@@ -1,3 +1,6 @@
+// Ports lv_example_roller_visible_rows. Re-ordered: lv_roller_set_options and
+// lv_roller_set_selected run before lv_roller_set_visible_row_count and lv_obj_set_width.
+
 #include "widgets.hpp"
 
 namespace {

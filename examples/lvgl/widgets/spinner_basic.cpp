@@ -1,3 +1,6 @@
+// Ports lv_example_spinner_basic. Re-ordered: lv_obj_set_size runs after
+// lv_spinner_set_anim_duration and lv_spinner_set_arc_sweep.
+
 #include "widgets.hpp"
 
 namespace {

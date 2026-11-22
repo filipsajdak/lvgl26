@@ -1,3 +1,6 @@
+// Ports lv_example_roller_event. Re-ordered: the state that takes the place of the event
+// handler (lv_obj_add_event_cb) is bound before lv_roller_set_visible_row_count.
+
 #include "widgets.hpp"
 
 #include <utility>
