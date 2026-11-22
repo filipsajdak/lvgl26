@@ -92,6 +92,7 @@ void switch_state(lv::obj screen);        // lv_example_switch_state
 void checkbox_bind_checked(lv::obj screen);  // lv_example_checkbox_bind_checked
 void checkbox_event(lv::obj screen);         // lv_example_checkbox_event
 void checkbox_states(lv::obj screen);        // lv_example_checkbox_states
+void checkbox_styling(lv::obj screen);       // lv_example_checkbox_styling
 void checkbox_text(lv::obj screen);          // lv_example_checkbox_text
 
 // led
