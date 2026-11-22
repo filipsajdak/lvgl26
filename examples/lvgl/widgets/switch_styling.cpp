@@ -33,7 +33,7 @@ constexpr auto knob = lv::style({
   .shadow_width    = tok.toggle.styled.knob.shadow_width,
 });
 
-constexpr auto look = track | lv::on("knob", knob) | lv::on("indicator", "checked", on);
+constexpr auto look = track | lv::on("indicator", "checked", on) | lv::on("knob", knob);
 
 // The size of each switch in the C example.
 constexpr auto width = 60 * px;
