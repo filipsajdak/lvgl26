@@ -26,7 +26,11 @@ At 800 x 480, landscape.
 | Settings panel | The theme | | Light and dark at run time (`gap-runtime-theming`): the port keeps one look |
 | Panels on top | One panel at a time over the player | `lv::shown` on a state of an enum of panels, with a transition | None |
 
-Left out, with the reason in the port's README: the video output (a device here decodes no video), opening a file or a URL (no file system, and a keyboard joined to a text area is a gap), the error popup that only a failed file causes.
+Left out, with the reason in the port's README:
+
+- the video output, since a device here decodes no video;
+- opening a file or a URL: there is no file system, and a keyboard joined to a text area is a gap;
+- the error popup, which only a failed file causes.
 
 ## State
 
@@ -53,6 +57,6 @@ The layout of the owner's decision "Projects split into files" (`documentation.m
 
 1. Which original: Qt's demo (recommended) or LVGL's music demo.
 2. The licence of the Qt demo's icons. If it is not stated, the port draws its own.
-3. A text made of two numbers, such as `1:05`: the port writes it in an effect, as the treadmill does, unless a binding of two values is planned first.
+3. A text made of two numbers, such as `1:05`. The port writes it in an effect, as the treadmill does, unless a binding of two values comes first.
 4. A handler in a row template that needs its row (the delete button).
 5. Light and dark at run time: the port keeps one look.

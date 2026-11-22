@@ -38,7 +38,7 @@ The theme button of the original switches light and dark while the program runs.
 | The chosen room | `room_id` | `state.hpp` |
 | A simulated room temperature | a task per screen that moves the temperature toward the set one | `screens/control.cpp`, its root as owner |
 
-A temperature is a quantity of degrees Celsius with an integer number, as a state needs: a quantity, not a point of mp-units, which a state does not hold. The original's statistics have one decimal, so the Stats screen keeps tenths of a degree as its unit.
+A temperature is a quantity of degrees Celsius with an integer number, as a state needs. It is a quantity, not a point of mp-units: a state holds no point. The original's statistics have one decimal, so the Stats screen keeps tenths of a degree as its unit.
 
 ## Files
 
@@ -66,5 +66,5 @@ examples/ports/qt/thermostat/
 ## Gaps to settle before the port starts
 
 1. The `add_` children: Schedule and Stats wait for them. Without them the port has three screens of five.
-2. One button of a group checked by a state of an enum: a computed per enumerator works today, but is plumbing; the setter order would allow a button matrix.
+2. One button of a group checked by a state of an enum. A computed per enumerator works today, but is plumbing; the setter order would allow a button matrix.
 3. Light and dark at run time: the port keeps one look.
