@@ -12,6 +12,7 @@ void lv_example_slider_event(void);
 void lv_example_slider_img_indicator(void);
 void lv_example_slider_modes(void);
 void lv_example_slider_reversed_direction(void);
+void lv_example_slider_styling(void);
 void lv_example_slider_value_range_orientation(void);
 }
 
@@ -38,6 +39,12 @@ void drag_and_let_go(lv::obj root) {
   drag_to(root, 40);
   drag_to(root, 60);
   lv_obj_send_event(nth(root, &lv_slider_class), LV_EVENT_RELEASED, nullptr);
+}
+
+// The knob held down: its pressed look, with the theme's transition over.
+void hold_knob(lv::obj root) {
+  lv_obj_add_state(nth(root, &lv_slider_class), LV_STATE_PRESSED);
+  pass_time(500);
 }
 
 // Let go, then dragged again: the label goes back to "Dragging".
@@ -76,6 +83,9 @@ int main() {
   same_pixels("slider_img_indicator at 7", &lv_example_slider_img_indicator,
               &widgets::slider_img_indicator, &drag_to_7);
   same_pixels("slider_modes", &lv_example_slider_modes, &widgets::slider_modes, &nothing);
+  same_pixels("slider_styling", &lv_example_slider_styling, &widgets::slider_styling, &nothing);
+  same_pixels("slider_styling held", &lv_example_slider_styling, &widgets::slider_styling,
+              &hold_knob);
   same_pixels("slider_reversed_direction", &lv_example_slider_reversed_direction,
               &widgets::slider_reversed_direction, &nothing);
   same_pixels("slider_value_range_orient.", &lv_example_slider_value_range_orientation,

@@ -7,7 +7,9 @@
 
 extern "C" {
 void lv_example_roller_bind_value(void);
+void lv_example_roller_event(void);
 void lv_example_roller_options(void);
+void lv_example_roller_visible_rows(void);
 }
 
 namespace {
@@ -19,6 +21,7 @@ void choose(lv::obj root, std::uint32_t index) {
   lv_obj_send_event(roller, LV_EVENT_VALUE_CHANGED, nullptr);
 }
 
+void choose_fourth(lv::obj root) { choose(root, 3); }
 void choose_fifth(lv::obj root) { choose(root, 4); }
 
 void click_button(lv::obj root) {
@@ -32,6 +35,10 @@ int main() {
   lv_test_display_create(320, 240);
 
   same_pixels("roller_options", &lv_example_roller_options, &widgets::roller_options, &nothing);
+  same_pixels("roller_event", &lv_example_roller_event, &widgets::roller_event, &nothing);
+  same_pixels("roller_event chosen", &lv_example_roller_event, &widgets::roller_event, &choose_fourth);
+  same_pixels("roller_visible_rows", &lv_example_roller_visible_rows, &widgets::roller_visible_rows,
+              &nothing);
   same_pixels("roller_bind_value", &lv_example_roller_bind_value, &widgets::roller_bind_value,
               &nothing);
   same_pixels("roller_bind_value chosen", &lv_example_roller_bind_value,
@@ -41,6 +48,12 @@ int main() {
               &widgets::roller_bind_value, &nothing);
   same_pixels("roller_bind_value button", &lv_example_roller_bind_value,
               &widgets::roller_bind_value, &click_button);
+
+  // The label must follow the choice. The state keeps the last choice from one screen to the
+  // next, so two different choices are compared.
+  const auto thursday = render(&widgets::roller_event, &choose_fourth);
+  const auto friday = render(&widgets::roller_event, &choose_fifth);
+  check(thursday.first_difference(friday) != -1);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");

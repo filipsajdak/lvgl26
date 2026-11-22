@@ -360,10 +360,10 @@ lvgl26_widget_ports(arc bind_value change_rate event img_indicator mode pie_char
 lvgl26_widget_ports(bar bind_value img_indicator modes orientation styling value_range
                     ASSETS img_bar_bg img_bar_indicator)
 lvgl26_widget_ports(slider bind_state bind_value event img_indicator modes reversed_direction
-                    value_range_orientation
+                    styling value_range_orientation
                     ASSETS img_bar_bg img_bar_indicator)
-lvgl26_widget_ports(switch event orientation state)
-lvgl26_widget_ports(checkbox bind_checked event states text)
+lvgl26_widget_ports(switch event orientation state styling)
+lvgl26_widget_ports(checkbox bind_checked event states styling text)
 lvgl26_widget_ports(led brightness color styling)
 lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
@@ -372,9 +372,10 @@ lvgl26_widget_ports(dropdown bind_value direction event text)
 # LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
 # sanitizer stops on. The picture is compared in the builds that have none.
 if(NOT LVGL26_SANITIZE)
-  lvgl26_widget_ports(roller bind_value options)
+  lvgl26_widget_ports(roller bind_value event options visible_rows)
 endif()
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
+lvgl26_widget_ports(spinner basic)
 lvgl26_widget_ports(textarea placeholder)
 lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
 lvgl26_widget_ports(scale modes range styling ticks)

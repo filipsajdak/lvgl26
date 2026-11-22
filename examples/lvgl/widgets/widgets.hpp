@@ -81,17 +81,20 @@ void slider_event(lv::obj screen);                    // lv_example_slider_event
 void slider_img_indicator(lv::obj screen);            // lv_example_slider_img_indicator
 void slider_modes(lv::obj screen);                    // lv_example_slider_modes
 void slider_reversed_direction(lv::obj screen);       // lv_example_slider_reversed_direction
+void slider_styling(lv::obj screen);                  // lv_example_slider_styling
 void slider_value_range_orientation(lv::obj screen);  // lv_example_slider_value_range_orientation
 
 // switch
 void switch_event(lv::obj screen);        // lv_example_switch_event
 void switch_orientation(lv::obj screen);  // lv_example_switch_orientation
 void switch_state(lv::obj screen);        // lv_example_switch_state
+void switch_styling(lv::obj screen);      // lv_example_switch_styling
 
 // checkbox
 void checkbox_bind_checked(lv::obj screen);  // lv_example_checkbox_bind_checked
 void checkbox_event(lv::obj screen);         // lv_example_checkbox_event
 void checkbox_states(lv::obj screen);        // lv_example_checkbox_states
+void checkbox_styling(lv::obj screen);       // lv_example_checkbox_styling
 void checkbox_text(lv::obj screen);          // lv_example_checkbox_text
 
 // led
@@ -116,8 +119,10 @@ void dropdown_event(lv::obj screen);       // lv_example_dropdown_event
 void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
 
 // roller
-void roller_bind_value(lv::obj screen);  // lv_example_roller_bind_value
-void roller_options(lv::obj screen);     // lv_example_roller_options
+void roller_bind_value(lv::obj screen);    // lv_example_roller_bind_value
+void roller_event(lv::obj screen);         // lv_example_roller_event
+void roller_options(lv::obj screen);       // lv_example_roller_options
+void roller_visible_rows(lv::obj screen);  // lv_example_roller_visible_rows
 
 // spinbox
 void spinbox_bind_value(lv::obj screen);  // lv_example_spinbox_bind_value
@@ -125,6 +130,9 @@ void spinbox_format(lv::obj screen);      // lv_example_spinbox_format
 void spinbox_rollover(lv::obj screen);    // lv_example_spinbox_rollover
 void spinbox_styling(lv::obj screen);     // lv_example_spinbox_styling
 void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
+
+// spinner
+void spinner_basic(lv::obj screen);  // lv_example_spinner_basic
 
 // textarea
 void textarea_placeholder(lv::obj screen);  // lv_example_textarea_placeholder

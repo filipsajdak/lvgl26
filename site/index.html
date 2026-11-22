@@ -179,10 +179,10 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       </figure>
       <div class="prose">
         <span class="tag">LVGL's own examples</span>
-        <h3>69 of 102 examples, for 18 widgets</h3>
+        <h3>75 of LVGL's 163 widget examples</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
-          <div><dt>Ported</dt><dd>69 of the 102 examples of the 18 widgets tried so far, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> lists the ones that wait, and what each needs.</dd></div>
+          <div><dt>Ported</dt><dd>75 of the 163 widget examples of LVGL v9.6.0, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> counts the ones that wait by what each needs.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
         </dl>
         <ul class="links">
@@ -460,7 +460,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
         <li><strong>Project settings</strong> in one JSON file for the whole program: <code>"allow": {"threads": false}</code> makes every part of lvgl26 that needs threads a compile error that names the key</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
-        <li><strong>Example ports</strong>: 73 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
+        <li><strong>Example ports</strong>: 79 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
         <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>
       </ul>
       <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>

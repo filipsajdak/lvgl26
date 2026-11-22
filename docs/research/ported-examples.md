@@ -9,8 +9,8 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 |---|---|
 | How many widget examples has LVGL v9.6.0? | 163, in 34 folders |
 | How many are ported? | 69, in `examples/lvgl/widgets/`, each compared pixel for pixel with its C original |
-| How many more can be ported today? | 7: `checkbox_styling`, `roller_event`, `roller_styling`, `roller_visible_rows`, `slider_styling`, `spinner_basic`, `switch_styling` |
-| What stops the other 87? | A form that lvgl26 does not have yet; the table "The blockers" counts them |
+| How many more can be ported today? | 6: `checkbox_styling`, `roller_event`, `roller_visible_rows`, `slider_styling`, `spinner_basic`, `switch_styling`. `roller_styling` looked portable, and CI showed that it needs its setters in another order (2026-11-22, `measured`) |
+| What stops the other 88? | A form that lvgl26 does not have yet; the table "The blockers" counts them |
 | Which one feature would open the most? | A child made by an `add_` function: 36 examples (charts, tab views, menus, message boxes, calendars, lists, spans, scale sections, a tile view, a window) |
 
 ## How the list was made
@@ -87,7 +87,7 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | obj | `obj_transform` | No: a build option | A transform matrix (`lv_matrix_*`), with `LV_DRAW_TRANSFORM_USE_MATRIX` |
 | roller | `roller_event` | Now | The label follows the selected day through a state of an enum and a computed text |
 | roller | `roller_fade_mask` | No: drawing | A fading mask drawn on a canvas layer |
-| roller | `roller_styling` | Now | The selected part's style; its font is the C font `font_example_large`, as `lv::raw(...)` |
+| roller | `roller_styling` | No: the order of setters | The count of visible rows works out the height from the font and line space of that moment. The C example sets it before its styles; a node adds its style first, so the port's roller was taller |
 | roller | `roller_visible_rows` | Now | Two rollers with a different count of visible rows |
 | scale | `scale_bind_section` | No: an added child | A section by `lv_scale_add_section`, bound to sliders |
 | scale | `scale_compass` | No: drawing | Labels recolored in a draw-task event, and an `lv_anim` |
@@ -129,7 +129,7 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | A child made by an `add_` function, or by a create function that takes more than a parent | 36 | `calendar_basic`, `calendar_chinese`, `calendar_highlighted_days`, `chart_area_gradient`, `chart_circular_gap`, `chart_cursor`, `chart_pressed_tooltip`, `chart_recolor_bars`, `chart_scatter`, `chart_scrollable`, `chart_series`, `chart_ticks_labels`, `chart_types`, `list_reorder`, `list_sections`, `menu_custom_back_button`, `menu_floating_button`, `menu_navigation`, `menu_root_back_button`, `menu_sidebar`, `menu_sub_page`, `msgbox_blur`, `msgbox_modal`, `msgbox_settings`, `scale_bind_section`, `scale_heart_rate`, `scale_sunset_sunrise`, `span_hittest`, `span_styling`, `tabview_active_tab`, `tabview_basic`, `tabview_tab_bar_position`, `tabview_tab_bar_style`, `tabview_tab_button_content`, `tileview_l_shape`, `win_toolbar` |
 | Drawing: a canvas layer (`lv_canvas_init_layer`, `lv_draw_*`) or a draw-task event | 16 | `canvas_alpha`, `canvas_arc`, `canvas_blur`, `canvas_image`, `canvas_label`, `canvas_line`, `canvas_rectangle`, `canvas_rotate`, `canvas_triangle`, `canvas_vector`, `canvas_wave_text`, `canvas_windstorm_text`, `keyboard_custom_draw`, `roller_fade_mask`, `scale_compass`, `scale_label_recolor` |
 | One setter called several times with different arguments: a node sets a property once | 11 | `buttonmatrix_button_ctrl`, `buttonmatrix_button_width`, `spinner_styling`, `table_cells`, `table_file_browser`, `table_merge_cells`, `table_rows_columns`, `table_scroll`, `table_scrollable_list`, `table_styling`, `table_width` |
-| The order of the setters: properties are set in alphabetical order, and LVGL needs another | 5 | `buttonmatrix_one_checked`, `buttonmatrix_popover`, `buttonmatrix_recolor`, `buttonmatrix_styling`, `textarea_cursor` |
+| The order of the setters: properties are set in alphabetical order, and LVGL needs another | 6 | `buttonmatrix_one_checked`, `buttonmatrix_popover`, `buttonmatrix_recolor`, `buttonmatrix_styling`, `roller_styling`, `textarea_cursor` |
 | A call that is neither a create nor a set function | 5 | `animimg_play`, `arc_knob_widget`, `spinbox_with_buttons`, `textarea_buttonmatrix`, `textarea_format` |
 | An LVGL build option that the test build leaves off | 5 | `image_svg`, `lottie_approve`, `lottie_from_data`, `lottie_from_file`, `obj_transform` |
 | A property that takes another widget as a pointer | 3 | `keyboard_custom_map`, `scale_needles`, `textarea_password` |
@@ -138,5 +138,5 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 ## What it changes in `examples/README.md`
 
 - Its table "Not ported yet" says that `roller_fade_mask`, `buttonmatrix_styling` and `textarea_cursor` can be ported now. They cannot: the first draws on a canvas layer, and the other two need their setters in another order.
-- It says the same of the styling examples of the slider, the switch and the checkbox, of the roller examples and of `spinner_basic`. They can, and the next pull request ports them.
+- It says the same of the styling examples of the slider, the switch and the checkbox, of the roller examples and of `spinner_basic`. Six of them can, and pull request 209 ports them; `roller_styling` needs its setters in another order.
 - The table is brought up to date with the ports, and the counts of `README.md` and the site with the last batch.
