@@ -195,16 +195,20 @@ consteval std::vector<member_item> scan_base(std::string_view prefix) {
   return items;
 }
 
-// The base is found and sorted once, on first use, and stored as one array of
-// quadruples: the name (a reflected string), the type, the target and the group.
+// The base is found and sorted once, on first use, and stored as one array: a triple for each
+// member (the name as a reflected string, the type and the target), and then, for each of the four
+// groups, the number of members that come before the end of it. The members are sorted by group,
+// so a group is a range, and no member needs its group stored.
 consteval std::vector<std::meta::info> pack_base(const std::vector<member_item>& items) {
   std::vector<std::meta::info> out;
+  std::size_t ends[4] = {};
   for (const auto& it : items) {
     out.push_back(std::meta::reflect_constant_string(it.name));
     out.push_back(it.type);
     out.push_back(it.target);
-    out.push_back(std::meta::reflect_constant(it.group));
+    for (int group = it.group; group < 4; ++group) ++ends[group];
   }
+  for (const auto end : ends) out.push_back(std::meta::reflect_constant(end));
   return out;
 }
 
@@ -234,9 +238,13 @@ consteval std::vector<member_item> members(std::string_view widget) {
 
   std::vector<member_item> items;
   std::size_t o = 0;
-  for (std::size_t b = 0; b < base<D>.size(); b += 4) {
+  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
+  std::size_t ends[4];
+  for (std::size_t g = 0; g < 4; ++g) ends[g] = std::meta::extract<std::size_t>(base<D>[members_in_base * 3 + g]);
+  int group = 0;
+  for (std::size_t b = 0; b < members_in_base * 3; b += 3) {
+    while (b / 3 >= ends[group]) ++group;
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
-    const int group = std::meta::extract<int>(base<D>[b + 3]);
     while (o < own.size() && (own[o].group < group || (own[o].group == group && own[o].name < name)))
       items.push_back(own[o++]);
     const bool overridden = o < own.size() && own[o].group == group && own[o].name == name;
