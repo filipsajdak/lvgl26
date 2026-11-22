@@ -11,7 +11,8 @@ in alphabetical order: `id`, then every other property (`size`, `text`, ...), th
 
 The tool changes the order of the properties of a list and nothing else: it keeps the white space
 between them, and each property keeps its own padding. A list that holds a comment between its
-properties is left alone and reported: move it by hand. A file may be C++ or Markdown with C++ blocks.
+properties is left alone and reported: move it by hand. A list that is out of order for a test says "order on purpose" in a comment on its line, and is skipped.
+A file may be C++ or Markdown with C++ blocks.
 It reads: lv::<widget>({...}, lv::widget<"name">({...}), `.set({...})` and lv::props<"name"> p{...}.
 Uses the standard library only.
 """
@@ -35,6 +36,7 @@ OPENING = re.compile(
 )
 DESIGNATOR = re.compile(r"\.([A-Za-z_]\w*)")
 HANDLER_PREFIX = "on_"
+ON_PURPOSE = "order on purpose"  # in a comment on the line of a list that is wrong for a test
 
 
 def group_of(name: str) -> int:
@@ -185,6 +187,11 @@ def reorder_text(text: str) -> tuple[str, int, list[int]]:
         brace = found.end() - 1
         end = close_of(text, brace)
         if end < 0:
+            position = found.end()
+            continue
+        line_start = text.rfind("\n", 0, brace) + 1
+        line_end = text.find("\n", end)
+        if ON_PURPOSE in text[line_start : line_end if line_end >= 0 else len(text)]:
             position = found.end()
             continue
         inner = text[brace + 1 : end]

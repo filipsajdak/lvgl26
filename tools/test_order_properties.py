@@ -54,6 +54,10 @@ class OrderProperties(unittest.TestCase):
         new, changed, manual = tool.reorder_text(text)
         self.assertEqual((new, changed, manual), (text, 0, [1]))
 
+    def test_a_list_that_is_wrong_on_purpose_is_skipped(self):
+        text = 'lv::label({.text = "x", .id = "t"});  // order on purpose'
+        self.assertEqual(ordered(text), text)
+
     def test_other_lists_are_not_touched(self):
         text = 'lv::each(tracks, &track::id, {.selected = s, .on_row = &f}, row); lv::theme({.screen = {}, .arc = {}})'
         self.assertEqual(ordered(text), text)

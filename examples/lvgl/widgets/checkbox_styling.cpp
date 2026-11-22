@@ -40,8 +40,8 @@ constexpr auto ui = lv::group(
     .flex_flow = "column",
     .style     = centered | lv::style({.pad_row = tok.checkbox.styled.row_gap}),
   },
-  lv::checkbox({.style = look, .text = "Default look"}),
-  lv::checkbox({.checked = true, .style = look, .text = "Pre-checked"})
+  lv::checkbox({.text = "Default look", .style = look}),
+  lv::checkbox({.checked = true, .text = "Pre-checked", .style = look})
 );
 
 }  // namespace

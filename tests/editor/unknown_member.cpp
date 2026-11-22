@@ -13,6 +13,6 @@ constexpr auto ranged = lv::label({.range = {0, 240}});  // expected-error {{no 
 constexpr auto wide = lv::label({.width = 120});  // expected-error {{no matching function for call}}
 
 // Out of order (the id comes first), which GCC refuses.
-constexpr auto ordered = lv::label({.text = "Speed", .id = "title"});  // expected-error {{field designators}}
+constexpr auto ordered = lv::label({.text = "Speed", .id = "title"});  // order on purpose, expected-error {{field designators}}
 
 constexpr auto right = lv::label({.id = "title", .text = "Speed", .width = 120 * px});
