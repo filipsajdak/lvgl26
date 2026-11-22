@@ -170,31 +170,6 @@ consteval std::vector<named_style_slot> named_style_slots() {
   return slots;
 }
 
-// The group of a property by its name: the id, then the properties, then the styles (`style` and
-// `style_pressed`, ...), then the handlers (`on_clicked`, ...). The order of a props struct is by
-// group, then by name, and designated initializers must follow it. It is read from the first
-// characters, so that asking costs a few comparisons and no call of a string function.
-consteval int property_group(std::string_view name) {
-  if (name.size() == 2 && name[0] == 'i' && name[1] == 'd') return 0;
-  if (name.size() >= 5 && name[0] == 's' && name[1] == 't' && name[2] == 'y' && name[3] == 'l' && name[4] == 'e' &&
-      (name.size() == 5 || name[5] == '_'))
-    return 2;
-  if (name.size() > 3 && name[0] == 'o' && name[1] == 'n' && name[2] == '_') return 3;
-  return 1;
-}
-
-// Sorts the members by group, then by name. The group is asked once for each member, and each
-// group is sorted by name as before.
-consteval void sort_by_group_and_name(std::vector<member_item>& items) {
-  std::vector<member_item> groups[4];
-  for (auto& item : items) groups[property_group(item.name)].push_back(std::move(item));
-  items.clear();
-  for (auto& group : groups) {
-    sort_by_name(group);
-    for (auto& item : group) items.push_back(std::move(item));
-  }
-}
-
 // What every widget has: `id`, `style`, the lv_obj_set_* properties and the events.
 // `prefix` is "lv_obj_set_". It is a parameter, and the scans are handed on as
 // arguments, because of GCC 16.2: a call whose arguments are all constants, written
@@ -209,7 +184,7 @@ consteval std::vector<member_item> scan_base(std::string_view prefix) {
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
       items.push_back({std::define_static_string(name), ^^arg<handler>, e});
-  sort_by_group_and_name(items);
+  sort_by_name(items);
   return items;
 }
 
@@ -237,31 +212,50 @@ consteval std::vector<member_item> own_members(std::string_view widget) {
   if (widget == "obj"sv) return own;
   const std::string prefix = "lv_" + str(widget) + "_set_";
   for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item<D>(f, prefix.size()));
-  sort_by_group_and_name(own);
+  sort_by_name(own);
   return own;
 }
 
-// The members of props<widget>, sorted by name: the widget's own setters merged
-// into the base. A widget's own setter wins over one of obj with the same name.
+// The group of a property by its name: the id, then the properties, then the styles (`style` and
+// `style_pressed`, ...), then the handlers (`on_clicked`, ...).
+consteval int property_group(std::string_view name) {
+  if (name == "id"sv) return 0;
+  if (name == "style"sv || has_prefix(name, "style_"sv)) return 2;
+  return has_prefix(name, "on_"sv) ? 3 : 1;
+}
+
+// Puts members that are sorted by name in their groups, each still sorted by name: the group is
+// asked once for each member, and the members move once, with no comparison of names.
+template <class D>
+consteval void order_by_group(std::vector<member_item>& items) {
+  std::vector<int> groups;
+  for (const auto& item : items) groups.push_back(property_group(item.name));
+  std::vector<member_item> ordered;
+  ordered.reserve(items.size());
+  for (int group = 0; group < 4; ++group)
+    for (std::size_t i = 0; i < items.size(); ++i)
+      if (groups[i] == group) ordered.push_back(std::move(items[i]));
+  items = std::move(ordered);
+}
+
+// The members of props<widget>, by group and then by name: the widget's own setters merged
+// into the base by name, then the groups. A widget's own setter wins over one of obj with the same name.
 // D only delays the base scan until a props struct is really needed.
 template <class D = void>
 consteval std::vector<member_item> members(std::string_view widget) {
   resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
   const auto own = own_members<D>(widget);
 
-  std::vector<int> own_groups;
-  for (const auto& item : own) own_groups.push_back(property_group(item.name));
   std::vector<member_item> items;
   std::size_t o = 0;
   for (std::size_t b = 0; b < base<D>.size(); b += 3) {
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
-    const int group = property_group(name);
-    while (o < own.size() && (own_groups[o] < group || (own_groups[o] == group && own[o].name < name)))
-      items.push_back(own[o++]);
+    while (o < own.size() && own[o].name < name) items.push_back(own[o++]);
     const bool overridden = o < own.size() && own[o].name == name;
     items.push_back(overridden ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2]});
   }
   items.insert(items.end(), own.begin() + static_cast<std::ptrdiff_t>(o), own.end());
+  order_by_group<D>(items);
   return items;
 }
 
