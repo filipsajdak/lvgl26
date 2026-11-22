@@ -21,9 +21,9 @@ The port shows the layout the demo uses at 800 x 480, landscape: the bottom bar 
 | Screen | What it shows | lvgl26 it uses | Gap |
 |---|---|---|---|
 | Rooms | A card per room: icon, name, floor, temperature, humidity, an on switch | `lv::list` of rooms with `lv::each`, `lv::bind(&room::field)`, a look per card | None |
-| Thermostat Control | A dial for the set temperature of the chosen room, its mode, its power | An arc bound to a temperature state, a dropdown of rooms (`lv::options_of`), mode buttons | The mode buttons: one checked by a state of an enum needs a computed per mode, or a button matrix once the setter order is fixed |
-| Schedule | A calendar, and times for each room | Rollers for hours and minutes | The calendar: its header is an `add_` child. Waits for the `add_` children |
-| Stats | Temperature, humidity and energy over twelve months, per room | A dropdown of rooms | The chart: a series is an `add_` child. Waits for the `add_` children |
+| Thermostat Control | A dial for the set temperature of the chosen room, its mode, its power | An arc bound to a temperature state, a dropdown of rooms, a dropdown of modes (`lv::options_of`) | The mode buttons: one checked by a state of an enum (see the gaps below) |
+| Schedule | A calendar, and times for each room | A calendar, rollers for hours and minutes | The calendar's header is an `add_` child: the port waits for it |
+| Stats | Temperature, humidity and energy over twelve months, per room | A chart, a dropdown of rooms | A chart's series is an `add_` child: the port waits for it |
 | Settings | Power, mode and the room's options | Switches and buttons bound to states | None |
 | Bottom bar | The five views | `lv::shown` of pages in other files, a state of an enum for the view | None |
 
@@ -63,8 +63,17 @@ examples/ports/qt/thermostat/
 - A picture per screen, written by a test into the port's folder and compared byte for byte, as the printer port does.
 - Steps: a room chosen, the dial moved, a mode chosen, the power off, a view switched by the bottom bar.
 
-## Gaps to settle before the port starts
+## The owner's decisions (2026-11-22)
 
-1. The `add_` children: Schedule and Stats wait for them. Without them the port has three screens of five.
-2. One button of a group checked by a state of an enum. A computed per enumerator works today, but is plumbing; the setter order would allow a button matrix.
-3. Light and dark at run time: the port keeps one look.
+- The thermostat waits for the `add_` children: node kinds of their own for each parent (`lv::tab`, `lv::menu_page`, `lv::series`, `lv::list_item`), not built yet. Then it is ported with all five screens. The media player goes first.
+- The icons are converted to PNG. `NOTICE.md` gets one entry for each set with its licence text: Phosphor Icons under CC-BY-4.0, Google's Material icons under Apache-2.0, as font-rs has.
+- One look. Switching light and dark at run time is a known gap, named in the port's README.
+- No plumbing to work around a gap. Each one below is recorded, and the port uses the best form that exists today; the ones that matter go to the owner as features.
+
+## Gaps, and the form the port uses today
+
+| Gap | The form today |
+|---|---|
+| A calendar header and a chart series are `add_` children | None: the port waits for them |
+| A group of buttons, one checked by a state of an enum (the modes) | A dropdown of the modes, `lv::options_of<mode>`, bound to the state. The README says that the original shows a row of round buttons |
+| Light and dark at run time | One look |
