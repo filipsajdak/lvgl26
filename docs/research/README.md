@@ -9,6 +9,8 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [lvgl-upstream.md](lvgl-upstream.md) | LVGL releases and what v10 removes. Its machine-readable API, introspection, observer, XML and Pro, styles, assets, threading, memory and testing. Existing C++ wrappers, name conflicts, and what the maintainers want. |
 | [cpp26.md](cpp26.md) | Pattern matching papers. The compile-time cost of reflection. How others read semantics from doc comments. The boost-ext/ut configuration pattern. Coroutines on microcontrollers. |
 | [example-ports.md](example-ports.md) | The examples of Qt, Slint, TouchGFX, emWin, Embedded Wizard, Crank and Altia: what exists, under which licence, and what we may do with it. |
+| [port-thermostat.md](port-thermostat.md) | The design of the port of Qt Quick's Thermostat demo: its licences, screens, state, files and tests, and the gaps to settle first. |
+| [port-media-player.md](port-media-player.md) | The design of a media player port: Qt Quick's Media Player demo or LVGL's music demo, the screens, state, files and tests, and the gaps to settle first. |
 | [device-ui.md](device-ui.md) | What drives the UI of each device class. Standards for process panels, medical alarms and charger prices. Touch target sizes. Text size by viewing distance. |
 | [instrument-cluster.md](instrument-cluster.md) | The information hierarchy of a cluster, glance limits, what the steering wheel hides, telltales, warning priority, tyre pressure, speedometer studies. |
 | [3d-and-effects.md](3d-and-effects.md) | 3D in LVGL, the plan for microcontrollers, generating 3D models, shadows and blur. |
@@ -18,6 +20,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [documentation.md](documentation.md) | The documentation programme: the owner's decisions on structure, outline, rules and checks, the audit of every page, what the pilot found, and the plan of every page with its batch. |
 | [components.md](components.md) | Components: reusable behaviour and its lifetime, dynamic content on small devices, slots, parameters and invariants, in other frameworks and for our trees. |
 | [lists.md](lists.md) | Lists whose rows change: a fixed-capacity model, keyed rows, bindings to a row's fields, the selected row, the heap and code a row costs, and the API of recycling and sorted views. |
+| [ported-examples.md](ported-examples.md) | Which of LVGL's widget examples are ported, which can be today, and what each of the others needs from lvgl26, grouped by the missing form. |
 | [node-storage.md](node-storage.md) | Run-time storage of structural nodes without heap: sized at compile time, placed by the caller, open to new kinds. When a shown tree switches, a style value that follows a state, and what a region for the whole program still needs. |
 | [shown-theme-format.md](shown-theme-format.md) | Design of four planned features: a node that shows one of several trees for a state, a look that changes at run time, text from several values in a fixed buffer, and handler arguments injected by reflection. Sketches compiled with GCC 16.2, decisions for the owner. |
 | [lsp.md](lsp.md) | Editor support for code that only GCC compiles: clangd and reflection, stub headers, completion inside a string, GCC's diagnostics, what agents can use. |

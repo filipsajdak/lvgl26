@@ -9,6 +9,7 @@ extern "C" {
 void lv_example_checkbox_bind_checked(void);
 void lv_example_checkbox_event(void);
 void lv_example_checkbox_states(void);
+void lv_example_checkbox_styling(void);
 void lv_example_checkbox_text(void);
 }
 
@@ -47,12 +48,20 @@ int main() {
   same_pixels("checkbox_event off again", &lv_example_checkbox_event, &widgets::checkbox_event,
               &tick_and_untick);
   same_pixels("checkbox_states", &lv_example_checkbox_states, &widgets::checkbox_states, &nothing);
+  same_pixels("checkbox_styling", &lv_example_checkbox_styling, &widgets::checkbox_styling, &nothing);
+  same_pixels("checkbox_styling ticked", &lv_example_checkbox_styling, &widgets::checkbox_styling,
+              &tick_it);
   same_pixels("checkbox_text", &lv_example_checkbox_text, &widgets::checkbox_text, &nothing);
 
   // The note must appear with the tick.
   const auto without = render(&widgets::checkbox_bind_checked, &tick_and_untick);
   const auto with = render(&widgets::checkbox_bind_checked, &tick_it);
   check(without.first_difference(with) != -1);
+
+  // The ticked box has a look of its own.
+  const auto plain = render(&widgets::checkbox_styling, &nothing);
+  const auto ticked = render(&widgets::checkbox_styling, &tick_it);
+  check(plain.first_difference(ticked) != -1);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
