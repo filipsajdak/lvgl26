@@ -287,6 +287,10 @@
     "include/lv/detail/json_fault.hpp": {
       "tests": "^json_fault$|^settings$|^fail_settings_not_json$",
       "targets": "json_fault settings"
+    },
+    "include/lv/detail/setter_order.hpp": {
+      "tests": "^setter_order$",
+      "targets": "setter_order"
     }
   }
 }
