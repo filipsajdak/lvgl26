@@ -9,6 +9,7 @@ extern "C" {
 void lv_example_switch_event(void);
 void lv_example_switch_orientation(void);
 void lv_example_switch_state(void);
+void lv_example_switch_styling(void);
 }
 
 namespace {
@@ -42,6 +43,8 @@ int main() {
   same_pixels("switch_orientation", &lv_example_switch_orientation, &widgets::switch_orientation,
               &nothing);
   same_pixels("switch_state", &lv_example_switch_state, &widgets::switch_state, &nothing);
+  same_pixels("switch_styling", &lv_example_switch_styling, &widgets::switch_styling, &nothing);
+  same_pixels("switch_styling on", &lv_example_switch_styling, &widgets::switch_styling, &turn_on);
 
   // On and off must be different pictures.
   const auto off = render(&widgets::switch_event, &turn_on_and_off);

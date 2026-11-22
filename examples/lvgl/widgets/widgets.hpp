@@ -88,6 +88,7 @@ void slider_value_range_orientation(lv::obj screen);  // lv_example_slider_value
 void switch_event(lv::obj screen);        // lv_example_switch_event
 void switch_orientation(lv::obj screen);  // lv_example_switch_orientation
 void switch_state(lv::obj screen);        // lv_example_switch_state
+void switch_styling(lv::obj screen);      // lv_example_switch_styling
 
 // checkbox
 void checkbox_bind_checked(lv::obj screen);  // lv_example_checkbox_bind_checked
