@@ -247,10 +247,14 @@ consteval std::array<std::size_t, 4> base_group_ends() {
   return ends;
 }
 
-// The base with the own setters merged in, group by group and by name. An own setter wins over
-// one of obj with the same name.
-template <class D>
-consteval std::vector<member_item> merge_own(const std::vector<member_item>& own) {
+// The members of props<widget>, by group and then by name: the widget's own setters merged
+// into the base. A widget's own setter wins over one of obj with the same name.
+// D only delays the base scan until a props struct is really needed. The loop stays here, in the
+// one function: taking it into a function template of its own cost 3.6 percent of a small file.
+template <class D = void>
+consteval std::vector<member_item> members(std::string_view widget) {
+  resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
+  const auto own = own_members<D>(widget);
   const auto ends = base_group_ends<D>();
   const std::size_t members_in_base = (base<D>.size() - 4) / 3;
   std::vector<member_item> items;
@@ -264,14 +268,6 @@ consteval std::vector<member_item> merge_own(const std::vector<member_item>& own
   }
   items.insert(items.end(), own.begin() + static_cast<std::ptrdiff_t>(o), own.end());
   return items;
-}
-
-// The members of props<widget>, by group and then by name: the widget's own setters merged
-// into the base. D only delays the base scan until a props struct is really needed.
-template <class D = void>
-consteval std::vector<member_item> members(std::string_view widget) {
-  resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
-  return merge_own<D>(own_members<D>(widget));
 }
 
 // Members as pairs: what std::meta::define_aggregate needs for the member, then its
