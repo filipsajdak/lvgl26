@@ -138,6 +138,18 @@ class Judging(unittest.TestCase):
         self.assertEqual(sorted(got), ["a", "b", "c", "d"])
         self.assertEqual((got["a"]["value"], got["b"]["value"], got["c"]["value"], got["d"]["value"]), (5, 1, 2, 8))
 
+    def test_an_accepted_rise_is_not_a_regression_and_moves_the_baseline_with_its_reason(self):
+        baseline = {"one_label": {"value": 100_000}, "wide": {"value": 100_000}}
+        found = hist.verdicts([row("one_label", 101_000), row("wide", 100_100)], baseline, [], CONFIG, ["one_label"])
+        self.assertEqual([v["status"] for v in found], ["accepted", "same"])
+        got = hist.moved_baseline(baseline, found, "sha", "day", "call form, PR 189")
+        self.assertEqual(got["one_label"], {"value": 101_000, "commit": "sha", "date": "day", "accepted": "call form, PR 189"})
+        self.assertEqual(got["wide"], {"value": 100_000})
+
+    def test_a_rise_of_a_probe_that_is_not_named_still_fails(self):
+        found = hist.verdicts([row("one_label", 101_000)], {"one_label": {"value": 100_000}}, [], CONFIG, ["wide"])
+        self.assertEqual(found[0]["status"], "regression")
+
     def test_summary_names_the_range_for_a_regression(self):
         found = [{"probe": "one_label", "status": "regression", "value": 101, "baseline": 100, "baseline_commit": "abc",
                   "change_percent": 1.0, "threshold_percent": 0.4}]
@@ -147,13 +159,14 @@ class Judging(unittest.TestCase):
 
 
 class Command(unittest.TestCase):
-    def run_judge(self, directory, ir):
+    def run_judge(self, directory, ir, *more):
         rows = pathlib.Path(directory, "rows.json")
         rows.write_text(json.dumps([row("one_label", ir)]))
         return subprocess.run([sys.executable, str(TOOLS / "cost_history.py"), "judge", "--rows", str(rows),
                                "--history", str(pathlib.Path(directory, "h.jsonl")),
                                "--baseline", str(pathlib.Path(directory, "b.json")),
-                               "--commit", "c" * 40, "--date", "2026-11-20"], capture_output=True, text=True)
+                               "--commit", "c" * 40, "--date", "2026-11-20", *more],
+                              capture_output=True, text=True)
 
     def test_first_night_is_new_then_a_rise_fails(self):
         with tempfile.TemporaryDirectory() as d:
@@ -164,6 +177,26 @@ class Command(unittest.TestCase):
             self.assertEqual(second.returncode, 1)
             self.assertEqual(len(hist.read_history(pathlib.Path(d, "h.jsonl"))), 2)
             self.assertEqual(json.loads(pathlib.Path(d, "b.json").read_text())["one_label"]["value"], 100_000)
+
+
+    def test_accept_records_the_reason_and_needs_one(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.run_judge(d, 100_000)
+            refused = self.run_judge(d, 105_000, "--accept", "one_label")
+            self.assertEqual(refused.returncode, 2)
+            self.assertIn("needs a --reason", refused.stderr)
+            self.assertEqual(len(hist.read_history(pathlib.Path(d, "h.jsonl"))), 1)
+            accepted = self.run_judge(d, 105_000, "--accept", "one_label", "--reason", "call form, PR 189")
+            self.assertEqual(accepted.returncode, 0)
+            self.assertEqual(json.loads(accepted.stdout)[0]["status"], "accepted")
+            nights = hist.read_history(pathlib.Path(d, "h.jsonl"))
+            self.assertEqual(nights[-1]["accepted"], {"probes": ["one_label"], "reason": "call form, PR 189"})
+            self.assertEqual(json.loads(pathlib.Path(d, "b.json").read_text())["one_label"]["accepted"], "call form, PR 189")
+            self.assertEqual(self.run_judge(d, 105_100).returncode, 0)
+
+    def test_accept_names_a_probe_that_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(self.run_judge(d, 100_000, "--accept", "nothing", "--reason", "x").returncode, 2)
 
 
 class Page(unittest.TestCase):
