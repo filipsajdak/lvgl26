@@ -228,30 +228,50 @@ consteval std::vector<member_item> own_members(std::string_view widget) {
   return own;
 }
 
-// The members of props<widget>, by group and then by name: the widget's own setters merged
-// into the base. A widget's own setter wins over one of obj with the same name.
-// D only delays the base scan until a props struct is really needed.
-template <class D = void>
-consteval std::vector<member_item> members(std::string_view widget) {
-  resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
-  const auto own = own_members<D>(widget);
+// Whether an own setter comes before the base member `name` of `group`.
+consteval bool comes_before(const member_item& own, int group, std::string_view name) {
+  return own.group < group || (own.group == group && own.name < name);
+}
 
+// Whether own setter `o` is the base member `name` of `group`, which it replaces.
+consteval bool replaces(const std::vector<member_item>& own, std::size_t o, int group, std::string_view name) {
+  return o < own.size() && own[o].group == group && own[o].name == name;
+}
+
+// The end of each group in the base, as the pack of the base lists them after its members.
+template <class D>
+consteval std::array<std::size_t, 4> base_group_ends() {
+  std::array<std::size_t, 4> ends{};
+  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
+  for (std::size_t g = 0; g < 4; ++g) ends[g] = std::meta::extract<std::size_t>(base<D>[members_in_base * 3 + g]);
+  return ends;
+}
+
+// The base with the own setters merged in, group by group and by name. An own setter wins over
+// one of obj with the same name.
+template <class D>
+consteval std::vector<member_item> merge_own(const std::vector<member_item>& own) {
+  const auto ends = base_group_ends<D>();
+  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
   std::vector<member_item> items;
   std::size_t o = 0;
-  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
-  std::size_t ends[4];
-  for (std::size_t g = 0; g < 4; ++g) ends[g] = std::meta::extract<std::size_t>(base<D>[members_in_base * 3 + g]);
   int group = 0;
   for (std::size_t b = 0; b < members_in_base * 3; b += 3) {
-    while (b / 3 >= ends[group]) ++group;
+    while (b / 3 >= ends[static_cast<std::size_t>(group)]) ++group;
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
-    while (o < own.size() && (own[o].group < group || (own[o].group == group && own[o].name < name)))
-      items.push_back(own[o++]);
-    const bool overridden = o < own.size() && own[o].group == group && own[o].name == name;
-    items.push_back(overridden ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2], group});
+    while (o < own.size() && comes_before(own[o], group, name)) items.push_back(own[o++]);
+    items.push_back(replaces(own, o, group, name) ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2], group});
   }
   items.insert(items.end(), own.begin() + static_cast<std::ptrdiff_t>(o), own.end());
   return items;
+}
+
+// The members of props<widget>, by group and then by name: the widget's own setters merged
+// into the base. D only delays the base scan until a props struct is really needed.
+template <class D = void>
+consteval std::vector<member_item> members(std::string_view widget) {
+  resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
+  return merge_own<D>(own_members<D>(widget));
 }
 
 // Members as pairs: what std::meta::define_aggregate needs for the member, then its
