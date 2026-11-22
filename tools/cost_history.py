@@ -3,6 +3,7 @@
 
     python3 tools/cost_history.py judge --rows rows.json --history history.jsonl \
         --baseline baseline.json --commit SHA --date 2026-11-20 [--run URL]
+        [--accept PROBE,PROBE --reason TEXT]
 
 `rows.json` is a list of rows of tools/compile_cost.py. The command appends the night to the history
 and moves the baseline, both files in place, and prints the verdicts as JSON on standard output and a
@@ -12,6 +13,12 @@ The baseline of a probe is the value of the last night that was neither a regres
 under the threshold: it moves when a probe is new or got cheaper beyond the threshold, and it stays
 while a probe is within the threshold, so that a slow creep adds up until it crosses. A regression
 must also stand against the median of the last nights, so that one odd baseline cannot raise it.
+
+A rise that the owner accepted is recorded, never allowed in general: `--accept` names the probes and
+`--reason` says why (the pull request and what it bought). A named probe that is a regression tonight gets
+the verdict `accepted`, its baseline moves to tonight's value with the reason, and the night's line of the
+history carries the same record. The threshold does not change, and nothing is rewritten: the history only
+grows. `--accept` without a reason is refused.
 Uses the standard library only.
 """
 
@@ -56,25 +63,29 @@ def judge(value, baseline, median, threshold):
     return "same", change
 
 
-def verdicts(rows, baseline, history, config):
+def verdicts(rows, baseline, history, config, accepted=()):
     out = []
     for row in rows:
         probe = row["probe"]
         threshold = config["probes"][probe].get("threshold_percent", config["default_threshold_percent"])
         before = baseline.get(probe, {}).get("value")
         status, change = judge(value_of(row), before, median_of(history, probe), threshold)
+        if status == "regression" and probe in accepted:
+            status = "accepted"
         out.append({"probe": probe, "status": status, "value": value_of(row), "baseline": before,
                     "baseline_commit": baseline.get(probe, {}).get("commit"),
                     "change_percent": round(change, 3), "threshold_percent": threshold})
     return out
 
 
-def moved_baseline(baseline, found, commit, date):
-    """The baseline after tonight: moved for a new probe and an improvement, kept otherwise."""
+def moved_baseline(baseline, found, commit, date, reason=""):
+    """The baseline after tonight: moved for a new probe, an improvement and an accepted rise, kept otherwise."""
     out = dict(baseline)
     for v in found:
-        if v["status"] in ("new", "improvement"):
+        if v["status"] in ("new", "improvement", "accepted"):
             out[v["probe"]] = {"value": v["value"], "commit": commit, "date": date}
+            if v["status"] == "accepted":
+                out[v["probe"]]["accepted"] = reason
     return out
 
 
@@ -112,12 +123,22 @@ def judge_command(args):
     config["probes"] = {p["id"]: p for p in config["probes"]}
     rows = json.loads(pathlib.Path(args.rows).read_text())
     baseline, history = read_json(args.baseline, {}), read_history(args.history)
-    found = verdicts(rows, baseline, history, config)
+    accepted = [p for p in args.accept.split(",") if p]
+    unknown = [p for p in accepted if p not in config["probes"]]
+    if accepted and not args.reason.strip():
+        print("--accept needs a --reason: what the rise bought, and the pull request", file=sys.stderr)
+        return 2
+    if unknown:
+        print("--accept names no probe: " + ", ".join(unknown), file=sys.stderr)
+        return 2
+    found = verdicts(rows, baseline, history, config, accepted)
     night = {"date": args.date, "commit": args.commit, "run": args.run, "rows": rows}
+    if accepted:
+        night["accepted"] = {"probes": accepted, "reason": args.reason.strip()}
     with open(args.history, "a") as out:
         out.write(json.dumps(night, sort_keys=True) + "\n")
     pathlib.Path(args.baseline).write_text(
-        json.dumps(moved_baseline(baseline, found, args.commit, args.date), indent=1, sort_keys=True) + "\n")
+        json.dumps(moved_baseline(baseline, found, args.commit, args.date, args.reason.strip()), indent=1, sort_keys=True) + "\n")
     print(json.dumps(found))
     print(summary(found, args.run, args.commit), file=sys.stderr)
     return 1 if any(v["status"] == "regression" for v in found) else 0
@@ -129,6 +150,8 @@ def main(argv):
     for name in ("rows", "history", "baseline", "commit", "date"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--run", default="")
+    parser.add_argument("--accept", default="", help="probes whose rise tonight is accepted, comma separated")
+    parser.add_argument("--reason", default="", help="why the rise is accepted; required with --accept")
     return judge_command(parser.parse_args(argv))
 
 

@@ -27,6 +27,18 @@ on:
         required: false
         type: boolean
         default: false
+      accept_cost:
+        description: >-
+          Probes (comma separated) whose rise in this run is accepted: the baseline moves to this run's value, with the
+          reason. Only a run on main writes the baseline. Needs accept_reason. It accepts one rise, not a larger threshold.
+        required: false
+        type: string
+        default: ''
+      accept_reason:
+        description: Why the rise of accept_cost is accepted, and the pull request that caused it. Recorded in the history.
+        required: false
+        type: string
+        default: ''
 
 
 jobs:
@@ -427,6 +439,8 @@ jobs:
         id: judge
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACCEPT: ${{ inputs.accept_cost }}
+          REASON: ${{ inputs.accept_reason }}
         run: |
           python3 - <<'PY'
           import glob, json, pathlib, sys
@@ -443,7 +457,8 @@ jobs:
           status=0
           python3 tools/cost_history.py judge --rows rows.json --history metrics/history.jsonl \
             --baseline metrics/baseline.json --commit "$GITHUB_SHA" --date "$(date -u +%F)" \
-            --run "$RUN_URL" > verdicts.json 2> summary.md || status=$?
+            --run "$RUN_URL" ${ACCEPT:+--accept "$ACCEPT" --reason "$REASON"} > verdicts.json 2> summary.md || status=$?
+          if [ "$status" = 2 ]; then cat summary.md; exit 2; fi
           { echo '### Compile cost, Valgrind instruction count'; cat summary.md; } >> "$GITHUB_STEP_SUMMARY"
           echo "regression=$([ "$status" = 1 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Keep the history
