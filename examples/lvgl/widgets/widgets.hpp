@@ -122,7 +122,6 @@ void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
 void roller_bind_value(lv::obj screen);    // lv_example_roller_bind_value
 void roller_event(lv::obj screen);         // lv_example_roller_event
 void roller_options(lv::obj screen);       // lv_example_roller_options
-void roller_styling(lv::obj screen);       // lv_example_roller_styling
 void roller_visible_rows(lv::obj screen);  // lv_example_roller_visible_rows
 
 // spinbox
