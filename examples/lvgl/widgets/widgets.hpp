@@ -81,6 +81,7 @@ void slider_event(lv::obj screen);                    // lv_example_slider_event
 void slider_img_indicator(lv::obj screen);            // lv_example_slider_img_indicator
 void slider_modes(lv::obj screen);                    // lv_example_slider_modes
 void slider_reversed_direction(lv::obj screen);       // lv_example_slider_reversed_direction
+void slider_styling(lv::obj screen);                  // lv_example_slider_styling
 void slider_value_range_orientation(lv::obj screen);  // lv_example_slider_value_range_orientation
 
 // switch
