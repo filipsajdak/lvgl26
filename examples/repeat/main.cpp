@@ -23,7 +23,7 @@ struct labels {
 };
 
 constexpr auto tile = []<page Page> {
-  return lv::button({.on_clicked = [] { shown = Page; }, .size = {80 * px, 60 * px}})[
+  return lv::button({.size = {80 * px, 60 * px}, .on_clicked = [] { shown = Page; }})[
       lv::label({.text = lv::like<Page, labels>})];
 };
 

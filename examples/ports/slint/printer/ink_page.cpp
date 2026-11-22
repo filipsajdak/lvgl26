@@ -21,17 +21,17 @@ constexpr auto small_font = type(tok.text.small);
 template <class Ink>
 constexpr auto tube(std::string_view fill_id, const Ink& ink, const char* percent) {
   return lv::group({.size = {tube_width * px, tube_height * px}})[
-      lv::group({.align = "bottom_mid", .id = fill_id, .size = {tube_width * px, 0 * px}})[
+      lv::group({.id = fill_id, .align = "bottom_mid", .size = {tube_width * px, 0 * px}})[
           lv::group({.align = "bottom_mid", .size = {tube_width * px, tube_height * px},
                      .style = {.bg_color = ink, .bg_opa = tok.solid, .radius = tok.ink.radius}})],
       lv::group({.size = {100 * pct, 100 * pct},
                  .style = {.border_color = tok.color.neutral, .border_width = tok.control.line,
                            .radius = tok.ink.radius}}),
       lv::group({.align = "bottom_mid", .size = {tube_width / 2 * px, pill_height * px},
-                 .style = {.bg_color = tok.ink.pill, .bg_opa = tok.ink.pill_opa, .radius = tok.ink.radius},
-                 .y = -pill_height * px})[
-          lv::label({.align = "center", .style = {.text_color = tok.ink.text, .text_font = small_font},
-                     .text = percent})]];
+                 .y = -pill_height * px,
+                 .style = {.bg_color = tok.ink.pill, .bg_opa = tok.ink.pill_opa, .radius = tok.ink.radius}})[
+          lv::label({.align = "center", .text = percent,
+                     .style = {.text_color = tok.ink.text, .text_font = small_font}})]];
 }
 
 constexpr int levels[] = {90, 50, 80, 10};
@@ -40,9 +40,9 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
     plain_header("Ink Level", title_font),
     lv::group({.flex_flow = "row", .size = {100 * pct, (window_height - plain_header_height) * px},
+               .y = plain_header_height * px,
                .style = {.pad_gap = lv::raw(tube_gap * px), .pad_left = lv::raw(tubes_left * px),
-                         .pad_top = lv::raw(tubes_top * px)},
-               .y = plain_header_height * px})[
+                         .pad_top = lv::raw(tubes_top * px)}})[
         tube("yellow", tok.ink.yellow, "90%"), tube("cyan", tok.ink.cyan, "50%"),
         tube("magenta", tok.ink.magenta, "80%"), tube("black", tok.ink.black, "10%")]];
 

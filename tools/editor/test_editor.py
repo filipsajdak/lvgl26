@@ -63,10 +63,10 @@ class Members(unittest.TestCase):
         "style": [{"name": "align", "takes": [ENUM]}],
     }
 
-    def test_own_member_wins_and_order_is_alphabetical(self):
+    def test_own_member_wins_and_order_is_by_group(self):
         members = reference_stubs.members_of(self.reference, "arc")
         self.assertEqual([m["name"] for m in members],
-                         ["id", "on_delete", "range", "rotation", "style", "style_pressed", "value", "width"])
+                         ["id", "range", "rotation", "value", "width", "style", "style_pressed", "on_delete"])
         self.assertEqual([m["sets"] for m in members if m["name"] == "value"], ["lv_arc_set_value"])
 
     def test_comment_names_the_setter_and_the_enum_names(self):

@@ -32,9 +32,9 @@ static_assert(most.get() == widest * deg);
 static_assert(requires { lv::animatable<"spinner">{}.arc_sweep; });
 static_assert(lv::detail::can_run_between(none, most));
 
-constexpr auto ui = lv::column[lv::spinner({.arc_sweep = 270 * deg, .id = "spin"}),
-                               lv::spinner({.arc_sweep = 0 * deg, .id = "none"}),
-                               lv::spinner({.arc_sweep = widest * deg, .id = "widest"})];
+constexpr auto ui = lv::column[lv::spinner({.id = "spin", .arc_sweep = 270 * deg}),
+                               lv::spinner({.id = "none", .arc_sweep = 0 * deg}),
+                               lv::spinner({.id = "widest", .arc_sweep = widest * deg})];
 
 void sweeps_reach_lvgl(lv::obj screen) {
   auto root = lv::mount<ui>(screen);

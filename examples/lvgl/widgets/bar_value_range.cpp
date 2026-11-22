@@ -11,9 +11,9 @@ constexpr auto caption = lv::style({.text_color = tok.caption.text});
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::bar({.max_value = 100, .min_value = 0, .size = {90 * pct, 20 * px}, .value = {30, false}})[
-        lv::label({.align = "center", .style = caption, .text = "0..100"})],
+        lv::label({.align = "center", .text = "0..100", .style = caption})],
     lv::bar({.max_value = 80, .min_value = -20, .size = {90 * pct, 20 * px}, .value = {35, false}})[
-        lv::label({.align = "center", .style = caption, .text = "-20..80"})]];
+        lv::label({.align = "center", .text = "-20..80", .style = caption})]];
 
 }  // namespace
 

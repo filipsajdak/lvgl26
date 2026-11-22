@@ -6,8 +6,8 @@
 //
 //   lv::props<"arc"> p{.id = "speedo", .range = {0, 240}, .rotation = 90 * lv::deg, .value = 120};
 //
-// Members are in alphabetical order, which is the order designated initializers
-// must follow. Every member is typed: a wrong name, a wrong unit, a bool where an
+// Members are in four groups: the id, the properties, the styles and the handlers, each in
+// alphabetical order. That is the order designated initializers must follow. Every member is typed: a wrong name, a wrong unit, a bool where an
 // integer is expected and a narrowing conversion are all compile errors.
 //
 // A props struct is made with braces, also an empty one: `lv::props<"arc"> p{};`.
@@ -130,7 +130,15 @@ struct member_item {
   std::meta::info target;  // the setter; the LV_EVENT_* enumerator; lv_obj_add_style for
                            // `style`; the LV_STATE_* or LV_PART_* enumerator for
                            // `style_pressed` and the like; or null for `id`
+  int group = 1;           // where it stands: member_group::*, set where the item is made
 };
+
+// The groups of a props struct, in order: the id, the properties (the setters), the styles
+// (`style`, `style_pressed`, ...) and the handlers (`on_clicked`, ...). Each member is put in its
+// group where it is made, so that no name is looked at to find it.
+namespace member_group {
+inline constexpr int id = 0, property = 1, style = 2, handler = 3;
+}  // namespace member_group
 
 template <class D>
 consteval member_item setter_item(std::meta::info f, std::size_t prefix_size) {
@@ -177,25 +185,30 @@ consteval std::vector<named_style_slot> named_style_slots() {
 template <class D>
 consteval std::vector<member_item> scan_base(std::string_view prefix) {
   std::vector<member_item> items;
-  items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}});
-  for (const auto& slot : named_style_slots()) items.push_back({slot.name, ^^style_t<D>, slot.target});
+  items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}, member_group::id});
+  for (const auto& slot : named_style_slots()) items.push_back({slot.name, ^^style_t<D>, slot.target, member_group::style});
   for (auto f : setters_with_prefix(prefix)) items.push_back(setter_item<D>(f, prefix.size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
-      items.push_back({std::define_static_string(name), ^^arg<handler>, e});
-  sort_by_name(items);
+      items.push_back({std::define_static_string(name), ^^arg<handler>, e, member_group::handler});
+  sort_by_group_and_name(items);
   return items;
 }
 
-// The base is found and sorted once, on first use, and stored as one array of
-// triples: the name (a reflected string), the type and the target.
+// The base is found and sorted once, on first use, and stored as one array: a triple for each
+// member (the name as a reflected string, the type and the target), and then, for each of the four
+// groups, the number of members that come before the end of it. The members are sorted by group,
+// so a group is a range, and no member needs its group stored.
 consteval std::vector<std::meta::info> pack_base(const std::vector<member_item>& items) {
   std::vector<std::meta::info> out;
+  std::size_t ends[4] = {};
   for (const auto& it : items) {
     out.push_back(std::meta::reflect_constant_string(it.name));
     out.push_back(it.type);
     out.push_back(it.target);
+    for (int group = it.group; group < 4; ++group) ++ends[group];
   }
+  for (const auto end : ends) out.push_back(std::meta::reflect_constant(end));
   return out;
 }
 
@@ -211,25 +224,47 @@ consteval std::vector<member_item> own_members(std::string_view widget) {
   if (widget == "obj"sv) return own;
   const std::string prefix = "lv_" + str(widget) + "_set_";
   for (auto f : setters_with_prefix(prefix)) own.push_back(setter_item<D>(f, prefix.size()));
-  sort_by_name(own);
+  sort_by_group_and_name(own);
   return own;
 }
 
-// The members of props<widget>, sorted by name: the widget's own setters merged
+// Whether an own setter comes before the base member `name` of `group`.
+consteval bool comes_before(const member_item& own, int group, std::string_view name) {
+  return own.group < group || (own.group == group && own.name < name);
+}
+
+// Whether own setter `o` is the base member `name` of `group`, which it replaces.
+consteval bool replaces(const std::vector<member_item>& own, std::size_t o, int group, std::string_view name) {
+  return o < own.size() && own[o].group == group && own[o].name == name;
+}
+
+// The end of each group in the base, as the pack of the base lists them after its members.
+template <class D>
+consteval std::array<std::size_t, 4> base_group_ends() {
+  std::array<std::size_t, 4> ends{};
+  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
+  for (std::size_t g = 0; g < 4; ++g) ends[g] = std::meta::extract<std::size_t>(base<D>[members_in_base * 3 + g]);
+  return ends;
+}
+
+// The members of props<widget>, by group and then by name: the widget's own setters merged
 // into the base. A widget's own setter wins over one of obj with the same name.
-// D only delays the base scan until a props struct is really needed.
+// D only delays the base scan until a props struct is really needed. The loop stays here, in the
+// one function: taking it into a function template of its own cost 3.6 percent of a small file.
 template <class D = void>
 consteval std::vector<member_item> members(std::string_view widget) {
   resolve_create(widget);  // a wrong widget name fails here, with the list of valid ones
   const auto own = own_members<D>(widget);
-
+  const auto ends = base_group_ends<D>();
+  const std::size_t members_in_base = (base<D>.size() - 4) / 3;
   std::vector<member_item> items;
   std::size_t o = 0;
-  for (std::size_t b = 0; b < base<D>.size(); b += 3) {
+  int group = 0;
+  for (std::size_t b = 0; b < members_in_base * 3; b += 3) {
+    while (b / 3 >= ends[static_cast<std::size_t>(group)]) ++group;
     const std::string_view name = std::meta::extract<const char*>(base<D>[b]);
-    while (o < own.size() && own[o].name < name) items.push_back(own[o++]);
-    const bool overridden = o < own.size() && own[o].name == name;
-    items.push_back(overridden ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2]});
+    while (o < own.size() && comes_before(own[o], group, name)) items.push_back(own[o++]);
+    items.push_back(replaces(own, o, group, name) ? own[o++] : member_item{name, base<D>[b + 1], base<D>[b + 2], group});
   }
   items.insert(items.end(), own.begin() + static_cast<std::ptrdiff_t>(o), own.end());
   return items;

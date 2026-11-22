@@ -21,7 +21,7 @@ constexpr auto ui = lv::group[
     lv::label({.align = "center", .text = lv::bind(status), .y = -50 * px}),
     lv::button({.align = "center", .on_clicked = &show_idle})[
         lv::label({.align = "center", .text = "Idle"})],
-    lv::button({.align = "center", .on_clicked = &show_running, .y = 50 * px})[
+    lv::button({.align = "center", .y = 50 * px, .on_clicked = &show_running})[
         lv::label({.align = "center", .text = "Running"})]];
 
 }  // namespace

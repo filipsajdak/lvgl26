@@ -9,6 +9,6 @@ constexpr unsigned char barlow_ttf[] = {
 };
 
 constexpr const lv_font_t* odd = lv::font<barlow_ttf>(18 * px);
-constexpr auto ui = lv::label({.style = {.text_font = odd}, .text = "x"});
+constexpr auto ui = lv::label({.text = "x", .style = {.text_font = odd}});
 
 int main() {}

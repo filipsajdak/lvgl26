@@ -24,9 +24,9 @@ constexpr auto ui = lv::column(
      .size = {320 * px, 240 * px},
      .style = {.bg_color = lv::rgb(0x0d1117), .bg_opa = 100 * pct, .radius = 0 * px}})[
     lv::column({.id = "card", .size = {200 * px, lv::size_content}, .style = card})[
-        lv::label({.id = "title", .style = {.text_color = lv::rgb(0xe6edf3)}, .text = "Speed"}),
-        lv::label({.id = "unit", .style = {.text_color = lv::rgb(0x8b949e), .text_opa = 80 * pct},
-                   .text = "km/h"})],
+        lv::label({.id = "title", .text = "Speed", .style = {.text_color = lv::rgb(0xe6edf3)}}),
+        lv::label({.id = "unit", .text = "km/h",
+                   .style = {.text_color = lv::rgb(0x8b949e), .text_opa = 80 * pct}})],
     lv::box({.id = "plain", .size = {40 * px, 10 * px}})];
 
 // The types of a few style members.

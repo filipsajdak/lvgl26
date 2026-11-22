@@ -27,7 +27,7 @@ int clicks_on_a = 0;
 void click_a() { ++clicks_on_a; }
 
 constexpr auto page_a = lv::column({.size = {width * px, 100 * px}})[
-    lv::label({.text = "a"}), lv::button({.on_clicked = &click_a, .size = {width * px, 60 * px}})];
+    lv::label({.text = "a"}), lv::button({.size = {width * px, 60 * px}, .on_clicked = &click_a})];
 constexpr auto page_b = lv::column({.size = {width * px, 100 * px}})[lv::label({.text = "b"})];
 constexpr auto page_c = lv::column({.size = {width * px, 100 * px}})[lv::label({.text = "c"})];
 

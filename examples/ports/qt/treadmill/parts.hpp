@@ -24,9 +24,9 @@ constexpr auto at(const box& b, const Child&... children) {
 // A box with a color.
 constexpr auto filled(const box& b, const auto& color) {
   return lv::group({.size = {b.w * px, b.h * px},
-                    .style = {.bg_color = color, .bg_opa = tok.solid},
                     .x = b.x * px,
-                    .y = b.y * px});
+                    .y = b.y * px,
+                    .style = {.bg_color = color, .bg_opa = tok.solid}});
 }
 
 // A picture at a place.
@@ -37,15 +37,15 @@ constexpr auto picture(int x, int y) {
 
 // Text in the middle of a box, on the left of it, or at its top. The text is a string, or a binding.
 constexpr auto text_middle(const box& b, const auto& text, const auto& font, const auto& color) {
-  return at(b, lv::label({.align = "center", .style = {.text_color = color, .text_font = font}, .text = text}));
+  return at(b, lv::label({.align = "center", .text = text, .style = {.text_color = color, .text_font = font}}));
 }
 
 constexpr auto text_left(const box& b, const auto& text, const auto& font, const auto& color) {
-  return at(b, lv::label({.align = "left_mid", .style = {.text_color = color, .text_font = font}, .text = text}));
+  return at(b, lv::label({.align = "left_mid", .text = text, .style = {.text_color = color, .text_font = font}}));
 }
 
 constexpr auto text_top(const box& b, const auto& text, const auto& font, const auto& color) {
-  return at(b, lv::label({.align = "top_mid", .style = {.text_color = color, .text_font = font}, .text = text}));
+  return at(b, lv::label({.align = "top_mid", .text = text, .style = {.text_color = color, .text_font = font}}));
 }
 
 // A button with a small arrow on it. A rim of the outer color, and a face that the finger changes.
@@ -60,28 +60,29 @@ constexpr auto arrow_button(const box& b, void (*clicked)()) {
                                 .shadow_width = lv::raw(0 * px)});
   const auto pressed = lv::style({.bg_color = tok.arrow.face_down, .border_color = tok.arrow.rim_down});
   if constexpr (Flipped)
-    return lv::button({.on_clicked = clicked,
-                       .size = {b.w * px, b.h * px},
+    return lv::button({.size = {b.w * px, b.h * px},
+                       .x = b.x * px,
+                       .y = b.y * px,
                        .style = style,
                        .style_pressed = pressed,
-                       .x = b.x * px,
-                       .y = b.y * px})[
+                       .on_clicked = clicked})[
         lv::image({.align = "center", .rotation = 180 * deg, .src = lv::image_file<pictures::arrow>})];
   else
-    return lv::button({.on_clicked = clicked,
-                       .size = {b.w * px, b.h * px},
+    return lv::button({.size = {b.w * px, b.h * px},
+                       .x = b.x * px,
+                       .y = b.y * px,
                        .style = style,
                        .style_pressed = pressed,
-                       .x = b.x * px,
-                       .y = b.y * px})[lv::image({.align = "center", .src = lv::image_file<pictures::arrow>})];
+                       .on_clicked = clicked})[lv::image({.align = "center", .src = lv::image_file<pictures::arrow>})];
 }
 
 // START, PAUSE and STOP: a rim of the button's color, and a black face that the finger takes away.
 template <const auto& Icon>
 constexpr auto big_button(const box& b, const auto& rim, const auto& face, const char* name, const auto& font,
                           void (*clicked)()) {
-  return lv::button({.on_clicked = clicked,
-                     .size = {b.w * px, b.h * px},
+  return lv::button({.size = {b.w * px, b.h * px},
+                     .x = b.x * px,
+                     .y = b.y * px,
                      .style = {.bg_color = face,
                                .bg_opa = tok.solid,
                                .border_color = rim,
@@ -90,13 +91,12 @@ constexpr auto big_button(const box& b, const auto& rim, const auto& face, const
                                .radius = tok.button.radius,
                                .shadow_width = lv::raw(0 * px)},
                      .style_pressed = {.bg_color = rim},
-                     .x = b.x * px,
-                     .y = b.y * px})[
+                     .on_clicked = clicked})[
       lv::image({.align = "left_mid", .src = lv::image_file<Icon>, .x = button_icon_x * px}),
       lv::label({.align = "left_mid",
-                 .style = {.text_color = tok.label.on_button, .text_font = font},
                  .text = name,
-                 .x = button_text_x * px})];
+                 .x = button_text_x * px,
+                 .style = {.text_color = tok.label.on_button, .text_font = font}})];
 }
 
 // The switch between manual and auto: a black track and a handle that sits over the chosen word.
@@ -104,19 +104,19 @@ constexpr auto mode_toggle(const box& b, const auto& track, const auto& handle) 
   const auto handle_at = [&](int x, const auto& hidden) {
     return lv::group({.hidden = hidden,
                       .size = {switch_handle.w * px, switch_handle.h * px},
-                      .style = {.bg_color = handle, .bg_opa = tok.solid, .radius = tok.toggle.radius},
                       .x = x * px,
-                      .y = switch_handle.y * px});
+                      .y = switch_handle.y * px,
+                      .style = {.bg_color = handle, .bg_opa = tok.solid, .radius = tok.toggle.radius}});
   };
-  return lv::button({.on_clicked = &toggle_mode,
-                     .size = {b.w * px, b.h * px},
+  return lv::button({.size = {b.w * px, b.h * px},
+                     .x = b.x * px,
+                     .y = b.y * px,
                      .style = {.bg_color = track,
                                .bg_opa = tok.solid,
                                .pad_all = tok.space.none,
                                .radius = tok.toggle.radius,
                                .shadow_width = lv::raw(0 * px)},
-                     .x = b.x * px,
-                     .y = b.y * px})[
+                     .on_clicked = &toggle_mode})[
       handle_at(switch_manual_x, lv::bind(auto_mode)), handle_at(switch_auto_x, lv::bind(manual_mode)),
       picture<pictures::manual_mode>(switch_manual_icon_x, switch_icon_y),
       picture<pictures::auto_mode>(switch_auto_icon_x, switch_icon_y)];
@@ -127,16 +127,16 @@ template <look L, bool On>
 constexpr auto look_button(int column, const char* name, const auto& font, const auto& on, const auto& off) {
   const auto style = lv::style({.bg_opa = tok.clear, .pad_all = tok.space.none, .shadow_width = lv::raw(0 * px)});
   if constexpr (On)
-    return lv::button({.on_clicked = &choose_look<L>,
-                       .size = {theme_button_width * px, theme_button_height * px},
+    return lv::button({.size = {theme_button_width * px, theme_button_height * px},
+                       .x = column * theme_button_step * px,
                        .style = style,
-                       .x = column * theme_button_step * px})[
+                       .on_clicked = &choose_look<L>})[
         text_top(theme_title, name, font, on), filled(theme_marker, on)];
   else
-    return lv::button({.on_clicked = &choose_look<L>,
-                       .size = {theme_button_width * px, theme_button_height * px},
+    return lv::button({.size = {theme_button_width * px, theme_button_height * px},
+                       .x = column * theme_button_step * px,
                        .style = style,
-                       .x = column * theme_button_step * px})[text_top(theme_title, name, font, off)];
+                       .on_clicked = &choose_look<L>})[text_top(theme_title, name, font, off)];
 }
 
 // A reading in a ring: a picture, what it is, and the number.
@@ -160,13 +160,13 @@ constexpr auto settings_panel(const box& b, const char* title, const char* unit,
 // The ring behind a reading: a pale disc with a red rim.
 constexpr auto ring(const box& b) {
   return lv::group({.size = {b.w * px, b.h * px},
+                    .x = b.x * px,
+                    .y = b.y * px,
                     .style = {.bg_color = tok.ring.fill,
                               .bg_opa = tok.ring.fill_strength,
                               .border_color = tok.ring.color,
                               .border_width = tok.ring.width,
-                              .radius = tok.ring.radius},
-                    .x = b.x * px,
-                    .y = b.y * px});
+                              .radius = tok.ring.radius}});
 }
 
 // The track with the time and the pace in it, and the dot that goes round it.

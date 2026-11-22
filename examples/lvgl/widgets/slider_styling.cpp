@@ -65,8 +65,8 @@ constexpr auto ui = lv::group(
     .max_value = 100,
     .min_value = 0,
     .size      = {90 * pct, 22 * px},
-    .style     = look,
     .value     = {55, false},
+    .style     = look,
   })
 );
 

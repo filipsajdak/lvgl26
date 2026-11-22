@@ -10,7 +10,7 @@
 //   };
 //   constinit lv::scaled_font title{barlow_ttf, tok.text.title};   // the size of the token
 //
-//   lv::label({.style = {.text_font = lv::bind(title)}, .text = "Wake up"})
+//   lv::label({.text = "Wake up", .style = {.text_font = lv::bind(title)}})
 //
 //   title.resize(tok.text.large);       // every widget bound to it follows
 //   title.resize(lv::raw(31 * px));     // a size that no token names

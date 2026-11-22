@@ -13,13 +13,13 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::slider({.max_value = 100, .min_value = 0, .mode = "normal",
                 .size = {90 * pct, 20 * px}, .value = {70, false}})[
-        lv::label({.align = "center", .style = caption, .text = "Normal"})],
+        lv::label({.align = "center", .text = "Normal", .style = caption})],
     lv::slider({.max_value = 100, .min_value = -100, .mode = "symmetrical",
                 .size = {90 * pct, 20 * px}, .value = {45, false}})[
-        lv::label({.align = "center", .style = caption, .text = "Symmetrical"})],
+        lv::label({.align = "center", .text = "Symmetrical", .style = caption})],
     lv::slider({.max_value = 100, .min_value = 0, .mode = "range",
                 .size = {90 * pct, 20 * px}, .start_value = {25, false}, .value = {80, false}})[
-        lv::label({.align = "center", .style = caption, .text = "Range"})]];
+        lv::label({.align = "center", .text = "Range", .style = caption})]];
 
 }  // namespace
 

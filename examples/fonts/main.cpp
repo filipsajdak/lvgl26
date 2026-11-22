@@ -37,9 +37,9 @@ constexpr auto numeral = type(tok.text.numeral);
 
 //! [tree]
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.style = {.text_font = title}, .text = "Wake up"}),
-    lv::label({.style = {.text_font = numeral}, .text = "06:45"}),
-    lv::label({.style = {.text_font = label}, .text = "Tomorrow, in 7 hours"})];
+    lv::label({.text = "Wake up", .style = {.text_font = title}}),
+    lv::label({.text = "06:45", .style = {.text_font = numeral}}),
+    lv::label({.text = "Tomorrow, in 7 hours", .style = {.text_font = label}})];
 //! [tree]
 
 constinit lv::frame<320, 240> frame;

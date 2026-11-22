@@ -10,7 +10,8 @@
 //   auto root = lv::mount<ui>(lv::screen_active());
 //   root->get<"speedo">().set({.value = 0});
 //
-// Properties go in (), in alphabetical order; children go in []. A node without
+// Properties go in (), in the order of lv::props (the id, the properties, the styles, the
+// handlers, each alphabetical); children follow as arguments or go in []. A node without
 // properties needs no (): lv::column[lv::label(...)].
 // The tree is read at compile time. Only the calls for the properties that are
 // set end up in the program; the tree itself is not stored in it.

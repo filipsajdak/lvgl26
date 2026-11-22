@@ -35,8 +35,8 @@ constinit lv::state<song_id> current{song_id{0}};  // no song has the id 0
 constexpr auto song_row = lv::button({.size = {100 * pct, lv::size_content}, .state_trickle = true,
                                       .style = {.bg_color = tok.color.card},
                                       .style_checked = {.bg_color = tok.color.primary}})[
-    lv::label({.style = {.text_color = tok.color.text}, .style_checked = {.text_color = tok.color.surface},
-               .text = lv::bind(&song::title)})];
+    lv::label({.text = lv::bind(&song::title), .style = {.text_color = tok.color.text},
+               .style_checked = {.text_color = tok.color.surface}})];
 
 constexpr auto picker = lv::column({.size = {320 * px, 240 * px}})[
     lv::each(songs, &song::id, {.selected = lv::bind(current)})[song_row]];

@@ -8,7 +8,7 @@ Write each option as an item.
 
 <!-- snippet: examples/lvgl/widgets/dropdown_event.cpp list -->
 ```cpp
-    lv::dropdown({.on_value_changed = &show_choice, .options = {"Berlin", "Paris", "Tokyo", "Sydney"}}),
+    lv::dropdown({.options = {"Berlin", "Paris", "Tokyo", "Sydney"}, .on_value_changed = &show_choice}),
 ```
 
 The compiler makes the one text LVGL takes and keeps it in read-only memory. A dropdown keeps the pointer and copies nothing, so the list costs no heap. A roller copies the list into its label, because LVGL has no setter that keeps it.

@@ -195,13 +195,13 @@ constexpr auto card =
                        .style = {.bg_color = tok.label.tertiary, .bg_opa = tok.solid, .radius = tok.queue.dot},
                        .style_checked = {.bg_color = tok.label.secondary}}),
             lv::label({.checked = lv::bind(&job::printing),
+                       .text = lv::bind(&job::status),
                        .style = {.text_color = tok.label.tertiary, .text_font = status_font},
-                       .style_checked = {.text_color = tok.label.secondary},
-                       .text = lv::bind(&job::status)})],
+                       .style_checked = {.text_color = tok.label.secondary}})],
         lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .state_trickle = true})[
             lv::label({.size = {100 * pct, lv::size_content},
-                       .style = {.text_color = tok.label.primary, .text_font = small_font},
-                       .text = lv::bind(&job::title)}),
+                       .text = lv::bind(&job::title),
+                       .style = {.text_color = tok.label.primary, .text_font = small_font}}),
             lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
                        .style = {.max_height = tok.space.none},
                        .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap}})[
@@ -245,12 +245,12 @@ constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), v
   return lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
                     .size = {item_width * px, control_height * px}})[
       lv::group({.size = {spin_name_width * px, control_height * px}})[
-          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
-                     .text = name})],
+          lv::label({.align = "left_mid", .text = name,
+                     .style = {.text_color = tok.label.primary, .text_font = font}})],
       icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer),
       lv::group({.size = {spin_value_width * px, control_height * px}, .style = {.pad_left = tok.space.card}})[
-          lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = font},
-                     .text = lv::bind(count, "{}")})],
+          lv::label({.align = "left_mid", .text = lv::bind(count, "{}"),
+                     .style = {.text_color = tok.label.primary, .text_font = font}})],
       icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)];
 }
 ```

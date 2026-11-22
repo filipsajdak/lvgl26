@@ -25,16 +25,16 @@ void tapped() { ++taps; }
 
 // A button with its text: 2 widgets.
 constexpr auto action(const char* text) {
-  return lv::button({.on_clicked = &tapped,
-                     .style = {.bg_color = tok.color.primary, .bg_opa = tok.opacity.opaque,
+  return lv::button({.style = {.bg_color = tok.color.primary, .bg_opa = tok.opacity.opaque,
                                .radius = tok.card.radius},
-                     .style_pressed = {.bg_color = tok.color.outline}})[
-      lv::label({.style = {.text_color = tok.color.text}, .text = text})];
+                     .style_pressed = {.bg_color = tok.color.outline},
+                     .on_clicked = &tapped})[
+      lv::label({.text = text, .style = {.text_color = tok.color.text}})];
 }
 
 // A number with its name: 3 widgets.
 constexpr auto reading(const char* name) {
-  return lv::row[lv::label({.style = {.text_color = tok.color.text}, .text = name}),
+  return lv::row[lv::label({.text = name, .style = {.text_color = tok.color.text}}),
                  lv::label({.text = lv::bind(taps, "{}")})];
 }
 

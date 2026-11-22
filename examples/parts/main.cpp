@@ -24,7 +24,7 @@ void more_copies() { copies.update([](lv::counter c) { return ++c; }); }
 //! [parts]
 // A heading in a font that a style accepts: a typeface's font, lv::raw(font) or lv::bind(font).
 constexpr auto heading(const char* name, const lv::font_value auto& font) {
-  return lv::label({.style = {.text_font = font}, .text = name});
+  return lv::label({.text = name, .style = {.text_font = font}});
 }
 
 // A number with a button on each side. The state is any state or computed; the handlers are

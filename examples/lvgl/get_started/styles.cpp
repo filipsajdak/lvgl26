@@ -23,13 +23,13 @@ constexpr auto danger = lv::style({.bg_color = tok.button.danger_top,
 
 constexpr auto ui = lv::group[
     // The base style, and another look while pressed.
-    lv::button({.align = "center", .size = {120 * px, 50 * px}, .style = base,
-                .style_pressed = pressed, .y = -35 * px})[
+    lv::button({.align = "center", .size = {120 * px, 50 * px}, .y = -35 * px,
+                .style = base, .style_pressed = pressed})[
         lv::label({.align = "center", .text = "Button"})],
     // The base style, the red variant on top of it, and a round shape.
     lv::button({.align = "center", .size = {120 * px, 50 * px},
-                .style = base | danger | lv::style({.radius = tok.button.pill_radius}),
-                .y = 35 * px})[
+                .y = 35 * px,
+                .style = base | danger | lv::style({.radius = tok.button.pill_radius})})[
         lv::label({.align = "center", .text = "Button 2"})]];
 
 }  // namespace

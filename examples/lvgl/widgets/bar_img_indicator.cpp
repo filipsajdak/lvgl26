@@ -40,8 +40,8 @@ constexpr auto stepper = lv::style({.bg_opa = tok.opacity.none,
 
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::bar({.max_value = 20, .min_value = 0, .size = {280 * px, 35 * px}, .style = dark_strip,
-             .style_indicator = lit_strip, .value = lv::bind(lit)}),
+    lv::bar({.max_value = 20, .min_value = 0, .size = {280 * px, 35 * px}, .value = lv::bind(lit),
+             .style = dark_strip, .style_indicator = lit_strip}),
     lv::row({.size = {180 * px, lv::size_content}, .style = stepper})[
         lv::button({.on_clicked = &one_less, .on_long_pressed_repeat = &one_less})[
             lv::label({.align = "center", .text = "-"})],

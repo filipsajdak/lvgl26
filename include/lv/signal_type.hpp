@@ -18,7 +18,7 @@
 //   constexpr auto title = lv::signal::type(lv::signal::type_tokens.text.title);
 //   constexpr auto reading = lv::signal::numerals(lv::signal::type_tokens.text.numeral_l);
 //
-//   lv::label({.style = {.text_font = reading}, .text = "21.5"})
+//   lv::label({.text = "21.5", .style = {.text_font = reading}})
 //
 // `type` holds the characters from the space to the tilde. `numerals` holds only what a
 // reading shows, so a large number costs little: at 72 px 11 KB instead of 62 KB.

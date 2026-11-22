@@ -23,8 +23,8 @@ constexpr auto cursor = lv::style({.bg_opa = tok.opacity.none,
                                    .text_opa = tok.opacity.none});
 
 constexpr auto ui = lv::group({.flex_flow = "column", .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::widget<"spinbox">({.dec_point_pos = 2, .digit_count = 5, .step = 1, .style = field,
-                 .style_cursor = cursor, .value = 12345, .width = 180 * px})];
+    lv::widget<"spinbox">({.dec_point_pos = 2, .digit_count = 5, .step = 1, .value = 12345,
+                 .width = 180 * px, .style = field, .style_cursor = cursor})];
 
 }  // namespace
 

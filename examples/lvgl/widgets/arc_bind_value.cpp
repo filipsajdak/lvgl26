@@ -17,7 +17,7 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     // The arc only shows the value: it takes no clicks and has no knob.
     lv::arc({.clickable = false, .size = {160 * px, 160 * px},
-             .style_knob = {.bg_opa = tok.opacity.none}, .value = lv::bind(level)})[
+             .value = lv::bind(level), .style_knob = {.bg_opa = tok.opacity.none}})[
         lv::label({.align = "center", .text = lv::bind(level)})],  // "50 %"
     lv::slider({.value = lv::bind(level), .width = 220 * px})];
 

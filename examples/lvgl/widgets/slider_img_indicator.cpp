@@ -32,8 +32,8 @@ constexpr auto plate = lv::style({.bg_color = tok.slider.image.knob.fill,
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::slider({.max_value = 20, .min_value = 0, .size = {280 * px, 30 * px},
-                .style = dark_strip, .style_indicator = lit_strip, .style_knob = plate,
-                .value = lv::bind(lit)}),
+                .value = lv::bind(lit), .style = dark_strip, .style_indicator = lit_strip,
+                .style_knob = plate}),
     lv::label({.text = lv::bind(lit, "{}")})];
 
 }  // namespace

@@ -34,10 +34,10 @@ constexpr int icon_size = 40;
 // The picture follows the page itself: a state that is set before the children exist does not trickle.
 template <const auto& Icon, class Current>
 constexpr auto side_icon(const Current& current, void (*go_to)()) {
-  return lv::group({.checked = lv::bind(current), .on_clicked = go_to,
-                    .size = {icon_size * px, icon_size * px},
+  return lv::group({.checked = lv::bind(current), .size = {icon_size * px, icon_size * px},
                     .style = {.radius = tok.sidebar.icon_radius},
-                    .style_checked = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid}})[
+                    .style_checked = {.bg_color = tok.sidebar.active, .bg_opa = tok.solid},
+                    .on_clicked = go_to})[
       lv::image({.align = "center", .checked = lv::bind(current), .src = lv::image_file<Icon>,
                  .style = {.image_recolor = tok.sidebar.icon, .image_recolor_opa = tok.tint},
                  .style_checked = {.image_recolor = tok.sidebar.icon_active}})];

@@ -47,8 +47,8 @@ static_assert((*lv::signal::body_font)->line_height == 20 && (*lv::signal::label
 static_assert((*title)->line_height == 29 && (*reading)->line_height == 48);
 
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .style = {.text_font = title}, .text = "TANK 2 LEVEL"}),
-    lv::label({.id = "reading", .style = {.text_font = reading}, .text = "72.5 %"}),
+    lv::label({.id = "title", .text = "TANK 2 LEVEL", .style = {.text_font = title}}),
+    lv::label({.id = "reading", .text = "72.5 %", .style = {.text_font = reading}}),
     lv::label({.id = "body", .text = "Refill below 20 percent."}),
     lv::button({.id = "start"})[lv::label({.id = "word", .text = "START"})]];
 

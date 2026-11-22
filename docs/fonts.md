@@ -52,9 +52,9 @@ The tokens of this example are [examples/fonts/tokens.json](../examples/fonts/to
 <!-- snippet: examples/fonts/main.cpp tree -->
 ```cpp
 constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.style = {.text_font = title}, .text = "Wake up"}),
-    lv::label({.style = {.text_font = numeral}, .text = "06:45"}),
-    lv::label({.style = {.text_font = label}, .text = "Tomorrow, in 7 hours"})];
+    lv::label({.text = "Wake up", .style = {.text_font = title}}),
+    lv::label({.text = "06:45", .style = {.text_font = numeral}}),
+    lv::label({.text = "Tomorrow, in 7 hours", .style = {.text_font = label}})];
 ```
 
 ## A font without a token
@@ -64,7 +64,7 @@ A font that no token names is an exception to the design, and the code says so:
 ```cpp
 constexpr auto odd = lv::font<barlow_ttf>(18 * px);
 
-lv::label({.style = {.text_font = lv::raw(odd)}, .text = "18 px, once"})
+lv::label({.text = "18 px, once", .style = {.text_font = lv::raw(odd)}})
 ```
 
 Without `lv::raw` the build stops:
@@ -84,7 +84,7 @@ A font made by the compiler has one size. Where the size is only known on the de
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};  // the size of the token: 16 px
 
 constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "reading", .style = {.text_font = lv::bind(reading)}, .text = "21.5"})];
+    lv::label({.id = "reading", .text = "21.5", .style = {.text_font = lv::bind(reading)}})];
 ```
 
 <!-- snippet: examples/scaled_font/main.cpp resize -->

@@ -13,13 +13,13 @@ constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = centered | lv::style({.pad_row = tok.gap.lg})})[
     lv::bar({.max_value = 100, .min_value = 0, .mode = "normal",
              .size = {90 * pct, 20 * px}, .value = {70, false}})[
-        lv::label({.align = "center", .style = caption, .text = "normal"})],
+        lv::label({.align = "center", .text = "normal", .style = caption})],
     lv::bar({.max_value = 100, .min_value = -100, .mode = "symmetrical",
              .size = {90 * pct, 20 * px}, .value = {45, false}})[
-        lv::label({.align = "center", .style = caption, .text = "symmetrical"})],
+        lv::label({.align = "center", .text = "symmetrical", .style = caption})],
     lv::bar({.max_value = 100, .min_value = 0, .mode = "range",
              .size = {90 * pct, 20 * px}, .start_value = {25, false}, .value = {80, false}})[
-        lv::label({.align = "center", .style = caption, .text = "range"})]];
+        lv::label({.align = "center", .text = "range", .style = caption})]];
 
 }  // namespace
 

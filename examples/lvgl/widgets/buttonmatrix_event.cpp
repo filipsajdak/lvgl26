@@ -21,8 +21,8 @@ void show_key(lv::event e) {
 
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = {.flex_cross_place = "center", .pad_row = tok.gap.md}})[
-    lv::widget<"buttonmatrix">({.map = keypad, .on_value_changed = &show_key,
-                                .size = {200 * px, 180 * px}}),
+    lv::widget<"buttonmatrix">({.map = keypad, .size = {200 * px, 180 * px},
+                                .on_value_changed = &show_key}),
     lv::label({.text = lv::bind(status)})];
 
 }  // namespace

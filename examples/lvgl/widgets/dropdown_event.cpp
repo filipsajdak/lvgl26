@@ -18,7 +18,7 @@ void show_choice(lv::event e) {
 constexpr auto ui = lv::group({.flex_flow = "column",
                                .style = {.flex_cross_place = "center", .pad_row = tok.gap.md}})[
     //! [list]
-    lv::dropdown({.on_value_changed = &show_choice, .options = {"Berlin", "Paris", "Tokyo", "Sydney"}}),
+    lv::dropdown({.options = {"Berlin", "Paris", "Tokyo", "Sydney"}, .on_value_changed = &show_choice}),
     //! [list]
     lv::label({.text = lv::bind(status)})];
 

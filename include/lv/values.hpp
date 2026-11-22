@@ -757,6 +757,39 @@ consteval void sort_by_name(std::vector<Item>& items) {
   items = std::move(sorted);
 }
 
+// Merges the sorted runs of indices into items, by group and then by name. As merge_by_name, with
+// the group an integer that the item carries.
+template <class Item>
+consteval void merge_by_group(const std::vector<Item>& items, const std::vector<std::size_t>& from,
+                              std::vector<std::size_t>& to, std::size_t lo, std::size_t mid, std::size_t hi) {
+  std::size_t i = lo, j = mid, k = lo;
+  while (i < mid && j < hi) {
+    const Item& a = items[from[i]];
+    const Item& b = items[from[j]];
+    to[k++] = b.group < a.group || (b.group == a.group && b.name < a.name) ? from[j++] : from[i++];
+  }
+  while (i < mid) to[k++] = from[i++];
+  while (j < hi) to[k++] = from[j++];
+}
+
+// Sorts items that have a `group` and a `name` by group and then by name, stably: sort_by_name
+// with the group in front.
+template <class Item>
+consteval void sort_by_group_and_name(std::vector<Item>& items) {
+  const std::size_t n = items.size();
+  std::vector<std::size_t> order(n), merged(n);
+  for (std::size_t i = 0; i < n; ++i) order[i] = i;
+  for (std::size_t width = 1; width < n; width *= 2) {
+    for (std::size_t lo = 0; lo < n; lo += 2 * width)
+      merge_by_group(items, order, merged, lo, std::min(lo + width, n), std::min(lo + 2 * width, n));
+    order.swap(merged);
+  }
+  std::vector<Item> sorted;
+  sorted.reserve(n);
+  for (const std::size_t i : order) sorted.push_back(std::move(items[i]));
+  items = std::move(sorted);
+}
+
 // Names that cannot be used for a generated struct member.
 consteval bool is_keyword(std::string_view s) {
   return is_one_of(s, {"auto"sv,     "bool"sv,   "break"sv,  "case"sv,     "char"sv,      "class"sv,  "const"sv,

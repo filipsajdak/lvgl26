@@ -43,9 +43,9 @@ constexpr auto scene = lv::group()[
                          .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}}), // C API
     lv::group({.id = "ground",
                .size = {100 * pct, 50 * pct},
+               .y = 50 * pct,
                .style = {.bg_color = tok.ground.top, .bg_grad_color = tok.ground.bottom,
-                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}, // C API
-               .y = 50 * pct}),
+                         .bg_grad_dir = LV_GRAD_DIR_VER, .bg_opa = tok.solid}}), // C API
     // A soft shadow, as under the sun: a dark oval, and over it a clear widget that blurs
     // what is behind it. (LVGL's blur works on a widget's own drawing or on its backdrop,
     // not on its children.)
@@ -134,7 +134,7 @@ lv::task<> shape(lv::view<"obj"> box_view, lv::view<"obj"> body, lv::view<"obj">
     const int above = floor - y;
     const int shade = ball * 3 / 4 + ball * above / drop_height * 2 / 5;
     shadow.set({.x = (x + (box - shadow_box) / 2) * px});
-    oval.set({.style = lv::style({.bg_opa = lv::raw((55 - 30 * above / drop_height) * pct)}), .width = shade * px});
+    oval.set({.width = shade * px, .style = lv::style({.bg_opa = lv::raw((55 - 30 * above / drop_height) * pct)})});
     frost.set({.style = lv::style({.blur_radius = lv::raw((3 + 9 * above / drop_height) * px)})});
     co_await lv::sleep(10 * ms);
   }

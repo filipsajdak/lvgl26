@@ -103,7 +103,7 @@ using view_of_id =
 ///   lv::arc({.value = 1})      lv::button({...}, lv::label({...}))      lv::box(child, child)
 template <detail::fixed W>
 struct factory {
-  /// A node with these properties. They are in alphabetical order.
+  /// A node with these properties. They are in the order of the props: the id, the properties, the styles, the handlers, each alphabetical.
   constexpr node<W> operator()(const props<W>& p = {}) const { return {p.id}; }
 
   /// A node with these properties and these children: lv::group({...}, lv::label({...})).

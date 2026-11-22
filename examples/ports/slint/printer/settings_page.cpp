@@ -40,35 +40,35 @@ constexpr auto body_font = type(tok.text.body);
 template <class On>
 constexpr auto check_box(const char* name, const On& on, void (*toggle)(), int x, int y) {
   return lv::group({.size = {control_width * px, box_size * px}, .x = x * px, .y = y * px})[
-      lv::group({.checked = lv::bind(on), .on_clicked = toggle, .size = {box_size * px, box_size * px},
-                 .style = {.bg_color = tok.control.background, .bg_opa = tok.solid,
+      lv::group({.checked = lv::bind(on), .size = {box_size * px, box_size * px}, .style = {.bg_color = tok.control.background, .bg_opa = tok.solid,
                            .border_color = tok.control.border, .border_width = tok.control.line,
-                           .radius = tok.queue.dot}})[
+                           .radius = tok.queue.dot},
+                 .on_clicked = toggle})[
           lv::image({.align = "center", .checked = lv::bind(on), .src = lv::image_file<icons::check>,
                      .style = {.image_opa = tok.clear, .image_recolor = tok.ink.accent,
                                .image_recolor_opa = tok.tint},
                      .style_checked = {.image_opa = tok.solid}})],
-      lv::label({.align = "left_mid", .style = {.text_color = tok.label.primary, .text_font = body_font},
-                 .text = name, .x = (box_size + gap) * px})];
+      lv::label({.align = "left_mid", .text = name,
+                 .x = (box_size + gap) * px, .style = {.text_color = tok.label.primary, .text_font = body_font}})];
 }
 
 constexpr auto heading(const char* text, int y) {
-  return lv::label({.style = {.text_color = tok.color.muted, .text_font = label_font}, .text = text,
-                    .x = margin * px, .y = y * px});
+  return lv::label({.text = text, .x = margin * px,
+                    .y = y * px, .style = {.text_color = tok.color.muted, .text_font = label_font}});
 }
 
 constexpr auto name(const char* text, int x, int y) {
-  return lv::label({.style = {.text_color = tok.label.primary, .text_font = label_font}, .text = text,
-                    .x = x * px, .y = (y + 14) * px});
+  return lv::label({.text = text, .x = x * px,
+                    .y = (y + 14) * px, .style = {.text_color = tok.label.primary, .text_font = label_font}});
 }
 
 constexpr auto drop(const char* options, int x, int y, int width) {
   return lv::dropdown({.options = options,
                        .size = {width * px, 52 * px},
-                       .style = dropdown_look(body_font),
                        .symbol = lv::image_file<icons::down>,
                        .x = x * px,
-                       .y = y * px});
+                       .y = y * px,
+                       .style = dropdown_look(body_font)});
 }
 
 constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},

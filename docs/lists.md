@@ -40,8 +40,8 @@ constinit lv::computed has_tracks{
 // Shown while the list is empty.
 constexpr auto empty_note = lv::label({
   .hidden = lv::bind(has_tracks),
-  .style  = {.text_color = tok.color.quiet},
   .text   = "No tracks",
+  .style  = {.text_color = tok.color.quiet},
 });
 
 // One row per track; the selected one is checked.
@@ -115,14 +115,14 @@ constexpr auto track_row = lv::button(
   },
   lv::label({
     .flex_grow     = 1,
+    .text          = lv::bind(&track::title),
     .style         = {.text_color = tok.color.text},
     .style_checked = {.text_color = tok.color.on_selected},
-    .text          = lv::bind(&track::title),
   }),
   lv::label({
+    .text          = lv::bind(&track::plays, "{} plays"),
     .style         = {.text_color = tok.color.quiet},
     .style_checked = {.text_color = tok.color.on_selected},
-    .text          = lv::bind(&track::plays, "{} plays"),
   })
 );
 ```

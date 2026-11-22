@@ -23,13 +23,13 @@ constexpr auto detail_font = type(tok.text.detail);
 
 constexpr auto detail_row(const char* name, auto value, int y) {
   return lv::group({.size = {240 * px, 20 * px}, .x = 0 * px, .y = y * px})[
-      lv::label({.style = {.text_color = tok.label.detail, .text_font = detail_font}, .text = name}),
-      lv::label({.align = "right_mid", .style = {.text_color = tok.label.value, .text_font = detail_font},
-                 .text = value})];
+      lv::label({.text = name, .style = {.text_color = tok.label.detail, .text_font = detail_font}}),
+      lv::label({.align = "right_mid", .text = value,
+                 .style = {.text_color = tok.label.value, .text_font = detail_font}})];
 }
 
 constexpr auto rule(int y) {
-  return lv::group({.size = {240 * px, 1 * px}, .style = {.bg_color = tok.queue.rule, .bg_opa = tok.solid}, .y = y * px});
+  return lv::group({.size = {240 * px, 1 * px}, .y = y * px, .style = {.bg_color = tok.queue.rule, .bg_opa = tok.solid}});
 }
 
 // Pause does nothing in the original either.
@@ -46,11 +46,11 @@ constexpr auto card = lv::group({.size = {card_width * px, card_height * px},
                                  .style = {.bg_color = tok.window.background, .bg_opa = tok.solid,
                                            .border_color = tok.color.neutral, .border_width = tok.control.line,
                                            .radius = tok.queue.wide_radius}})[
-    lv::label({.style = {.text_color = tok.label.secondary, .text_font = status_font},
-               .text = lv::bind(&job::status), .x = 14 * px, .y = 14 * px}),
+    lv::label({.text = lv::bind(&job::status),
+               .x = 14 * px, .y = 14 * px, .style = {.text_color = tok.label.secondary, .text_font = status_font}}),
     lv::group({.size = {bar_width * px, tok.queue.track},
-               .style = {.bg_color = tok.color.neutral, .bg_opa = tok.solid, .radius = tok.queue.dot},
-               .x = (left_width - bar_width) * px, .y = 18 * px})[
+               .x = (left_width - bar_width) * px,
+               .y = 18 * px, .style = {.bg_color = tok.color.neutral, .bg_opa = tok.solid, .radius = tok.queue.dot}})[
         // The ink grows with the share of the job that is done: LVGL rounds a grown item to the nearest
         // pixel, where the original cuts it down, so the span is one pixel short to stay within a pixel.
         lv::group({.flex_flow = "row", .size = {(bar_width - 1) * px, 100 * pct}})[
@@ -59,8 +59,8 @@ constexpr auto card = lv::group({.size = {card_width * px, card_height * px},
                                  .min_width = tok.queue.track, .radius = tok.queue.dot}}),
             lv::group({.flex_grow = lv::bind(&job::left), .size = {0 * px, 100 * pct}})]],
     lv::label({.size = {left_width * px, lv::size_content},
-               .style = {.text_color = tok.label.primary, .text_font = subtitle_font},
-               .text = lv::bind(&job::title), .x = 14 * px, .y = 38 * px}),
+               .text = lv::bind(&job::title),
+               .x = 14 * px, .y = 38 * px, .style = {.text_color = tok.label.primary, .text_font = subtitle_font}}),
     lv::group({.x = 14 * px, .y = 82 * px})[
         icon_text_button<icons::pause>("pause", "Pause", &nothing, tok.button.primary, body_font)],
     lv::group({.x = (14 + 110 + 14) * px, .y = 82 * px})[
@@ -79,7 +79,7 @@ constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
                                .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
     back_header("Print", "Printing-Queue", title_font, body_font),
     lv::group({.flex_flow = "column", .size = {100 * pct, (window_height - header_height) * px},
-               .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}, .y = header_height * px})[
+               .y = header_height * px, .style = {.pad_all = tok.space.edge, .pad_gap = tok.space.card}})[
         lv::each(queue, &job::id, {.on_row = &start_card})[card]]];
 //! [card]
 
