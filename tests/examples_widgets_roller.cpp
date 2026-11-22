@@ -49,10 +49,11 @@ int main() {
   same_pixels("roller_bind_value button", &lv_example_roller_bind_value,
               &widgets::roller_bind_value, &click_button);
 
-  // The label must follow the choice.
-  const auto monday = render(&widgets::roller_event, &nothing);
+  // The label must follow the choice. The state keeps the last choice from one screen to the
+  // next, so two different choices are compared.
   const auto thursday = render(&widgets::roller_event, &choose_fourth);
-  check(monday.first_difference(thursday) != -1);
+  const auto friday = render(&widgets::roller_event, &choose_fifth);
+  check(thursday.first_difference(friday) != -1);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
