@@ -175,6 +175,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 
 - The number is Valgrind's instruction count of one `cc1plus` (`tools/compile_cost.py`): the hosted runners have no hardware counter, and this count is the same on every run. `tools/compile_report.py` on a Mac counts another thing: bisect with it, compare trends, not numbers. Peak memory is never a threshold.
 - A rise beyond a probe's `threshold_percent` (0.5 percent by default) fails the job and opens the issue of the night. Only a run on `main` writes the history on the branch `metrics`. A probe runs under 90 minutes: callgrind is 50 to 60 times slower than the compile.
+- A rise that the owner accepted is recorded with its reason and pull request, never allowed as a standing margin: run the nightly on main by hand with `cost_only=true`, `accept_cost=<probe>` and `accept_reason=<why, PR>`. The baseline of that probe moves to the value of the run and the night's line of the history carries the reason (`--accept` of `tools/cost_history.py`; the history only grows, and the threshold does not change).
 
 ## The experimental browser target
 
