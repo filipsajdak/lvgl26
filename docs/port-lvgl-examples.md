@@ -47,10 +47,10 @@ The tests are `tests/examples_get_started.cpp` and `tests/examples_widgets_*.cpp
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original |
 | LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 48 | 52 | Same pixels, also after clicks, drags and time |
-| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 27 | 50 | Same pixels, also after a choice, a key or a click |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 26 | 50 | Same pixels, also after a choice, a key or a click |
 | Other `widgets` (the spinner so far), `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 1 | 193 | Same pixels, also after time |
 
-That is 80 of 299 examples, and 76 of the 163 widget examples.
+That is 79 of 299 examples, and 75 of the 163 widget examples.
 [examples/README.md](../examples/README.md) holds the current table, and the list of what is not ported.
 
 ## A skipped example is a finding
