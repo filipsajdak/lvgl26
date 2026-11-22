@@ -46,11 +46,11 @@ The tests are `tests/examples_get_started.cpp` and `tests/examples_widgets_*.cpp
 | Group | Ported | Of | How a port is checked |
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original |
-| LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 45 | 52 | Same pixels, also after clicks, drags and time |
-| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 24 | 50 | Same pixels, also after a choice, a key or a click |
-| Other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 0 | 193 | Not started |
+| LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 48 | 52 | Same pixels, also after clicks, drags and time |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 27 | 50 | Same pixels, also after a choice, a key or a click |
+| Other `widgets` (the spinner so far), `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 1 | 193 | Same pixels, also after time |
 
-That is 73 of 299 examples.
+That is 80 of 299 examples, and 76 of the 163 widget examples.
 [examples/README.md](../examples/README.md) holds the current table, and the list of what is not ported.
 
 ## A skipped example is a finding
@@ -66,7 +66,7 @@ For you, a finding is a warning.
 If your UI uses the same feature, expect the same gap.
 Look in the table before you start a port, and write your own gaps down, as the examples do.
 
-Some widget families are not tried yet: lists, message boxes, tab views, tile views, menus, windows, calendars, charts, canvases and span groups.
+Every widget folder of LVGL v9.6.0 has been tried. [ported-examples.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/ported-examples.md) says what each example that waits needs.
 
 ## Rules for a port
 

@@ -6,37 +6,27 @@ with all the quality presets.
 | Group | Ported | Of | How a port is checked |
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original (`tests/examples_get_started.cpp`) |
-| LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 45 | 52 | Same pixels as the C original, also after clicks, drags and time (`tests/examples_widgets_*.cpp`) |
-| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 24 | 50 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
-| LVGL other `widgets`, `layouts`, `styles`, `event`, `anim`, `scroll`, others | 0 | 193 | Same pixels as the C original |
+| LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 48 | 52 | Same pixels as the C original, also after clicks, drags and time (`tests/examples_widgets_*.cpp`) |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 27 | 50 | Same pixels as the C original, also after a choice, a key or a click (`tests/examples_widgets_*.cpp`) |
+| LVGL other `widgets` (spinner so far), `layouts`, `styles`, `event`, `anim`, `scroll`, others | 1 | 193 | Same pixels as the C original, also after time (`tests/examples_widgets_spinner.cpp`) |
 | Qt for MCUs demos and examples | 0 | 35 | Screenshots; written from the documented behaviour only |
 | Qt 6 and Qt Design Studio examples (BSD-3-Clause) | 1 | about 60 | Screenshots; [treadmill](ports/qt/treadmill/README.md) is the Qt Design Studio port (`tests/ports_treadmill.cpp`) |
 
 ## Not ported yet
 
-| Example | What it needs |
-|---|---|
-| `label_translation` | LVGL's translation tables (`lv_translation_*`), which the framework does not wrap |
-| `arc_knob_widget` | `lv_arc_rotate_obj_to_angle`: a view reaches `set` and `get` functions only |
-| `slider_styling`, `switch_styling`, `checkbox_styling` | Can be ported now: `lv::on("knob", "pressed", {...})` styles a part in a state. Not done yet |
-| `obj_draggable` | The input device (`lv_indev_get_vect`), which the framework does not wrap |
-| `obj_transform` | `LV_DRAW_TRANSFORM_USE_MATRIX`, which the test build does not enable |
-| `roller_event`, `roller_fade_mask`, `roller_styling`, `roller_visible_rows` | Can be ported now. Not done yet |
-| `spinner_basic` | Can be ported now: `.arc_sweep = 270 * deg` compiles. Not done yet |
-| `table_*` (8 of 8) | More than one cell: `.cell_value` takes a row, a column and a text, and a props struct names it once |
-| `buttonmatrix_button_ctrl`, `_button_width`, `_one_checked`, `_popover`, `_recolor`, `keyboard_custom_map` | An array of control flags, written with LVGL's C enumerators |
-| `buttonmatrix_styling`, `textarea_cursor` | Can be ported now: `lv::on` styles `items` and checked, `cursor` and focused. Not done yet |
-| `dropdown_styling` | The style of the list part: the list is a widget of its own, reached by `lv_dropdown_get_list` |
-| `textarea_buttonmatrix`, `textarea_format` | `lv_textarea_add_text`, `lv_textarea_delete_char` and `lv_textarea_add_char`, which are not set or get functions |
-| `textarea_password`, `keyboard_custom_draw` | A keyboard joined to a text area (`.textarea` takes a widget pointer), and draw task events |
-| `spinbox_with_buttons` | `lv_obj_align_to` (placing a widget next to another) and symbol pictures on a button |
-| `image_recolor`, `image_svg` | Not tried: a style property bound to a state (`lv_obj_bind_style_prop`), and an SVG picture |
+[docs/research/ported-examples.md](../docs/research/ported-examples.md) lists each widget example that is not ported, and what it needs.
+Of LVGL v9.6.0's 163 widget examples, 76 are ported. The other 87 wait for a form that lvgl26 does not have yet:
 
-Not tried yet, and expected to need functions that are neither set nor get functions:
-`list_*` (`lv_list_add_button`), `msgbox_*` (`lv_msgbox_add_title`), `tabview_*` (`lv_tabview_add_tab`),
-`tileview_*` (`lv_tileview_add_tile`), `menu_*`, `win_*` (`lv_win_add_title`), `calendar_*` (`lv_calendar_add_header_arrow`),
-`chart_*` (`lv_chart_add_series`), `canvas_*` (draw functions), `span_*` (`lv_spangroup_add_span`),
-`scale_*` with sections or needles, `imagebutton_basic`, `animimg_basic`, `arclabel_curved_text`, `lottie_*`.
+| What it needs | Examples |
+|---|---|
+| A child made by an `add_` function: a tab, a chart series, a menu page, a list button, a message box's title, a span, a scale section, a calendar header, a tile | 36 |
+| Drawing on a canvas layer, or in a draw-task event | 16 |
+| One setter called several times: a table's cells, a control or a width for each button | 11 |
+| The order of setters: a button matrix needs its map before its controls, a text area its text before its cursor | 5 |
+| A call that is no setter: `lv_animimg_start`, `lv_textarea_add_text`, `lv_spinbox_increment` | 5 |
+| An LVGL build option that the test build leaves off: Lottie, SVG, a transform matrix | 5 |
+| Another widget as a pointer: a keyboard's text area, a scale's needle | 3 |
+| A feature of its own: translations, the input device's motion, a style bound to a state, a style transition, the dropdown's list, a percentage as a whole number | 6 |
 
 ## Findings
 
