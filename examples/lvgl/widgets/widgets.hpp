@@ -109,8 +109,10 @@ void line_points(lv::obj screen);  // lv_example_line_points
 void obj_bind_style(lv::obj screen);  // lv_example_obj_bind_style
 
 // buttonmatrix
-void buttonmatrix_event(lv::obj screen);  // lv_example_buttonmatrix_event
-void buttonmatrix_map(lv::obj screen);    // lv_example_buttonmatrix_map
+void buttonmatrix_event(lv::obj screen);    // lv_example_buttonmatrix_event
+void buttonmatrix_map(lv::obj screen);      // lv_example_buttonmatrix_map
+void buttonmatrix_popover(lv::obj screen);  // lv_example_buttonmatrix_popover
+void buttonmatrix_recolor(lv::obj screen);  // lv_example_buttonmatrix_recolor
 
 // dropdown
 void dropdown_bind_value(lv::obj screen);  // lv_example_dropdown_bind_value

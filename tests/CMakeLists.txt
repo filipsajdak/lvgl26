@@ -375,7 +375,7 @@ lvgl26_widget_ports(checkbox bind_checked event states styling text)
 lvgl26_widget_ports(led brightness color styling)
 lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
-lvgl26_widget_ports(buttonmatrix event map)
+lvgl26_widget_ports(buttonmatrix event map popover recolor)
 lvgl26_widget_ports(dropdown bind_value direction event text)
 # LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
 # sanitizer stops on. The picture is compared in the builds that have none.
