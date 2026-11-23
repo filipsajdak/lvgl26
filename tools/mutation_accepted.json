@@ -203,5 +203,105 @@
     "header": "include/lv/detail/api.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "return {i, close == '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};  ->  return {i, close >= '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};",
+    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "closed = s[i] == close;  ->  closed = s[i] >= close;",
+    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (i >= s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};  ->  if (i == s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (end == npos) return {i, \"the closing quote of this string\"};  ->  if (end >= npos) return {i, \"the closing quote of this string\"};",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (i >= s.size() || s[i] != ':') return {i, \"':' after the key\"};  ->  if (i == s.size() || s[i] != ':') return {i, \"':' after the key\"};",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (const auto f = key_fault(s, i, first); f.at != npos) return f;  ->  if (const auto f = key_fault(s, i, first); f.at < npos) return f;",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "const bool object = s[i] == '{';  ->  const bool object = s[i] >= '{';",
+    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (i < s.size() && s[i] == close) return ++i, fault{};  ->  if (i != s.size() && s[i] == close) return ++i, fault{};",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (const auto f = element_fault(s, i, object, first, depth); f.at != npos) return f;  ->  if (const auto f = element_fault(s, i, object, first, depth); f.at < npos) return f;",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (const auto f = after_fault(s, i, close, closed); f.at != npos) return f;  ->  if (const auto f = after_fault(s, i, close, closed); f.at < npos) return f;",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) != npos ? skip_word(s, i) : skip_number(s, i));  ->  const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) < npos ? skip_word(s, i) : skip_number(s, i));",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (end == npos)  ->  if (end >= npos)",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (i >= s.size()) return {i, \"a value\"};  ->  if (i == s.size()) return {i, \"a value\"};",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (i >= s.size() || (s[i] != ',' && s[i] != close))  ->  if (i == s.size() || (s[i] != ',' && s[i] != close))",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "if (const auto f = value_fault(s, i, 0); f.at != npos) return f;  ->  if (const auto f = value_fault(s, i, 0); f.at < npos) return f;",
+    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "return i < s.size() ? fault{i, \"the end of the file\"} : fault{};  ->  return i != s.size() ? fault{i, \"the end of the file\"} : fault{};",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "for (std::size_t i = 0; i < f.at; ++i) {  ->  for (std::size_t i = 0; i != f.at; ++i) {",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/json_fault.hpp",
+    "mutant": "const bool ends = f.at >= s.size();  ->  const bool ends = f.at == s.size();",
+    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
   }
 ]
