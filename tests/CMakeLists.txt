@@ -1016,6 +1016,9 @@ if(Python3_FOUND)
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
   add_test(NAME order_properties_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_order_properties.py)
+  # The format of UI code (tools/format_ui.py, .clang-format). Its lever tests need clang-format, which
+  # only the editor image has; they skip where it is missing, and the job editor runs them.
+  add_test(NAME editor_format_ui COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_format_ui.py)
   # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
   # the check of tests/smoke.cpp left its stamp.
   if(LVGL26_CHECK_INCLUDES)
