@@ -13,8 +13,8 @@ namespace demo {
 
 using namespace lv::units;
 
-inline constexpr std::int32_t width = 480;
-inline constexpr std::int32_t height = 360;
+inline constexpr std::int32_t width        = 480;
+inline constexpr std::int32_t height       = 360;
 inline constexpr std::int32_t step_of_dial = 10;
 
 inline constinit lv::state dial{lv::counter{}};    // the arc, moved by the buttons
@@ -24,27 +24,45 @@ inline constinit lv::state volume{lv::counter{}};  // the slider
 inline constinit lv::state lamp{false};            // the switch
 
 inline void more() {
-  dial.update([](lv::counter c) { return c.value + step_of_dial > 100 ? c : c += step_of_dial; });
+  dial.update([](lv::counter c) {
+    return c.value + step_of_dial > 100 ? c : c += step_of_dial;
+  });
   ++clicks;
 }
 inline void fewer() {
-  dial.update([](lv::counter c) { return c.value - step_of_dial < 0 ? c : c -= step_of_dial; });
+  dial.update([](lv::counter c) {
+    return c.value - step_of_dial < 0 ? c : c -= step_of_dial;
+  });
   ++clicks;
 }
 
 inline constexpr auto ui = lv::column(
-    {.flex_align = {"center", "center", "center"}, .size = {width * px, height * px}})[
-    lv::label({.text = "lvgl26 in the browser"}),
-    lv::arc({.range = {0, 100}, .size = {130 * px, 130 * px}, .value = lv::bind(dial)})[
-        lv::label({.align = "center", .text = lv::bind(dial, "{}")})],
-    lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-        lv::button({.on_clicked = &fewer})[lv::label({.text = "-"})],
-        lv::label({.text = lv::bind(clicks, "{} clicks")}),
-        lv::button({.on_clicked = &more})[lv::label({.text = "+"})]],
-    lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-        lv::slider({.range = {0, 100}, .size = {200 * px, 12 * px}, .value = lv::bind(volume)}),
-        lv::toggle({.checked = lv::bind(lamp)}),
-        lv::label({.text = lv::bind(ticks, "{} ticks")})]];
+  {.flex_align = {"center", "center", "center"}, .size = {width * px, height * px}},
+  lv::label({.text = "lvgl26 in the browser"}),
+  lv::arc(
+    {
+      .range = {0, 100},
+      .size  = {130 * px, 130 * px},
+      .value = lv::bind(dial),
+    },
+    lv::label({.align = "center", .text = lv::bind(dial, "{}")})
+  ),
+  lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button({.on_clicked = &fewer}, lv::label({.text = "-"})),
+    lv::label({.text = lv::bind(clicks, "{} clicks")}),
+    lv::button({.on_clicked = &more}, lv::label({.text = "+"}))
+  ),
+  lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::slider({
+      .range = {0, 100},
+      .size  = {200 * px, 12 * px},
+      .value = lv::bind(volume),
+    }),
+    lv::toggle({.checked = lv::bind(lamp)}), lv::label({.text = lv::bind(ticks, "{} ticks")})
+  )
+);
 
 // The task that makes the screen live without input.
 inline lv::task<> tick() {
@@ -61,9 +79,9 @@ inline lv::task<> tick() {
 // The platform mounts the tree and checks the result.
 namespace app {
 
-inline constexpr std::int32_t width = demo::width;
+inline constexpr std::int32_t width  = demo::width;
 inline constexpr std::int32_t height = demo::height;
-inline constexpr const auto& ui = demo::ui;
+inline constexpr const auto& ui      = demo::ui;
 
 // The task belongs to the mounted tree: it ends when the tree is unmounted, so mounting it again
 // starts exactly one.
@@ -75,12 +93,18 @@ void start(const Mounted& root) {
 // 0 the dial, 1 the clicks, 2 the ticks, 3 the slider, 4 the switch (1 when on). Else -1.
 inline std::int32_t state(std::int32_t which) {
   switch (which) {
-    case 0: return demo::dial.get().value;
-    case 1: return demo::clicks.get().value;
-    case 2: return demo::ticks.get().value;
-    case 3: return demo::volume.get().value;
-    case 4: return demo::lamp.get() ? 1 : 0;
-    default: return -1;
+    case 0:
+      return demo::dial.get().value;
+    case 1:
+      return demo::clicks.get().value;
+    case 2:
+      return demo::ticks.get().value;
+    case 3:
+      return demo::volume.get().value;
+    case 4:
+      return demo::lamp.get() ? 1 : 0;
+    default:
+      return -1;
   }
 }
 

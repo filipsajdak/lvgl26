@@ -25,7 +25,7 @@
 
 namespace {
 
-constexpr std::int32_t width = 320;
+constexpr std::int32_t width  = 320;
 constexpr std::int32_t height = 240;
 
 // Where LVGL draws: the display has no panel.
@@ -45,8 +45,9 @@ int main(int argc, char** argv) {
 
   {
     lv::mcp::server<"obj", "label", "button", "arc", "bar", "slider", "switch", "checkbox"> agent{
-        display.screen(),
-        {.name = "lvgl26 example host", .screenshot_directory = argc > 2 ? argv[2] : ""}};
+      display.screen(),
+      {.name = "lvgl26 example host", .screenshot_directory = argc > 2 ? argv[2] : ""}
+    };
     agent.serve(in, stdout);
   }
 
