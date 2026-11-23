@@ -13,7 +13,7 @@ A coffee machine's screen at 480 x 320, landscape. The reader picks a drink, set
 | Your cup | Strength from 1 to 5, the size in millilitres, the beans it takes | Typed values: a struct of one member, an mp-units quantity, `lv::computed` |
 | Brewing | A ring that fills, the seconds left, a cancel button | A task owned by its page, `lv::animate` with an easing token, `co_await` of a click or a time |
 | Enjoy | The drink, ready | A page that follows a state; `.on_shown` |
-| Service | Water hardness, cup counter, a descaling reminder | A state per setting, `lv::effect` for what lies outside the screen |
+| Service | Water hardness, cup counter, a descaling reminder | A state per setting, `lv::effect` for what lies outside the screen. No water temperature: see "What waits" |
 
 The pages follow one state, `enum class step { drinks, cup, brewing, enjoy, service }`, through `lv::shown` with a slide.
 
@@ -23,15 +23,15 @@ Each step is a whole program that a test builds, and that writes the picture the
 
 | Step | Adds | Files |
 |---|---|---|
-| 1. A screen | The drinks as a tree, one state, a label bound to it | `main.cpp` |
+| 1. A screen | The drinks as a tree, one state, a label bound to it; the reader's own token file and looks | `main.cpp`, `tokens.json` |
 | 2. Values that say what they are | Strength, size and beans; a computed dose; a refused `lv::state<int>` as its compile-fail message | `main.cpp` |
 | 3. Pages | `lv::shown` over the steps, with a slide | `main.cpp` |
 | 4. Time | The brewing task: progress, the time left, cancel | `main.cpp` |
-| 5. A look of its own | A token file and looks in place of Signal's theme | `main.cpp`, `tokens.json` |
+| 5. A design system you can reuse | Signal's theme for every widget, beside the program's own looks | `main.cpp`, `tokens.json` |
 | 6. Split into files | The same program in the layout below; nothing else changes | the layout |
 | 7. A service page | One more screen in its own file, and the settings file | the layout |
 
-Steps 1 to 5 are one file each, growing. Step 6 is the turning point of the tutorial: the reader sees the one file become the layout, with the same picture.
+Steps 1 to 5 are one program each, growing. Each step is a whole program in `examples/coffee/1-screen/` to `7-service/`, a small CI target with its picture. Step 6 is the turning point of the tutorial: the reader sees the one file become the layout, with the same picture.
 
 ## The layout of step 6 and 7
 
@@ -74,15 +74,16 @@ coffee/
 
 | Gap | The form today |
 |---|---|
-| Fonts drawn once, one file per font (`design/font_title.cpp`): today each file draws the fonts it uses | Signal's theme for steps 1 to 4, and the looks of step 5 without drawn fonts. Fonts join `design/` when the feature exists |
+| Fonts drawn once, one file per font (`design/font_title.cpp`): today each file draws the fonts it uses | LVGL's own font in the looks, and Signal's theme without its typefaces in step 5. Fonts join `design/` when the feature exists |
 | `lv::run<fn>`, a task that a tree declares (`task-handles.md`) | `lv::spawn(brew(page), page)` in `.on_shown` |
 | A time such as `0:25` in one binding | The seconds left: "25 s" |
 | The layout check of `extendable-1` | The layout by hand; the check comes with the fonts, since a font drawn in a screen's file would fail it |
+| A state of an absolute temperature: `lv::state water{mp_units::point<deg_C>(92)}` is refused with "lv: a state holds a quantity ... This state's type is mp_units::quantity_point<...degree_Celsius..., int>" (`measured` 2026-11-23, GCC 16.2.0, `-fsyntax-only`). A `delta<deg_C>` is accepted, but it is a difference, not a temperature | None: the service page has no water temperature |
 
-## Questions for the owner
+## The owner's decisions (2026-11-23)
 
-1. Is the example of "An application that grows" the tutorial's step 7, or a small program of its own? One program means one set of pictures and less code to keep in step; the plan says "of its own".
-2. 480 x 320, or the 320 x 240 of the quick start? The larger screen fits a list beside its detail.
-3. Each step a whole copy in `examples/coffee/1-screen/` to `7-service/`, or one program with the steps as its history? Copies build and test each step; they cost seven targets in CI.
-4. Signal first and a look of its own in step 5, or the reader's own tokens from step 1?
-5. Water temperature as a setting: an absolute temperature in °C is a quantity point in mp-units, `point<deg_C>(92)`. Whether `lv::state` holds one is not checked yet. Check it first, or show the hardness and the counter only?
+1. "An application that grows" gets a small program of its own, in the layout, which runs the layout check. The tutorial links to it.
+2. The screen is 480 x 320.
+3. Each step is a whole program, `examples/coffee/1-screen/` to `7-service/`: seven small CI targets, each with its picture.
+4. The reader's own tokens from step 1. Signal appears in a late step, as a design system you can reuse.
+5. Water temperature was checked: `lv::state` refuses an mp-units quantity point. The tutorial leaves it out, and the gap is in the table above. No workaround.
