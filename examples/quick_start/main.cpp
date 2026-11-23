@@ -16,18 +16,26 @@ void reset() { speed = 0 * km / h; }
 //! [state]
 
 //! [tree]
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.text = "Speed"}),
-    lv::arc({.range = {0, 240}, .size = {120 * px, 120 * px}, .value = lv::bind(speed)})[
-        lv::label({.align = "center", .text = lv::bind(speed)})],
-    lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({.text = "Speed"}),
+  lv::arc(
+    {
+      .range = {0, 240},
+      .size  = {120 * px, 120 * px},
+      .value = lv::bind(speed),
+    },
+    lv::label({.align = "center", .text = lv::bind(speed)})
+  ),
+  lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
+);
 //! [tree]
 
 //! [main]
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::application app;  // LVGL starts; it stops when app goes out of scope
   lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them

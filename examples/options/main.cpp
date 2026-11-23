@@ -17,10 +17,14 @@ template <>
 struct lv::option_text<sheet> {
   static consteval const char* of(sheet s) {
     switch (s) {
-      case sheet::a4: return "A4";
-      case sheet::letter: return "Letter";
-      case sheet::legal: return "Legal";
-      case sheet::a5: return "A5";
+      case sheet::a4:
+        return "A4";
+      case sheet::letter:
+        return "Letter";
+      case sheet::legal:
+        return "Legal";
+      case sheet::a5:
+        return "A5";
     }
     return "";
   }
@@ -36,7 +40,12 @@ constexpr auto tray = lv::options_of<sheet, lv::but<sheet::a5>>;
 
 constinit lv::state<sheet> paper{sheet::letter};
 
-constexpr auto ui = lv::dropdown({.id = "paper", .options = tray, .selected = lv::bind(paper), .width = 120 * px});
+constexpr auto ui = lv::dropdown({
+  .id       = "paper",
+  .options  = tray,
+  .selected = lv::bind(paper),
+  .width    = 120 * px,
+});
 
 constinit lv::frame<320, 240> frame;
 

@@ -74,7 +74,7 @@ A style cannot follow a state, so a look that changes while the program runs is 
 The original changes three themes of colors in place:
 
 ```cpp
-lv::group({.style = {.bg_color = lv::bind(background)}})  // a style takes a token, not a binding
+lv::group({.style = {.bg_color = lv::bind(background)},})  // a style takes a token, not a binding
 ```
 
 A position cannot follow a state of a plain number. A binding to `.x` accepts only a length, and no state holds one:
