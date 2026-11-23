@@ -364,6 +364,9 @@ static_assert(lv::page_of<popup>.size > 0);
 // The same with the children as arguments: properties first, then each child.
 constexpr auto pager_call = lv::group(lv::shown(
     current_page, lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup), lv::otherwise()));
+constexpr auto sliding_call = lv::group(lv::shown(
+    current_page, {.alive = 2, .enter = slide_in, .leave = slide_out}, lv::is<screen_page::main>(ui),
+    lv::otherwise()));
 constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
 static_assert(std::same_as<decltype(lv::when(busy, popup)), decltype(lv::when(busy)[popup])>);
 static_assert(std::same_as<decltype(lv::shown(current_page, lv::is<screen_page::main>(ui), lv::otherwise())),
