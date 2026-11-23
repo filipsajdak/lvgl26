@@ -77,12 +77,12 @@
       "parts": 3
     },
     "include/lv/detail/deferred.hpp": {
-      "tests": "^shown$|^example_pages$",
-      "targets": "shown example_pages"
+      "tests": "^deferred$|^shown$|^example_pages$",
+      "targets": "deferred shown example_pages"
     },
     "include/lv/detail/one_of_region.hpp": {
-      "tests": "^one_of$|one_of_violation",
-      "targets": "one_of"
+      "tests": "^one_of_region$|^one_of$|one_of_violation",
+      "targets": "one_of_region one_of"
     },
     "include/lv/detail/style_add.hpp": {
       "tests": "^style_add$|^mounted_storage$|^start_style$",
@@ -93,8 +93,8 @@
       "targets": "pointer window_app"
     },
     "include/lv/detail/input_queue.hpp": {
-      "tests": "^pointer$|^window_app$",
-      "targets": "pointer window_app"
+      "tests": "^input_queue$|input_queue_violation|^pointer$|^window_app$",
+      "targets": "input_queue pointer window_app"
     },
     "include/lv/image.hpp": {
       "tests": "^image$|^image_alone$|fail_image",
