@@ -4,7 +4,7 @@ name: docs
 # This run checks it: the snippets against their files, then the rendered site.
 on:
   pull_request:
-    paths: ['docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
+    paths: ['README.md', 'docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
             'tools/rules.py', 'tools/check_includes.py', 'tools/test_docs.py', 'tools/test_rules.py',
             'tools/check_site.py', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
             '.github/workflows/docs.yml']

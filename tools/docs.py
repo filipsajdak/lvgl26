@@ -5,6 +5,9 @@
     python3 tools/docs.py check    every snippet equals its source; no C names in code
     python3 tools/docs.py sync     rewrites the snippets from their sources
 
+`check` and `sync` read the README of the repository too, as a page that is never rendered.
+Every C++ block in it is a snippet, so the front door cannot show code that does not build.
+
 The Markdown in docs/ is the one source. People read it on the site, or on GitHub.
 Agents read site/llms.txt (an index), site/llms-full.txt (everything in one file) or
 the page itself: every page is also published as Markdown, next to its HTML.
@@ -51,6 +54,7 @@ DOCS = ROOT / "docs"
 SITE = ROOT / "site"
 OUT = SITE / "docs"
 NOT_PAGES = {"research", "reference"}  # notes for contributors, and data: not pages
+README = ROOT / "README.md"  # checked and synced like a page; not rendered, not in llms.txt
 
 SNIPPET = re.compile(r"<!-- snippet: (\S+)(?: (\S+))? -->\n```(\w*)\n(.*?)```\n", re.S)
 FENCE = re.compile(r"```(\w*)\n(.*?)```\n", re.S)
@@ -304,19 +308,26 @@ def outline_name_problems(outline: set[str]) -> list[str]:
 def page_problems(page: pathlib.Path, text: str, outline: set[str]) -> list[str]:
     problems = snippet_problems(page, text) + c_name_problems(page, text) + link_problems(page, text)
     problems += message_problems(page, text) + rules_problems(page, text)
+    if page == README:
+        return problems + [f"{page.relative_to(ROOT)}: {p}" for p in free_code_problems(text)]
     if str(page.relative_to(DOCS)) in outline:
         problems += outline_problems(page, text)
     return problems
 
 
+def checked() -> list[pathlib.Path]:
+    """What `check` and `sync` read: every page, and the README."""
+    return pages() + [README]
+
+
 def check() -> int:
     outline = outlined()
     problems = outline_name_problems(outline)
-    for page in pages():
+    for page in checked():
         problems += page_problems(page, page.read_text(), outline)
     for problem in problems:
         print(problem)
-    print(f"{len(pages())} pages, {len(problems)} problems")
+    print(f"{len(pages())} pages and the README, {len(problems)} problems")
     return 1 if problems else 0
 
 
@@ -328,7 +339,7 @@ def synced(text: str) -> str:
 
 
 def sync() -> int:
-    for page in pages():
+    for page in checked():
         text = page.read_text()
         fresh = synced(text)
         if fresh != text:
