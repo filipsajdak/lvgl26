@@ -23,7 +23,8 @@ int main(int argc, char** argv) {
   if (!treadmill::start(display.screen())) return 1;
   for (const treadmill::scene& s : treadmill::scenes) {
     treadmill::play(app, s);
-    if (!lv::write_png(display.screen(), (std::string{argv[1]} + "/" + s.name + ".png").c_str())) return 1;
+    if (!lv::write_png(display.screen(), (std::string{argv[1]} + "/" + s.name + ".png").c_str()))
+      return 1;
   }
   return 0;
 }

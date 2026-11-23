@@ -14,7 +14,8 @@ Header: `<lv/lv.hpp>`, the core.
 ```cpp
 constinit lv::state cups{lv::counter{2}};  // a value that widgets follow
 
-constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
+constexpr auto cups_text =
+  lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
 ```
 
 Once the label is mounted, a new value is all the program writes. The label then shows "4 cups", and all else that follows `cups` changes with it.
@@ -73,13 +74,23 @@ A text binding without a format shows a quantity with its unit, such as "60 g". 
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 The dropdown lists the enumerators of `drink` and follows `chosen` both ways. The slider follows `bold` and writes the user's choice into it.
@@ -99,7 +110,7 @@ A handler that only changes a state is a lambda in the tree, as in the part belo
 using grams = decltype(beans.get());
 
 constexpr auto least_dose = 12 * g;  // the dose of the mildest cup
-constexpr auto dose_step = 2 * g;    // what one step of strength adds
+constexpr auto dose_step  = 2 * g;   // what one step of strength adds
 
 // Values made from states, and from each other. They store nothing; binding one makes it follow.
 constinit lv::computed dose{[](strength s) { return least_dose + s.value * dose_step; }, bold};
@@ -145,10 +156,12 @@ A part is a function that returns a piece of tree. It takes its state as a templ
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 ```
 

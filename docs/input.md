@@ -17,8 +17,8 @@ int main() {
 
   auto root = lv::mount<app::ui>(display.screen());
   if (!root) return 2;
-  app::start(root);                         // the application's task, on the mounted tree
-  return app.run();                         // until the window is closed
+  app::start(root);  // the application's task, on the mounted tree
+  return app.run();  // until the window is closed
 }
 ```
 

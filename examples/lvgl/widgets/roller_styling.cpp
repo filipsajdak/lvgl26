@@ -52,6 +52,4 @@ constexpr auto ui = lv::group(
 
 }  // namespace
 
-void widgets::roller_styling(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::roller_styling(lv::obj screen) { lv::place<ui>(screen); }

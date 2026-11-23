@@ -45,9 +45,10 @@ The program itself does not change. This one builds with each of the three prese
 constinit lv::state taps{lv::counter{}};
 void tapped() { ++taps; }
 
-constexpr auto ui = lv::column[
-    lv::label({.text = lv::bind(taps, "{} taps")}),
-    lv::button({.on_clicked = &tapped})[lv::label({.text = "Tap"})]];
+constexpr auto ui = lv::column(
+  lv::label({.text = lv::bind(taps, "{} taps")}),
+  lv::button({.on_clicked = &tapped}, lv::label({.text = "Tap"}))
+);
 
 constinit lv::frame<320, 240> frame;  // the display's memory
 

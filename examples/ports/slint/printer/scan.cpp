@@ -9,7 +9,8 @@ namespace {
 
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
-constexpr auto ui = job_page<job_kind::scan>("Scan", "Format", "PDF\nJPEG\nPNG", "Start scanning", fonts);
+constexpr auto ui =
+  job_page<job_kind::scan>("Scan", "Format", "PDF\nJPEG\nPNG", "Start scanning", fonts);
 
 }  // namespace
 

@@ -16,7 +16,8 @@ using namespace lv::units;
 //! [tokens]
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 //! [tokens]
 

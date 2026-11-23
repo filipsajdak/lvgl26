@@ -7,11 +7,19 @@ using namespace lv::units;
 
 // The same days for both rollers. A roller takes the list and its mode together.
 //! [roller]
-constexpr auto normal = lv::roller({.options = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "normal"},
-                                    .selected = {0, false}, .visible_row_count = 3, .width = 120 * px});
+constexpr auto normal = lv::roller({
+  .options           = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "normal"},
+  .selected          = {0, false},
+  .visible_row_count = 3,
+  .width             = 120 * px,
+});
 
-constexpr auto infinite = lv::roller({.options = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "infinite"},
-                                      .selected = {2, false}, .visible_row_count = 3, .width = 120 * px});
+constexpr auto infinite = lv::roller({
+  .options           = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "infinite"},
+  .selected          = {2, false},
+  .visible_row_count = 3,
+  .width             = 120 * px,
+});
 //! [roller]
 
 }  // namespace

@@ -21,13 +21,13 @@ inline constexpr std::size_t queue_capacity = 32;
 struct job {
   job_id id;
   const char* title;
-  const char* owner = "joe@example.com";
-  const char* size = "100kB";
+  const char* owner     = "joe@example.com";
+  const char* size      = "100kB";
   const char* submitted = "11:41 25/01/26";
   lv::counter pages{1};
   lv::counter progress{};  // percent; the first job gains one a second
-  lv::counter left{100};  // 100 less `progress`; the bar on the Print page grows with both
-  bool printing = false;
+  lv::counter left{100};   // 100 less `progress`; the bar on the Print page grows with both
+  bool printing   = false;
   char status[16] = "WAITING...";  // "63% - PRINTING", "WAITING..."; follows `progress`
 };
 
