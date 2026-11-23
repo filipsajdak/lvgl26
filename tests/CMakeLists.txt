@@ -243,6 +243,11 @@ add_executable(signal_type signal_type.cpp)
 target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
                                               A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# The same test with the fonts linked from lvgl26::signal_type (lv/signal_fonts.hpp): the same pictures.
+add_executable(signal_linked signal_linked.cpp)
+target_link_libraries(signal_linked PRIVATE lvgl26::signal_type lvgl26_warnings)
+add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
+                                                  A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
 # Signal's tell-tale lamp colours, a header of its own.
 lvgl26_test(signal_lamps)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
@@ -1321,6 +1326,8 @@ lvgl26_compile_fail_message(font_of_unknown_name constexpr "lv: the font 'text.l
 lvgl26_compile_fail_message(font_of_not_typography constexpr "lv: the font 'color.blue' names a color, not a typography token. A font comes from a typography token: lv::font_of<\"text.title\">.")
 lvgl26_compile_fail_message(font_of_no_design static_assert "lv: no design is registered for lv::font_of. Name the token file once, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};")
 lvgl26_compile_fail_message(font_draw_unknown_name constexpr "lv: the font 'text.title' has no name 'title' in 'text'. The names there: label, small.")
+lvgl26_compile_fail_message(signal_fonts_and_type static_assert "lv: lv/signal_type.hpp and lv/signal_fonts.hpp both give Signal's fonts, one drawn in each file and one linked. Include one of them.")
+lvgl26_compile_fail_message(signal_type_and_fonts static_assert "lv: lv/signal_fonts.hpp and lv/signal_type.hpp both give Signal's fonts, one linked and one drawn in each file. Include one of them.")
 lvgl26_compile_fail_message(look_no_design static_assert "lv: no design is registered for lv::look. Name the token file once, before the first look, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok}; If you did name it, the naming comes after a look that has already read the design: move it above every lv::look, as lv::cfg must come first.")
 lvgl26_compile_fail_message(look_design_too_late static_assert "lv: no design is registered for lv::look. Name the token file once, before the first look, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok}; If you did name it, the naming comes after a look that has already read the design: move it above every lv::look, as lv::cfg must come first.")
 lvgl26_compile_fail_message(look_string_token constexpr "lv: the look entry 'flex_flow' of 'stringtoken' is a string token, and a string is no standard value for the style property 'flex_flow', which takes a string that names an LVGL value. An LVGL value by name (\"flex_flow\": \"row\") goes in \"\$extensions\": {\"io.github.filipsajdak.lvgl26\": {...}} of the group.")

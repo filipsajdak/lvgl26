@@ -86,7 +86,7 @@ inline constexpr detail::no_design design{};
 // The object of a font that a file of its own defines: see lv::font_of at the end of this file.
 using drawn_font = lv_font_t;
 
-template <detail::fixed Name>
+template <detail::fixed Name, class D = override>
 extern const drawn_font font_object;
 
 namespace detail {
@@ -762,7 +762,7 @@ consteval const token<typography_token>& typography_named() {
 template <fixed Name, class D>
 consteval token<const lv_font_t*> declared_font() {
   (void)typography_named<Name, D>();
-  return {&font_object<Name>, from_design_tokens{}};
+  return {&font_object<Name, D>, from_design_tokens{}};
 }
 
 }  // namespace detail
@@ -801,6 +801,10 @@ inline constexpr auto look_of = look<detail::path_of_enumerator<Prefix, V>(), D>
 //
 //   template <>
 //   const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type);
+//
+// The object belongs to a design, `lv::font_object<Name, D>` as `lv::design<D>` does: a library
+// with a design of its own (Signal) draws fonts under the names of its tokens, and they are not the
+// fonts of the project that links it. The default design is the project's.
 //
 // A file that includes this header and no more draws nothing: the address of an object is a
 // constant, whatever the object holds. The build checks that every font that a file names has

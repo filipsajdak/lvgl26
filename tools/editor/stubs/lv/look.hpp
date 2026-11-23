@@ -71,7 +71,7 @@ inline constexpr stub::no_design design{};
 /// lv::font_object<"text.title"> = lv::draw<"text.title">(type);
 using drawn_font = lv_font_t;
 
-template <detail::fixed Name>
+template <detail::fixed Name, class D = override>
 extern const drawn_font font_object;
 
 namespace stub {

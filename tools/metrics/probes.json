@@ -67,6 +67,12 @@
       "stands_for": "the file that draws one font of a project (lv::draw): what a font costs once for the program"
     },
     {
+      "id": "signal_linked",
+      "kind": "compile",
+      "file": "tests/signal_linked.cpp",
+      "stands_for": "a file that uses Signal's themes with fonts and fonts of its own when the library draws them (lv/signal_fonts.hpp)"
+    },
+    {
       "id": "port_page",
       "kind": "compile",
       "file": "examples/ports/slint/printer/print_page.cpp",

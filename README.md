@@ -392,7 +392,7 @@ lv::display display{app, frame, mine};                // or lv::signal::dark, fr
 
 [docs/themes.md](docs/themes.md) shows a whole one, and Signal, the theme that comes with lvgl26.
 
-Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash. The tell-tale lamp colours that the law defines are in a header of their own, `lv/signal_lamps.hpp`.
+Signal has typefaces of its own, and `lv/signal_type.hpp` makes them. `lv::signal::dark_with_type` is the theme that sets its text in them, and `lv::signal::numerals` makes a font of digits for a large reading. They are in a second header because the compiler draws the fonts, which costs compile time and flash. A program of many files links the fonts once instead: `lv/signal_fonts.hpp` and the optional library `lvgl26::signal_type` give the same names and the same pixels, and a file that uses them compiles in about a third of the time. The tell-tale lamp colours that the law defines are in a header of their own, `lv/signal_lamps.hpp`.
 
 A font is made by the compiler from an embedded TrueType file: glyph pictures and kerning in
 read-only memory, no heap and no converter. A typography token chooses it:
