@@ -52,6 +52,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`expressive-4`](#expressive-4) | Name the look of an element, `lv::look<"tile">`, and keep its values in the token file. |
 | [`expressive-5`](#expressive-5) | Use semantic and component tokens in screen code, such as `tok.color.selected`, not primitives such as a step of a palette. |
 | [`expressive-6`](#expressive-6) | Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists. |
+| [`expressive-7`](#expressive-7) | Write a tree in the call form and let clang-format lay it out: the children as arguments, two spaces, and a trailing comma after a property list when it should have one property per line. |
 | [`extendable-1`](#extendable-1) | Put one screen in each file with the states only it uses, and give shared state, parts, design, platform and `main` places of their own. |
 | [`extendable-2`](#extendable-2) | Make a reusable piece of screen a function that returns a tree, and constrain each parameter with a public concept: `lv::dependency`, `lv::tree_handler`, `lv::tree_node`. |
 | [`extendable-3`](#extendable-3) | Give a part its state as a template argument, `stepper<cups>(...)`, so that its handlers can name the state. |
@@ -1102,9 +1103,77 @@ Guide: Design tokens (not written yet).
 
 A name says what a piece is, the screen shows its shape at a glance, and a piece can move to a file of its own.
 
-No example yet: the built example comes with the reformat of the examples to children as call arguments.
+<!-- snippet: examples/pages/main.cpp tree -->
+```cpp
+// The buttons that choose the page.
+constexpr auto menu = lv::column(
+  {.size = {80 * px, 240 * px}},
+  lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+  lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+  lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
+);
+
+// The page that follows `current`, and a banner above it while the device is offline.
+constexpr auto pages = lv::shown(
+  current, {.enter = slide_in, .leave = slide_out},
+  lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+  lv::is<page::settings>(settings), lv::is<page::about>(about)
+);
+
+constexpr auto content = lv::column(
+  {.size = {240 * px, 240 * px}},
+  lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+  lv::group({.size = {240 * px, 200 * px}}, pages)
+);
+
+constexpr auto ui = lv::row({.size = {320 * px, 240 * px}}, menu, content);
+```
 
 Checked: no tool checks this rule yet.
+
+Guide: The tree and its widgets (not written yet).
+
+### expressive-7
+
+**Write a tree in the call form and let clang-format lay it out: the children as arguments, two spaces, and a trailing comma after a property list when it should have one property per line.**
+
+Every example then has the one shape that a person reads at a glance, a diff shows the change and not the layout, and a tool, not a reviewer, keeps it so.
+
+<!-- snippet: examples/lists/main.cpp row -->
+```cpp
+// One row: a button that is checked while it is the selected one. state_trickle hands that
+// state to the labels, which style themselves for it.
+constexpr auto track_row = lv::button(
+  {
+    .flex_flow     = "row",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color = tok.color.row,
+      .pad_all  = tok.space.edge,
+      .radius   = tok.radius.row,
+    },
+    .style_checked = {.bg_color = tok.color.selected},
+  },
+  lv::label({
+    .flex_grow     = 1,
+    .text          = lv::bind(&track::title),
+    .style         = {.text_color = tok.color.text},
+    .style_checked = {.text_color = tok.color.on_selected},
+  }),
+  lv::label({
+    .text          = lv::bind(&track::plays, "{} plays"),
+    .style         = {.text_color = tok.color.quiet},
+    .style_checked = {.text_color = tok.color.on_selected},
+  })
+);
+```
+
+Checked by `tools/format_ui.py`. The test `editor_format_examples` pins the message.
+
+```text
+would change
+```
 
 Guide: The tree and its widgets (not written yet).
 

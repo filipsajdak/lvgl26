@@ -441,12 +441,25 @@
       "quality": "expressive",
       "rule": "Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists.",
       "why": "A name says what a piece is, the screen shows its shape at a glance, and a piece can move to a file of its own.",
-      "example": null,
-      "example_note": "No example yet: the built example comes with the reformat of the examples to children as call arguments.",
+      "example": "examples/pages/main.cpp tree",
       "check": null,
       "guide": "tree.md",
-      "evidence": null,
-      "revisit": "the reformat of all examples to the call form: the example of this rule comes with it"
+      "evidence": null
+    },
+    {
+      "id": "expressive-7",
+      "quality": "expressive",
+      "rule": "Write a tree in the call form and let clang-format lay it out: the children as arguments, two spaces, and a trailing comma after a property list when it should have one property per line.",
+      "why": "Every example then has the one shape that a person reads at a glance, a diff shows the change and not the layout, and a tool, not a reviewer, keeps it so.",
+      "example": "examples/lists/main.cpp row",
+      "check": {
+        "by": "tool",
+        "tool": "tools/format_ui.py",
+        "test": "editor_format_examples",
+        "message": "would change"
+      },
+      "guide": "tree.md",
+      "evidence": null
     },
     {
       "id": "extendable-1",

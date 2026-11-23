@@ -181,12 +181,16 @@ jobs:
           g++-16 --version | head -n 1
           clang++ --version
           clangd --version
+          # editor_format_examples is registered only where CMake finds clang-format: a missing
+          # tool must fail this job, not drop the check.
+          clang-format --version
           # Where Clang finds its standard library: the stubs are read with it.
           clang++ -v -x c++ -fsyntax-only /dev/null 2>&1 | grep -E 'Selected GCC|Target|^ /'
       - name: Configure
         run: |
           cmake --preset host-v96
           grep -E 'LVGL26_CLANG(XX|D):' build/host-v96/CMakeCache.txt
+          grep -E 'LVGL26_CLANG_FORMAT:FILEPATH=/' build/host-v96/CMakeCache.txt
       - name: Build the list of public names
         run: cmake --build --preset host-v96 --target lv_names
       - name: Test
