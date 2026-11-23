@@ -380,7 +380,8 @@ lvgl26_widget_ports(dropdown bind_value direction event text)
 # LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
 # sanitizer stops on. The picture is compared in the builds that have none.
 if(NOT LVGL26_SANITIZE)
-  lvgl26_widget_ports(roller bind_value event options visible_rows)
+  lvgl26_widget_ports(roller bind_value event options styling visible_rows
+                      ASSETS font_example_large)
 endif()
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 lvgl26_widget_ports(spinner basic)
