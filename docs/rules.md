@@ -306,18 +306,29 @@ The library builds the page or the dialog that is current and ends the one befor
 
 <!-- snippet: examples/pages/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
-    lv::column({.size = {80 * px, 240 * px}})[
-        lv::button({.on_clicked = [] { current = page::home; }})[lv::label({.text = "Home"})],
-        lv::button({.on_clicked = [] { current = page::settings; }})[lv::label({.text = "Settings"})],
-        lv::button({.on_clicked = [] { current = page::about; }})[lv::label({.text = "About"})]],
-    lv::column({.size = {240 * px, 240 * px}})[
-        lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
-        lv::group({.size = {240 * px, 200 * px}})[
-            lv::shown(current, {.enter = slide_in, .leave = slide_out})[
-                lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
-                lv::is<page::settings>(settings),
-                lv::is<page::about>(about)]]]];
+constexpr auto ui = lv::row(
+  {.size = {320 * px, 240 * px}},
+  lv::column(
+    {.size = {80 * px, 240 * px}},
+    lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+    lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+    lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
+  ),
+  lv::column(
+    {.size = {240 * px, 240 * px}},
+    lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+    lv::group(
+      {.size = {240 * px, 200 * px}},
+      lv::shown(
+        current,
+        {.enter = slide_in, .leave = slide_out},
+        lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+        lv::is<page::settings>(settings),
+        lv::is<page::about>(about)
+      )
+    )
+  )
+);
 ```
 
 Checked: no tool checks this rule yet.
