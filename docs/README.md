@@ -91,6 +91,7 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 - A longer valid form stands beside a short one only when it is a built file too, labelled "the long way". There is no hand-written bad code.
 - A picture on a page is written by a test, as `quick_start_picture` writes its own.
 - `python3 tools/docs.py check` must pass.
+- The root `README.md` is checked like a page, and `python3 tools/check_readme.py` holds it to the code: a change of syntax or of a feature updates it in the same pull request.
 
 ### The outline of a guide
 

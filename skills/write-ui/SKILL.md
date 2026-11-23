@@ -85,6 +85,7 @@ lvgl26 turns a mistake into a compile error whose message says how to fix it.
 
 - Build and run the program's tests; a tree that compiles is already checked against the widgets' properties.
 - For a picture of the screen, write one with `lv::write_png` from `<lv/png.hpp>`, as the quick start does.
+- A change of syntax or of a feature in this repository also updates `README.md` and `site/index.html`; `python3 tools/check_readme.py` holds the README to the code.
 
 ## What not to do
 
