@@ -58,6 +58,74 @@ lv::task<> delete_on_tap(lv::obj button, job_id id) {
 }
 
 //! [card]
+constexpr auto status_text = lv::label({
+  .text  = lv::bind(&job::status),
+  .x     = 14 * px,
+  .y     = 14 * px,
+  .style = {.text_color = tok.label.secondary, .text_font = status_font},
+});
+
+// The ink grows with the share of the job that is done: LVGL rounds a grown item to the nearest
+// pixel, where the original cuts it down, so the span is one pixel short to stay within a pixel.
+constexpr auto ink = lv::group(
+  {.flex_flow = "row", .size = {(bar_width - 1) * px, 100 * pct}},
+  lv::group({
+    .flex_grow = lv::bind(&job::progress),
+    .size      = {0 * px, 100 * pct},
+    .style = {
+      .bg_color  = tok.color.foreground,
+      .bg_opa    = tok.solid,
+      .min_width = tok.queue.track,
+      .radius    = tok.queue.dot,
+    },
+  }),
+  lv::group({.flex_grow = lv::bind(&job::left), .size = {0 * px, 100 * pct}})
+);
+
+constexpr auto progress_bar = lv::group(
+  {
+    .size = {bar_width * px, tok.queue.track},
+    .x    = (left_width - bar_width) * px,
+    .y    = 18 * px,
+    .style = {
+      .bg_color = tok.color.neutral,
+      .bg_opa   = tok.solid,
+      .radius   = tok.queue.dot,
+    },
+  },
+  ink
+);
+
+constexpr auto title_text = lv::label({
+  .size  = {left_width * px, lv::size_content},
+  .text  = lv::bind(&job::title),
+  .x     = 14 * px,
+  .y     = 38 * px,
+  .style = {.text_color = tok.label.primary, .text_font = subtitle_font},
+});
+
+constexpr auto pause_button = lv::group(
+  {.x = 14 * px, .y = 82 * px},
+  icon_text_button<icons::pause>("pause", "Pause", &nothing, tok.button.primary, body_font)
+);
+
+constexpr auto delete_button = lv::group(
+  {.x = (14 + 110 + 14) * px, .y = 82 * px},
+  icon_text_button<icons::bin>("delete", "Delete", &nothing, tok.button.destructive, body_font)
+);
+
+constexpr auto details = lv::group(
+  {
+    .size = {240 * px, 100 * px},
+    .x    = (card_width - 240 - 14) * px,
+    .y    = 14 * px,
+  },
+  detail_row("Job Owner", lv::bind(&job::owner), 0), rule(24),
+  detail_row("Pages", lv::bind(&job::pages, "{}"), 28), rule(52),
+  detail_row("Size", lv::bind(&job::size), 56), rule(80),
+  detail_row("Submitted", lv::bind(&job::submitted), 84)
+);
+
 constexpr auto card = lv::group(
   {
     .size = {card_width * px, card_height * px},
@@ -69,68 +137,8 @@ constexpr auto card = lv::group(
       .radius       = tok.queue.wide_radius,
     },
   },
-  lv::label({
-    .text  = lv::bind(&job::status),
-    .x     = 14 * px,
-    .y     = 14 * px,
-    .style = {.text_color = tok.label.secondary, .text_font = status_font},
-  }),
-  lv::group(
-    {
-      .size = {bar_width * px, tok.queue.track},
-      .x    = (left_width - bar_width) * px,
-      .y    = 18 * px,
-      .style = {
-        .bg_color = tok.color.neutral,
-        .bg_opa   = tok.solid,
-        .radius   = tok.queue.dot,
-      },
-    },
-    // The ink grows with the share of the job that is done: LVGL rounds a grown item to the nearest
-    // pixel, where the original cuts it down, so the span is one pixel short to stay within a pixel.
-    lv::group(
-      {.flex_flow = "row", .size = {(bar_width - 1) * px, 100 * pct}},
-      lv::group({
-        .flex_grow = lv::bind(&job::progress),
-        .size      = {0 * px, 100 * pct},
-        .style = {
-          .bg_color  = tok.color.foreground,
-          .bg_opa    = tok.solid,
-          .min_width = tok.queue.track,
-          .radius    = tok.queue.dot,
-        },
-      }),
-      lv::group({.flex_grow = lv::bind(&job::left), .size = {0 * px, 100 * pct}})
-    )
-  ),
-  lv::label({
-    .size  = {left_width * px, lv::size_content},
-    .text  = lv::bind(&job::title),
-    .x     = 14 * px,
-    .y     = 38 * px,
-    .style = {.text_color = tok.label.primary, .text_font = subtitle_font},
-  }),
-  lv::group(
-    {.x = 14 * px, .y = 82 * px},
-    icon_text_button<icons::pause>("pause", "Pause", &nothing, tok.button.primary, body_font)
-  ),
-  lv::group(
-    {.x = (14 + 110 + 14) * px, .y = 82 * px},
-    icon_text_button<icons::bin>("delete", "Delete", &nothing, tok.button.destructive, body_font)
-  ),
-  lv::group(
-    {
-      .size = {240 * px, 100 * px},
-      .x    = (card_width - 240 - 14) * px,
-      .y    = 14 * px,
-    },
-    detail_row("Job Owner", lv::bind(&job::owner), 0), rule(24),
-    detail_row("Pages", lv::bind(&job::pages, "{}"), 28), rule(52),
-    detail_row("Size", lv::bind(&job::size), 56), rule(80),
-    detail_row("Submitted", lv::bind(&job::submitted), 84)
-  )
+  status_text, progress_bar, title_text, pause_button, delete_button, details
 );
-
 void start_card(lv::obj row, const job& j) {
   lv::spawn(delete_on_tap(lv::obj{lv::row_view<card>{row}.get<"delete">().raw()}, j.id), row);
 }

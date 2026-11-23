@@ -43,6 +43,62 @@ constexpr auto detail_line(const char* name, auto value) {
 //! [card]
 // One card for every job. The dot and the words are blue while the job prints and gray while it
 // waits. A tap checks the card, and the checked card shows the details under its title.
+constexpr auto printing_dot = lv::group({
+  .checked = lv::bind(&job::printing),
+  .size    = {8 * px, 8 * px},
+  .style = {
+    .bg_color = tok.label.tertiary,
+    .bg_opa   = tok.solid,
+    .radius   = tok.queue.dot,
+  },
+  .style_checked = {.bg_color = tok.label.secondary},
+});
+
+constexpr auto status_line = lv::label({
+  .checked       = lv::bind(&job::printing),
+  .text          = lv::bind(&job::status),
+  .style         = {.text_color = tok.label.tertiary, .text_font = status_font},
+  .style_checked = {.text_color = tok.label.secondary},
+});
+
+constexpr auto status_row = lv::group(
+  {
+    .flex_align = {"start", "center", "center"},
+    .flex_flow  = "row",
+    .size       = {100 * pct, lv::size_content},
+    .style      = {.pad_gap = tok.space.gap},
+  },
+  printing_dot, status_line
+);
+
+constexpr auto title_line = lv::label({
+  .size  = {100 * pct, lv::size_content},
+  .text  = lv::bind(&job::title),
+  .style = {.text_color = tok.label.primary, .text_font = small_font},
+});
+
+// The details are folded away until the card is checked.
+constexpr auto details = lv::group(
+  {
+    .flex_flow     = "column",
+    .size          = {100 * pct, lv::size_content},
+    .style         = {.max_height = tok.space.none},
+    .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap},
+  },
+  detail_line("Job Owner", lv::bind(&job::owner)),
+  detail_line("Pages", lv::bind(&job::pages, "{}")), detail_line("Size", lv::bind(&job::size)),
+  detail_line("Submitted", lv::bind(&job::submitted))
+);
+
+constexpr auto title_and_details = lv::group(
+  {
+    .flex_flow     = "column",
+    .size          = {100 * pct, lv::size_content},
+    .state_trickle = true,
+  },
+  title_line, details
+);
+
 constexpr auto card = lv::group(
   {
     .checkable     = true,
@@ -59,53 +115,7 @@ constexpr auto card = lv::group(
       .radius       = tok.queue.radius,
     },
   },
-  lv::group(
-    {
-      .flex_align = {"start", "center", "center"},
-      .flex_flow  = "row",
-      .size       = {100 * pct, lv::size_content},
-      .style      = {.pad_gap = tok.space.gap},
-    },
-    lv::group({
-      .checked = lv::bind(&job::printing),
-      .size    = {8 * px, 8 * px},
-      .style = {
-        .bg_color = tok.label.tertiary,
-        .bg_opa   = tok.solid,
-        .radius   = tok.queue.dot,
-      },
-      .style_checked = {.bg_color = tok.label.secondary},
-    }),
-    lv::label({
-      .checked       = lv::bind(&job::printing),
-      .text          = lv::bind(&job::status),
-      .style         = {.text_color = tok.label.tertiary, .text_font = status_font},
-      .style_checked = {.text_color = tok.label.secondary},
-    })
-  ),
-  lv::group(
-    {
-      .flex_flow     = "column",
-      .size          = {100 * pct, lv::size_content},
-      .state_trickle = true,
-    },
-    lv::label({
-      .size  = {100 * pct, lv::size_content},
-      .text  = lv::bind(&job::title),
-      .style = {.text_color = tok.label.primary, .text_font = small_font},
-    }),
-    lv::group(
-      {
-        .flex_flow     = "column",
-        .size          = {100 * pct, lv::size_content},
-        .style         = {.max_height = tok.space.none},
-        .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap},
-      },
-      detail_line("Job Owner", lv::bind(&job::owner)),
-      detail_line("Pages", lv::bind(&job::pages, "{}")), detail_line("Size", lv::bind(&job::size)),
-      detail_line("Submitted", lv::bind(&job::submitted))
-    )
-  )
+  status_row, title_and_details
 );
 //! [card]
 
