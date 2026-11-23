@@ -6,6 +6,7 @@
 #include "same_pixels.hpp"
 
 extern "C" {
+void lv_example_textarea_cursor(void);
 void lv_example_textarea_placeholder(void);
 }
 
@@ -15,6 +16,7 @@ int main() {
 
   same_pixels("textarea_placeholder", &lv_example_textarea_placeholder,
               &widgets::textarea_placeholder, &nothing);
+  same_pixels("textarea_cursor", &lv_example_textarea_cursor, &widgets::textarea_cursor, &nothing);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");

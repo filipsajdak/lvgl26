@@ -137,6 +137,7 @@ void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
 void spinner_basic(lv::obj screen);  // lv_example_spinner_basic
 
 // textarea
+void textarea_cursor(lv::obj screen);       // lv_example_textarea_cursor
 void textarea_placeholder(lv::obj screen);  // lv_example_textarea_placeholder
 
 // image
