@@ -11,6 +11,7 @@ using namespace lv::units;
 
 namespace {
 
+//! [readme]
 //! [fonts]
 // A copy: a reference to the tokens would keep the token file in the program.
 constexpr auto text = lv::signal::type_tokens.text;
@@ -20,14 +21,19 @@ constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the si
 //! [fonts]
 
 //! [tree]
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
-                                .size = {320 * px, 240 * px},
-                                .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
-    lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
-    lv::label({.text = "21.5°", .style = {.text_font = reading}}),
-    lv::label({.text = "Heating to 22 degrees."}),
-    lv::button[lv::label({.text = "HOLD"})]];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+    .style      = {.pad_gap = lv::signal::dark_tokens.space._2},
+  },
+  lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
+  lv::label({.text = "21.5°", .style = {.text_font = reading}}),
+  lv::label({.text = "Heating to 22 degrees."}),
+  lv::button(lv::label({.text = "HOLD"}))
+);
 //! [tree]
+//! [readme]
 
 constinit lv::frame<320, 240> frame;
 

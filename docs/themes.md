@@ -64,13 +64,17 @@ constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the si
 
 <!-- snippet: examples/signal_type/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
-                                .size = {320 * px, 240 * px},
-                                .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
-    lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
-    lv::label({.text = "21.5°", .style = {.text_font = reading}}),
-    lv::label({.text = "Heating to 22 degrees."}),
-    lv::button[lv::label({.text = "HOLD"})]];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+    .style      = {.pad_gap = lv::signal::dark_tokens.space._2},
+  },
+  lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
+  lv::label({.text = "21.5°", .style = {.text_font = reading}}),
+  lv::label({.text = "Heating to 22 degrees."}),
+  lv::button(lv::label({.text = "HOLD"}))
+);
 ```
 
 - `type` makes a font with the characters from the space to the tilde.
