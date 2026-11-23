@@ -7,7 +7,8 @@
   "outline": [
     "lists.md",
     "state.md",
-    "tree.md"
+    "tree.md",
+    "views.md"
   ],
   "sections": [
     {
