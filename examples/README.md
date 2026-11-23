@@ -22,7 +22,7 @@ Of LVGL v9.6.0's 163 widget examples, 79 are ported. The other 84 wait for a for
 | A child made by an `add_` function: a tab, a chart series, a menu page, a list button, a message box's title, a span, a scale section, a calendar header, a tile | 36 |
 | Drawing on a canvas layer, or in a draw-task event | 16 |
 | One setter called several times: a table's cells, a control or a width for each button | 11 |
-| The order of setters: a button matrix's controls run before `one_checked`, which clears them | 2 |
+| The order of setters: a button matrix's controls run before `one_checked`, which clears them (pending two rules of the setter table) | 2 |
 | A call that is no setter: `lv_animimg_start`, `lv_textarea_add_text`, `lv_spinbox_increment` | 5 |
 | An LVGL build option that the test build leaves off: Lottie, SVG, a transform matrix | 5 |
 | Another widget as a pointer: a keyboard's text area, a scale's needle | 3 |
