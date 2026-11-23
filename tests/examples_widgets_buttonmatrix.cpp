@@ -8,8 +8,10 @@
 extern "C" {
 void lv_example_buttonmatrix_event(void);
 void lv_example_buttonmatrix_map(void);
+void lv_example_buttonmatrix_one_checked(void);
 void lv_example_buttonmatrix_popover(void);
 void lv_example_buttonmatrix_recolor(void);
+void lv_example_buttonmatrix_styling(void);
 }
 
 namespace {
@@ -52,6 +54,10 @@ int main() {
               &widgets::buttonmatrix_popover, &hold_e);
   same_pixels("buttonmatrix_recolor", &lv_example_buttonmatrix_recolor,
               &widgets::buttonmatrix_recolor, &nothing);
+  same_pixels("buttonmatrix_one_checked", &lv_example_buttonmatrix_one_checked,
+              &widgets::buttonmatrix_one_checked, &nothing);
+  same_pixels("buttonmatrix_styling", &lv_example_buttonmatrix_styling,
+              &widgets::buttonmatrix_styling, &nothing);
 
   // A held key shows its popover.
   check(render(&widgets::buttonmatrix_popover, &nothing).first_difference(
