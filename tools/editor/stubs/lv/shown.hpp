@@ -150,6 +150,13 @@ constexpr detail::shown_node<S, A...> shown(const S& state, const A&...) {
   return {&state};
 }
 
+/// The transitions in braces, then the arms: lv::shown(current, {.enter = slide_in}, lv::is<...>(...), ...).
+template <detail::shown_source S, class... A>
+  requires(sizeof...(A) > 0)
+constexpr detail::shown_node<S, A...> shown(const S& state, const detail::shown_options& options, const A&...) {
+  return {&state};
+}
+
 /// The tree as the second argument: lv::when(online, online_ui).
 template <detail::shown_source S, class T>
   requires std::same_as<detail::value_of<S>, bool> && tree_node<T>

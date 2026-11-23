@@ -368,6 +368,13 @@ constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
 static_assert(std::same_as<decltype(lv::when(busy, popup)), decltype(lv::when(busy)[popup])>);
 static_assert(std::same_as<decltype(lv::shown(current_page, lv::is<screen_page::main>(ui), lv::otherwise())),
                            decltype(lv::shown(current_page)[lv::is<screen_page::main>(ui), lv::otherwise()])>);
+constexpr auto sliding_call = lv::group(lv::shown(current_page, {.alive = 2, .enter = slide_in, .leave = slide_out},
+                                                lv::is<screen_page::main>(main_page),
+                                                lv::is<screen_page::popup_page>(popup_page), lv::otherwise()));
+static_assert(std::same_as<decltype(lv::shown(current_page, {.enter = slide_in}, lv::is<screen_page::main>(ui),
+                                              lv::otherwise())),
+                           decltype(lv::shown(current_page, {.enter = slide_in})[lv::is<screen_page::main>(ui),
+                                                                                 lv::otherwise()])>);
 constexpr auto boxed = lv::column({.size = {100 * pct, lv::size_content}}, lv::label({.text = "a"}), lv::label());
 constexpr auto boxed_bare = lv::row(lv::label({.text = "a"}), lv::button({.id = "go"}, lv::label({.text = "Go"})));
 // The call form and the subscript form build the same node.
