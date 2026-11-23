@@ -37,14 +37,18 @@ inline constexpr lv::design_of<decltype(looks::tok)> lv::design<lv::override>{
 <!-- snippet: examples/looks/screen.hpp tree -->
 ```cpp
 constexpr auto tile = []<action Action> {
-  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Action>})[
-      lv::label({.text = lv::like<Action, names>})];
+  return lv::button(
+    {.style = lv::look<"tile"> | lv::look_of<"tile", Action>},
+    lv::label({.text = lv::like<Action, names>})
+  );
 };
 
-constexpr auto ui = lv::group({.style = lv::look<"page">})[
-    lv::label({.text = "Printer", .style = lv::look<"title">}),
-    lv::group({.style = lv::look<"tiles">})[lv::for_each<action, lv::but<action::none>>(tile)],
-    lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})];
+constexpr auto ui = lv::group(
+  {.style = lv::look<"page">},
+  lv::label({.text = "Printer", .style = lv::look<"title">}),
+  lv::group({.style = lv::look<"tiles">}, lv::for_each<action, lv::but<action::none>>(tile)),
+  lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})
+);
 ```
 
 A look is a style value. It goes wherever a style goes: in a node, in a theme, in a part that takes an `lv::style_value`, and on either side of `|` with `lv::on(...)`, another style or a composite token. It is resolved when it is first used, and a file that names no look does not pay for any.

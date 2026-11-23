@@ -40,14 +40,18 @@ struct names {
 
 //! [tree]
 constexpr auto tile = []<action Action> {
-  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Action>})[
-      lv::label({.text = lv::like<Action, names>})];
+  return lv::button(
+    {.style = lv::look<"tile"> | lv::look_of<"tile", Action>},
+    lv::label({.text = lv::like<Action, names>})
+  );
 };
 
-constexpr auto ui = lv::group({.style = lv::look<"page">})[
-    lv::label({.text = "Printer", .style = lv::look<"title">}),
-    lv::group({.style = lv::look<"tiles">})[lv::for_each<action, lv::but<action::none>>(tile)],
-    lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})];
+constexpr auto ui = lv::group(
+  {.style = lv::look<"page">},
+  lv::label({.text = "Printer", .style = lv::look<"title">}),
+  lv::group({.style = lv::look<"tiles">}, lv::for_each<action, lv::but<action::none>>(tile)),
+  lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})
+);
 //! [tree]
 
 }  // namespace looks
