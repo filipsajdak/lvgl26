@@ -71,13 +71,18 @@ The compiler checks the whole tree against the widgets' properties, and `lv::mou
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  stepper<cups>(cups_text),
+  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -114,10 +119,15 @@ A state takes `=`, `++`, `--`, `+=` and `-=`. A named function, a pointer to it 
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {
+      .flex_align = {"center", "center", "center"},
+      .size       = {lv::size_content, lv::size_content},
+    },
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 ```
 
@@ -504,13 +514,18 @@ LVGL skips a hidden widget when it draws. A covered widget, or one at opacity ze
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  stepper<cups>(cups_text),
+  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -657,13 +672,18 @@ The compiler pays for a widget kind once in each file; what one node adds on top
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  stepper<cups>(cups_text),
+  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -902,13 +922,18 @@ A new enumerator then reaches every place that lists the choices, and an `lv::ma
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  stepper<cups>(cups_text),
+  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked by the compiler. The test `match_missing_case` pins the message.
@@ -1062,10 +1087,15 @@ A wrong argument is then refused at the call, with the name of the concept, and 
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {
+      .flex_align = {"center", "center", "center"},
+      .size       = {lv::size_content, lv::size_content},
+    },
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 ```
 
@@ -1091,10 +1121,15 @@ A handler in a constant tree is a plain function pointer and captures nothing; a
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {
+      .flex_align = {"center", "center", "center"},
+      .size       = {lv::size_content, lv::size_content},
+    },
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 ```
 

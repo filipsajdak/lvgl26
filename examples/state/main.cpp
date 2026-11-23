@@ -58,21 +58,31 @@ constinit lv::effect grinder{[](grams n) { grinder_dose = n; }, needed};
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {
+      .flex_align = {"center", "center", "center"},
+      .size       = {lv::size_content, lv::size_content},
+    },
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 //! [part]
 
 //! [tree]
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  stepper<cups>(cups_text),
+  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 //! [tree]
 
 constinit lv::frame<320, 240> frame;
