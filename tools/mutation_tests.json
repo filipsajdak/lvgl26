@@ -81,8 +81,8 @@
       "targets": "deferred shown example_pages"
     },
     "include/lv/detail/one_of_region.hpp": {
-      "tests": "^one_of$|one_of_violation",
-      "targets": "one_of"
+      "tests": "^one_of_region$|^one_of$|one_of_violation",
+      "targets": "one_of_region one_of"
     },
     "include/lv/detail/style_add.hpp": {
       "tests": "^style_add$|^mounted_storage$|^start_style$",

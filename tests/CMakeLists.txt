@@ -132,7 +132,12 @@ add_test(NAME pointer_violation_no_function
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
+<<<<<<< HEAD
 lvgl26_test(deferred)
+||||||| 801c165
+=======
+lvgl26_test(one_of_region)
+>>>>>>> origin/main
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
 lvgl26_test(shown_kept)

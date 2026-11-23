@@ -1,317 +1,70 @@
 [
-  {
-    "header": "include/lv/runtime.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. The tool inserts `continue;` before the `}` that closes the body of the `template for` counting the style members in make_style_slots (describe shows it as `}` -> `continue;`, the first line that differs). A `continue;` as the last statement of a loop body changes nothing; runtime_ui and json pass with it. A triage matches the text of the mutant, not its line, so it also covers another `continue;` inserted before a `}` in this header."
-  },
-  {
-    "header": "include/lv/detail/style_add.hpp",
-    "mutant": "return Add(o, style, selector) == LV_RESULT_OK;  ->  return Add(o, style, selector) >= LV_RESULT_OK;",
-    "reason": "Equivalent. lv_result_t has two values, LV_RESULT_INVALID (0) and LV_RESULT_OK (1), so >= LV_RESULT_OK and == LV_RESULT_OK accept the same results."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 0; i != Size; ++i) to[i] = from[i];",
-    "reason": "Equivalent. The loop counts up by one from below Size, so it stops at Size either way."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 1; i < Size; ++i) to[i] = from[i];",
-    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = (0+1); i < Size; ++i) to[i] = from[i];",
-    "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "if (depth != 16) {  ->  if (depth > 16) {",
-    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "if (depth == 16)  ->  if (depth <= 16)",
-    "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."
-  },
-  {
-    "header": "include/lv/image.hpp",
-    "mutant": "write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());  ->  write_rgb565(p, form.format >= LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());",
-    "reason": "Equivalent. In the 16-bit branch the format is RGB565 or RGB565A8, and RGB565A8 is the larger enumerator, so >= and == pick the same one."
-  },
-  {
-    "header": "include/lv/detail/png_reader.hpp",
-    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 1, 3, 1, 2, 0, 4};",
-    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
-  },
-  {
-    "header": "include/lv/detail/png_reader.hpp",
-    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 1, 4};",
-    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
-  },
-  {
-    "header": "include/lv/detail/png_reader.hpp",
-    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, (0+1), 3, 1, 2, 0, 4};",
-    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
-  },
-  {
-    "header": "include/lv/detail/png_reader.hpp",
-    "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, (0+1), 4};",
-    "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."
-  },
-  {
-    "header": "include/lv/detail/png_reader.hpp",
-    "mutant": "// The rows: for each its filter byte, then its pixels.  ->  /*// The rows: for each its filter byte, then its pixels.*/",
-    "reason": "Equivalent. The mutant turns a comment into a comment."
-  },
-  {
-    "header": "include/lv/encoded_image.hpp",
-    "mutant": "requires detail::embedded_bytes<decltype(File)> && detail::included<\"lv/encoded_image.hpp\">  ->  requires detail::embedded_bytes<decltype(File)> && (1==1)",
-    "reason": "Equivalent. This header specializes detail::included<\"lv/encoded_image.hpp\"> to true a few lines above, so wherever this template is visible the condition is already true; it only makes the real template more constrained than the fallback in lv/detail/missing.hpp."
-  },
-  {
-    "header": "include/lv/scaled_font.hpp",
-    "mutant": "if (font_ != nullptr && destroy_ != nullptr && lv_is_initialized()) destroy_(font_);  ->  if (font_ != nullptr && (1==1) && lv_is_initialized()) destroy_(font_);",
-    "reason": "Equivalent. made() sets font_ and destroy_ together, so a font that exists always has the function that gives it back; the destroy_ test is a guard that no input reaches."
-  },
-  {
-    "header": "include/lv/scaled_font.hpp",
-    "mutant": "static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));  ->  /*static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));*/",
-    "reason": "Arid. The assertion checks the layout of scaled_font itself: its first member is the source, so that the address of the font is the address of its source. No code of a user can make it fire; only a change to the members of the class in this header can, and then the assertion is the test."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. The mutant puts `continue;` as the last statement of a loop body: it changes nothing."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "std::vector<std::size_t> row(b.size() + 1);  ->  std::vector<std::size_t> row(b.size() + (1+1));",
-    "reason": "Arid. The row has one element more than it uses; row[b.size()] is still the one that is read."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (const auto& n : names) far.push_back(distance_between(wanted, n));  ->  for (const auto& n : names) far.push_back(distance_between ( n,wanted));",
-    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k != names_offered && k < names.size(); ++k) {",
-    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k < names_offered && k != names.size(); ++k) {",
-    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 1; i != names.size(); ++i)",
-    "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 0; i < names.size(); ++i)",
-    "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = (1-1); i < names.size(); ++i)",
-    "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "far[best] = static_cast<std::size_t>(-1);  ->  far[best] = static_cast<std::size_t>(-(1+1));",
-    "reason": "Arid. The sentinel only has to be larger than any distance, and -2 as a size_t is."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = 1; j <= b.size(); ++j) row[j] = j;",
-    "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "return distance_between(wanted, closest) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};  ->  return distance_between ( closest,wanted) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};",
-    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = (0+1); j <= b.size(); ++j) row[j] = j;",
-    "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."
-  },
-  {
-    "header": "include/lv/detail/nearest.hpp",
-    "mutant": "consteval std::size_t distance_between(std::string_view a, std::string_view b) {  ->  consteval std::size_t distance_between ( std::string_view b,std::string_view a) {",
-    "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() >= 1; }",
-    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() != 1; }",
-    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 0; }",
-    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1+1); }",
-    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1-1); }",
-    "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "while ((n /= 10) > 0);  ->  while ((n /= 10) != 0);",
-    "reason": "Equivalent. n is unsigned, so n > 0 and n != 0 are the same."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] > prefix[3]) return false;",
-    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] < prefix[3]) return false;",
-    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > (3+1) && id[3] != prefix[3]) return false;",
-    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  /*if (prefix.size() > 3 && id[3] != prefix[3]) return false;*/",
-    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (0==1) return false;",
-    "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."
-  },
-  {
-    "header": "include/lv/detail/api.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "return {i, close == '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};  ->  return {i, close >= '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};",
-    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "closed = s[i] == close;  ->  closed = s[i] >= close;",
-    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (i >= s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};  ->  if (i == s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (end == npos) return {i, \"the closing quote of this string\"};  ->  if (end >= npos) return {i, \"the closing quote of this string\"};",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (i >= s.size() || s[i] != ':') return {i, \"':' after the key\"};  ->  if (i == s.size() || s[i] != ':') return {i, \"':' after the key\"};",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (const auto f = key_fault(s, i, first); f.at != npos) return f;  ->  if (const auto f = key_fault(s, i, first); f.at < npos) return f;",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "const bool object = s[i] == '{';  ->  const bool object = s[i] >= '{';",
-    "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (i < s.size() && s[i] == close) return ++i, fault{};  ->  if (i != s.size() && s[i] == close) return ++i, fault{};",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (const auto f = element_fault(s, i, object, first, depth); f.at != npos) return f;  ->  if (const auto f = element_fault(s, i, object, first, depth); f.at < npos) return f;",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (const auto f = after_fault(s, i, close, closed); f.at != npos) return f;  ->  if (const auto f = after_fault(s, i, close, closed); f.at < npos) return f;",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) != npos ? skip_word(s, i) : skip_number(s, i));  ->  const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) < npos ? skip_word(s, i) : skip_number(s, i));",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (end == npos)  ->  if (end >= npos)",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (i >= s.size()) return {i, \"a value\"};  ->  if (i == s.size()) return {i, \"a value\"};",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (i >= s.size() || (s[i] != ',' && s[i] != close))  ->  if (i == s.size() || (s[i] != ',' && s[i] != close))",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "if (const auto f = value_fault(s, i, 0); f.at != npos) return f;  ->  if (const auto f = value_fault(s, i, 0); f.at < npos) return f;",
-    "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "return i < s.size() ? fault{i, \"the end of the file\"} : fault{};  ->  return i != s.size() ? fault{i, \"the end of the file\"} : fault{};",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "for (std::size_t i = 0; i < f.at; ++i) {  ->  for (std::size_t i = 0; i != f.at; ++i) {",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
-  },
-  {
-    "header": "include/lv/detail/json_fault.hpp",
-    "mutant": "const bool ends = f.at >= s.size();  ->  const bool ends = f.at == s.size();",
-    "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."
-  },
-  {
-    "header": "include/lv/detail/deferred.hpp",
-    "mutant": "n.next = nullptr;  ->  /*n.next = nullptr;*/",
-    "reason": "Equivalent. A node out of the queue always has next set to nullptr (its constructor, and remove), so add sets it to what it holds."
-  },
-  {
-    "header": "include/lv/detail/deferred.hpp",
-    "mutant": "}  ->  continue;",
-    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
-  }
+  {"header": "include/lv/detail/api.hpp", "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() != 1; }", "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1+1); }", "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > (1-1); }", "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 0; }", "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() > 1; }  ->  consteval bool declared_in_a_file(std::meta::info m) { return std::meta::source_location_of(m).line() >= 1; }", "reason": "Equivalent. The line filter only skips GCC's builtins early; no lv_ function is declared at line 0, 1 or 2, so the table is the same (tests/api_table.cpp compares it with an unfiltered scan)."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  /*if (prefix.size() > 3 && id[3] != prefix[3]) return false;*/", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (0==1) return false;", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > (3+1) && id[3] != prefix[3]) return false;", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] < prefix[3]) return false;", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] > prefix[3]) return false;", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "while ((n /= 10) > 0);  ->  while ((n /= 10) != 0);", "reason": "Equivalent. n is unsigned, so n > 0 and n != 0 are the same."},
+  {"header": "include/lv/detail/api.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
+  {"header": "include/lv/detail/deferred.hpp", "mutant": "n.next = nullptr;  ->  /*n.next = nullptr;*/", "reason": "Equivalent. A node out of the queue always has next set to nullptr (its constructor, and remove), so add sets it to what it holds."},
+  {"header": "include/lv/detail/deferred.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "closed = s[i] == close;  ->  closed = s[i] >= close;", "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) != npos ? skip_word(s, i) : skip_number(s, i));  ->  const auto end = quoted ? skip_string(s, i) : (skip_word(s, i) < npos ? skip_word(s, i) : skip_number(s, i));", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "const bool ends = f.at >= s.size();  ->  const bool ends = f.at == s.size();", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "const bool object = s[i] == '{';  ->  const bool object = s[i] >= '{';", "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "for (std::size_t i = 0; i < f.at; ++i) {  ->  for (std::size_t i = 0; i != f.at; ++i) {", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (const auto f = after_fault(s, i, close, closed); f.at != npos) return f;  ->  if (const auto f = after_fault(s, i, close, closed); f.at < npos) return f;", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (const auto f = element_fault(s, i, object, first, depth); f.at != npos) return f;  ->  if (const auto f = element_fault(s, i, object, first, depth); f.at < npos) return f;", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (const auto f = key_fault(s, i, first); f.at != npos) return f;  ->  if (const auto f = key_fault(s, i, first); f.at < npos) return f;", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (const auto f = value_fault(s, i, 0); f.at != npos) return f;  ->  if (const auto f = value_fault(s, i, 0); f.at < npos) return f;", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (end == npos)  ->  if (end >= npos)", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (end == npos) return {i, \"the closing quote of this string\"};  ->  if (end >= npos) return {i, \"the closing quote of this string\"};", "reason": "Equivalent. npos is the largest size_t, so `< npos` is `!= npos` and `>= npos` is `== npos`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (i < s.size() && s[i] == close) return ++i, fault{};  ->  if (i != s.size() && s[i] == close) return ++i, fault{};", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (i >= s.size() || (s[i] != ',' && s[i] != close))  ->  if (i == s.size() || (s[i] != ',' && s[i] != close))", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (i >= s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};  ->  if (i == s.size() || s[i] != '\"') return {i, first ? \"a key in quotes or '}'\" : \"a key in quotes\"};", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (i >= s.size() || s[i] != ':') return {i, \"':' after the key\"};  ->  if (i == s.size() || s[i] != ':') return {i, \"':' after the key\"};", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "if (i >= s.size()) return {i, \"a value\"};  ->  if (i == s.size()) return {i, \"a value\"};", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "return i < s.size() ? fault{i, \"the end of the file\"} : fault{};  ->  return i != s.size() ? fault{i, \"the end of the file\"} : fault{};", "reason": "Equivalent. An index in these loops and tests never passes the size of the text, so `>=` and `==` (or `<` and `!=`) agree."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "return {i, close == '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};  ->  return {i, close >= '}' ? \"',' or '}' after the value\" : \"',' or ']' after the value\"};", "reason": "Equivalent. The character compared is one of two (`,` or the closer; `{` or `[`), and the other sorts below, so `>=` is `==`."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
+  {"header": "include/lv/detail/json_fault.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "consteval std::size_t distance_between(std::string_view a, std::string_view b) {  ->  consteval std::size_t distance_between ( std::string_view b,std::string_view a) {", "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "far[best] = static_cast<std::size_t>(-1);  ->  far[best] = static_cast<std::size_t>(-(1+1));", "reason": "Arid. The sentinel only has to be larger than any distance, and -2 as a size_t is."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (const auto& n : names) far.push_back(distance_between(wanted, n));  ->  for (const auto& n : names) far.push_back(distance_between ( n,wanted));", "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = (1-1); i < names.size(); ++i)", "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 0; i < names.size(); ++i)", "reason": "Equivalent. At i = 0 the loop compares far[0] with far[best] and best is 0: never smaller."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t i = 1; i < names.size(); ++i)  ->  for (std::size_t i = 1; i != names.size(); ++i)", "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = (0+1); j <= b.size(); ++j) row[j] = j;", "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t j = 0; j <= b.size(); ++j) row[j] = j;  ->  for (std::size_t j = 1; j <= b.size(); ++j) row[j] = j;", "reason": "Equivalent. row[0] is zero from the construction of the vector, as the loop would set it."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k != names_offered && k < names.size(); ++k) {", "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "for (std::size_t k = 0; k < names_offered && k < names.size(); ++k) {  ->  for (std::size_t k = 0; k < names_offered && k != names.size(); ++k) {", "reason": "Equivalent. The counter goes up by one from below the bound, so it stops at the bound with != as with <."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "return distance_between(wanted, closest) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};  ->  return distance_between ( closest,wanted) <= close_enough ? \" Did you mean '\" + closest + \"'?\" : std::string{};", "reason": "Equivalent. The distance between two names is the same in either order, so swapping the arguments changes nothing."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "std::vector<std::size_t> row(b.size() + 1);  ->  std::vector<std::size_t> row(b.size() + (1+1));", "reason": "Arid. The row has one element more than it uses; row[b.size()] is still the one that is read."},
+  {"header": "include/lv/detail/nearest.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. The mutant puts `continue;` as the last statement of a loop body: it changes nothing."},
+  {"header": "include/lv/detail/one_of_region.hpp", "mutant": "constexpr alternatives() {}  ->  /*constexpr alternatives() {}*/", "reason": "Equivalent. The union has a default member initializer, so the implicit constructor does what `{}` does."},
+  {"header": "include/lv/detail/one_of_region.hpp", "mutant": "if constexpr (I == 0)  ->  if constexpr (I <= 0)", "reason": "Equivalent. I is unsigned, so `== 0` and `<= 0` agree."},
+  {"header": "include/lv/detail/one_of_region.hpp", "mutant": "if constexpr (I == 0) {  ->  if constexpr (I <= 0) {", "reason": "Equivalent. I is unsigned, so `== 0` and `<= 0` agree."},
+  {"header": "include/lv/detail/one_of_region.hpp", "mutant": "no_alternative none{};  ->  /*no_alternative none{};*/", "reason": "Arid. The union alternatives<> is the end of the chain and is never made: start_alternative stops at the object, so its default member initializer is never run."},
+  {"header": "include/lv/detail/one_of_region.hpp", "mutant": "std::construct_at(&a.rest);  ->  /*std::construct_at(&a.rest);*/", "reason": "Arid. Starting the member `rest` only makes it the active member of the union; no compiler or sanitizer in the build reads the difference, and reading a.rest.first works either way."},
+  {"header": "include/lv/detail/png_reader.hpp", "mutant": "// The rows: for each its filter byte, then its pixels.  ->  /*// The rows: for each its filter byte, then its pixels.*/", "reason": "Equivalent. The mutant turns a comment into a comment."},
+  {"header": "include/lv/detail/png_reader.hpp", "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, (0+1), 3, 1, 2, 0, 4};", "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."},
+  {"header": "include/lv/detail/png_reader.hpp", "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, (0+1), 4};", "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."},
+  {"header": "include/lv/detail/png_reader.hpp", "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 1, 4};", "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."},
+  {"header": "include/lv/detail/png_reader.hpp", "mutant": "inline constexpr std::size_t pixel_steps[] = {1, 0, 3, 1, 2, 0, 4};  ->  inline constexpr std::size_t pixel_steps[] = {1, 1, 3, 1, 2, 0, 4};", "reason": "Arid. PNG defines no colour type 1 or 5, so the entry only keeps the table indexable by colour type; a valid file never reads it."},
+  {"header": "include/lv/detail/style_add.hpp", "mutant": "return Add(o, style, selector) == LV_RESULT_OK;  ->  return Add(o, style, selector) >= LV_RESULT_OK;", "reason": "Equivalent. lv_result_t has two values, LV_RESULT_INVALID (0) and LV_RESULT_OK (1), so >= LV_RESULT_OK and == LV_RESULT_OK accept the same results."},
+  {"header": "include/lv/encoded_image.hpp", "mutant": "requires detail::embedded_bytes<decltype(File)> && detail::included<\"lv/encoded_image.hpp\">  ->  requires detail::embedded_bytes<decltype(File)> && (1==1)", "reason": "Equivalent. This header specializes detail::included<\"lv/encoded_image.hpp\"> to true a few lines above, so wherever this template is visible the condition is already true; it only makes the real template more constrained than the fallback in lv/detail/missing.hpp."},
+  {"header": "include/lv/image.hpp", "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = (0+1); i < Size; ++i) to[i] = from[i];", "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."},
+  {"header": "include/lv/image.hpp", "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 0; i != Size; ++i) to[i] = from[i];", "reason": "Equivalent. The loop counts up by one from below Size, so it stops at Size either way."},
+  {"header": "include/lv/image.hpp", "mutant": "for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];  ->  for (std::size_t i = 1; i < Size; ++i) to[i] = from[i];", "reason": "Arid. Byte 0 of the decoded rows is the filter byte of the first row, and every reader starts a row one byte after it (p.bits() + y * (stride + 1) + 1), so nothing observes the byte."},
+  {"header": "include/lv/image.hpp", "mutant": "if (depth != 16) {  ->  if (depth > 16) {", "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."},
+  {"header": "include/lv/image.hpp", "mutant": "if (depth == 16)  ->  if (depth <= 16)", "reason": "Equivalent on the depths lvgl26 supports. LV_COLOR_DEPTH is 16, 24 or 32 there; the mutant differs only for a depth below 16 (LVGL's 1 and 8), which the header does not claim to store."},
+  {"header": "include/lv/image.hpp", "mutant": "write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());  ->  write_rgb565(p, form.format >= LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());", "reason": "Equivalent. In the 16-bit branch the format is RGB565 or RGB565A8, and RGB565A8 is the larger enumerator, so >= and == pick the same one."},
+  {"header": "include/lv/runtime.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. The tool inserts `continue;` before the `}` that closes the body of the `template for` counting the style members in make_style_slots (describe shows it as `}` -> `continue;`, the first line that differs). A `continue;` as the last statement of a loop body changes nothing; runtime_ui and json pass with it. A triage matches the text of the mutant, not its line, so it also covers another `continue;` inserted before a `}` in this header."},
+  {"header": "include/lv/scaled_font.hpp", "mutant": "if (font_ != nullptr && destroy_ != nullptr && lv_is_initialized()) destroy_(font_);  ->  if (font_ != nullptr && (1==1) && lv_is_initialized()) destroy_(font_);", "reason": "Equivalent. made() sets font_ and destroy_ together, so a font that exists always has the function that gives it back; the destroy_ test is a guard that no input reaches."},
+  {"header": "include/lv/scaled_font.hpp", "mutant": "static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));  ->  /*static_assert(std::is_pointer_interconvertible_with_class(&scaled_font::source_));*/", "reason": "Arid. The assertion checks the layout of scaled_font itself: its first member is the source, so that the address of the font is the address of its source. No code of a user can make it fire; only a change to the members of the class in this header can, and then the assertion is the test."}
 ]

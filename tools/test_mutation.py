@@ -14,6 +14,7 @@ TOOLS = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 
 import mutation  # noqa: E402
+import mutation_accepted as accepted_file  # noqa: E402
 import mutation_plan as plan  # noqa: E402
 import mutation_summary as summary  # noqa: E402
 
@@ -168,6 +169,17 @@ class AcceptedFile(unittest.TestCase):
             self.assertTrue((plan.ROOT / row["header"]).exists(), row)
             self.assertIn("  ->  ", row["mutant"])
             self.assertTrue(row["reason"].strip(), row)
+
+    def test_the_file_is_one_sorted_entry_per_line(self):
+        path = plan.TOOLS / "mutation_accepted.json"
+        rows = json.loads(path.read_text())
+        self.assertEqual(path.read_text(), accepted_file.canonical(rows))
+
+    def test_the_canonical_form_puts_each_entry_on_a_line_in_order(self):
+        text = accepted_file.canonical([{"header": "b", "mutant": "1  ->  2", "reason": "r"},
+                                        {"header": "a", "mutant": "3  ->  4", "reason": "r"}])
+        self.assertEqual(text, '[\n  {"header": "a", "mutant": "3  ->  4", "reason": "r"},\n'
+                               '  {"header": "b", "mutant": "1  ->  2", "reason": "r"}\n]\n')
 
     def test_the_triaged_mutant_of_runtime_hpp_is_matched_as_the_run_describes_it(self):
         accepted = mutation.accepted_for(str(plan.TOOLS / "mutation_accepted.json"), "include/lv/runtime.hpp")
