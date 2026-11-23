@@ -32,8 +32,15 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 
 | To write | Read |
 |---|---|
+| A screen as one tree, its properties and their order | [docs/tree.md](../../docs/tree.md) |
 | Values that widgets follow, values made from them, an action that follows them | [docs/state.md](../../docs/state.md) |
-| Mounting a tree, unmounting, one of several trees in a slot | [docs/mounting.md](../../docs/mounting.md) |
+| A widget of a tree by its id, and who owns a widget | [docs/views.md](../../docs/views.md) |
+| Units, angles, and LVGL's values by name | [docs/values.md](../../docs/values.md) |
+| Mounting a tree, pages that follow a state, one of several trees in a slot | [docs/mounting.md](../../docs/mounting.md) |
+| A choice by value that covers every case | [docs/match.md](../../docs/match.md) |
+| A sequence of steps over time, work from another thread | [docs/tasks.md](../../docs/tasks.md) |
+| A property that moves | [docs/animation.md](../../docs/animation.md) |
+| Design tokens, and styles that take them | [docs/tokens.md](../../docs/tokens.md) |
 | A look for all widgets of a kind | [docs/themes.md](../../docs/themes.md) |
 | A look named by the design, from the token file | [docs/looks.md](../../docs/looks.md) |
 | Rows that change | [docs/lists.md](../../docs/lists.md) |
@@ -41,7 +48,9 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 | A choice among options, from an enum | [docs/options.md](../../docs/options.md) |
 | Fonts | [docs/fonts.md](../../docs/fonts.md) |
 | Pictures | [docs/images.md](../../docs/images.md) |
+| The program's `main`: the application, its clock, a display and its panel | [docs/application.md](../../docs/application.md) |
 | A pointer, the loop of a program, a window | [docs/input.md](../../docs/input.md) |
+| A microcontroller, and what a program costs there | [docs/targets.md](../../docs/targets.md) |
 | A function that returns a piece of tree | [docs/concepts.md](../../docs/concepts.md) |
 | What the program may use, and the library's strictness | [docs/settings.md](../../docs/settings.md), and the skill `settings` |
 | Completion and errors in the editor | [docs/editor-support.md](../../docs/editor-support.md) |
