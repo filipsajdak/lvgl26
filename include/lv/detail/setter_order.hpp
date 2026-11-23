@@ -40,8 +40,9 @@ consteval int setter_phase_of(std::string_view name) {
   if constexpr (widget == "buttonmatrix"sv) {
     // A new map clears the controls and the checked button, so it comes before the other setters.
     if (name == "map"sv) return setter_first;
-    // set_one_checked checks button 0 again, so the controls of ctrl_map come after it.
-    if (name == "ctrl_map"sv) return setter_last;
+    // set_one_checked clears CHECKED on every button but the first (make_one_button_checked), so
+    // the controls of ctrl_map, button_ctrl and button_ctrl_all come after it.
+    if (name == "ctrl_map"sv || name == "button_ctrl"sv || name == "button_ctrl_all"sv) return setter_last;
   } else if constexpr (widget == "textarea"sv) {
     // set_text moves the cursor to the end of the text, so the cursor position comes after it.
     if (name == "cursor_pos"sv) return setter_last;
