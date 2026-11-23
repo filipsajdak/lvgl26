@@ -11,10 +11,7 @@ This is the screen of the [quick start](quick-start.md):
 <!-- snippet: examples/quick_start/main.cpp tree -->
 ```cpp
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
   lv::label({.text = "Speed"}),
   lv::arc(
     {
@@ -24,7 +21,7 @@ constexpr auto ui = lv::column(
     },
     lv::label({.align = "center", .text = lv::bind(speed)})
   ),
-  lv::button({.on_clicked = [] { speed = 0 * km / h; }}, lv::label({.text = "Reset"}))
+  lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
 );
 ```
 

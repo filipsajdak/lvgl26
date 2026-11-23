@@ -18,8 +18,8 @@ constexpr unsigned char inter_medium[] = {
 };
 
 constexpr auto type = lv::typeface({
-    {"Inter 24pt", 400, inter_regular},
-    {"Inter 24pt", 500, inter_medium},
+  {"Inter 24pt", 400, inter_regular},
+  {"Inter 24pt", 500, inter_medium},
 });
 
 }  // namespace printer

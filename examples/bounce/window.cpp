@@ -19,5 +19,5 @@ int main() {
   lv::display display{app, frame, window};
   lv::pointer mouse{display, window};
   if (!bounce::start(page, display.screen())) return 2;
-  return app.run();                         // until the window is closed
+  return app.run();  // until the window is closed
 }

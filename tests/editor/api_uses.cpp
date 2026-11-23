@@ -364,17 +364,13 @@ static_assert(lv::page_of<popup>.size > 0);
 // The same with the children as arguments: properties first, then each child.
 constexpr auto pager_call = lv::group(lv::shown(
     current_page, lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup), lv::otherwise()));
+constexpr auto sliding_call = lv::group(lv::shown(
+    current_page, {.alive = 2, .enter = slide_in, .leave = slide_out}, lv::is<screen_page::main>(ui),
+    lv::otherwise()));
 constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
 static_assert(std::same_as<decltype(lv::when(busy, popup)), decltype(lv::when(busy)[popup])>);
 static_assert(std::same_as<decltype(lv::shown(current_page, lv::is<screen_page::main>(ui), lv::otherwise())),
                            decltype(lv::shown(current_page)[lv::is<screen_page::main>(ui), lv::otherwise()])>);
-constexpr auto sliding_call = lv::group(lv::shown(current_page, {.alive = 2, .enter = slide_in, .leave = slide_out},
-                                                lv::is<screen_page::main>(main_page),
-                                                lv::is<screen_page::popup_page>(popup_page), lv::otherwise()));
-static_assert(std::same_as<decltype(lv::shown(current_page, {.enter = slide_in}, lv::is<screen_page::main>(ui),
-                                              lv::otherwise())),
-                           decltype(lv::shown(current_page, {.enter = slide_in})[lv::is<screen_page::main>(ui),
-                                                                                 lv::otherwise()])>);
 constexpr auto boxed = lv::column({.size = {100 * pct, lv::size_content}}, lv::label({.text = "a"}), lv::label());
 constexpr auto boxed_bare = lv::row(lv::label({.text = "a"}), lv::button({.id = "go"}, lv::label({.text = "Go"})));
 // The call form and the subscript form build the same node.
@@ -552,6 +548,11 @@ constexpr auto playlist_call = lv::column(
     {.size = {100 * pct, lv::size_content}},
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
 constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
+// A row written in the call: a temporary, which the deleted fallback of lv::each would bind better
+// than a const reference.
+constexpr auto playlist_inline = lv::column(lv::each(tracks, &track::id, lv::label({.text = lv::bind(&track::title)})));
+static_assert(std::same_as<std::remove_const_t<decltype(playlist_inline)>,
+                           decltype(lv::column[lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})]])>);
 static_assert(std::same_as<std::remove_const_t<decltype(playlist_plain)>,
                            decltype(lv::column[lv::each(tracks, &track::id)[track_row]])>);
 

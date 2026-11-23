@@ -9,6 +9,7 @@ extern "C" {
 void lv_example_roller_bind_value(void);
 void lv_example_roller_event(void);
 void lv_example_roller_options(void);
+void lv_example_roller_styling(void);
 void lv_example_roller_visible_rows(void);
 }
 
@@ -37,6 +38,7 @@ int main() {
   same_pixels("roller_options", &lv_example_roller_options, &widgets::roller_options, &nothing);
   same_pixels("roller_event", &lv_example_roller_event, &widgets::roller_event, &nothing);
   same_pixels("roller_event chosen", &lv_example_roller_event, &widgets::roller_event, &choose_fourth);
+  same_pixels("roller_styling", &lv_example_roller_styling, &widgets::roller_styling, &nothing);
   same_pixels("roller_visible_rows", &lv_example_roller_visible_rows, &widgets::roller_visible_rows,
               &nothing);
   same_pixels("roller_bind_value", &lv_example_roller_bind_value, &widgets::roller_bind_value,

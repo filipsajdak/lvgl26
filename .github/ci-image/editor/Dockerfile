@@ -1,6 +1,6 @@
 # The container of the job that reads the editor stubs with Clang (ci.yml, job editor).
 # It holds what configuring the project needs, as the main image does, and on top of it
-# clang++ and clangd: the eight editor_* tests that need them run nowhere else in CI.
+# clang++, clangd and clang-format: the editor_* tests that need them run nowhere else in CI.
 #
 # Clang 21 comes from apt.llvm.org. Debian 13, which gcc:16 is made from, has Clang 19,
 # and Clang 19 does not compile mp-units 2.5.0, which the quick start includes. Clang
@@ -21,10 +21,11 @@ RUN apt-get update \
  && echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/trixie/ llvm-toolchain-trixie-${CLANG} main" \
       > /etc/apt/sources.list.d/llvm.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends clang-${CLANG} clangd-${CLANG} \
+ && apt-get install -y --no-install-recommends clang-${CLANG} clangd-${CLANG} clang-format-${CLANG} \
  && rm -rf /var/lib/apt/lists/* \
  && ln -sf "$(command -v gcc)" /usr/local/bin/gcc-16 \
  && ln -sf "$(command -v g++)" /usr/local/bin/g++-16 \
  && ln -sf "$(command -v clang++-${CLANG})" /usr/local/bin/clang++ \
  && ln -sf "$(command -v clangd-${CLANG})" /usr/local/bin/clangd \
- && clang++ --version && clangd --version
+ && ln -sf "$(command -v clang-format-${CLANG})" /usr/local/bin/clang-format \
+ && clang++ --version && clangd --version && clang-format --version

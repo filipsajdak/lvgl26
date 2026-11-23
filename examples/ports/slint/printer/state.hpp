@@ -23,8 +23,12 @@ inline void close_subpage() { active_subpage = subpage::none; }
 
 // A number the user can raise and lower between 1 and 100, as Copies and Scans.
 //! [counter]
-constexpr lv::counter one_fewer(lv::counter n) { return n.value > 1 ? lv::counter{n.value - 1} : n; }
-constexpr lv::counter one_more(lv::counter n) { return n.value < 100 ? lv::counter{n.value + 1} : n; }
+constexpr lv::counter one_fewer(lv::counter n) {
+  return n.value > 1 ? lv::counter{n.value - 1} : n;
+}
+constexpr lv::counter one_more(lv::counter n) {
+  return n.value < 100 ? lv::counter{n.value + 1} : n;
+}
 //! [counter]
 
 // The choice between color and grayscale of a job, and its name on the button.

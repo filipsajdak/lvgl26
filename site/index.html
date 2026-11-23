@@ -179,10 +179,10 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       </figure>
       <div class="prose">
         <span class="tag">LVGL's own examples</span>
-        <h3>75 of LVGL's 163 widget examples</h3>
+        <h3>79 of LVGL's 163 widget examples</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
-          <div><dt>Ported</dt><dd>75 of the 163 widget examples of LVGL v9.6.0, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> counts the ones that wait by what each needs.</dd></div>
+          <div><dt>Ported</dt><dd>79 of the 163 widget examples of LVGL v9.6.0, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> counts the ones that wait by what each needs.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
         </dl>
         <ul class="links">
@@ -461,7 +461,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
         <li><strong>Project settings</strong> in one JSON file for the whole program: <code>"allow": {"threads": false}</code> makes every part of lvgl26 that needs threads a compile error that names the key</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
-        <li><strong>Example ports</strong>: 79 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
+        <li><strong>Example ports</strong>: 83 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
         <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>
       </ul>
       <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>
@@ -677,11 +677,10 @@ cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ct
           <figcaption><span>examples/quick_start/main.cpp</span><span>C++26</span></figcaption>
 <pre tabindex="0"><code><span class="k">constinit</span> <span class="t">lv::state</span> speed{<span class="n">0</span> * km / h};
 
+<span class="k">void</span> reset() { speed = <span class="n">0</span> * km / h; }
+
 <span class="k">constexpr</span> <span class="k">auto</span> ui = <span class="t">lv::column</span>(
-  {
-    .flex_align = {<span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>},
-    .size       = {<span class="n">320</span> * px, <span class="n">240</span> * px},
-  },
+  {.flex_align = {<span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>}, .size = {<span class="n">320</span> * px, <span class="n">240</span> * px}},
   <span class="t">lv::label</span>({.text = <span class="s">&quot;Speed&quot;</span>}),
   <span class="t">lv::arc</span>(
     {
@@ -691,7 +690,7 @@ cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ct
     },
     <span class="t">lv::label</span>({.align = <span class="s">&quot;center&quot;</span>, .text = <span class="t">lv::bind</span>(speed)})
   ),
-  <span class="t">lv::button</span>({.on_clicked = [] { speed = <span class="n">0</span> * km / h; }}, <span class="t">lv::label</span>({.text = <span class="s">&quot;Reset&quot;</span>}))
+  <span class="t">lv::button</span>({.on_clicked = &amp;reset}, <span class="t">lv::label</span>({.text = <span class="s">&quot;Reset&quot;</span>}))
 );</code></pre>
         </figure>
       </div></li>

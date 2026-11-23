@@ -23,10 +23,16 @@ using namespace lv::units;
 
 constinit lv::state ticks{lv::counter{}};
 
-constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .text = "Speed"}),
-    lv::arc({.id = "speedo", .range = {0, 240}, .size = {110 * px, 110 * px}, .value = 120}),
-    lv::label({.id = "count", .text = lv::bind(ticks, "{} ticks")})];
+constexpr auto ui = lv::column(
+  {.size = {320 * px, 240 * px}}, lv::label({.id = "title", .text = "Speed"}),
+  lv::arc({
+    .id    = "speedo",
+    .range = {0, 240},
+    .size  = {110 * px, 110 * px},
+    .value = 120,
+  }),
+  lv::label({.id = "count", .text = lv::bind(ticks, "{} ticks")})
+);
 
 // A task: wait, count, and move the dial, three times.
 lv::task<> run(lv::view<"arc"> dial) {
@@ -48,7 +54,7 @@ int main() {
   lv::display display{app, band, &discard};
 
   const std::size_t before = app.heap().used;
-  auto root = lv::mount<ui>(display.screen());
+  auto root                = lv::mount<ui>(display.screen());
   if (!root) {
     std::printf("mount failed\n");
     return 1;

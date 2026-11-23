@@ -17,18 +17,21 @@ constexpr unsigned char sun_png[] = {
 #embed "sun.png"
 };
 
-constexpr auto sky = lv::image_file<sky_png>;  // every pixel opaque: stored as the display's own pixels
-constexpr auto sun = lv::image_file<sun_png>;  // see-through around the sun: stored with an alpha plane
+constexpr auto sky =
+  lv::image_file<sky_png>;  // every pixel opaque: stored as the display's own pixels
+constexpr auto sun =
+  lv::image_file<sun_png>;  // see-through around the sun: stored with an alpha plane
 ```
 
 `lv::image_file` is what an image widget takes as its `.src`:
 
 <!-- snippet: examples/images/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::box({.size = {320 * px, 240 * px}})[
-    lv::image({.align = "center", .src = sky}),
-    lv::image({.align = "center", .src = sun}),
-    lv::label({.align = "bottom_mid", .text = "Two pictures, no decoder on the device"})];
+constexpr auto ui = lv::box(
+  {.size = {320 * px, 240 * px}}, lv::image({.align = "center", .src = sky}),
+  lv::image({.align = "center", .src = sun}),
+  lv::label({.align = "bottom_mid", .text = "Two pictures, no decoder on the device"})
+);
 ```
 
 ## How a picture is stored

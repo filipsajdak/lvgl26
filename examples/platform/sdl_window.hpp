@@ -39,8 +39,10 @@ enum class close { quit, ignore, hide };
 // The SDL texture format that holds the frame's bytes as they are, from the bytes of a pixel.
 template <std::size_t BytesPerPixel>
 consteval std::uint32_t texture_format() {
-  static_assert(BytesPerPixel == 2 || BytesPerPixel == 3 || BytesPerPixel == 4,
-                "the window shows a frame of 16, 24 or 32 bits a pixel");
+  static_assert(
+    BytesPerPixel == 2 || BytesPerPixel == 3 || BytesPerPixel == 4,
+    "the window shows a frame of 16, 24 or 32 bits a pixel"
+  );
   if constexpr (BytesPerPixel == 2) return SDL_PIXELFORMAT_RGB565;
   if constexpr (BytesPerPixel == 3) return SDL_PIXELFORMAT_BGR24;
   return SDL_PIXELFORMAT_ARGB8888;
@@ -53,21 +55,27 @@ template <std::int32_t Width, std::int32_t Height>
 class sdl_window {
   lv::application& app_;
   const lv::frame<Width, Height>& frame_;
-  SDL_Window* window_ = nullptr;
+  SDL_Window* window_     = nullptr;
   SDL_Renderer* renderer_ = nullptr;
-  SDL_Texture* texture_ = nullptr;
-  lv::display* display_ = nullptr;
+  SDL_Texture* texture_   = nullptr;
+  lv::display* display_   = nullptr;
   lv::pointer_feed mouse_{};
   close (*on_close_)() = nullptr;
   lv::in_loop<sdl_window> loop_;  // last: the window is complete when it joins
 
-  static constexpr std::size_t pixel_bytes = lv::frame<Width, Height>::stride / static_cast<std::size_t>(Width);
+  static constexpr std::size_t pixel_bytes =
+    lv::frame<Width, Height>::stride / static_cast<std::size_t>(Width);
 
   void close_requested() {
     switch (on_close_ != nullptr ? on_close_() : close::quit) {
-      case close::quit: app_.quit(); break;
-      case close::hide: hide(); break;
-      case close::ignore: break;
+      case close::quit:
+        app_.quit();
+        break;
+      case close::hide:
+        hide();
+        break;
+      case close::ignore:
+        break;
     }
   }
 
@@ -88,22 +96,30 @@ class sdl_window {
     if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT)
       static_cast<void>(mouse_({e.button.x, e.button.y}, lv::released));
     if (e.type == SDL_MOUSEMOTION)
-      static_cast<void>(mouse_({e.motion.x, e.motion.y}, (e.motion.state & SDL_BUTTON_LMASK) != 0 ? lv::pressed : lv::released));
+      static_cast<void>(mouse_(
+        {e.motion.x, e.motion.y},
+        (e.motion.state & SDL_BUTTON_LMASK) != 0 ? lv::pressed : lv::released
+      ));
   }
 
  public:
   sdl_window(lv::application& app, const char* title, const lv::frame<Width, Height>& frame)
       : app_(app), frame_(frame), loop_(app, *this) {
     SDL_Init(SDL_INIT_VIDEO);
-    window_ = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Width, Height,
-                               SDL_WINDOW_RESIZABLE);
+    window_ = SDL_CreateWindow(
+      title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Width, Height, SDL_WINDOW_RESIZABLE
+    );
     renderer_ = SDL_CreateRenderer(window_, -1, 0);
-    SDL_RenderSetLogicalSize(renderer_, Width, Height);  // mouse positions come in pixels of the frame
-    texture_ = SDL_CreateTexture(renderer_, texture_format<pixel_bytes>(), SDL_TEXTUREACCESS_STREAMING, Width, Height);
+    SDL_RenderSetLogicalSize(
+      renderer_, Width, Height
+    );  // mouse positions come in pixels of the frame
+    texture_ = SDL_CreateTexture(
+      renderer_, texture_format<pixel_bytes>(), SDL_TEXTUREACCESS_STREAMING, Width, Height
+    );
   }
   sdl_window(lv::application&&, const char*, const lv::frame<Width, Height>&) = delete;
-  sdl_window(const sdl_window&) = delete;
-  sdl_window& operator=(const sdl_window&) = delete;
+  sdl_window(const sdl_window&)                                               = delete;
+  sdl_window& operator=(const sdl_window&)                                    = delete;
   ~sdl_window() {
     SDL_DestroyTexture(texture_);
     SDL_DestroyRenderer(renderer_);
@@ -131,7 +147,8 @@ class sdl_window {
   // The display calls this when LVGL has drawn `changed`: the window shows it.
   void operator()(lv::area changed) {
     const SDL_Rect r{changed.x, changed.y, changed.width, changed.height};
-    const std::byte* first = frame_.bytes().data() + static_cast<std::size_t>(changed.y) * frame_.stride +
+    const std::byte* first = frame_.bytes().data() +
+                             static_cast<std::size_t>(changed.y) * frame_.stride +
                              static_cast<std::size_t>(changed.x) * pixel_bytes;
     SDL_UpdateTexture(texture_, &r, first, static_cast<int>(frame_.stride));
     SDL_RenderClear(renderer_);
@@ -158,7 +175,9 @@ class sdl_window {
   }
 
   // Waits until the application's next step is due, or an event comes.
-  void wait(lv::duration due) const { SDL_WaitEventTimeout(nullptr, static_cast<int>(std::min(due.ms, longest_wait_ms))); }
+  void wait(lv::duration due) const {
+    SDL_WaitEventTimeout(nullptr, static_cast<int>(std::min(due.ms, longest_wait_ms)));
+  }
 };
 
 }  // namespace platform

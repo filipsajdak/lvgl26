@@ -7,11 +7,11 @@
 namespace printer {
 namespace {
 
-constexpr int tube_gap = 50;
-constexpr int tube_width = (page_width * 3 / 4 - 3 * tube_gap) / 4;
+constexpr int tube_gap    = 50;
+constexpr int tube_width  = (page_width * 3 / 4 - 3 * tube_gap) / 4;
 constexpr int tube_height = (window_height - plain_header_height) * 65 / 100;
-constexpr int tubes_left = (page_width - (4 * tube_width + 3 * tube_gap)) / 2;
-constexpr int tubes_top = (window_height - plain_header_height - tube_height) / 2;
+constexpr int tubes_left  = (page_width - (4 * tube_width + 3 * tube_gap)) / 2;
+constexpr int tubes_top   = (window_height - plain_header_height - tube_height) / 2;
 constexpr int pill_height = 30;
 
 constexpr auto title_font = type(tok.text.title);
@@ -20,37 +20,82 @@ constexpr auto small_font = type(tok.text.small);
 // One tube: its outline, the ink that rises in it, and the level written on a label.
 template <class Ink>
 constexpr auto tube(std::string_view fill_id, const Ink& ink, const char* percent) {
-  return lv::group({.size = {tube_width * px, tube_height * px}})[
-      lv::group({.id = fill_id, .align = "bottom_mid", .size = {tube_width * px, 0 * px}})[
-          lv::group({.align = "bottom_mid", .size = {tube_width * px, tube_height * px},
-                     .style = {.bg_color = ink, .bg_opa = tok.solid, .radius = tok.ink.radius}})],
-      lv::group({.size = {100 * pct, 100 * pct},
-                 .style = {.border_color = tok.color.neutral, .border_width = tok.control.line,
-                           .radius = tok.ink.radius}}),
-      lv::group({.align = "bottom_mid", .size = {tube_width / 2 * px, pill_height * px},
-                 .y = -pill_height * px,
-                 .style = {.bg_color = tok.ink.pill, .bg_opa = tok.ink.pill_opa, .radius = tok.ink.radius}})[
-          lv::label({.align = "center", .text = percent,
-                     .style = {.text_color = tok.ink.text, .text_font = small_font}})]];
+  return lv::group(
+    {.size = {tube_width * px, tube_height * px}},
+    lv::group(
+      {
+        .id    = fill_id,
+        .align = "bottom_mid",
+        .size  = {tube_width * px, 0 * px},
+      },
+      lv::group({
+        .align = "bottom_mid",
+        .size  = {tube_width * px, tube_height * px},
+        .style = {
+          .bg_color = ink,
+          .bg_opa   = tok.solid,
+          .radius   = tok.ink.radius,
+        },
+      })
+    ),
+    lv::group({
+      .size = {100 * pct, 100 * pct},
+      .style = {
+        .border_color = tok.color.neutral,
+        .border_width = tok.control.line,
+        .radius       = tok.ink.radius,
+      },
+    }),
+    lv::group(
+      {
+        .align = "bottom_mid",
+        .size  = {tube_width / 2 * px, pill_height * px},
+        .y     = -pill_height * px,
+        .style = {
+          .bg_color = tok.ink.pill,
+          .bg_opa   = tok.ink.pill_opa,
+          .radius   = tok.ink.radius,
+        },
+      },
+      lv::label({
+        .align = "center",
+        .text  = percent,
+        .style = {.text_color = tok.ink.text, .text_font = small_font},
+      })
+    )
+  );
 }
 
 constexpr int levels[] = {90, 50, 80, 10};
 
-constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
-                               .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
-    plain_header("Ink Level", title_font),
-    lv::group({.flex_flow = "row", .size = {100 * pct, (window_height - plain_header_height) * px},
-               .y = plain_header_height * px,
-               .style = {.pad_gap = lv::raw(tube_gap * px), .pad_left = lv::raw(tubes_left * px),
-                         .pad_top = lv::raw(tubes_top * px)}})[
-        tube("yellow", tok.ink.yellow, "90%"), tube("cyan", tok.ink.cyan, "50%"),
-        tube("magenta", tok.ink.magenta, "80%"), tube("black", tok.ink.black, "10%")]];
+constexpr auto ui = lv::group(
+  {
+    .size  = {100 * pct, 100 * pct},
+    .style = {.bg_color = tok.window.background, .bg_opa = tok.solid},
+  },
+  plain_header("Ink Level", title_font),
+  lv::group(
+    {
+      .flex_flow = "row",
+      .size      = {100 * pct, (window_height - plain_header_height) * px},
+      .y         = plain_header_height * px,
+      .style = {
+        .pad_gap  = lv::raw(tube_gap * px),
+        .pad_left = lv::raw(tubes_left * px),
+        .pad_top  = lv::raw(tubes_top * px),
+      },
+    },
+    tube("yellow", tok.ink.yellow, "90%"), tube("cyan", tok.ink.cyan, "50%"),
+    tube("magenta", tok.ink.magenta, "80%"), tube("black", tok.ink.black, "10%")
+  )
+);
 
 //! [rise]
 // The ink rises to its level, a moment after the page appears.
 lv::task<> fill(lv::obj ink, int level) {
-  co_await lv::animate(ink, {.height = {0 * px, tube_height * level / 100 * px}}, tok.motion.ink_time,
-                       tok.motion.ink);
+  co_await lv::animate(
+    ink, {.height = {0 * px, tube_height * level / 100 * px}}, tok.motion.ink_time, tok.motion.ink
+  );
 }
 
 lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
@@ -64,9 +109,15 @@ lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {
 
 // Each time the page is shown, its levels rise.
 void start_ink(lv::held<ui> page) {
-  lv::spawn(rise(lv::obj{page->get<"yellow">().raw()}, lv::obj{page->get<"cyan">().raw()},
-                 lv::obj{page->get<"magenta">().raw()}, lv::obj{page->get<"black">().raw()}),
-            page->root());
+  lv::spawn(
+    rise(
+      lv::obj{page->get<"yellow">().raw()},
+      lv::obj{page->get<"cyan">().raw()},
+      lv::obj{page->get<"magenta">().raw()},
+      lv::obj{page->get<"black">().raw()}
+    ),
+    page->root()
+  );
 }
 
 }  // namespace

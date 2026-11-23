@@ -39,7 +39,7 @@ constexpr auto knob = lv::style({
 constexpr auto look = track | lv::on("indicator", "checked", on) | lv::on("knob", knob);
 
 // The size of each switch in the C example.
-constexpr auto width = 60 * px;
+constexpr auto width  = 60 * px;
 constexpr auto height = 30 * px;
 
 // Two switches with the same look; the second is on.
@@ -49,11 +49,13 @@ constexpr auto ui = lv::group(
     .style     = centered | lv::style({.pad_row = tok.gap.lg}),
   },
   lv::toggle({.size = {width, height}, .style = look}),
-  lv::toggle({.checked = true, .size = {width, height}, .style = look})
+  lv::toggle({
+    .checked = true,
+    .size    = {width, height},
+    .style   = look,
+  })
 );
 
 }  // namespace
 
-void widgets::switch_styling(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::switch_styling(lv::obj screen) { lv::place<ui>(screen); }

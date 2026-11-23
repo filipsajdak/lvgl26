@@ -14,7 +14,8 @@ namespace {
 using namespace lv::units;
 
 constinit lv::frame<160, 120> frame;
-constexpr auto ui = lv::column({.size = {160 * px, 120 * px}})[lv::label({.id = "text", .text = "Window"})];
+constexpr auto ui =
+  lv::column({.size = {160 * px, 120 * px}}, lv::label({.id = "text", .text = "Window"}));
 
 int failures = 0;
 void check(bool ok, int line) {
@@ -45,7 +46,11 @@ void close_taken(lv::application& app, Window& window, lv::display& display, Roo
   app.step();
   check(!window.shown() && !display.visible() && root->root(), __LINE__);
   window.show();
-  check(window.shown() && display.visible() && root->template get<"text">().template get<"text">() != nullptr, __LINE__);
+  check(
+    window.shown() && display.visible() &&
+      root->template get<"text">().template get<"text">() != nullptr,
+    __LINE__
+  );
 }
 
 // display.hide() and display.show() ask the window to hide and show itself.

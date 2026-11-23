@@ -1,6 +1,9 @@
 {
-  "comment": "The probes of the nightly compile-cost run. One line adds a probe. kind compile: Valgrind's instruction total of one cc1plus on `file` (docs/research/compile-time.md, 'The nightly measure'). kind stack: bytes of stack of a function, read from the report of the Arm job. threshold_percent is the change in Ir that opens an issue; it is the default when a probe names none.",
-  "default_threshold_percent": 0.5,
+  "comment": "The probes of the nightly compile-cost run. One line adds a probe. kind compile: Valgrind's instruction total of one cc1plus on `file` (docs/research/compile-time.md, 'The nightly measure'). kind stack: bytes of stack of a function, read from the report of the Arm job. The four limits, in percent, are the defaults of every probe, and a probe may name its own: warn_percent and block_percent judge a change (a pull request: up to warn it merges, up to block it needs the cost table and a reason, above block it waits), drift_percent and clear_percent judge the drift of the baseline (the nightly fails above drift and clears under clear). See docs/research/compile-time.md, 'Judging a night'.",
+  "warn_percent": 0.25,
+  "block_percent": 1.0,
+  "drift_percent": 2.0,
+  "clear_percent": 1.0,
   "probes": [
     {
       "id": "include_lv",
@@ -56,21 +59,30 @@
       "kind": "run",
       "scenario": "visible",
       "stands_for": "what 24 animated arcs cost a second when they are drawn",
-      "threshold_percent": 5
+      "warn_percent": 2.5,
+      "block_percent": 5,
+      "drift_percent": 5,
+      "clear_percent": 2.5
     },
     {
       "id": "visibility_hidden",
       "kind": "run",
       "scenario": "hidden",
       "stands_for": "what the same arcs cost a second when each has the hidden flag (about 0.14 percent of visible)",
-      "threshold_percent": 5
+      "warn_percent": 2.5,
+      "block_percent": 5,
+      "drift_percent": 5,
+      "clear_percent": 2.5
     },
     {
       "id": "visibility_invalidation_off",
       "kind": "run",
       "scenario": "invalidation_off",
       "stands_for": "what they cost a second when LVGL is told to mark nothing for redraw, as for a hidden window (about 3.4 percent of visible)",
-      "threshold_percent": 5
+      "warn_percent": 2.5,
+      "block_percent": 5,
+      "drift_percent": 5,
+      "clear_percent": 2.5
     },
     {
       "id": "set_stack",
@@ -78,7 +90,10 @@
       "function": "set_value",
       "unit": "bytes",
       "stands_for": "the stack of one run-time set({...}) on a Cortex-M4 (the budget is in tools/stack_budget.py)",
-      "threshold_percent": 2
+      "warn_percent": 1.0,
+      "block_percent": 2,
+      "drift_percent": 2,
+      "clear_percent": 1.0
     }
   ]
 }

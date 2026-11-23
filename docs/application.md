@@ -13,7 +13,7 @@ This is the `main` of the [quick start](quick-start.md). It draws one picture in
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::application app;  // LVGL starts; it stops when app goes out of scope
   lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them

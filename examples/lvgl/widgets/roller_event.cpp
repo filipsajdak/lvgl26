@@ -15,13 +15,12 @@ enum class day { Mon, Tue, Wed, Thu, Fri, Sat, Sun };
 constinit lv::state chosen{day::Mon};
 
 // What the label says for each day. The C example writes it in the roller's event handler.
-constexpr const char* status_texts[] = {"Day: Mon", "Day: Tue", "Day: Wed", "Day: Thu",
-                                        "Day: Fri", "Day: Sat", "Day: Sun"};
+constexpr const char* status_texts[] = {
+  "Day: Mon", "Day: Tue", "Day: Wed", "Day: Thu", "Day: Fri", "Day: Sat", "Day: Sun"
+};
 
 constinit lv::computed status{
-  [](day d) {
-    return status_texts[std::to_underlying(d)];
-  },
+  [](day d) { return status_texts[std::to_underlying(d)]; },
   chosen,
 };
 
@@ -40,6 +39,4 @@ constexpr auto ui = lv::group(
 
 }  // namespace
 
-void widgets::roller_event(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::roller_event(lv::obj screen) { lv::place<ui>(screen); }

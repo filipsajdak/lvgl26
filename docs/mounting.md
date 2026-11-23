@@ -15,7 +15,7 @@ An `lv::mounted` is never copied or moved. LVGL's handler on the root widget poi
 
 `if (!shown)`, or `shown.has_value()`, tells whether LVGL had memory for the widgets, and `shown.error()` says why it had not. `shown->get<"id">()` reaches a widget by its id, as with `std::expected`. When the variable goes, the widgets go with it.
 
-`set({...})` changes properties of a widget at run time, written in place as in a tree. A style in it is a named style, a look, or a style made with `lv::style({...})`: `set` holds a style by reference so that its argument stays small on the stack, and a style written out inline (`.style = {.radius = ...}`) is a compile error that says so. A prepared set of properties is a function that calls `set`, not a variable: a variable given to `set` is a compile error.
+`set({...})` changes properties of a widget at run time, written in place as in a tree. A style in it is a named style, a look, or a style made with `lv::style({...})`: `set` holds a style by reference so that its argument stays small on the stack, and a style written out inline (`.style = {.radius = ...}`) is a compile error that says so. A prepared set of properties is a function that calls `set`, not a variable: a variable given to `set` is a compile error. A `set` calls the setters in the same order as a tree does, so what a tree sets in one order, a `set` sets in that order too.
 
 What a `set` costs in stack on a Cortex-M4: 3.5 KB for plain properties (`set({.value = 60})`), the same with a named style or a look, since the call holds a reference to it, and about 6.1 KB with a style written inline as `lv::style({...})`, which is built in the call. The budget of 4 KB that a nightly check keeps covers the first two. On a small stack, name the style or use a look.
 
@@ -70,29 +70,28 @@ constinit lv::state<bool> offline{false};
 
 <!-- snippet: examples/pages/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::row(
-  {.size = {320 * px, 240 * px}},
-  lv::column(
-    {.size = {80 * px, 240 * px}},
-    lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
-    lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
-    lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
-  ),
-  lv::column(
-    {.size = {240 * px, 240 * px}},
-    lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
-    lv::group(
-      {.size = {240 * px, 200 * px}},
-      lv::shown(
-        current,
-        {.enter = slide_in, .leave = slide_out},
-        lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
-        lv::is<page::settings>(settings),
-        lv::is<page::about>(about)
-      )
-    )
-  )
+// The buttons that choose the page.
+constexpr auto menu = lv::column(
+  {.size = {80 * px, 240 * px}},
+  lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+  lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+  lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
 );
+
+// The page that follows `current`, and a banner above it while the device is offline.
+constexpr auto pages = lv::shown(
+  current, {.enter = slide_in, .leave = slide_out},
+  lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+  lv::is<page::settings>(settings), lv::is<page::about>(about)
+);
+
+constexpr auto content = lv::column(
+  {.size = {240 * px, 240 * px}},
+  lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+  lv::group({.size = {240 * px, 200 * px}}, pages)
+);
+
+constexpr auto ui = lv::row({.size = {320 * px, 240 * px}}, menu, content);
 ```
 
 - `lv::shown(current, arms...)` shows the tree of the current value of a state of an enum or a bool. A page that is not shown has no widgets.
@@ -122,8 +121,10 @@ constinit lv::one_of<saving, failed> status;  // a window that shows one of two 
   if (!status.mount<saving>(display.screen())) return 6;
   app.advance(50 * ms), app.step();
   if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
-  status.visit([](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
-               [](const auto&) {});                    // saving has nothing to update
+  status.visit(
+    [](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+    [](const auto&) {}
+  );  // saving has nothing to update
 ```
 
 The slot carries its failure as `lv::mounted` does: `if (!status)`, `status.has_value()`, and `status.error()`, which is `lv::mount_error::not_mounted` while it holds no tree. `status.holds<failed>()` tells which tree is mounted. `unmount()` deletes the widgets, and so does the parent or C code: the slot is empty afterwards.

@@ -6,15 +6,27 @@ using namespace widgets;
 using namespace lv::units;
 
 // Two arcs that follow a drag at different speeds, in degrees per second.
-constexpr auto slow =
-    lv::arc({.bg_end_angle = 45 * deg, .bg_start_angle = 135 * deg, .change_rate = 40,
-             .size = {120 * px, 120 * px}, .value = 35})[
-        lv::label({.align = "center", .text = "rate=40"})];
+constexpr auto slow = lv::arc(
+  {
+    .bg_end_angle   = 45 * deg,
+    .bg_start_angle = 135 * deg,
+    .change_rate    = 40,
+    .size           = {120 * px, 120 * px},
+    .value          = 35,
+  },
+  lv::label({.align = "center", .text = "rate=40"})
+);
 
-constexpr auto fast =
-    lv::arc({.bg_end_angle = 45 * deg, .bg_start_angle = 135 * deg, .change_rate = 360,
-             .size = {120 * px, 120 * px}, .value = 35})[
-        lv::label({.align = "center", .text = "rate=360"})];
+constexpr auto fast = lv::arc(
+  {
+    .bg_end_angle   = 45 * deg,
+    .bg_start_angle = 135 * deg,
+    .change_rate    = 360,
+    .size           = {120 * px, 120 * px},
+    .value          = 35,
+  },
+  lv::label({.align = "center", .text = "rate=360"})
+);
 
 }  // namespace
 
