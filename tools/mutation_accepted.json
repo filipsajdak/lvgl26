@@ -11,6 +11,8 @@
   {"header": "include/lv/detail/api.hpp", "mutant": "if (prefix.size() > 3 && id[3] != prefix[3]) return false;  ->  if (prefix.size() > 3 && id[3] > prefix[3]) return false;", "reason": "Equivalent. The size and fourth-character tests only reject early; starts_with that follows gives the same answer."},
   {"header": "include/lv/detail/api.hpp", "mutant": "while ((n /= 10) > 0);  ->  while ((n /= 10) != 0);", "reason": "Equivalent. n is unsigned, so n > 0 and n != 0 are the same."},
   {"header": "include/lv/detail/api.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
+  {"header": "include/lv/detail/deferred.hpp", "mutant": "n.next = nullptr;  ->  /*n.next = nullptr;*/", "reason": "Equivalent. A node out of the queue always has next set to nullptr (its constructor, and remove), so add sets it to what it holds."},
+  {"header": "include/lv/detail/deferred.hpp", "mutant": "}  ->  continue;", "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."},
   {"header": "include/lv/detail/input_queue.hpp", "mutant": "bool empty() const noexcept { return count_ == 0; }  ->  bool empty() const noexcept { return count_ <= 0; }", "reason": "Equivalent. count_ is unsigned, so `== 0` and `<= 0` agree."},
   {"header": "include/lv/detail/input_queue.hpp", "mutant": "if (count_ < Capacity) {  ->  if (count_ != Capacity) {", "reason": "Equivalent. count_ never exceeds Capacity, so `<` and `!=` agree."},
   {"header": "include/lv/detail/input_queue.hpp", "mutant": "if (count_ == 0) return std::nullopt;  ->  if (count_ <= 0) return std::nullopt;", "reason": "Equivalent. count_ is unsigned, so `== 0` and `<= 0` agree."},

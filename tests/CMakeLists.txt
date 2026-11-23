@@ -138,6 +138,7 @@ add_test(NAME pointer_violation_no_function
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
 lvgl26_test(one_of_region)
+lvgl26_test(deferred)
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
 lvgl26_test(shown_kept)
