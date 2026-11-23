@@ -256,6 +256,14 @@
       "tests": "^signal$|^signal_lamps$|^signal_type$|^fail_signal_numerals_not_a_numeral$",
       "targets": "signal signal_lamps signal_type"
     },
+    "include/lv/signal_fonts.hpp": {
+      "tests": "^signal_linked$|^fail_signal_fonts_and_type$|^fail_signal_type_and_fonts$",
+      "targets": "signal_linked"
+    },
+    "include/lv/signal_type_design.hpp": {
+      "tests": "^signal_linked$",
+      "targets": "signal_linked"
+    },
     "include/lv/signal_lamps.hpp": {
       "tests": "^signal_lamps$",
       "targets": "signal_lamps"

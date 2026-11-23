@@ -14,7 +14,8 @@ the font is named:
 
 The files are the sources of one program and the files they include with quotes. Comments and
 strings are not read, so a name in a comment or in a text is no use. --defined NAME says that a
-library that the program links draws that font (the property LVGL26_FONTS of a target).
+library that the program links draws that font (the property LVGL26_FONTS of a target): `text.title`, or
+`text.title@lv::signal::type_design` for a font of another design.
 
 --build STAMP DEPFILE sources... is the form a build runs (cmake/check_fonts.cmake): it writes
 STAMP when all is well, and DEPFILE, so that the check runs again only when a file changes.
@@ -26,10 +27,17 @@ import re
 import sys
 
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
-USE = re.compile(r'\bfont_of\s*<\s*"([^"]+)"')
-DEFINITION = re.compile(r'\bfont_object\s*<\s*"([^"]+)"\s*>\s*=')
+# A font of the project is named by its token alone; a font of another design adds the design
+# (lv::font_of<"text.title", lv::signal::type_design>), and is told apart by it.
+USE = re.compile(r'\bfont_of\s*<\s*"([^"]+)"\s*(?:,\s*([\w:]+)\s*)?>')
+DEFINITION = re.compile(r'\bfont_object\s*<\s*"([^"]+)"\s*(?:,\s*([\w:]+)\s*)?>\s*=')
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 PLACEHOLDER = re.compile(r'"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'')
+
+
+def key_of(name: str, design: str | None) -> str:
+    """The name of a font as --defined and the messages write it: text.title, or text.title@design."""
+    return f"{name}@{design}" if design else name
 
 
 def file_name_of(font: str) -> str:
@@ -60,15 +68,24 @@ def missing_fonts(files: list[pathlib.Path], defined: set[str]) -> list[str]:
     uses: dict[str, tuple[pathlib.Path, int]] = {}
     for path in files:
         text = without_comments(path.read_text(errors="replace"))
-        defined |= set(DEFINITION.findall(text))
+        defined |= {key_of(*m) for m in DEFINITION.findall(text)}
         for match in USE.finditer(text):
-            uses.setdefault(match.group(1), (path, text.count("\n", 0, match.start()) + 1))
+            key = key_of(match.group(1), match.group(2))
+            uses.setdefault(key, (path, text.count("\n", 0, match.start()) + 1))
     out = []
-    for name, (path, line) in uses.items():
-        if name in defined:
+    for key, (path, line) in uses.items():
+        if key in defined:
+            continue
+        name, _, design = key.partition("@")
+        if design:
+            out.append(
+                f"{path.name}:{line}: the font '{name}' of the design {design} has no file that draws it. Link the library "
+                f"that draws it, or add {file_name_of(name)} with template <> const lv::drawn_font "
+                f'lv::font_object<"{name}", {design}> = lv::draw<"{name}", {design}>(type);'
+            )
             continue
         out.append(
-            f'{path.name}:{line}: the font \'{name}\' has no file that draws it. Add {file_name_of(name)} with '
+            f"{path.name}:{line}: the font '{name}' has no file that draws it. Add {file_name_of(name)} with "
             f'template <> const lv::drawn_font lv::font_object<"{name}"> = lv::draw<"{name}">(type);'
         )
     return out

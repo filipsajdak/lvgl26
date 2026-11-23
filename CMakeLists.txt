@@ -13,6 +13,7 @@ option(LVGL26_PNG "Build LVGL with its PNG decoder, for PNG files decoded on the
 option(LVGL26_JPEG "Build LVGL with its JPEG decoder, for JPEG files decoded on the device (lv::encoded_image)" OFF)
 option(LVGL26_TTF "Build LVGL with TinyTTF, for fonts drawn on the device (lv::scaled_font)" OFF)
 option(LVGL26_NO_DEFAULT_THEME "Build LVGL without its own themes (default, simple, mono): 2.5 KB less heap on a microcontroller. Give the display a theme of your own (lv::theme)" OFF)
+option(LVGL26_SIGNAL_TYPE "Build lvgl26::signal_type, Signal's fonts drawn once in a library (lv/signal_fonts.hpp)" OFF)
 option(LVGL26_UNITS "Fetch mp-units and link it to lvgl26, for values with a unit" OFF)
 option(LVGL26_UPDATE_REFERENCES "Let the tests write missing reference screenshots" OFF)
 
@@ -43,6 +44,12 @@ target_compile_options(lvgl26 INTERFACE
 target_link_libraries(lvgl26 INTERFACE lvgl::lvgl stdc++exp)
 if(LVGL26_UNITS)
   target_link_libraries(lvgl26 INTERFACE mp-units::mp-units)
+endif()
+
+# Signal's fonts, drawn once in a library of their own. The tests build it.
+if(LVGL26_SIGNAL_TYPE OR LVGL26_BUILD_TESTS)
+  add_subdirectory(lib/signal_type)
+  lvgl26_skip_analyzer(lib/signal_type)
 endif()
 
 if(LVGL26_BUILD_TESTS)
