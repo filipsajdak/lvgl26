@@ -203,5 +203,30 @@
     "header": "include/lv/detail/api.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/input_queue.hpp",
+    "mutant": "if (count_ < Capacity) {  ->  if (count_ != Capacity) {",
+    "reason": "Equivalent. count_ never exceeds Capacity, so `<` and `!=` agree."
+  },
+  {
+    "header": "include/lv/detail/input_queue.hpp",
+    "mutant": "if (count_ == 0) return std::nullopt;  ->  if (count_ <= 0) return std::nullopt;",
+    "reason": "Equivalent. count_ is unsigned, so `== 0` and `<= 0` agree."
+  },
+  {
+    "header": "include/lv/detail/input_queue.hpp",
+    "mutant": "requires(Capacity > 0)  ->  requires(Capacity != 0)",
+    "reason": "Equivalent. Capacity is unsigned, so `> 0` and `!= 0` agree."
+  },
+  {
+    "header": "include/lv/detail/input_queue.hpp",
+    "mutant": "bool empty() const noexcept { return count_ == 0; }  ->  bool empty() const noexcept { return count_ <= 0; }",
+    "reason": "Equivalent. count_ is unsigned, so `== 0` and `<= 0` agree."
+  },
+  {
+    "header": "include/lv/detail/input_queue.hpp",
+    "mutant": "pre(count_ > 0)  ->  pre(count_ != 0)",
+    "reason": "Equivalent. count_ is unsigned, so `> 0` and `!= 0` agree."
   }
 ]

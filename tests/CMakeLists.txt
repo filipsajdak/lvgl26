@@ -99,6 +99,11 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+lvgl26_test(input_queue)
+# back() of an empty queue ends the program.
+add_test(NAME input_queue_violation_back_of_empty
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:input_queue> -DCASE=back_of_empty
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # The application's loop: sources, a window that feeds a pointer and closes, a hidden display.
 lvgl26_test(app_loop)
 add_test(NAME app_loop_violation_display_of_c_display
