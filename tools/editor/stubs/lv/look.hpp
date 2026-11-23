@@ -67,6 +67,13 @@ struct design_of {
 template <class = override>
 inline constexpr stub::no_design design{};
 
+/// The font object that a file of its own defines: template <> const lv::drawn_font
+/// lv::font_object<"text.title"> = lv::draw<"text.title">(type);
+using drawn_font = lv_font_t;
+
+template <detail::fixed Name>
+extern const drawn_font font_object;
+
 namespace stub {
 
 template <detail::fixed Paths, class D>
@@ -96,5 +103,17 @@ inline constexpr stub::style_t look<Paths, D> = stub::checked_look<Paths, D>();
 template <detail::fixed Prefix, auto V, class D = override>
   requires std::is_enum_v<decltype(V)>
 inline constexpr stub::style_t look_of{};
+
+/// A font that another file draws: lv::label({.style = {.text_font = lv::font_of<"text.title">}}).
+/// Name the path of a typography token. GCC checks the name against the token file.
+template <detail::fixed Name, class D = override>
+inline constexpr token<const lv_font_t*> font_of{};
+
+/// The font that the typography token `Name` asks for, from the files of `type`: the initializer
+/// of lv::font_object<Name> in the file that defines it.
+template <detail::fixed Name, class D = override>
+consteval drawn_font draw(const typeface&) {
+  return {};
+}
 
 }  // namespace lv

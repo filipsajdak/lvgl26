@@ -167,6 +167,16 @@ add_test(NAME look_link COMMAND look_link)
 add_executable(fonts_split fonts_split_main.cpp fonts_split_label.cpp fonts_split_small.cpp)
 target_link_libraries(fonts_split PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME fonts_split COMMAND fonts_split)
+# The build checks that every font a program names has a file that draws it (tools/check_fonts.py).
+add_test(NAME check_fonts_tool COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_fonts.py)
+add_test(NAME check_fonts_program
+         COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_fonts.py ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_main.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_label.cpp ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_small.cpp)
+add_test(NAME check_fonts_missing
+         COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_fonts.py ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_main.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_label.cpp)
+set_tests_properties(check_fonts_missing PROPERTIES PASS_REGULAR_EXPRESSION
+                     "fonts_split_main.cpp:[0-9]+: the font 'text.small' has no file that draws it. Add font_text_small.cpp")
 lvgl26_test(state)
 lvgl26_test(units)
 lvgl26_test(values)

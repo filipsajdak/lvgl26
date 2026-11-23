@@ -1,0 +1,129 @@
+# Checks at build time that every font that a program names has a file that draws it
+# (include/lv/look.hpp, lv::font_of): "main.cpp:12: the font 'text.title' has no file that draws
+# it. Add font_text_title.cpp with ...". Without it the link says it, with the mangled name of a
+# variable template.
+#
+# Every executable that links lvgl26 gets the check with no line of its own, as the includes do
+# (cmake/check_includes.cmake): the files of the executable and of the libraries it links, and the
+# files they include with quotes. A library that draws fonts says which, in the property
+# LVGL26_FONTS of its target (the names of the typography tokens). LVGL26_CHECK_FONTS=OFF turns
+# the check off; lvgl26_check_fonts(target) checks one target, also with the option off.
+
+option(LVGL26_CHECK_FONTS "Check at build time that every font that a program names has a file that draws it" ON)
+
+cmake_path(ABSOLUTE_PATH CMAKE_CURRENT_LIST_DIR NORMALIZE OUTPUT_VARIABLE lvgl26_fonts_cmake_dir)
+set(LVGL26_CHECK_FONTS_SCRIPT ${lvgl26_fonts_cmake_dir}/../tools/check_fonts.py CACHE INTERNAL "")
+
+# The source files and the drawn fonts of `target` and of every target it links, in `files` and `fonts`.
+function(lvgl26_fonts_inputs target files fonts)
+  set(all_files)
+  set(all_fonts)
+  set(todo ${target})
+  set(seen)
+  while(todo)
+    list(POP_FRONT todo current)
+    if(current IN_LIST seen OR NOT TARGET ${current})
+      continue()
+    endif()
+    list(APPEND seen ${current})
+    get_target_property(aliased ${current} ALIASED_TARGET)
+    if(aliased)
+      set(current ${aliased})
+    endif()
+    get_target_property(imported ${current} IMPORTED)
+    get_target_property(type ${current} TYPE)
+    get_target_property(drawn ${current} LVGL26_FONTS)
+    if(drawn)
+      list(APPEND all_fonts ${drawn})
+    endif()
+    if(NOT imported AND type MATCHES "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY)$")
+      lvgl26_sources_to_check(${current} own)
+      list(APPEND all_files ${own})
+    endif()
+    set(links)
+    if(NOT type STREQUAL "INTERFACE_LIBRARY")
+      get_target_property(direct ${current} LINK_LIBRARIES)
+      if(direct)
+        list(APPEND links ${direct})
+      endif()
+    endif()
+    get_target_property(interface ${current} INTERFACE_LINK_LIBRARIES)
+    if(interface)
+      list(APPEND links ${interface})
+    endif()
+    foreach(link IN LISTS links)
+      string(REGEX REPLACE "^\\$<LINK_ONLY:(.*)>$" "\\1" link "${link}")
+      if(NOT link MATCHES "\\$<")
+        list(APPEND todo ${link})
+      endif()
+    endforeach()
+  endwhile()
+  set(${files} ${all_files} PARENT_SCOPE)
+  set(${fonts} ${all_fonts} PARENT_SCOPE)
+endfunction()
+
+function(lvgl26_check_fonts target)
+  if(NOT Python3_Interpreter_FOUND)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+  endif()
+  if(NOT Python3_Interpreter_FOUND)
+    message(STATUS "lvgl26: no Python, so the fonts of ${target} are not checked")
+    return()
+  endif()
+  get_target_property(done ${target} LVGL26_FONTS_CHECKED)
+  if(done)
+    return()
+  endif()
+  set_target_properties(${target} PROPERTIES LVGL26_FONTS_CHECKED ON)
+  lvgl26_fonts_inputs(${target} files fonts)
+  if(NOT files)
+    return()
+  endif()
+  set(defined)
+  foreach(font IN LISTS fonts)
+    list(APPEND defined --defined ${font})
+  endforeach()
+  set(stamp ${CMAKE_BINARY_DIR}/lvgl26_fonts/${target}.stamp)
+  add_custom_command(
+    OUTPUT ${stamp}
+    COMMAND Python3::Interpreter ${LVGL26_CHECK_FONTS_SCRIPT} ${defined} --build ${stamp} ${stamp}.d ${files}
+    DEPENDS ${files} ${LVGL26_CHECK_FONTS_SCRIPT}
+    DEPFILE ${stamp}.d
+    COMMENT "lvgl26: checking the fonts of ${target}"
+    VERBATIM)
+  add_custom_target(${target}_lvgl26_fonts DEPENDS ${stamp})
+  # As the includes: with Ninja only the link waits for the check.
+  if(CMAKE_GENERATOR MATCHES "Ninja")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS ${stamp})
+  else()
+    add_dependencies(${target} ${target}_lvgl26_fonts)
+  endif()
+endfunction()
+
+function(lvgl26_check_fonts_in directory)
+  get_property(targets DIRECTORY ${directory} PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS targets)
+    get_target_property(type ${target} TYPE)
+    get_target_property(imported ${target} IMPORTED)
+    if(imported OR NOT type STREQUAL "EXECUTABLE")
+      continue()
+    endif()
+    lvgl26_links_lvgl26(${target} links)
+    if(links)
+      lvgl26_check_fonts(${target})
+    endif()
+  endforeach()
+  get_property(children DIRECTORY ${directory} PROPERTY SUBDIRECTORIES)
+  foreach(child IN LISTS children)
+    lvgl26_check_fonts_in(${child})
+  endforeach()
+endfunction()
+
+function(lvgl26_check_all_fonts)
+  lvgl26_check_fonts_in(${CMAKE_SOURCE_DIR})
+endfunction()
+
+if(LVGL26_CHECK_FONTS)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  cmake_language(DEFER DIRECTORY ${CMAKE_SOURCE_DIR} CALL lvgl26_check_all_fonts)
+endif()
