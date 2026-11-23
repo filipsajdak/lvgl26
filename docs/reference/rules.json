@@ -9,16 +9,10 @@
     {"id": "extendable", "title": "Extendable", "aim": "Grow the application, reuse its parts and extend lvgl26 itself, without changing what already works."}
   ],
   "pages_planned": {
-    "tree.md": "The tree and its widgets",
-    "tokens.md": "Design tokens",
-    "tasks.md": "Tasks",
-    "application.md": "Application and loop",
     "run-fast.md": "Code that runs fast",
     "build-fast.md": "Keeping builds fast",
     "growing.md": "An application that grows",
-    "extending.md": "Extending lvgl26",
-    "views.md": "Views and ids",
-    "animation.md": "Animation"
+    "extending.md": "Extending lvgl26"
   },
   "rules": [
     {

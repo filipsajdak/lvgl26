@@ -55,7 +55,56 @@ constinit lv::mounted<dialog> asked;    // a window that opens and closes
 
 `mount(parent)` works whenever the global is not mounted: never mounted, after `unmount()`, after a failed mount, and after the parent deleted the widgets. Mounting a global that is mounted breaks a precondition, and so does `unmount()` of one that is not.
 
-`unmount()` is for the life of a root: a window that closes, a screen that is torn down. Pages that take turns inside a tree are switched with `lv::shown`, which is planned and not built yet. It keeps one page alive at a time in memory of the tree's own.
+`unmount()` is for the life of a root: a window that closes, a screen that is torn down. Pages that take turns inside a tree are switched with `lv::shown`, below.
+
+## Pages that follow a state
+
+Pages inside a tree follow a state: the tree shows the page of the state's value. `lv::shown` is in its own header, `#include <lv/shown.hpp>`.
+
+<!-- snippet: examples/pages/main.cpp state -->
+```cpp
+enum class page { home, settings, about };
+constinit lv::state<page> current{page::home};
+constinit lv::state<bool> offline{false};
+```
+
+<!-- snippet: examples/pages/main.cpp tree -->
+```cpp
+constexpr auto ui = lv::row(
+  {.size = {320 * px, 240 * px}},
+  lv::column(
+    {.size = {80 * px, 240 * px}},
+    lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+    lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+    lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
+  ),
+  lv::column(
+    {.size = {240 * px, 240 * px}},
+    lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+    lv::group(
+      {.size = {240 * px, 200 * px}},
+      lv::shown(
+        current,
+        {.enter = slide_in, .leave = slide_out},
+        lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+        lv::is<page::settings>(settings),
+        lv::is<page::about>(about)
+      )
+    )
+  )
+);
+```
+
+- `lv::shown(current, arms...)` shows the tree of the current value of a state of an enum or a bool. A page that is not shown has no widgets.
+- `lv::when(offline, offline_banner)` shows a tree while a flag is true, and nothing while it is false.
+- Every value has one arm, and the compiler checks it. The arms are the patterns of [lv::match](match.md), and `lv::otherwise()` takes the values left.
+- With `{.enter = slide_in, .leave = slide_out}` the pages slide, through `lv::transition`. The new page is built before the old one leaves.
+- `.on_shown` runs each time a page is built. `.on_front` runs each time it comes to the front.
+- A switch waits for the start of the display's next refresh, and lvgl26 allocates nothing for it. `lv::settle()` switches at once.
+
+A page of another file is declared where the tree is, `extern const lv::page home_page;`. Its own file defines it: `constinit const lv::page home_page = lv::page_of<ui>;`.
+
+Nobody writes a size. The pages of other files take one block of LVGL's heap at mount: two slots of the largest page. The [printer walkthrough](port-slint-printer.md) keeps each page in a file of its own.
 
 ## A window that shows one of several trees
 

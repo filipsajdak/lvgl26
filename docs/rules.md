@@ -87,7 +87,7 @@ constexpr auto ui = lv::column(
 
 Checked: no tool checks this rule yet.
 
-Guide: The tree and its widgets (not written yet).
+Guide: [The tree and its widgets](tree.md).
 
 ### no-boilerplate-2
 
@@ -296,7 +296,7 @@ int main() {
 
 Checked: no tool checks this rule yet.
 
-Guide: Application and loop (not written yet).
+Guide: [Application and loop](application.md).
 
 ### no-boilerplate-9
 
@@ -440,7 +440,7 @@ Checked: no tool checks this rule yet.
 
 Measured on 2026-11-18, see [memory-region.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/memory-region.md). A task's frame is one block of LVGL's heap. Each sleep adds a timer of 36 bytes, each watched widget 16 bytes and a delete handler of about 24.
 
-Guide: Tasks (not written yet).
+Guide: [Tasks](tasks.md).
 
 ### fast-run-5
 
@@ -515,7 +515,7 @@ Checked: no tool checks this rule yet.
 
 Measured on 2026-11-19, see [visibility.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/visibility.md). 24 animated arcs drawn into a frame nobody saw took 438 M instructions a second. With nothing marked for redraw, as on a hidden display, they took 15 M. The nightly probe `visibility_invalidation_off` measures it again.
 
-Guide: Application and loop (not written yet).
+Guide: [Application and loop](application.md).
 
 ### fast-run-9
 
@@ -593,7 +593,7 @@ Checked: no tool checks this rule yet.
 
 Measured on 2026-11-19, see [visibility.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/visibility.md). 24 arcs of 70 by 70 pixels, animated without end on a 480 by 320 display, took 438 M instructions a second. The nightly probe `visibility_visible` measures it again.
 
-Guide: Animation (not written yet).
+Guide: [Animation](animation.md).
 
 ## Fast to compile
 
@@ -775,7 +775,7 @@ Checked by the compiler. The test `enumerator_unknown_name` pins the message.
 error: constexpr message: lv: align has no value 'centre'. Its values: default, top_left, top_mid, top_right, bottom_left, bottom_mid, bottom_right, left_mid, right_mid, center, out_top_left, out_top_mid, out_top_right, out_bottom_left, out_bottom_mid, out_bottom_right, out_left_top, out_left_mid, out_left_bottom, out_right_top, out_right_mid, out_right_bottom.
 ```
 
-Guide: The tree and its widgets (not written yet).
+Guide: [The tree and its widgets](tree.md).
 
 ### checked-3
 
@@ -821,7 +821,7 @@ error: static assertion failed: lv: wrong value for this property. It takes a de
 
 Wins over the shorter raw value: one source for the design is worth the name of a token.
 
-Guide: Design tokens (not written yet).
+Guide: [Design tokens](tokens.md).
 
 ### checked-4
 
@@ -919,7 +919,7 @@ Checked by the compiler. The test `unknown_id` pins the message.
 error: constexpr message: lv: the tree has no id 'titel'. Its ids: title.
 ```
 
-Guide: Views and ids (not written yet).
+Guide: [Views and ids](views.md).
 
 ## Expressive
 
@@ -988,7 +988,7 @@ No example yet: the Tasks guide will add one.
 
 Checked: no tool checks this rule yet.
 
-Guide: Tasks (not written yet).
+Guide: [Tasks](tasks.md).
 
 ### expressive-4
 
@@ -1057,7 +1057,7 @@ constexpr auto track_row = lv::button(
 
 Checked: no tool checks this rule yet.
 
-Guide: Design tokens (not written yet).
+Guide: [Design tokens](tokens.md).
 
 ### expressive-6
 
@@ -1069,7 +1069,7 @@ No example yet: the built example comes with the reformat of the examples to chi
 
 Checked: no tool checks this rule yet.
 
-Guide: The tree and its widgets (not written yet).
+Guide: [The tree and its widgets](tree.md).
 
 ## Extendable
 
