@@ -93,8 +93,8 @@
       "targets": "pointer window_app"
     },
     "include/lv/detail/input_queue.hpp": {
-      "tests": "^pointer$|^window_app$",
-      "targets": "pointer window_app"
+      "tests": "^input_queue$|input_queue_violation|^pointer$|^window_app$",
+      "targets": "input_queue pointer window_app"
     },
     "include/lv/image.hpp": {
       "tests": "^image$|^image_alone$|fail_image",
