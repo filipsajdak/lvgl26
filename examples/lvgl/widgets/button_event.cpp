@@ -11,20 +11,18 @@ using namespace widgets;
 // here the label always shows the count.
 constinit lv::state clicks{lv::counter{}};
 
-void count_click() {
-  ++clicks;
-}
+void count_click() { ++clicks; }
 
-constexpr auto ui = lv::group({.flex_flow = "column",
-                               .style = {.flex_cross_place = "center",
-                                         .pad_row = tok.gap.md}})[
-    lv::button({.on_clicked = &count_click})[
-        lv::label({.align = "center", .text = "Click me"})],
-    lv::label({.text = lv::bind(clicks, "Clicks: {}")})];
+constexpr auto ui = lv::group(
+  {
+    .flex_flow = "column",
+    .style     = {.flex_cross_place = "center", .pad_row = tok.gap.md},
+  },
+  lv::button({.on_clicked = &count_click}, lv::label({.align = "center", .text = "Click me"})),
+  lv::label({.text = lv::bind(clicks, "Clicks: {}")})
+);
 //! [clicks]
 
 }  // namespace
 
-void widgets::button_event(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::button_event(lv::obj screen) { lv::place<ui>(screen); }

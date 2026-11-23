@@ -11,11 +11,10 @@ Public preview: GCC 16.2 or newer only.
 ```cpp
 constinit lv::state speed{0 * km / h};
 
+void reset() { speed = 0 * km / h; }
+
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
   lv::label({.text = "Speed"}),
   lv::arc(
     {
@@ -25,13 +24,13 @@ constexpr auto ui = lv::column(
     },
     lv::label({.align = "center", .text = lv::bind(speed)})
   ),
-  lv::button({.on_clicked = [] { speed = 0 * km / h; }}, lv::label({.text = "Reset"}))
+  lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
 );
 ```
 
 ![The screen this code draws: the title Speed, a dial at half its range with "120 km/h" inside it, and a Reset button](docs/media/quick-start.png)
 
-The dial and its label follow `speed`, and the button's lambda sets it. This is the [quick start](docs/quick-start.md): a test runs it and compares its picture with the one above, byte for byte.
+The dial and its label follow `speed`, and the button's handler `reset` sets it. This is the [quick start](docs/quick-start.md): a test runs it and compares its picture with the one above, byte for byte.
 
 ## Why lvgl26
 
@@ -48,13 +47,18 @@ A state holds a typed value of the application. Widgets follow it, and so do val
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
-  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
   stepper<cups>(cups_text),
-  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
   lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
   lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
   lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
@@ -81,8 +85,8 @@ struct track {
   lv::counter plays;
 };
 
-constinit lv::list<track, 8> tracks;               // room for eight rows
-constinit lv::state current{track_id{0}};          // the selected row; no track has the id 0
+constinit lv::list<track, 8> tracks;       // room for eight rows
+constinit lv::state current{track_id{0}};  // the selected row; no track has the id 0
 ```
 
 `lv::each(tracks, &track::id, {.selected = lv::bind(current)}, track_row)` shows the rows. The list holds its rows inside itself, with room for eight. `tracks.update(row, [](track& t) { ++t.plays; })` sets the labels of that one row again.
@@ -103,10 +107,13 @@ constexpr auto tile = []<action Action> {
 };
 
 constexpr auto ui = lv::group(
-  {.style = lv::look<"page">},
-  lv::label({.text = "Printer", .style = lv::look<"title">}),
+  {.style = lv::look<"page">}, lv::label({.text = "Printer", .style = lv::look<"title">}),
   lv::group({.style = lv::look<"tiles">}, lv::for_each<action, lv::but<action::none>>(tile)),
-  lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})
+  lv::label({
+    .checked = true,
+    .text    = "Ready to print",
+    .style   = lv::look<"status">,
+  })
 );
 ```
 
@@ -126,7 +133,8 @@ inline lv::task<> bounce(lv::view<"obj"> box_view) {
   for (bool to_right = true;; to_right = !to_right) {
     lv::spawn(slide(box_view, to_right ? left : right, to_right ? right : left), box_view);
     co_await fall(box_view, drop_height);
-    for (int height = next_height(drop_height); height > last_height; height = next_height(height)) {
+    for (int height = next_height(drop_height); height > last_height;
+         height     = next_height(height)) {
       co_await rise(box_view, height);
       co_await fall(box_view, height);
     }
@@ -150,8 +158,9 @@ Signal comes with lvgl26: design tokens, themes and typefaces. Its theme styles 
 // A copy: a reference to the tokens would keep the token file in the program.
 constexpr auto text = lv::signal::type_tokens.text;
 
-constexpr auto title = lv::signal::type(text.title);            // 24 px, the space to the tilde
-constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
+constexpr auto title = lv::signal::type(text.title);  // 24 px, the space to the tilde
+constexpr auto reading =
+  lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
 
 constexpr auto ui = lv::column(
   {
@@ -159,10 +168,14 @@ constexpr auto ui = lv::column(
     .size       = {320 * px, 240 * px},
     .style      = {.pad_gap = lv::signal::dark_tokens.space._2},
   },
-  lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
-  lv::label({.text = "21.5°", .style = {.text_font = reading}}),
-  lv::label({.text = "Heating to 22 degrees."}),
-  lv::button(lv::label({.text = "HOLD"}))
+  lv::label(
+    {.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}
+  ),  // and its spacing
+  lv::label({
+    .text  = "21.5°",
+    .style = {.text_font = reading},
+  }),
+  lv::label({.text = "Heating to 22 degrees."}), lv::button(lv::label({.text = "HOLD"}))
 );
 ```
 

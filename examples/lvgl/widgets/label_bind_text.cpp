@@ -9,23 +9,29 @@ using namespace lv::units;
 // state holds a pointer to a string literal, so nothing is copied.
 constinit lv::state<const char*> status{"Hello"};
 
-void show_idle() {
-  status = "Idle";
-}
+void show_idle() { status = "Idle"; }
 
-void show_running() {
-  status = "Running";
-}
+void show_running() { status = "Running"; }
 
-constexpr auto ui = lv::group[
-    lv::label({.align = "center", .text = lv::bind(status), .y = -50 * px}),
-    lv::button({.align = "center", .on_clicked = &show_idle})[
-        lv::label({.align = "center", .text = "Idle"})],
-    lv::button({.align = "center", .y = 50 * px, .on_clicked = &show_running})[
-        lv::label({.align = "center", .text = "Running"})]];
+constexpr auto ui = lv::group(
+  lv::label({
+    .align = "center",
+    .text  = lv::bind(status),
+    .y     = -50 * px,
+  }),
+  lv::button(
+    {.align = "center", .on_clicked = &show_idle}, lv::label({.align = "center", .text = "Idle"})
+  ),
+  lv::button(
+    {
+      .align      = "center",
+      .y          = 50 * px,
+      .on_clicked = &show_running,
+    },
+    lv::label({.align = "center", .text = "Running"})
+  )
+);
 
 }  // namespace
 
-void widgets::label_bind_text(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::label_bind_text(lv::obj screen) { lv::place<ui>(screen); }

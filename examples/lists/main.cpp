@@ -15,7 +15,8 @@ namespace {
 
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 //! [model]
@@ -29,8 +30,8 @@ struct track {
   lv::counter plays;
 };
 
-constinit lv::list<track, 8> tracks;               // room for eight rows
-constinit lv::state current{track_id{0}};          // the selected row; no track has the id 0
+constinit lv::list<track, 8> tracks;       // room for eight rows
+constinit lv::state current{track_id{0}};  // the selected row; no track has the id 0
 //! [model]
 
 //! [row]
@@ -64,9 +65,7 @@ constexpr auto track_row = lv::button(
 
 //! [tree]
 constinit lv::computed has_tracks{
-  [](lv::counter n) {
-    return n.value > 0;
-  },
+  [](lv::counter n) { return n.value > 0; },
   tracks.count(),
 };
 
@@ -107,10 +106,12 @@ constinit lv::frame<320, 240> frame;
 
 //! [rows]
 // The playlist to start with, in one constant.
-constexpr track playlist[] = {{{4}, "Overture", lv::counter{0}},
-                              {{1}, "Intro", lv::counter{3}},
-                              {{2}, "Northern Lights", lv::counter{1}},
-                              {{3}, "Harbour", lv::counter{12}}};
+constexpr track playlist[] = {
+  {{4}, "Overture", lv::counter{0}},
+  {{1}, "Intro", lv::counter{3}},
+  {{2}, "Northern Lights", lv::counter{1}},
+  {{3}, "Harbour", lv::counter{12}}
+};
 //! [rows]
 
 //! [changes]

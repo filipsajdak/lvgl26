@@ -11,7 +11,8 @@ namespace get_started {
 
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 
 // Every color, radius and opacity of these examples.
 inline constexpr auto tok = lv::tokens<tokens_json>;

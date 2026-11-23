@@ -15,17 +15,16 @@ This is all of `main.cpp`, in three parts.
 <!-- snippet: examples/quick_start/main.cpp state -->
 ```cpp
 constinit lv::state speed{0 * km / h};
+
+void reset() { speed = 0 * km / h; }
 ```
 
-**A screen.** It is a tree, written as one constant. Each widget takes its properties in braces, then its children. `lv::bind(speed)` ties a property to the value, and the button's lambda sets it.
+**A screen.** It is a tree, written as one constant. Each widget takes its properties in braces, then its children. `lv::bind(speed)` ties a property to the value.
 
 <!-- snippet: examples/quick_start/main.cpp tree -->
 ```cpp
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
   lv::label({.text = "Speed"}),
   lv::arc(
     {
@@ -35,7 +34,7 @@ constexpr auto ui = lv::column(
     },
     lv::label({.align = "center", .text = lv::bind(speed)})
   ),
-  lv::button({.on_clicked = [] { speed = 0 * km / h; }}, lv::label({.text = "Reset"}))
+  lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
 );
 ```
 
@@ -46,7 +45,7 @@ constexpr auto ui = lv::column(
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::application app;  // LVGL starts; it stops when app goes out of scope
   lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them
@@ -136,7 +135,7 @@ error: static assertion failed: lv: wrong value for this property. It takes a wi
 |---|---|
 | A QML or Slint document | The `constexpr` tree. It is C++: no second language, no code generator |
 | A property binding | `lv::bind(state)` |
-| A signal handler or callback | `.on_clicked = [] { speed = 0 * km / h; }`, or a coroutine that waits for the event |
+| A signal handler or callback | `.on_clicked = &reset`, or a coroutine that waits for the event |
 | `QApplication` and `exec()` | `lv::application` and `run()` |
 
 ## Where next

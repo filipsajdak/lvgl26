@@ -99,6 +99,11 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+lvgl26_test(input_queue)
+# back() of an empty queue ends the program.
+add_test(NAME input_queue_violation_back_of_empty
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:input_queue> -DCASE=back_of_empty
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # The application's loop: sources, a window that feeds a pointer and closes, a hidden display.
 lvgl26_test(app_loop)
 add_test(NAME app_loop_violation_display_of_c_display
@@ -133,6 +138,7 @@ add_test(NAME pointer_violation_no_function
 target_link_libraries(mounted_storage PRIVATE lvgl26_test_data)  # look_tokens.json
 lvgl26_test(one_of)
 lvgl26_test(one_of_region)
+lvgl26_test(deferred)
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
 lvgl26_test(shown_kept)
@@ -186,6 +192,7 @@ lvgl26_test(watchers)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
+lvgl26_test(setter_order)
 lvgl26_test(options)
 # LVGL says which setters take options separated by line breaks in its doc comments; the names
 # that lvgl26 goes by must agree with them.
@@ -368,16 +375,17 @@ lvgl26_widget_ports(checkbox bind_checked event states styling text)
 lvgl26_widget_ports(led brightness color styling)
 lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
-lvgl26_widget_ports(buttonmatrix event map)
+lvgl26_widget_ports(buttonmatrix event map popover recolor)
 lvgl26_widget_ports(dropdown bind_value direction event text)
 # LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
 # sanitizer stops on. The picture is compared in the builds that have none.
 if(NOT LVGL26_SANITIZE)
-  lvgl26_widget_ports(roller bind_value event options visible_rows)
+  lvgl26_widget_ports(roller bind_value event options styling visible_rows
+                      ASSETS font_example_large)
 endif()
 lvgl26_widget_ports(spinbox bind_value format rollover styling value)
 lvgl26_widget_ports(spinner basic)
-lvgl26_widget_ports(textarea placeholder)
+lvgl26_widget_ports(textarea cursor placeholder)
 lvgl26_widget_ports(image inner_align src transformations ASSETS img_example_lvgl_logo)
 lvgl26_widget_ports(scale modes range styling ticks)
 lvgl26_widget_ports(keyboard modes popovers textarea)
@@ -1013,6 +1021,18 @@ if(Python3_FOUND)
                                        ${lvgl26_checked_sources})
   add_test(NAME includes_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_includes.py)
   add_test(NAME order_properties_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_order_properties.py)
+  # The format of UI code (tools/format_ui.py, .clang-format). Its lever tests need clang-format, which
+  # only the editor image has; they skip where it is missing, and the job editor runs them.
+  add_test(NAME editor_format_ui COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_format_ui.py)
+  add_test(NAME call_form_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_call_form.py)
+  # The examples are in the format of the repository (tools/format_ui.py): where clang-format is found, which is
+  # the editor image, a file that differs fails the job.
+  find_program(LVGL26_CLANG_FORMAT NAMES clang-format-21 clang-format-22 clang-format-23 clang-format)
+  if(LVGL26_CLANG_FORMAT)
+    add_test(NAME editor_format_examples
+             COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/format_ui.py --check ${PROJECT_SOURCE_DIR}/examples)
+    set_tests_properties(editor_format_examples PROPERTIES ENVIRONMENT CLANG_FORMAT=${LVGL26_CLANG_FORMAT})
+  endif()
   # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
   # the check of tests/smoke.cpp left its stamp.
   if(LVGL26_CHECK_INCLUDES)
@@ -1323,7 +1343,7 @@ lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::compu
 lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(children_alone_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(each_row_not_a_tree static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
-lvgl26_compile_fail_message(each_plain_row_not_a_tree deleted "lv: lv::each takes an lv::list and the member of its rows that holds the key: lv::each(tracks, &track::id, track_row).")
+lvgl26_compile_fail_message(each_plain_row_not_a_tree static_assert "lv: lv::each takes the options in braces, then the row template: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(when_second_not_a_tree deleted "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).")
 lvgl26_compile_fail(shown_arms_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")
 lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their parent, and this tree keeps run-time storage")

@@ -15,12 +15,12 @@ constinit lv::state<bool> too_high{false};
 // The C example gives the button a function of the value (lv_obj_bind_int). A
 // binding has no function, so a second state holds the result and the button's
 // `disabled` follows that.
-constexpr auto ui = lv::group({.flex_flow = "column",
-                               .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::slider({.value = lv::bind(level), .width = 90 * pct}),
-    lv::label({.text = lv::bind(level, "Current: {} (disabled above 80)")}),
-    lv::button({.disabled = lv::bind(too_high)})[
-        lv::label({.align = "center", .text = "Submit"})]];
+constexpr auto ui = lv::group(
+  {.flex_flow = "column", .style = centered | lv::style({.pad_row = tok.gap.lg})},
+  lv::slider({.value = lv::bind(level), .width = 90 * pct}),
+  lv::label({.text = lv::bind(level, "Current: {} (disabled above 80)")}),
+  lv::button({.disabled = lv::bind(too_high)}, lv::label({.align = "center", .text = "Submit"}))
+);
 
 }  // namespace
 

@@ -9,13 +9,13 @@ using namespace lv::units;
 
 namespace {
 
-constexpr auto home = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "title", .text = "Home"})];
-constexpr auto toast = lv::column[lv::label({.id = "message", .text = "Saved"})];
-constexpr auto dialog = lv::column[lv::label({.id = "question", .text = "Discard changes?"})];
+constexpr auto home =
+  lv::column({.size = {320 * px, 240 * px}}, lv::label({.id = "title", .text = "Home"}));
+constexpr auto toast  = lv::column(lv::label({.id = "message", .text = "Saved"}));
+constexpr auto dialog = lv::column(lv::label({.id = "question", .text = "Discard changes?"}));
 
-constexpr auto saving = lv::column[lv::label({.id = "progress", .text = "Saving"})];
-constexpr auto failed = lv::column[lv::label({.id = "reason", .text = "Not saved"})];
+constexpr auto saving = lv::column(lv::label({.id = "progress", .text = "Saving"}));
+constexpr auto failed = lv::column(lv::label({.id = "reason", .text = "Not saved"}));
 
 constinit lv::frame<320, 240> frame;
 
@@ -56,8 +56,10 @@ int dialogs(lv::application& app, lv::display& display) {
   if (!status.mount<saving>(display.screen())) return 6;
   app.advance(50 * ms), app.step();
   if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
-  status.visit([](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
-               [](const auto&) {});                    // saving has nothing to update
+  status.visit(
+    [](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+    [](const auto&) {}
+  );  // saving has nothing to update
   //! [slot-use]
   return status.holds<failed>() ? 0 : 8;
 }

@@ -12,14 +12,13 @@ using namespace mp_units::si::unit_symbols;
 //! [readme]
 //! [state]
 constinit lv::state speed{0 * km / h};
+
+void reset() { speed = 0 * km / h; }
 //! [state]
 
 //! [tree]
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
   lv::label({.text = "Speed"}),
   lv::arc(
     {
@@ -29,7 +28,7 @@ constexpr auto ui = lv::column(
     },
     lv::label({.align = "center", .text = lv::bind(speed)})
   ),
-  lv::button({.on_clicked = [] { speed = 0 * km / h; }}, lv::label({.text = "Reset"}))
+  lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
 );
 //! [tree]
 //! [readme]
@@ -38,7 +37,7 @@ constexpr auto ui = lv::column(
 constinit lv::frame<320, 240> frame;  // the display's memory
 
 int main() {
-  lv::application app;                                // LVGL starts; it stops when app goes out of scope
+  lv::application app;  // LVGL starts; it stops when app goes out of scope
   lv::display display{app, frame, lv::signal::dark};  // no panel; Signal is the look
 
   auto root = lv::mount<ui>(display.screen());  // creates the widgets, and owns them

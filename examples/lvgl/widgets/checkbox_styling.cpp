@@ -41,11 +41,13 @@ constexpr auto ui = lv::group(
     .style     = centered | lv::style({.pad_row = tok.checkbox.styled.row_gap}),
   },
   lv::checkbox({.text = "Default look", .style = look}),
-  lv::checkbox({.checked = true, .text = "Pre-checked", .style = look})
+  lv::checkbox({
+    .checked = true,
+    .text    = "Pre-checked",
+    .style   = look,
+  })
 );
 
 }  // namespace
 
-void widgets::checkbox_styling(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::checkbox_styling(lv::obj screen) { lv::place<ui>(screen); }

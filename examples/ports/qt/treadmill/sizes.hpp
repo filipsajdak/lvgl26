@@ -14,7 +14,7 @@ struct box {
   int h;
 };
 
-inline constexpr int screen_width = 800;
+inline constexpr int screen_width  = 800;
 inline constexpr int screen_height = 480;
 
 // The largest picture the compiler decodes: the wordmark of the splash screen, 624 x 76.
@@ -42,9 +42,9 @@ inline constexpr box stop_button{573, 378, 169, 60};
 inline constexpr box mode_switch{228, 18, 88, 28};
 
 inline constexpr box theme_buttons{491, 14, 300, 37};
-inline constexpr int theme_button_width = 96;
+inline constexpr int theme_button_width  = 96;
 inline constexpr int theme_button_height = 37;
-inline constexpr int theme_button_step = 102;
+inline constexpr int theme_button_step   = 102;
 inline constexpr box theme_title{0, 0, 84, 27};
 inline constexpr box theme_marker{28, 33, 28, 4};
 
@@ -72,24 +72,24 @@ inline constexpr box time_title{95, 0, 47, 28};
 inline constexpr box time_icon{65, 4, 20, 20};
 inline constexpr int runner_size = 32;
 
-inline constexpr int button_icon_x = 26;   // from the inside of the button's rim
-inline constexpr int button_text_x = 76;
+inline constexpr int button_icon_x     = 26;  // from the inside of the button's rim
+inline constexpr int button_text_x     = 76;
 inline constexpr int button_text_width = 88;
-inline constexpr int switch_manual_x = 2;
-inline constexpr int switch_auto_x = 46;
+inline constexpr int switch_manual_x   = 2;
+inline constexpr int switch_auto_x     = 46;
 inline constexpr box switch_handle{0, 2, 40, 24};
 inline constexpr int switch_manual_icon_x = 13;
-inline constexpr int switch_auto_icon_x = 57;
-inline constexpr int switch_icon_y = 5;
+inline constexpr int switch_auto_icon_x   = 57;
+inline constexpr int switch_icon_y        = 5;
 
 // ---- the splash screen --------------------------------------------------------
 
-inline constexpr int slogan_y = 211;
-inline constexpr int slogan_from = 254;
-inline constexpr int slogan_to = 154;
-inline constexpr int wordmark_y = 109;
+inline constexpr int slogan_y      = 211;
+inline constexpr int slogan_from   = 254;
+inline constexpr int slogan_to     = 154;
+inline constexpr int wordmark_y    = 109;
 inline constexpr int wordmark_from = -12;
-inline constexpr int wordmark_to = 88;
+inline constexpr int wordmark_to   = 88;
 
 // ---- the runner on the track --------------------------------------------------
 

@@ -16,16 +16,16 @@ This is the click counter of the button examples.
 // here the label always shows the count.
 constinit lv::state clicks{lv::counter{}};
 
-void count_click() {
-  ++clicks;
-}
+void count_click() { ++clicks; }
 
-constexpr auto ui = lv::group({.flex_flow = "column",
-                               .style = {.flex_cross_place = "center",
-                                         .pad_row = tok.gap.md}})[
-    lv::button({.on_clicked = &count_click})[
-        lv::label({.align = "center", .text = "Click me"})],
-    lv::label({.text = lv::bind(clicks, "Clicks: {}")})];
+constexpr auto ui = lv::group(
+  {
+    .flex_flow = "column",
+    .style     = {.flex_cross_place = "center", .pad_row = tok.gap.md},
+  },
+  lv::button({.on_clicked = &count_click}, lv::label({.align = "center", .text = "Click me"})),
+  lv::label({.text = lv::bind(clicks, "Clicks: {}")})
+);
 ```
 
 A port that differs from the original says so in a comment at the top, as this one does.
@@ -47,10 +47,10 @@ The tests are `tests/examples_get_started.cpp` and `tests/examples_widgets_*.cpp
 |---|---|---|---|
 | LVGL `get_started` | 4 | 4 | Same pixels as the C original |
 | LVGL `widgets`: label, button, arc, bar, slider, switch, checkbox, led, line, obj | 48 | 52 | Same pixels, also after clicks, drags and time |
-| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 26 | 50 | Same pixels, also after a choice, a key or a click |
+| LVGL `widgets`: buttonmatrix, dropdown, roller, spinbox, textarea, image, scale, keyboard | 30 | 50 | Same pixels, also after a choice, a key or a click |
 | Other `widgets` (the spinner so far), `layouts`, `styles`, `event`, `anim`, `scroll` and the rest | 1 | 193 | Same pixels, also after time |
 
-That is 79 of 299 examples, and 75 of the 163 widget examples.
+That is 83 of 299 examples, and 79 of the 163 widget examples.
 [examples/README.md](../examples/README.md) holds the current table, and the list of what is not ported.
 
 ## A skipped example is a finding

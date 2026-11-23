@@ -5,9 +5,9 @@
 
 namespace app {
 
-inline constexpr std::int32_t width = screen_width;
+inline constexpr std::int32_t width  = screen_width;
 inline constexpr std::int32_t height = screen_height;
-inline constexpr const auto& ui = scene;
+inline constexpr const auto& ui      = scene;
 
 // The tasks of the scene, on the mounted tree.
 template <class Mounted>

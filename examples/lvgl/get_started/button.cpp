@@ -9,16 +9,19 @@ using namespace lv::units;
 // click, this one shows "Button: 0".
 constinit lv::state clicks{lv::counter{}};
 
-void count_click() {
-  ++clicks;
-}
+void count_click() { ++clicks; }
 
-constexpr auto ui = lv::group[
-    lv::button({.pos = {10 * px, 10 * px}, .size = {120 * px, 50 * px}, .on_clicked = &count_click})[
-        lv::label({.align = "center", .text = lv::bind(clicks, "Button: {}")})]];
+constexpr auto ui = lv::group(
+  lv::button(
+    {
+      .pos        = {10 * px, 10 * px},
+      .size       = {120 * px, 50 * px},
+      .on_clicked = &count_click,
+    },
+    lv::label({.align = "center", .text = lv::bind(clicks, "Button: {}")})
+  )
+);
 
 }  // namespace
 
-void get_started::button(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void get_started::button(lv::obj screen) { lv::place<ui>(screen); }
