@@ -545,6 +545,11 @@ constexpr auto playlist_call = lv::column(
     {.size = {100 * pct, lv::size_content}},
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
 constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
+// A row written in the call: a temporary, which the deleted fallback of lv::each would bind better
+// than a const reference.
+constexpr auto playlist_inline = lv::column(lv::each(tracks, &track::id, lv::label({.text = lv::bind(&track::title)})));
+static_assert(std::same_as<std::remove_const_t<decltype(playlist_inline)>,
+                           decltype(lv::column[lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})]])>);
 static_assert(std::same_as<std::remove_const_t<decltype(playlist_plain)>,
                            decltype(lv::column[lv::each(tracks, &track::id)[track_row]])>);
 
