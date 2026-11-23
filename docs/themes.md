@@ -12,11 +12,19 @@ Both pictures show this screen. It has no style in it.
 
 <!-- snippet: examples/theme/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.text = "Battery"}),
-    lv::arc({.range = {0, 100}, .size = {110 * px, 110 * px}, .value = 72})[
-        lv::label({.align = "center", .text = "72 %"})],
-    lv::button[lv::label({.text = "Charge"})]];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({.text = "Battery"}),
+  lv::arc(
+    {
+      .range = {0, 100},
+      .size  = {110 * px, 110 * px},
+      .value = 72,
+    },
+    lv::label({.align = "center", .text = "72 %"})
+  ),
+  lv::button(lv::label({.text = "Charge"}))
+);
 ```
 
 ## Use Signal
@@ -58,8 +66,9 @@ The larger styles are yours to make, once each, in the file that shows them. `lv
 // A copy: a reference to the tokens would keep the token file in the program.
 constexpr auto text = lv::signal::type_tokens.text;
 
-constexpr auto title = lv::signal::type(text.title);            // 24 px, the space to the tilde
-constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
+constexpr auto title = lv::signal::type(text.title);  // 24 px, the space to the tilde
+constexpr auto reading =
+  lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
 ```
 
 <!-- snippet: examples/signal_type/main.cpp tree -->
@@ -70,10 +79,14 @@ constexpr auto ui = lv::column(
     .size       = {320 * px, 240 * px},
     .style      = {.pad_gap = lv::signal::dark_tokens.space._2},
   },
-  lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
-  lv::label({.text = "21.5°", .style = {.text_font = reading}}),
-  lv::label({.text = "Heating to 22 degrees."}),
-  lv::button(lv::label({.text = "HOLD"}))
+  lv::label(
+    {.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}
+  ),  // and its spacing
+  lv::label({
+    .text  = "21.5°",
+    .style = {.text_font = reading},
+  }),
+  lv::label({.text = "Heating to 22 degrees."}), lv::button(lv::label({.text = "HOLD"}))
 );
 ```
 
@@ -125,26 +138,39 @@ A theme is one constant. It has a member for each kind of widget, and each membe
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 constexpr auto paper = lv::theme({
-    .arc = {.style = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
-            .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
-            .style_knob = {.bg_opa = tok.opacity.none}},
-    .button = {.style = {.bg_color = tok.color.accent,
-                         .pad_hor = tok.space.button_x,
-                         .pad_ver = tok.space.button_y,
-                         .radius = tok.radius.button,
-                         .shadow_width = tok.space.none,
-                         .text_color = tok.color.on_accent},
-               .style_pressed = {.bg_color = tok.color.ink}},
-    .obj = {.style = {.bg_opa = tok.opacity.none,
-                      .border_width = tok.space.none,
-                      .pad_all = tok.space.edge,
-                      .pad_gap = tok.space.gap,
-                      .text_color = tok.color.ink}},
-    .screen = {.style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque}},
+  .arc = {
+    .style           = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
+    .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
+    .style_knob      = {.bg_opa = tok.opacity.none},
+  },
+  .button = {
+    .style = {
+      .bg_color     = tok.color.accent,
+      .pad_hor      = tok.space.button_x,
+      .pad_ver      = tok.space.button_y,
+      .radius       = tok.radius.button,
+      .shadow_width = tok.space.none,
+      .text_color   = tok.color.on_accent,
+    },
+    .style_pressed = {.bg_color = tok.color.ink},
+  },
+  .obj = {
+    .style = {
+      .bg_opa       = tok.opacity.none,
+      .border_width = tok.space.none,
+      .pad_all      = tok.space.edge,
+      .pad_gap      = tok.space.gap,
+      .text_color   = tok.color.ink,
+    },
+  },
+  .screen = {
+    .style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque},
+  },
 });
 ```
 

@@ -150,7 +150,7 @@ constexpr detail::shown_node<S, A...> shown(const S& state, const A&...) {
   return {&state};
 }
 
-/// The transitions in braces, then the arms: lv::shown(current, {.enter = slide_in}, lv::is<...>(...), ...).
+/// Options, then the arms: lv::shown(current, {.enter = slide_in}, lv::is<page::home>(home_ui), ...).
 template <detail::shown_source S, class... A>
   requires(sizeof...(A) > 0)
 constexpr detail::shown_node<S, A...> shown(const S& state, const detail::shown_options& options, const A&...) {

@@ -10,12 +10,39 @@ using namespace lv::units;
 constexpr int percent_done = 100;
 
 constexpr job demo_jobs[] = {
-    {.id = {1}, .title = "210106-FinalPresentation.pdf", .owner = "info@example.com", .size = "143kb",
-     .pages{6}, .progress{63}, .left{37}, .printing = true, .status = "63% - PRINTING"},
-    {.id = {2}, .title = "Adressliste.docx", .owner = "info@example.com", .size = "143kb", .pages{6}},
-    {.id = {3}, .title = "Salaries.pdf", .owner = "info@example.com", .size = "143kb", .pages{6}},
-    {.id = {4}, .title = "EW 2026 Slides", .owner = "info@example.com", .size = "2.5MB",
-     .submitted = "11:41 10/03/26", .pages{300}},
+  {
+    .id    = {1},
+    .title = "210106-FinalPresentation.pdf",
+    .owner = "info@example.com",
+    .size  = "143kb",
+    .pages{6},
+    .progress{63},
+    .left{37},
+    .printing = true,
+    .status   = "63% - PRINTING",
+  },
+  {
+    .id    = {2},
+    .title = "Adressliste.docx",
+    .owner = "info@example.com",
+    .size  = "143kb",
+    .pages{6},
+  },
+  {
+    .id    = {3},
+    .title = "Salaries.pdf",
+    .owner = "info@example.com",
+    .size  = "143kb",
+    .pages{6},
+  },
+  {
+    .id        = {4},
+    .title     = "EW 2026 Slides",
+    .owner     = "info@example.com",
+    .size      = "2.5MB",
+    .submitted = "11:41 10/03/26",
+    .pages{300},
+  },
 };
 
 int next_id = 5;
@@ -24,7 +51,7 @@ int next_id = 5;
 void advance(job& j) {
   ++j.progress.value;
   --j.left.value;
-  j.printing = true;
+  j.printing                                                                               = true;
   *std::format_to_n(j.status, sizeof j.status - 1, "{}% - PRINTING", j.progress.value).out = '\0';
 }
 

@@ -14,19 +14,19 @@ namespace treadmill {
 
 struct scene {
   const char* name;
-  void (*act)();      // what the finger does, or null
-  int wait_ms;        // how long LVGL runs after that
+  void (*act)();  // what the finger does, or null
+  int wait_ms;    // how long LVGL runs after that
 };
 
 // The splash screen has slid in. Then it goes at five seconds, and the main screen shows.
 inline constexpr int splash_shown_ms = 1200;
-inline constexpr int splash_over_ms = 4000;
+inline constexpr int splash_over_ms  = 4000;
 
 // A run on a slope: START, a faster pace and a steeper slope, and three seconds of counting.
-inline constexpr int faster_presses = 85;  // 8.5 mph
-inline constexpr int steeper_presses = 8;  // 8 percent
-inline constexpr int run_ms = 3200;
-inline constexpr int look_ms = 100;
+inline constexpr int faster_presses  = 85;  // 8.5 mph
+inline constexpr int steeper_presses = 8;   // 8 percent
+inline constexpr int run_ms          = 3200;
+inline constexpr int look_ms         = 100;
 
 inline void run_on_a_slope() {
   start();
@@ -35,12 +35,12 @@ inline void run_on_a_slope() {
 }
 
 inline constexpr std::array scenes{
-    scene{"splash", nullptr, splash_shown_ms},
-    scene{"light", nullptr, splash_over_ms},
-    scene{"running", &run_on_a_slope, run_ms},
-    scene{"dark", &choose_look<look::dark>, look_ms},
-    scene{"sporty", &choose_look<look::sporty>, look_ms},
-    scene{"auto", &toggle_mode, run_ms},
+  scene{"splash", nullptr, splash_shown_ms},
+  scene{"light", nullptr, splash_over_ms},
+  scene{"running", &run_on_a_slope, run_ms},
+  scene{"dark", &choose_look<look::dark>, look_ms},
+  scene{"sporty", &choose_look<look::sporty>, look_ms},
+  scene{"auto", &toggle_mode, run_ms},
 };
 
 // How often LVGL is told the time while a scene runs.

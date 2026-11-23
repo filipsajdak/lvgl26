@@ -12,11 +12,15 @@ The ball of `examples/bounce` falls and rises in tasks that each await one anima
 ```cpp
 // One fall from `height`, or one rise to it.
 inline lv::task<> fall(lv::view<"obj"> box_view, int height) {
-  co_await lv::animate(box_view, {.y = {(landing - height) * px, landing * px}}, fall_time(height), *tok.motion.fall);
+  co_await lv::animate(
+    box_view, {.y = {(landing - height) * px, landing * px}}, fall_time(height), *tok.motion.fall
+  );
   squash = 100 * height / drop_height;
 }
 inline lv::task<> rise(lv::view<"obj"> box_view, int height) {
-  co_await lv::animate(box_view, {.y = {landing * px, (landing - height) * px}}, fall_time(height), *tok.motion.rise);
+  co_await lv::animate(
+    box_view, {.y = {landing * px, (landing - height) * px}}, fall_time(height), *tok.motion.rise
+  );
 }
 ```
 

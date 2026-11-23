@@ -14,7 +14,8 @@ inline lv::task<> bounce(lv::view<"obj"> box_view) {
   for (bool to_right = true;; to_right = !to_right) {
     lv::spawn(slide(box_view, to_right ? left : right, to_right ? right : left), box_view);
     co_await fall(box_view, drop_height);
-    for (int height = next_height(drop_height); height > last_height; height = next_height(height)) {
+    for (int height = next_height(drop_height); height > last_height;
+         height     = next_height(height)) {
       co_await rise(box_view, height);
       co_await fall(box_view, height);
     }

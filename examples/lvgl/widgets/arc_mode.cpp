@@ -6,17 +6,32 @@ using namespace widgets;
 using namespace lv::units;
 
 // The same value drawn three ways: from the start, from the end, and from the middle.
-constexpr auto normal =
-    lv::arc({.mode = "normal", .size = {95 * px, 95 * px}, .value = 75})[
-        lv::label({.align = "center", .text = "normal"})];
+constexpr auto normal = lv::arc(
+  {
+    .mode  = "normal",
+    .size  = {95 * px, 95 * px},
+    .value = 75,
+  },
+  lv::label({.align = "center", .text = "normal"})
+);
 
-constexpr auto reverse =
-    lv::arc({.mode = "reverse", .size = {95 * px, 95 * px}, .value = 75})[
-        lv::label({.align = "center", .text = "rev."})];
+constexpr auto reverse = lv::arc(
+  {
+    .mode  = "reverse",
+    .size  = {95 * px, 95 * px},
+    .value = 75,
+  },
+  lv::label({.align = "center", .text = "rev."})
+);
 
-constexpr auto symmetrical =
-    lv::arc({.mode = "symmetrical", .size = {95 * px, 95 * px}, .value = 75})[
-        lv::label({.align = "center", .text = "sym."})];
+constexpr auto symmetrical = lv::arc(
+  {
+    .mode  = "symmetrical",
+    .size  = {95 * px, 95 * px},
+    .value = 75,
+  },
+  lv::label({.align = "center", .text = "sym."})
+);
 
 }  // namespace
 

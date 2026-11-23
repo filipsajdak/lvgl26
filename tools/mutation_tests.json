@@ -77,8 +77,8 @@
       "parts": 3
     },
     "include/lv/detail/deferred.hpp": {
-      "tests": "^shown$|^example_pages$",
-      "targets": "shown example_pages"
+      "tests": "^deferred$|^shown$|^example_pages$",
+      "targets": "deferred shown example_pages"
     },
     "include/lv/detail/one_of_region.hpp": {
       "tests": "^one_of_region$|^one_of$|one_of_violation",
@@ -93,8 +93,8 @@
       "targets": "pointer window_app"
     },
     "include/lv/detail/input_queue.hpp": {
-      "tests": "^pointer$|^window_app$",
-      "targets": "pointer window_app"
+      "tests": "^input_queue$|input_queue_violation|^pointer$|^window_app$",
+      "targets": "input_queue pointer window_app"
     },
     "include/lv/image.hpp": {
       "tests": "^image$|^image_alone$|fail_image",
@@ -287,6 +287,10 @@
     "include/lv/detail/json_fault.hpp": {
       "tests": "^json_fault$|^settings$|^fail_settings_not_json$",
       "targets": "json_fault settings"
+    },
+    "include/lv/detail/setter_order.hpp": {
+      "tests": "^setter_order$",
+      "targets": "setter_order"
     }
   }
 }

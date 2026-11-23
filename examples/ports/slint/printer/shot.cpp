@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
   if (!printer::start(display.screen())) return 1;
   for (const printer::scene& s : printer::scenes) {
     printer::play(app, s);
-    if (!lv::write_png(display.screen(), (std::string{argv[1]} + "/" + s.name + ".png").c_str())) return 1;
+    if (!lv::write_png(display.screen(), (std::string{argv[1]} + "/" + s.name + ".png").c_str()))
+      return 1;
   }
   return 0;
 }

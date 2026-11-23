@@ -26,14 +26,16 @@ constinit lv::area taken{};
 
 void changed(lv::area a) {
   if (!any_dirty) {
-    dirty = a;
+    dirty     = a;
     any_dirty = true;
     return;
   }
   const std::int32_t x0 = a.x < dirty.x ? a.x : dirty.x;
   const std::int32_t y0 = a.y < dirty.y ? a.y : dirty.y;
-  const std::int32_t x1 = a.x + a.width > dirty.x + dirty.width ? a.x + a.width : dirty.x + dirty.width;
-  const std::int32_t y1 = a.y + a.height > dirty.y + dirty.height ? a.y + a.height : dirty.y + dirty.height;
+  const std::int32_t x1 =
+    a.x + a.width > dirty.x + dirty.width ? a.x + a.width : dirty.x + dirty.width;
+  const std::int32_t y1 =
+    a.y + a.height > dirty.y + dirty.height ? a.y + a.height : dirty.y + dirty.height;
   dirty = {x0, y0, x1 - x0, y1 - y0};
 }
 
@@ -90,7 +92,9 @@ std::uint32_t web_step(std::uint32_t now, std::int32_t x, std::int32_t y, std::i
   return the_world->app.step().ms;
 }
 
-const std::uint8_t* web_frame() { return reinterpret_cast<const std::uint8_t*>(picture.bytes().data()); }
+const std::uint8_t* web_frame() {
+  return reinterpret_cast<const std::uint8_t*>(picture.bytes().data());
+}
 std::int32_t web_stride() { return static_cast<std::int32_t>(picture.stride); }
 std::int32_t web_width() { return app::width; }
 std::int32_t web_height() { return app::height; }
@@ -99,7 +103,7 @@ std::int32_t web_height() { return app::height; }
 // height, until the next call.
 std::int32_t web_take_dirty() {
   if (!any_dirty) return 0;
-  taken = dirty;
+  taken     = dirty;
   any_dirty = false;
   return 1;
 }

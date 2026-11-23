@@ -1,0 +1,14 @@
+# The format of the UI code of lvgl26 (docs/research/code-format.md). Used for examples/ by
+# tools/format_ui.py, which runs clang-format and then a pass that keeps `.style = {` on one line.
+# A property list that ends with a comma is laid out one property per line; without the comma
+# it stays on one line while it fits.
+BasedOnStyle: Google
+ColumnLimit: 100
+IndentWidth: 2
+ContinuationIndentWidth: 2
+SortIncludes: Never
+ReflowComments: false
+AlignConsecutiveAssignments: Consecutive
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+AllowShortLambdasOnASingleLine: Inline

@@ -28,25 +28,32 @@ void step_up() {
 }
 
 // The row of the two buttons: a box without its own look.
-constexpr auto stepper = lv::style({.bg_opa = tok.opacity.none,
-                                    .border_width = tok.bar.stepper.border_width,
-                                    .flex_cross_place = "center",
-                                    .flex_main_place = "space_between",
-                                    .pad_column = tok.bar.stepper.gap});
+constexpr auto stepper = lv::style({
+  .bg_opa           = tok.opacity.none,
+  .border_width     = tok.bar.stepper.border_width,
+  .flex_cross_place = "center",
+  .flex_main_place  = "space_between",
+  .pad_column       = tok.bar.stepper.gap,
+});
 
-constexpr auto ui = lv::group({.flex_flow = "column",
-                               .style = centered | lv::style({.pad_row = tok.gap.lg})})[
-    lv::bar({.size = {90 * pct, 20 * px}, .value = lv::bind(level)}),
-    lv::row({.size = {180 * px, lv::size_content}, .style = stepper})[
-        // A click steps once; holding the button down repeats the step.
-        lv::button({.on_clicked = &step_down, .on_long_pressed_repeat = &step_down})[
-            lv::label({.align = "center", .text = "-"})],
-        lv::label({.text = lv::bind(level, "{}%")}),
-        lv::button({.on_clicked = &step_up, .on_long_pressed_repeat = &step_up})[
-            lv::label({.align = "center", .text = "+"})]]];
+constexpr auto ui = lv::group(
+  {.flex_flow = "column", .style = centered | lv::style({.pad_row = tok.gap.lg})},
+  lv::bar({.size = {90 * pct, 20 * px}, .value = lv::bind(level)}),
+  lv::row(
+    {.size = {180 * px, lv::size_content}, .style = stepper},
+    // A click steps once; holding the button down repeats the step.
+    lv::button(
+      {.on_clicked = &step_down, .on_long_pressed_repeat = &step_down},
+      lv::label({.align = "center", .text = "-"})
+    ),
+    lv::label({.text = lv::bind(level, "{}%")}),
+    lv::button(
+      {.on_clicked = &step_up, .on_long_pressed_repeat = &step_up},
+      lv::label({.align = "center", .text = "+"})
+    )
+  )
+);
 
 }  // namespace
 
-void widgets::bar_bind_value(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::bar_bind_value(lv::obj screen) { lv::place<ui>(screen); }
