@@ -192,6 +192,7 @@ lvgl26_test(watchers)
 lvgl26_test(angle_units)
 lvgl26_test(task)
 lvgl26_test(static_text)
+lvgl26_test(setter_order)
 lvgl26_test(options)
 # LVGL says which setters take options separated by line breaks in its doc comments; the names
 # that lvgl26 goes by must agree with them.

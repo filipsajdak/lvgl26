@@ -526,14 +526,16 @@ struct style_at {
   }
 };
 
-// The numbers of the members of props<W> that the node `n` sets.
+// The numbers of the members of props<W> that the node `n` sets, in the order of their setters:
+// that of the props, unless setter_order.hpp says otherwise for the widget.
 template <fixed W, class... Kids>
 consteval std::vector<std::size_t> set_members_of(const node<W, Kids...>& n) {
   std::vector<std::size_t> out;
   template for (constexpr auto i : indices<members_of_kept<W>.size()>) {
     if (is_set(n.p.[:members_of_kept<W>[i]:])) out.push_back(i);
   }
-  return out;
+  if constexpr (has_setter_rule<W>) return in_setter_order<W>(out, members_of_kept<W>);
+  else return out;
 }
 
 // The same for the node of `Tree` at `Path`. They are found in one constant

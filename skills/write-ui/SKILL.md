@@ -55,6 +55,7 @@ Look a name up there; do not guess it from LVGL's C names.
 - A program starts LVGL with `lv::application` and gets its screen from an `lv::display`. It calls no `lv_init`, `lv_display_*`, `lv_tick_*` or `lv_timer_handler`.
 - Application code names no `lv_` function, `lv_..._t` type or `LV_` name. `raw()` is the one door to the C API, for what lvgl26 has no form for.
 - An LVGL enumerator is a name in quotes: `.align = "center"`.
+- A tree and a `view.set` call the setters in the order of the properties, except for the few that LVGL needs in another (the map of a button matrix first, its controls and the cursor of a text area last): [detail/setter_order.hpp](../../include/lv/detail/setter_order.hpp) lists them. Write the properties in the order of the group rule below; nothing else is needed.
 - Properties go in four groups, each alphabetical: the `id`, the properties (`size`, `text`, ...), the styles (`style`, `style_pressed`), the handlers (`on_clicked`). A list out of order is a compile error that names one field; `python3 tools/order_properties.py <files>` puts the properties of existing code in order.
 - A style takes design tokens. Add a missing token to the project's token file; `lv::raw(...)` marks a reasoned exception.
 - A measure is a quantity with a unit (`120 * px`, `120 * km / h`), a count is `lv::counter`, anything else a named type. A plain integer in a state is refused.
