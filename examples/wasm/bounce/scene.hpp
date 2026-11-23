@@ -37,80 +37,85 @@ constexpr int shadow_box    = ball * 11 / 10 + 2 * margin;  // the widget the sh
 constexpr int left          = 20;  // the box's x at the left and right ends of its way
 constexpr int right         = screen_width - box - 20;
 
-constexpr auto
-  scene =
-    lv::
-      group(
-        lv::group({
-          .id   = "sky",
-          .size = {100 * pct, 50 * pct},
-          .style = {
-            .bg_color      = tok.sky.top,
-            .bg_grad_color = tok.sky.bottom,
-            .bg_grad_dir   = LV_GRAD_DIR_VER,  // C API
-            .bg_opa        = tok.solid,
-          },
-        }),
-        lv::group({
-          .id   = "ground",
-          .size = {100 * pct, 50 * pct},
-          .y    = 50 * pct,
-          .style = {
-            .bg_color      = tok.ground.top,
-            .bg_grad_color = tok.ground.bottom,
-            .bg_grad_dir   = LV_GRAD_DIR_VER,  // C API
-            .bg_opa        = tok.solid,
-          },
-        }),
-        // A soft shadow, as under the sun: a dark oval, and over it a clear widget that blurs
-        // what is behind it. (LVGL's blur works on a widget's own drawing or on its backdrop,
-        // not on its children.)
-        lv::group(
-          {
-            .id   = "shadow",
-            .size = {shadow_box * px, (14 + 2 * margin) * px},
-            .y    = (ground - 7 - margin) * px,
-          },
-          lv::group({
-            .align = LV_ALIGN_CENTER,  // C API
-            .size  = {ball * px, 14 * px},
-            .style = {
-              .bg_color = tok.shadow.fill,
-              .bg_opa   = tok.shadow.strength,
-              .radius   = tok.ball.round,
-            },
-          }),
-          lv::group(
-            {
-              .size = {100 * pct, 100 * pct},
-              .style = {
-                .blur_backdrop = true,
-                .blur_quality  = LV_BLUR_QUALITY_PRECISION,  // C API
-                .blur_radius   = tok.shadow.blur,
-              },
-            }
-          )
-        ),
-        lv::group(
-          {
-            .id   = "box",
-            .size = {box * px, box * px},
-            .x    = left * px,
-            .y    = (floor - drop_height) * px,
-          },
-          lv::group({
-            .id    = "body",
-            .size  = {ball * px, ball * px},
-            .style = {
-              .bg_color     = tok.ball.fill,
-              .bg_opa       = tok.solid,
-              .border_color = tok.ball.edge,
-              .border_width = tok.ball.edge_width,
-              .radius       = tok.ball.round,
-            },
-          })
-        )
-      );
+// The sky and the ground fill the two halves of the screen.
+constexpr auto sky = lv::group({
+  .id    = "sky",
+  .size  = {100 * pct, 50 * pct},
+  .style = {
+    .bg_color      = tok.sky.top,
+    .bg_grad_color = tok.sky.bottom,
+    .bg_grad_dir   = LV_GRAD_DIR_VER,  // C API
+    .bg_opa        = tok.solid,
+  },
+});
+
+constexpr auto ground_half = lv::group({
+  .id    = "ground",
+  .size  = {100 * pct, 50 * pct},
+  .y     = 50 * pct,
+  .style = {
+    .bg_color      = tok.ground.top,
+    .bg_grad_color = tok.ground.bottom,
+    .bg_grad_dir   = LV_GRAD_DIR_VER,  // C API
+    .bg_opa        = tok.solid,
+  },
+});
+
+// A soft shadow, as under the sun: a dark oval, and over it a clear widget that blurs
+// what is behind it. (LVGL's blur works on a widget's own drawing or on its backdrop,
+// not on its children.)
+constexpr auto shadow_oval = lv::group({
+  .align = LV_ALIGN_CENTER,  // C API
+  .size  = {ball * px, 14 * px},
+  .style = {
+    .bg_color = tok.shadow.fill,
+    .bg_opa   = tok.shadow.strength,
+    .radius   = tok.ball.round,
+  },
+});
+
+constexpr auto shadow_frost = lv::group({
+  .size  = {100 * pct, 100 * pct},
+  .style = {
+    .blur_backdrop = true,
+    .blur_quality  = LV_BLUR_QUALITY_PRECISION,  // C API
+    .blur_radius   = tok.shadow.blur,
+  },
+});
+
+constexpr auto shadow_piece = lv::group(
+  {
+    .id   = "shadow",
+    .size = {shadow_box * px, (14 + 2 * margin) * px},
+    .y    = (ground - 7 - margin) * px,
+  },
+  shadow_oval, shadow_frost
+);
+
+// The box the ball is drawn in, and the ball.
+constexpr auto ball_body = lv::group({
+  .id    = "body",
+  .size  = {ball * px, ball * px},
+  .style = {
+    .bg_color     = tok.ball.fill,
+    .bg_opa       = tok.solid,
+    .border_color = tok.ball.edge,
+    .border_width = tok.ball.edge_width,
+    .radius       = tok.ball.round,
+  },
+});
+
+constexpr auto ball_box = lv::group(
+  {
+    .id   = "box",
+    .size = {box * px, box * px},
+    .x    = left * px,
+    .y    = (floor - drop_height) * px,
+  },
+  ball_body
+);
+
+constexpr auto scene = lv::group(sky, ground_half, shadow_piece, ball_box);
 
 // How hard the ball hit the ground last, fading out: 100 right after the first hit.
 int squash = 0;
