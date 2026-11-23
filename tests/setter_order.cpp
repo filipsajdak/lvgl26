@@ -7,8 +7,6 @@
 
 #include "check.hpp"
 
-#include <iterator>
-
 namespace {
 
 constinit lv::frame<64, 48> frame;
@@ -28,7 +26,7 @@ consteval bool has_member(std::string_view name) {
 }
 static_assert(has_member<lv::props<"buttonmatrix">>("map") && has_member<lv::props<"buttonmatrix">>("ctrl_map"));
 static_assert(has_member<lv::props<"textarea">>("cursor_pos"));
-static_assert(std::size(lv::detail::setter_rules) == 3, "a new rule needs a test in this file");
+static_assert(lv::detail::setter_rules().size() == 3, "a new rule needs a test in this file");
 static_assert(lv::detail::setter_phase_of("buttonmatrix", "map") == lv::detail::setter_first);
 static_assert(lv::detail::setter_phase_of("buttonmatrix", "ctrl_map") == lv::detail::setter_last);
 static_assert(lv::detail::setter_phase_of("textarea", "cursor_pos") == lv::detail::setter_last);

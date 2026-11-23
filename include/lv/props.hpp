@@ -992,12 +992,6 @@ void apply_set_member(lv_obj_t* o, const A& a) {
   apply_member<W, I>(o, a);
 }
 
-template <fixed W, class D, std::size_t I>
-void apply_set_one(lv_obj_t* o, const set_props<W, D>& p) {
-  constexpr auto m = members_of_set_props<W, D>[I];
-  if (is_set(p.[:m:])) apply_set_member<W, I>(o, p.[:m:]);
-}
-
 // The numbers of the members of set_props<W, D> in the order of their setters (setter_order.hpp).
 template <fixed W, class D>
 consteval std::vector<std::size_t> set_apply_order_of() {
@@ -1015,9 +1009,15 @@ inline constexpr std::span<const std::size_t> set_apply_order = std::define_stat
 template <fixed W, class D>
 void apply_set_props(lv_obj_t* o, const set_props<W, D>& p) {
   if constexpr (has_setter_rule<W>) {
-    template for (constexpr auto i : set_apply_order<W, D>) apply_set_one<W, D, i>(o, p);
+    template for (constexpr auto i : set_apply_order<W, D>) {
+      constexpr auto m = members_of_set_props<W, D>[i];
+      if (is_set(p.[:m:])) apply_set_member<W, i>(o, p.[:m:]);
+    }
   } else {
-    template for (constexpr auto i : indices<members_of_set_props<W, D>.size()>) apply_set_one<W, D, i>(o, p);
+    template for (constexpr auto i : indices<members_of_set_props<W, D>.size()>) {
+      constexpr auto m = members_of_set_props<W, D>[i];
+      if (is_set(p.[:m:])) apply_set_member<W, i>(o, p.[:m:]);
+    }
   }
 }
 

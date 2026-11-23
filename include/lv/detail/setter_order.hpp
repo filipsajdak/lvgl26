@@ -32,18 +32,23 @@ struct setter_rule {
 
 using namespace std::string_view_literals;
 
-inline constexpr setter_rule setter_rules[] = {
-    // A new map clears the controls and the checked button, so it comes before the other setters.
-    {"buttonmatrix"sv, "map"sv, setter_first},
-    // set_one_checked checks button 0 again, so the controls of ctrl_map come after it.
-    {"buttonmatrix"sv, "ctrl_map"sv, setter_last},
-    // set_text moves the cursor to the end of the text, so the cursor position comes after it.
-    {"textarea"sv, "cursor_pos"sv, setter_last},
-};
+// The table is the body of a function, so that nothing of it is worked out where this header is
+// read: a file that includes it and names no widget with a rule pays nothing.
+consteval std::span<const setter_rule> setter_rules() {
+  static constexpr setter_rule rules[] = {
+      // A new map clears the controls and the checked button, so it comes before the other setters.
+      {"buttonmatrix"sv, "map"sv, setter_first},
+      // set_one_checked checks button 0 again, so the controls of ctrl_map come after it.
+      {"buttonmatrix"sv, "ctrl_map"sv, setter_last},
+      // set_text moves the cursor to the end of the text, so the cursor position comes after it.
+      {"textarea"sv, "cursor_pos"sv, setter_last},
+  };
+  return rules;
+}
 
 // Whether any rule is for this widget. A widget with none pays one compare for each rule, once.
 consteval bool widget_has_setter_rule(std::string_view widget) {
-  for (const auto& rule : setter_rules)
+  for (const auto& rule : setter_rules())
     if (rule.widget == widget) return true;
   return false;
 }
@@ -53,7 +58,7 @@ inline constexpr bool has_setter_rule = widget_has_setter_rule(W.sv());
 
 // The phase of property `name` of widget `widget`: setter_first, setter_normal or setter_last.
 consteval int setter_phase_of(std::string_view widget, std::string_view name) {
-  for (const auto& rule : setter_rules)
+  for (const auto& rule : setter_rules())
     if (rule.widget == widget && rule.property == name) return rule.phase;
   return setter_normal;
 }
