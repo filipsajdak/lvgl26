@@ -1020,6 +1020,14 @@ if(Python3_FOUND)
   # only the editor image has; they skip where it is missing, and the job editor runs them.
   add_test(NAME editor_format_ui COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_format_ui.py)
   add_test(NAME call_form_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_call_form.py)
+  # The examples are in the format of the repository (tools/format_ui.py): where clang-format is found, which is
+  # the editor image, a file that differs fails the job.
+  find_program(LVGL26_CLANG_FORMAT NAMES clang-format-21 clang-format-22 clang-format-23 clang-format)
+  if(LVGL26_CLANG_FORMAT)
+    add_test(NAME editor_format_examples
+             COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/format_ui.py --check ${PROJECT_SOURCE_DIR}/examples)
+    set_tests_properties(editor_format_examples PROPERTIES ENVIRONMENT CLANG_FORMAT=${LVGL26_CLANG_FORMAT})
+  endif()
   # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
   # the check of tests/smoke.cpp left its stamp.
   if(LVGL26_CHECK_INCLUDES)
