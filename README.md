@@ -410,7 +410,7 @@ lv::label({.text = "Wake up", .style = {.text_font = title}})
 Where the size is only known on the device, `lv::scaled_font` lets the device draw the glyphs, and a
 style binds to it: `.text_font = lv::bind(title)`, then `title.resize(tok.text.large)`.
 
-[docs/fonts.md](docs/fonts.md) has the costs and the limits.
+A program of several files draws each font once, in a file of its own, and names it with `lv::font_of<"text.title">` everywhere else. [docs/fonts.md](docs/fonts.md) has the costs and the limits.
 
 A picture works the same way. The compiler decodes an embedded PNG file into the display's own
 pixels, so the device needs no decoder:
