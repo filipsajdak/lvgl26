@@ -15,8 +15,11 @@ constexpr auto plain = lv::widget<"image">({.src = &img_example_lvgl_logo});
 constexpr auto turned = lv::widget<"image">({.rotation = 45 * deg, .src = &img_example_lvgl_logo});
 
 // Scaled to 160 of 256 along both axes.
-constexpr auto scaled = lv::widget<"image">({.scale_x = 160, .scale_y = 160,
-                                             .src = &img_example_lvgl_logo});
+constexpr auto scaled = lv::widget<"image">({
+  .scale_x = 160,
+  .scale_y = 160,
+  .src     = &img_example_lvgl_logo,
+});
 
 }  // namespace
 

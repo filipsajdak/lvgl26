@@ -12,18 +12,26 @@ using namespace lv::units;
 constinit lv::state<bool> details_wanted{false};
 constinit lv::state<bool> note_hidden{true};
 
-constexpr auto box = lv::checkbox({.align = "center", .checked = lv::bind(details_wanted),
-                                   .text = "Show extra details"});
+constexpr auto box = lv::checkbox({
+  .align   = "center",
+  .checked = lv::bind(details_wanted),
+  .text    = "Show extra details",
+});
 
-constexpr auto note =
-    lv::label({.align = "center", .hidden = lv::bind(note_hidden),
-               .text = "Extra details only visible while the box is ticked.", .y = 30 * px});
+constexpr auto note = lv::label({
+  .align  = "center",
+  .hidden = lv::bind(note_hidden),
+  .text   = "Extra details only visible while the box is ticked.",
+  .y      = 30 * px,
+});
 
 }  // namespace
 
 void widgets::checkbox_bind_checked(lv::obj screen) {
   // Once, however often the example is built: the note follows the box from now on.
-  static const auto following = details_wanted.observe([](bool wanted) { note_hidden = !wanted; });
+  static const auto following = details_wanted.observe([](bool wanted) {
+    note_hidden = !wanted;
+  });
   if (following == nullptr) return;  // LVGL had no memory for the observer
   // Both sit on the screen itself: the note is wider than the screen, and the
   // scrollbar this gives must be the screen's own. A tree has one root, so each

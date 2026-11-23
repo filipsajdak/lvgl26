@@ -13,6 +13,4 @@ constexpr auto ui = lv::widget<"image">({.align = "center", .src = &img_example_
 
 }  // namespace
 
-void widgets::image_src(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::image_src(lv::obj screen) { lv::place<ui>(screen); }

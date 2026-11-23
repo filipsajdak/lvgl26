@@ -48,12 +48,9 @@ constexpr auto ui = lv::group(
     .flex_flow = "column",
     .style     = centered | lv::style({.pad_row = tok.gap.lg}),
   },
-  block_field,
-  bar_field
+  block_field, bar_field
 );
 
 }  // namespace
 
-void widgets::textarea_cursor(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::textarea_cursor(lv::obj screen) { lv::place<ui>(screen); }

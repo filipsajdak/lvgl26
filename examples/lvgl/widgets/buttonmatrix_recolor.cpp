@@ -22,6 +22,4 @@ constexpr auto ui = lv::widget<"buttonmatrix">({
 
 }  // namespace
 
-void widgets::buttonmatrix_recolor(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::buttonmatrix_recolor(lv::obj screen) { lv::place<ui>(screen); }
