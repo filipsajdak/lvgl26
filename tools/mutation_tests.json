@@ -55,8 +55,8 @@
       "parts": 4
     },
     "include/lv/look.hpp": {
-      "tests": "^look$|^looks_example$|fail_look_",
-      "targets": "look looks_example",
+      "tests": "^look$|^looks_example$|^fonts_split$|fail_look_|fail_font_of_|fail_font_draw_",
+      "targets": "look looks_example fonts_split",
       "logic": true,
       "parts": 3,
       "jobs": 1
