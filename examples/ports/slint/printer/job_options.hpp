@@ -16,13 +16,13 @@ constexpr const char* job_name(job_kind kind) {
 
 template <job_kind Kind>
 struct job_options {
-//! [color]
+  //! [color]
   static inline constinit lv::state<lv::counter> count{lv::counter{1}};
   static inline constinit lv::state<bool> in_color{true};
   static inline constinit lv::computed color_label{&color_name, in_color};
-//! [color]
+  //! [color]
 
-//! [actions]
+  //! [actions]
   static void fewer() { count.update(&one_fewer); }
   static void more() { count.update(&one_more); }
   static void toggle_color() { in_color = !in_color.get(); }
@@ -30,7 +30,7 @@ struct job_options {
     start_job(job_name(Kind));
     close_subpage();
   }
-//! [actions]
+  //! [actions]
 };
 
 }  // namespace printer
