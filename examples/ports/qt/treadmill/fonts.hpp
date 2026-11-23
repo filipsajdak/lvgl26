@@ -26,9 +26,8 @@ constexpr char digits[] = "0123456789:.";
 // What the buttons say in SemiBold: START, PAUSE, STOP.
 constexpr char capitals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-
-constexpr auto words_face = lv::typeface({{"Exo", 500, exo_medium, words}});
-constexpr auto digits_face = lv::typeface({{"Exo", 600, exo_semibold, digits}});
+constexpr auto words_face    = lv::typeface({{"Exo", 500, exo_medium, words}});
+constexpr auto digits_face   = lv::typeface({{"Exo", 600, exo_semibold, digits}});
 constexpr auto capitals_face = lv::typeface({{"Exo", 600, exo_semibold, capitals}});
 
 }  // namespace treadmill
