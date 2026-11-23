@@ -26,12 +26,14 @@ consteval bool has_member(std::string_view name) {
 }
 static_assert(has_member<lv::props<"buttonmatrix">>("map") && has_member<lv::props<"buttonmatrix">>("ctrl_map"));
 static_assert(has_member<lv::props<"textarea">>("cursor_pos"));
-static_assert(lv::detail::setter_rules().size() == 3, "a new rule needs a test in this file");
-static_assert(lv::detail::setter_phase_of("buttonmatrix", "map") == lv::detail::setter_first);
-static_assert(lv::detail::setter_phase_of("buttonmatrix", "ctrl_map") == lv::detail::setter_last);
-static_assert(lv::detail::setter_phase_of("textarea", "cursor_pos") == lv::detail::setter_last);
-static_assert(lv::detail::setter_phase_of("buttonmatrix", "one_checked") == lv::detail::setter_normal);
-static_assert(lv::detail::setter_phase_of("label", "map") == lv::detail::setter_normal);
+// A new rule needs a test in this file, and its widget a line here.
+static_assert(lv::detail::has_setter_rule<"buttonmatrix"> && lv::detail::has_setter_rule<"textarea">);
+static_assert(!lv::detail::has_setter_rule<"label"> && !lv::detail::has_setter_rule<"roller">);
+static_assert(lv::detail::setter_phase_of<"buttonmatrix">("map") == lv::detail::setter_first);
+static_assert(lv::detail::setter_phase_of<"buttonmatrix">("ctrl_map") == lv::detail::setter_last);
+static_assert(lv::detail::setter_phase_of<"textarea">("cursor_pos") == lv::detail::setter_last);
+static_assert(lv::detail::setter_phase_of<"buttonmatrix">("one_checked") == lv::detail::setter_normal);
+static_assert(lv::detail::setter_phase_of<"label">("map") == lv::detail::setter_normal);
 
 constexpr auto matrix = lv::widget<"buttonmatrix">({.id = "keys", .ctrl_map = controls, .map = keys, .one_checked = true});
 constexpr auto area = lv::textarea({.id = "area", .cursor_pos = 2, .one_line = true, .text = "Block"});
