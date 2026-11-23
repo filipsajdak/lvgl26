@@ -754,6 +754,10 @@ struct plain_design {};
 template <>
 inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
 
+// A font that a file of its own draws. A file that defines the object does so before it names it.
+template <>
+const lv::drawn_font lv::font_object<"text.label"> = lv::draw<"text.label">(api_uses::type);
+
 namespace api_uses {
 
 constexpr auto printed = lv::button({.style = lv::look<"tile"> | lv::look<"tile-print">});
@@ -767,5 +771,10 @@ constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per
 template <class Design = lv::override>
 constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
 constexpr auto chips = lv::row[chip<>, chip<plain_design>];
+
+// A font that another file draws: named here, defined in the file that draws it.
+constexpr auto split_label = lv::font_of<"text.label">;
+static_assert(std::same_as<decltype(split_label), const lv::token<const lv_font_t*>>);  // C API
+constexpr auto split_text = lv::label({.text = "a", .style = {.text_font = split_label}});
 
 }  // namespace api_uses

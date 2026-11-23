@@ -69,6 +69,65 @@ constexpr auto ui = lv::column(
 );
 ```
 
+## Fonts of a project in several files
+
+`type(token)` draws the font in the file that writes it. A program of many files that asks for the same font in each pays for it in each. Draw each font once, in a file of its own, and name it everywhere else:
+
+<!-- snippet: examples/fonts_split/main.cpp tree -->
+```cpp
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({
+    .text  = "Wake up",
+    .style = {.text_font = lv::font_of<"text.title">},
+  }),
+  lv::label({
+    .text  = "06:45",
+    .style = {.text_font = lv::font_of<"text.numeral">},
+  }),
+  lv::label({
+    .text  = "Tomorrow, in 7 hours",
+    .style = {.text_font = lv::font_of<"text.label">},
+  })
+);
+```
+
+`lv::font_of<"text.title">` is the font of the typography token `text.title`. The name is checked against the token file where it is written, so a typo is a compile error that lists the names there. A file that names a font holds only its address, which is a constant whatever the font holds, so it draws nothing and costs next to nothing.
+
+The font is drawn by one file for each font, `font_text_title.cpp` for this one. It embeds the TrueType file, says which file each family and weight is, and defines the object:
+
+<!-- snippet: examples/fonts_split/font_text_label.cpp font -->
+```cpp
+#include "design.hpp"
+
+namespace {
+
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
+
+}  // namespace
+
+template <>
+const lv::drawn_font lv::font_object<"text.label"> = lv::draw<"text.label">(type);
+```
+
+- The design header (`design.hpp` in the example) names the token file and holds no font file: `lv::design_of<decltype(tok)>{.tokens = tok}`. Every file includes it.
+- Name a font before you define it in the same file, never after: a file that defines a font and names it earlier stops with "specialization after instantiation".
+- A font that is named and has no defining file stops the build, before the link, with the name of the file to add: `main.cpp:12: the font 'text.title' has no file that draws it. Add font_text_title.cpp with ...`. `LVGL26_CHECK_FONTS=OFF` turns the check off. A library that draws fonts for its users lists their tokens in the property `LVGL26_FONTS` of its target.
+- Both forms live together. A one-file program and the quick start keep `type(token)`. Switch to the split form when a second file asks for a font that the first draws.
+- The picture of the example is the one of the example above, pixel for pixel, and the program holds the same bytes: the section sizes of the linked programs are equal.
+
+What it costs, on the same machine, as instructions of the compiler:
+
+| File | In place (`examples/fonts`) | In files (`examples/fonts_split`) |
+|---|---|---|
+| The screen, three fonts | 164 G | 44 G |
+| One file that draws a font (16 px, 28 px, a clock) | none | 65 G, 72 G, 26 G |
+
+A file that names a font costs about 0.08 G more for each distinct name, for the check against the token file. The files that draw the fonts compile side by side.
+
 ## A font without a token
 
 A font that no token names is an exception to the design, and the code says so:
@@ -129,7 +188,7 @@ Barlow Medium with its 95 characters, measured once on one machine:
 - Kerning pairs add three bytes each. Barlow Medium at 32 px has 748 among these characters.
 - The characters cost more compile time than the size does. A font of sixteen characters at 16 px takes about half a second.
 - A large font costs memory in the compiler. Barlow Condensed with 95 characters at 208 px takes about 34 s and 5.4 GB.
-- Make the fonts in one file, so that only that file pays the compile time.
+- Make each font in one file, so that only that file pays the compile time: see "Fonts of a project in several files".
 
 ## Rules and limits
 

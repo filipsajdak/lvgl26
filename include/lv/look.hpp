@@ -83,6 +83,12 @@ struct design_of {
 template <class = override>
 inline constexpr detail::no_design design{};
 
+// The object of a font that a file of its own defines: see lv::font_of at the end of this file.
+using drawn_font = lv_font_t;
+
+template <detail::fixed Name>
+extern const drawn_font font_object;
+
 namespace detail {
 
 // lv::style, named through D so that it is generated on first use, not where this header is read.
@@ -691,6 +697,74 @@ consteval look_style_of<D> look_value() {
   }
 }
 
+// ---- fonts drawn in a file of their own ---------------------------------------
+
+// What a font path can name in `group`: its typography tokens and its groups.
+consteval std::string font_names_hint(std::meta::info group, std::string_view wanted) {
+  std::vector<std::string> names;
+  for (auto m : std::meta::nonstatic_data_members_of(group, std::meta::access_context::unchecked()))
+    if (!is_vendor_member(m) && !is_extends_member(m) &&
+        (is_group_member(m) || std::meta::type_of(m) == ^^token<typography_token>))
+      names.push_back(str(std::meta::identifier_of(m)));
+  if (names.empty()) return "It holds no typography token.";
+  std::string out = "The names there: " + joined_names(names) + ".";
+  const std::string like_a_member = token_member_name(wanted);
+  const std::string closest = nearest_list(like_a_member, names).front();
+  if (distance_between(like_a_member, closest) <= close_enough) out += " Did you mean '" + closest + "'?";
+  return out;
+}
+
+// The typography token at `Path` ("text.title"), found by walking the groups of the tokens.
+template <fixed Path, std::size_t I, class D, const auto& G>
+consteval const token<typography_token>& typography_at() {
+  using Group = std::remove_cvref_t<decltype(G)>;
+  constexpr piece at = segments_of<Path>[I];
+  constexpr std::string_view segment = Path.sv().substr(at.at, at.size);
+  constexpr std::string_view so_far = Path.sv().substr(0, at.at + at.size);
+  constexpr std::string_view quoted_path = Path.sv();
+  constexpr auto m = segment.empty() ? std::meta::info{} : member_named(^^Group, str(token_member_name(segment)));
+  if constexpr (m == std::meta::info{}) {
+    fail("lv: the font '" + str(quoted_path) + "' has no name '" + str(segment) + "'" +
+         (I == 0 ? std::string(" in the token file. ") : " in '" + str(so_far.substr(0, at.at - 1)) + "'. ") +
+         font_names_hint(^^Group, segment));
+  } else if constexpr (I + 1 == segments_of<Path>.size()) {
+    using Entry = typename[:std::meta::type_of(m):];
+    if constexpr (std::same_as<Entry, token<typography_token>>) {
+      return G.[:m:];
+    } else {
+      fail("lv: the font '" + str(quoted_path) + "' names " +
+           (is_group_member(m) ? std::string("a group") : std::string(token_kind<Entry>)) +
+           ", not a typography token. A font comes from a typography token: lv::font_of<\"text.title\">.");
+    }
+  } else if constexpr (!is_group_member(m)) {
+    fail("lv: the font '" + str(quoted_path) + "' goes through '" + str(so_far) + "', which is a token and holds no group.");
+  } else {
+    return typography_at<Path, I + 1, D, G.[:m:]>();
+  }
+}
+
+// Returned after the static_assert of a missing design, so that only that message is printed.
+inline constexpr token<typography_token> no_typography{};
+
+template <fixed Path, class D>
+consteval const token<typography_token>& typography_named() {
+  if constexpr (registered_design<D>) {
+    return typography_at<Path, 0, D, design<D>.tokens>();
+  } else {
+    static_assert(registered_design<D>,
+                  "lv: no design is registered for lv::font_of. Name the token file once, in a header that every file includes: "
+                  "constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr "
+                  "lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};");
+    return no_typography;
+  }
+}
+
+template <fixed Name, class D>
+consteval token<const lv_font_t*> declared_font() {
+  (void)typography_named<Name, D>();
+  return {&font_object<Name>, from_design_tokens{}};
+}
+
 }  // namespace detail
 
 // The look of one or several groups of the project's tokens, as a style: lv::look<"queue.card">,
@@ -715,5 +789,31 @@ consteval auto path_of_enumerator() {
 template <detail::fixed Prefix, auto V, class D = override>
   requires std::is_enum_v<decltype(V)>
 inline constexpr auto look_of = look<detail::path_of_enumerator<Prefix, V>(), D>;
+
+// A font that is drawn in a file of its own. Every file that styles with it names it, and only
+// that file pays for the drawing (docs/fonts.md, "Fonts of a project in several files"):
+//
+//   lv::label({.text = "Wake up", .style = {.text_font = lv::font_of<"text.title">}})
+//
+// `Name` is the path of a typography token of the design. The name is checked against the token
+// file, so a typo is a compile error here and not a link error. The font is an object that
+// another file defines:
+//
+//   template <>
+//   const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type);
+//
+// A file that includes this header and no more draws nothing: the address of an object is a
+// constant, whatever the object holds. The build checks that every font that a file names has
+// its defining file (cmake/check_fonts.cmake).
+template <detail::fixed Name, class D = override>
+inline constexpr token<const lv_font_t*> font_of = detail::declared_font<Name, D>();
+
+// The font that the typography token `Name` asks for, drawn from the files of `type`. The
+// initializer of `lv::font_object<Name>`, in the one file that defines it.
+template <detail::fixed Name, class D = override>
+consteval drawn_font draw(const typeface& type) {
+  const token<typography_token>& t = detail::typography_named<Name, D>();
+  return *type.draw(type.file_of(t), t->font_size.raw());
+}
 
 }  // namespace lv
