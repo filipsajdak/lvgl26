@@ -25,18 +25,23 @@ consteval bool has_member(std::string_view name) {
   return false;
 }
 static_assert(has_member<lv::props<"buttonmatrix">>("map") && has_member<lv::props<"buttonmatrix">>("ctrl_map"));
+static_assert(has_member<lv::props<"buttonmatrix">>("button_ctrl") && has_member<lv::props<"buttonmatrix">>("button_ctrl_all"));
 static_assert(has_member<lv::props<"textarea">>("cursor_pos"));
 // A new rule needs a test in this file, and its widget a line here.
 static_assert(lv::detail::has_setter_rule<"buttonmatrix"> && lv::detail::has_setter_rule<"textarea">);
 static_assert(!lv::detail::has_setter_rule<"label"> && !lv::detail::has_setter_rule<"roller">);
 static_assert(lv::detail::setter_phase_of<"buttonmatrix">("map") == lv::detail::setter_first);
 static_assert(lv::detail::setter_phase_of<"buttonmatrix">("ctrl_map") == lv::detail::setter_last);
+static_assert(lv::detail::setter_phase_of<"buttonmatrix">("button_ctrl") == lv::detail::setter_last);
+static_assert(lv::detail::setter_phase_of<"buttonmatrix">("button_ctrl_all") == lv::detail::setter_last);
 static_assert(lv::detail::setter_phase_of<"textarea">("cursor_pos") == lv::detail::setter_last);
 static_assert(lv::detail::setter_phase_of<"buttonmatrix">("one_checked") == lv::detail::setter_normal);
 static_assert(lv::detail::setter_phase_of<"label">("map") == lv::detail::setter_normal);
 
 constexpr auto matrix = lv::widget<"buttonmatrix">({.id = "keys", .ctrl_map = controls, .map = keys, .one_checked = true});
 constexpr auto area = lv::textarea({.id = "area", .cursor_pos = 2, .one_line = true, .text = "Block"});
+constexpr auto one_button = lv::widget<"buttonmatrix">({.id = "keys", .button_ctrl = {1, "checked"}, .map = keys, .one_checked = true});
+constexpr auto all_buttons = lv::widget<"buttonmatrix">({.id = "keys", .button_ctrl_all = "checked", .map = keys, .one_checked = true});
 constexpr auto empty_matrix = lv::widget<"buttonmatrix">({.id = "keys"});
 constexpr auto empty_area = lv::textarea({.id = "area", .one_line = true});
 
@@ -66,6 +71,50 @@ void a_set_does_the_same(lv::display& display) {
   check(!checked(obj, 2));
 }
 
+// set_one_checked clears CHECKED on every button but the first, so button_ctrl comes after it and
+// button 1 stays checked; button_ctrl_all sets CHECKED on each button in turn, and with one_checked
+// the last one stays.
+void button_ctrl_comes_after_one_checked(lv::display& display) {
+  auto root = lv::mount<one_button>(display.screen());
+  check(root.has_value());
+  if (!root) return;
+  lv_obj_t* obj = root->get<"keys">().raw();
+  check(!checked(obj, 0));
+  check(checked(obj, 1));
+  check(!checked(obj, 2));
+}
+
+void button_ctrl_all_comes_after_one_checked(lv::display& display) {
+  auto root = lv::mount<all_buttons>(display.screen());
+  if (!root) return;
+  lv_obj_t* obj = root->get<"keys">().raw();
+  check(!checked(obj, 0));
+  check(!checked(obj, 1));
+  check(checked(obj, 2));
+}
+
+void a_set_does_the_same_for_button_ctrl(lv::display& display) {
+  auto root = lv::mount<empty_matrix>(display.screen());
+  if (!root) return;
+  // The button is a value the compiler cannot fold.
+  const volatile int button = 1;
+  root->get<"keys">().set({.button_ctrl = {button, "checked"}, .map = keys, .one_checked = true});
+  lv_obj_t* obj = root->get<"keys">().raw();
+  check(!checked(obj, 0));
+  check(checked(obj, 1));
+  check(!checked(obj, 2));
+}
+
+void a_set_does_the_same_for_button_ctrl_all(lv::display& display) {
+  auto root = lv::mount<empty_matrix>(display.screen());
+  if (!root) return;
+  root->get<"keys">().set({.button_ctrl_all = "checked", .map = keys, .one_checked = true});
+  lv_obj_t* obj = root->get<"keys">().raw();
+  check(!checked(obj, 0));
+  check(!checked(obj, 1));
+  check(checked(obj, 2));
+}
+
 // set_text moves the cursor to the end, so the cursor position is set after the text.
 void a_tree_sets_the_cursor_after_the_text(lv::display& display) {
   auto root = lv::mount<area>(display.screen());
@@ -90,6 +139,10 @@ int main() {
   lv::display display{app, frame};
   a_tree_sets_the_map_before_the_controls(display);
   a_set_does_the_same(display);
+  button_ctrl_comes_after_one_checked(display);
+  button_ctrl_all_comes_after_one_checked(display);
+  a_set_does_the_same_for_button_ctrl(display);
+  a_set_does_the_same_for_button_ctrl_all(display);
   a_tree_sets_the_cursor_after_the_text(display);
   a_set_does_the_same_for_the_cursor(display);
   return failures == 0 ? 0 : 1;
