@@ -25,7 +25,7 @@ constexpr auto ui = lv::column(
 );
 ```
 
-Each widget takes its properties in braces first, then its children as further arguments. The label inside the arc follows `speed`, and the button's lambda sets it.
+Each widget takes its properties in braces first, then its children as further arguments. The label inside the arc follows `speed`, and the button's handler `reset` sets it.
 
 ## How it works
 
@@ -48,13 +48,18 @@ A screen lists named pieces: a constant for a widget, or a function that returns
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
 constexpr auto ui = lv::column(
-  {
-    .flex_align = {"center", "center", "center"},
-    .size       = {320 * px, 240 * px},
-  },
-  lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
   stepper<cups>(cups_text),
-  lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
   lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
   lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
   lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
@@ -78,16 +83,24 @@ using namespace lv::units;
 
 // A 3 by 3 keypad: the "\n" entries end a row, and the last entry is null.
 // The widget keeps a pointer to the map, not a copy.
-constexpr const char* const keypad[] = {"1", "2", "3", "\n", "4", "5", "6", "\n", "7", "8", "9", nullptr};
+constexpr const char* const keypad[] = {
+  "1", "2", "3", "\n", "4", "5", "6", "\n", "7", "8", "9", nullptr
+};
 
-constexpr auto ui = lv::widget<"buttonmatrix">({.align = "center", .map = keypad, .size = {90 * pct, 200 * px}});
+constexpr auto ui = lv::widget<"buttonmatrix">({
+  .align = "center",
+  .map   = keypad,
+  .size  = {90 * pct, 200 * px},
+});
 
 }  // namespace
 
-void widgets::buttonmatrix_map(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::buttonmatrix_map(lv::obj screen) { lv::place<ui>(screen); }
 ```
+
+### Lay the tree out
+
+`python3 tools/format_ui.py <files>` runs clang-format with the repository's `.clang-format`, then a pass that changes white space only. A property list that ends with a comma gets one property per line; one without it stays on one line while it fits.
 
 ### Put the properties in order
 
@@ -139,10 +152,11 @@ A misspelled property is not named. GCC 16.2 says `no match for call to '(const 
 
 ## Rules
 
-<!-- rules: no-boilerplate-1 checked-2 expressive-6 -->
+<!-- rules: no-boilerplate-1 checked-2 expressive-6 expressive-7 -->
 - [`no-boilerplate-1`](rules.md#no-boilerplate-1): Write a screen as one constant tree, `constexpr auto ui = lv::column[...]`, and mount it; never create its widgets one by one.
 - [`checked-2`](rules.md#checked-2): Write an LVGL enumerator as its name in quotes, `.align = "center"`; a misspelled name stops the build and lists the right ones.
 - [`expressive-6`](rules.md#expressive-6): Build a screen from named pieces: small constants, each at most about three levels deep, that the screen lists.
+- [`expressive-7`](rules.md#expressive-7): Write a tree in the call form and let clang-format lay it out: the children as arguments, two spaces, and a trailing comma after a property list when it should have one property per line.
 <!-- rules: end -->
 
 ## Limits
