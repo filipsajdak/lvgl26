@@ -8,7 +8,9 @@ Write each option as an item.
 
 <!-- snippet: examples/lvgl/widgets/dropdown_event.cpp list -->
 ```cpp
-    lv::dropdown({.options = {"Berlin", "Paris", "Tokyo", "Sydney"}, .on_value_changed = &show_choice}),
+  lv::dropdown(
+    {.options = {"Berlin", "Paris", "Tokyo", "Sydney"}, .on_value_changed = &show_choice}
+  ),
 ```
 
 The compiler makes the one text LVGL takes and keeps it in read-only memory. A dropdown keeps the pointer and copies nothing, so the list costs no heap. A roller copies the list into its label, because LVGL has no setter that keeps it.
@@ -23,11 +25,19 @@ A roller takes the list and its mode. Put the list in braces of its own.
 
 <!-- snippet: examples/lvgl/widgets/roller_options.cpp roller -->
 ```cpp
-constexpr auto normal = lv::roller({.options = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "normal"},
-                                    .selected = {0, false}, .visible_row_count = 3, .width = 120 * px});
+constexpr auto normal = lv::roller({
+  .options           = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "normal"},
+  .selected          = {0, false},
+  .visible_row_count = 3,
+  .width             = 120 * px,
+});
 
-constexpr auto infinite = lv::roller({.options = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "infinite"},
-                                      .selected = {2, false}, .visible_row_count = 3, .width = 120 * px});
+constexpr auto infinite = lv::roller({
+  .options           = {{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}, "infinite"},
+  .selected          = {2, false},
+  .visible_row_count = 3,
+  .width             = 120 * px,
+});
 ```
 
 `{"Mon\nTue", "normal"}` still works: a text, then the mode. `{"Mon", "Tue"}` is a text and a mode too, so it is refused with the message that "Tue" is no mode.
@@ -46,7 +56,11 @@ A state of the enum follows the choice with `.selected = lv::bind(state)`, in bo
 
 <!-- snippet: examples/lvgl/widgets/dropdown_bind_value.cpp bound -->
 ```cpp
-    lv::dropdown({.options = lv::options_of<fruit>, .selected = lv::bind(chosen), .width = 160 * px}),
+  lv::dropdown({
+    .options  = lv::options_of<fruit>,
+    .selected = lv::bind(chosen),
+    .width    = 160 * px,
+  }),
 ```
 
 The compiler maps the place of an option to its enumerator. The values of the enumerators need not be 0, 1, 2. A state of another enum, a plain list and a widget with no list are compile errors, each with a message that says what to write.
@@ -76,10 +90,14 @@ template <>
 struct lv::option_text<sheet> {
   static consteval const char* of(sheet s) {
     switch (s) {
-      case sheet::a4: return "A4";
-      case sheet::letter: return "Letter";
-      case sheet::legal: return "Legal";
-      case sheet::a5: return "A5";
+      case sheet::a4:
+        return "A4";
+      case sheet::letter:
+        return "Letter";
+      case sheet::legal:
+        return "Legal";
+      case sheet::a5:
+        return "A5";
     }
     return "";
   }

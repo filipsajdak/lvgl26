@@ -65,7 +65,8 @@ CMake gives the compiler `--embed-dir`, so that `#embed` finds the file.
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 ```
 
@@ -105,7 +106,8 @@ The file gives the shell one `lv::page`, which says how to build the page and ho
 ```cpp
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
-constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
+constexpr auto ui =
+  job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
 
 }  // namespace
 
@@ -138,26 +140,58 @@ The holder of the sub-pages takes no clicks itself, so with no sub-page shown a 
 <!-- snippet: examples/ports/slint/printer/shell.cpp shown -->
 ```cpp
 // A sub-page slides in from the right over the page, and out again.
-constexpr auto slide_in = lv::transition({.x = {page_width * px, 0 * px}}, tok.motion.slide_time, tok.motion.slide);
-constexpr auto slide_out = lv::transition({.x = {0 * px, page_width * px}}, tok.motion.slide_time, tok.motion.slide);
+constexpr auto slide_in =
+  lv::transition({.x = {page_width * px, 0 * px}}, tok.motion.slide_time, tok.motion.slide);
+constexpr auto slide_out =
+  lv::transition({.x = {0 * px, page_width * px}}, tok.motion.slide_time, tok.motion.slide);
 
-constexpr auto ui = lv::group({.size = {window_width * px, window_height * px},
-                               .style = {.bg_color = tok.window.background, .bg_opa = tok.solid,
-                                         .clip_corner = true, .radius = tok.window.radius}})[
-    lv::group({.size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
-        lv::shown(active_page)[
-            lv::is<page::home>(home_page), lv::is<page::settings>(settings_page), lv::is<page::ink>(ink_page)]],
-    // Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
-    lv::group({.clickable = false, .size = {page_width * px, 100 * pct}, .x = sidebar_width * px})[
-        lv::shown(active_subpage, {.enter = slide_in, .leave = slide_out})[
-            lv::is<subpage::none>(), lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
-            lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)]],
-    lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "column",
-               .size = {sidebar_width * px, 100 * pct},
-                .style = {.bg_color = tok.sidebar.background, .bg_opa = tok.solid, .pad_gap = tok.space.edge,
-                          .pad_top = tok.space.edge}})[
-        side_icon<icons::home>(is_home, &go<page::home>), side_icon<icons::settings>(is_settings, &go<page::settings>),
-        side_icon<icons::ink>(is_ink, &go<page::ink>)]];
+constexpr auto ui = lv::group(
+  {
+    .size = {window_width * px, window_height * px},
+    .style = {
+      .bg_color    = tok.window.background,
+      .bg_opa      = tok.solid,
+      .clip_corner = true,
+      .radius      = tok.window.radius,
+    },
+  },
+  lv::group(
+    {.size = {page_width * px, 100 * pct}, .x = sidebar_width * px},
+    lv::shown(
+      active_page, lv::is<page::home>(home_page), lv::is<page::settings>(settings_page),
+      lv::is<page::ink>(ink_page)
+    )
+  ),
+  // Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
+  lv::group(
+    {
+      .clickable = false,
+      .size      = {page_width * px, 100 * pct},
+      .x         = sidebar_width * px,
+    },
+    lv::shown(
+      active_subpage, {.enter = slide_in, .leave = slide_out}, lv::is<subpage::none>(),
+      lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
+      lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)
+    )
+  ),
+  lv::group(
+    {
+      .flex_align = {"start", "center", "center"},
+      .flex_flow  = "column",
+      .size       = {sidebar_width * px, 100 * pct},
+      .style = {
+        .bg_color = tok.sidebar.background,
+        .bg_opa   = tok.solid,
+        .pad_gap  = tok.space.edge,
+        .pad_top  = tok.space.edge,
+      },
+    },
+    side_icon<icons::home>(is_home, &go<page::home>),
+    side_icon<icons::settings>(is_settings, &go<page::settings>),
+    side_icon<icons::ink>(is_ink, &go<page::ink>)
+  )
+);
 ```
 
 A switch deletes the old page before it builds the new one, unless a transition needs both.
@@ -183,30 +217,70 @@ A second of printing sets the status line of the first job and moves nothing els
 ```cpp
 // One card for every job. The dot and the words are blue while the job prints and gray while it
 // waits. A tap checks the card, and the checked card shows the details under its title.
-constexpr auto card =
-    lv::group({.checkable = true, .flex_flow = "column", .size = {card_width * px, lv::size_content},
-               .state_trickle = true,
-               .style = {.bg_color = tok.queue.card, .bg_opa = tok.solid, .border_color = tok.queue.card_border,
-                         .border_width = tok.control.thin, .pad_all = tok.space.card, .pad_gap = tok.space.gap,
-                         .radius = tok.queue.radius}})[
-        lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
-                   .size = {100 * pct, lv::size_content}, .style = {.pad_gap = tok.space.gap}})[
-            lv::group({.checked = lv::bind(&job::printing), .size = {8 * px, 8 * px},
-                       .style = {.bg_color = tok.label.tertiary, .bg_opa = tok.solid, .radius = tok.queue.dot},
-                       .style_checked = {.bg_color = tok.label.secondary}}),
-            lv::label({.checked = lv::bind(&job::printing),
-                       .text = lv::bind(&job::status),
-                       .style = {.text_color = tok.label.tertiary, .text_font = status_font},
-                       .style_checked = {.text_color = tok.label.secondary}})],
-        lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content}, .state_trickle = true})[
-            lv::label({.size = {100 * pct, lv::size_content},
-                       .text = lv::bind(&job::title),
-                       .style = {.text_color = tok.label.primary, .text_font = small_font}}),
-            lv::group({.flex_flow = "column", .size = {100 * pct, lv::size_content},
-                       .style = {.max_height = tok.space.none},
-                       .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap}})[
-                detail_line("Job Owner", lv::bind(&job::owner)), detail_line("Pages", lv::bind(&job::pages, "{}")),
-                detail_line("Size", lv::bind(&job::size)), detail_line("Submitted", lv::bind(&job::submitted))]]];
+constexpr auto card = lv::group(
+  {
+    .checkable     = true,
+    .flex_flow     = "column",
+    .size          = {card_width * px, lv::size_content},
+    .state_trickle = true,
+    .style = {
+      .bg_color     = tok.queue.card,
+      .bg_opa       = tok.solid,
+      .border_color = tok.queue.card_border,
+      .border_width = tok.control.thin,
+      .pad_all      = tok.space.card,
+      .pad_gap      = tok.space.gap,
+      .radius       = tok.queue.radius,
+    },
+  },
+  lv::group(
+    {
+      .flex_align = {"start", "center", "center"},
+      .flex_flow  = "row",
+      .size       = {100 * pct, lv::size_content},
+      .style      = {.pad_gap = tok.space.gap},
+    },
+    lv::group({
+      .checked = lv::bind(&job::printing),
+      .size    = {8 * px, 8 * px},
+      .style = {
+        .bg_color = tok.label.tertiary,
+        .bg_opa   = tok.solid,
+        .radius   = tok.queue.dot,
+      },
+      .style_checked = {.bg_color = tok.label.secondary},
+    }),
+    lv::label({
+      .checked       = lv::bind(&job::printing),
+      .text          = lv::bind(&job::status),
+      .style         = {.text_color = tok.label.tertiary, .text_font = status_font},
+      .style_checked = {.text_color = tok.label.secondary},
+    })
+  ),
+  lv::group(
+    {
+      .flex_flow     = "column",
+      .size          = {100 * pct, lv::size_content},
+      .state_trickle = true,
+    },
+    lv::label({
+      .size  = {100 * pct, lv::size_content},
+      .text  = lv::bind(&job::title),
+      .style = {.text_color = tok.label.primary, .text_font = small_font},
+    }),
+    lv::group(
+      {
+        .flex_flow     = "column",
+        .size          = {100 * pct, lv::size_content},
+        .style         = {.max_height = tok.space.none},
+        .style_checked = {.max_height = lv::raw(window_height * px), .pad_top = tok.space.gap},
+      },
+      detail_line("Job Owner", lv::bind(&job::owner)),
+      detail_line("Pages", lv::bind(&job::pages, "{}")), detail_line("Size", lv::bind(&job::size)),
+      detail_line("Submitted", lv::bind(&job::submitted))
+    )
+  )
+);
 ```
 
 One tree serves both looks of a card.
@@ -241,24 +315,48 @@ The count is a state in `job_options<Kind>`, and the limits are two small functi
 ```cpp
 // A number with a button on each side: "Copies  [-] 1 [+]".
 template <class Count>
-constexpr auto spin_box(const char* name, const Count& count, void (*fewer)(), void (*more)(), const auto& font) {
-  return lv::group({.flex_align = {"start", "center", "center"}, .flex_flow = "row",
-                    .size = {item_width * px, control_height * px}})[
-      lv::group({.size = {spin_name_width * px, control_height * px}})[
-          lv::label({.align = "left_mid", .text = name,
-                     .style = {.text_color = tok.label.primary, .text_font = font}})],
-      icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer),
-      lv::group({.size = {spin_value_width * px, control_height * px}, .style = {.pad_left = tok.space.card}})[
-          lv::label({.align = "left_mid", .text = lv::bind(count, "{}"),
-                     .style = {.text_color = tok.label.primary, .text_font = font}})],
-      icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)];
+constexpr auto spin_box(
+  const char* name, const Count& count, void (*fewer)(), void (*more)(), const auto& font
+) {
+  return lv::group(
+    {
+      .flex_align = {"start", "center", "center"},
+      .flex_flow  = "row",
+      .size       = {item_width * px, control_height * px},
+    },
+    lv::group(
+      {.size = {spin_name_width * px, control_height * px}},
+      lv::label({
+        .align = "left_mid",
+        .text  = name,
+        .style = {.text_color = tok.label.primary, .text_font = font},
+      })
+    ),
+    icon_button<icons::minus>(control_height, tok.spinbox.button, tok.spinbox.text, fewer),
+    lv::group(
+      {
+        .size  = {spin_value_width * px, control_height * px},
+        .style = {.pad_left = tok.space.card},
+      },
+      lv::label({
+        .align = "left_mid",
+        .text  = lv::bind(count, "{}"),
+        .style = {.text_color = tok.label.primary, .text_font = font},
+      })
+    ),
+    icon_button<icons::plus>(control_height, tok.spinbox.button, tok.spinbox.text, more)
+  );
 }
 ```
 
 <!-- snippet: examples/ports/slint/printer/state.hpp counter -->
 ```cpp
-constexpr lv::counter one_fewer(lv::counter n) { return n.value > 1 ? lv::counter{n.value - 1} : n; }
-constexpr lv::counter one_more(lv::counter n) { return n.value < 100 ? lv::counter{n.value + 1} : n; }
+constexpr lv::counter one_fewer(lv::counter n) {
+  return n.value > 1 ? lv::counter{n.value - 1} : n;
+}
+constexpr lv::counter one_more(lv::counter n) {
+  return n.value < 100 ? lv::counter{n.value + 1} : n;
+}
 ```
 
 A function has no state of its own, so its state is an argument.
@@ -361,8 +459,9 @@ The page is the owner of the task, so the task ends when the page is deleted.
 ```cpp
 // The ink rises to its level, a moment after the page appears.
 lv::task<> fill(lv::obj ink, int level) {
-  co_await lv::animate(ink, {.height = {0 * px, tube_height * level / 100 * px}}, tok.motion.ink_time,
-                       tok.motion.ink);
+  co_await lv::animate(
+    ink, {.height = {0 * px, tube_height * level / 100 * px}}, tok.motion.ink_time, tok.motion.ink
+  );
 }
 
 lv::task<> rise(lv::obj a, lv::obj b, lv::obj c, lv::obj d) {

@@ -16,7 +16,8 @@ A project names its token file once, before the first look. The file with the sp
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr unsigned char barlow[] = {
 #embed "fonts/Barlow-Medium.ttf"
 };
@@ -27,7 +28,8 @@ constexpr auto tok = lv::tokens<tokens_json>;
 ```cpp
 template <>
 inline constexpr lv::design_of<decltype(looks::tok)> lv::design<lv::override>{
-    .tokens = looks::tok, .type = lv::typeface({{"Barlow", 500, looks::barlow}})};
+  .tokens = looks::tok, .type = lv::typeface({{"Barlow", 500, looks::barlow}})
+};
 ```
 
 `lv::design_of` holds the tokens and the typeface that draws the fonts of the typography tokens. A project whose looks have no typography token leaves the typeface out: `{.tokens = tok}`. A registration that comes after the first look is a compile error.
@@ -37,14 +39,21 @@ inline constexpr lv::design_of<decltype(looks::tok)> lv::design<lv::override>{
 <!-- snippet: examples/looks/screen.hpp tree -->
 ```cpp
 constexpr auto tile = []<action Action> {
-  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Action>})[
-      lv::label({.text = lv::like<Action, names>})];
+  return lv::button(
+    {.style = lv::look<"tile"> | lv::look_of<"tile", Action>},
+    lv::label({.text = lv::like<Action, names>})
+  );
 };
 
-constexpr auto ui = lv::group({.style = lv::look<"page">})[
-    lv::label({.text = "Printer", .style = lv::look<"title">}),
-    lv::group({.style = lv::look<"tiles">})[lv::for_each<action, lv::but<action::none>>(tile)],
-    lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})];
+constexpr auto ui = lv::group(
+  {.style = lv::look<"page">}, lv::label({.text = "Printer", .style = lv::look<"title">}),
+  lv::group({.style = lv::look<"tiles">}, lv::for_each<action, lv::but<action::none>>(tile)),
+  lv::label({
+    .checked = true,
+    .text    = "Ready to print",
+    .style   = lv::look<"status">,
+  })
+);
 ```
 
 A look is a style value. It goes wherever a style goes: in a node, in a theme, in a part that takes an `lv::style_value`, and on either side of `|` with `lv::on(...)`, another style or a composite token. It is resolved when it is first used, and a file that names no look does not pay for any.
@@ -413,36 +422,63 @@ constexpr lv::typeface type({{"Barlow", 500, barlow}});
 
 constexpr auto tile(const char* text, const auto& tint) {
   const auto& t = tok.tile;
-  return lv::button({.flex_align = {"center", "center", "center"},
-                     .flex_flow = "column",
-                     .style = {.bg_color = tint.bg_color,
-                               .bg_grad_color = tint.bg_grad_color,
-                               .bg_grad_dir = "ver",
-                               .bg_opa = t.bg_opa,
-                               .height = t.height,
-                               .radius = t.radius,
-                               .shadow_width = t.shadow_width,
-                               .text_color = t.text_color,
-                               .text_font = type(t.text_font),
-                               .width = t.width},
-                     .style_pressed = {.bg_opa = t.pressed.bg_opa}})[lv::label({.text = text})];
+  return lv::button(
+    {
+      .flex_align = {"center", "center", "center"},
+      .flex_flow  = "column",
+      .style = {
+        .bg_color      = tint.bg_color,
+        .bg_grad_color = tint.bg_grad_color,
+        .bg_grad_dir   = "ver",
+        .bg_opa        = t.bg_opa,
+        .height        = t.height,
+        .radius        = t.radius,
+        .shadow_width  = t.shadow_width,
+        .text_color    = t.text_color,
+        .text_font     = type(t.text_font),
+        .width         = t.width,
+      },
+      .style_pressed = {.bg_opa = t.pressed.bg_opa},
+    },
+    lv::label({.text = text})
+  );
 }
 
-constexpr auto ui = lv::group({.flex_flow = "column",
-                               .style = {.bg_color = tok.page.bg_color,
-                                         .bg_opa = tok.page.bg_opa,
-                                         .pad_all = tok.page.pad_all,
-                                         .pad_row = tok.page.pad_row,
-                                         .text_color = tok.page.text_color,
-                                         .text_font = type(tok.page.text_font)}})[
-    lv::label({.text = "Printer", .style = {.text_font = type(tok.title.text_font)}}),
-    lv::group({.flex_flow = "row",
-               .style = {.height = tok.tiles.height, .pad_column = tok.tiles.pad_column, .width = tok.tiles.width}})[
-        tile(names::print, tok.tile_print), tile(names::scan, tok.tile_scan), tile(names::copy, tok.tile_copy)],
-    lv::label({.checked = true,
-               .text = "Ready to print",
-               .style = {.text_color = tok.status.text_color},
-               .style_checked = {.text_color = tok.status.checked.text_color}})];
+constexpr auto ui = lv::group(
+  {
+    .flex_flow = "column",
+    .style = {
+      .bg_color   = tok.page.bg_color,
+      .bg_opa     = tok.page.bg_opa,
+      .pad_all    = tok.page.pad_all,
+      .pad_row    = tok.page.pad_row,
+      .text_color = tok.page.text_color,
+      .text_font  = type(tok.page.text_font),
+    },
+  },
+  lv::label({
+    .text  = "Printer",
+    .style = {.text_font = type(tok.title.text_font)},
+  }),
+  lv::group(
+    {
+      .flex_flow = "row",
+      .style = {
+        .height     = tok.tiles.height,
+        .pad_column = tok.tiles.pad_column,
+        .width      = tok.tiles.width,
+      },
+    },
+    tile(names::print, tok.tile_print), tile(names::scan, tok.tile_scan),
+    tile(names::copy, tok.tile_copy)
+  ),
+  lv::label({
+    .checked       = true,
+    .text          = "Ready to print",
+    .style         = {.text_color = tok.status.text_color},
+    .style_checked = {.text_color = tok.status.checked.text_color},
+  })
+);
 ```
 
 The words of the code, counted as `tools/code_words.py` counts them (an identifier, a number or a string; no punctuation, no comments):

@@ -71,13 +71,23 @@ The compiler checks the whole tree against the widgets' properties, and `lv::mou
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -94,7 +104,8 @@ A binding sets every widget that shows the value after each change, and an arc, 
 ```cpp
 constinit lv::state cups{lv::counter{2}};  // a value that widgets follow
 
-constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
+constexpr auto cups_text =
+  lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
 ```
 
 Checked: no tool checks this rule yet.
@@ -114,10 +125,24 @@ A state takes `=`, `++`, `--`, `+=` and `-=`. A named function, a pointer to it 
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button(
+      {.on_clicked =
+         [] {
+           --Count;
+         }},
+      lv::label({.text = "-"})
+    ),
+    shown,
+    lv::button(
+      {.on_clicked =
+         [] {
+           ++Count;
+         }},
+      lv::label({.text = "+"})
+    )
+  );
 }
 ```
 
@@ -191,18 +216,24 @@ constinit lv::state<page> shown{page::none};
 // The label of a tile is a member of `labels` with the name of the enumerator.
 struct labels {
   static constexpr char print[] = "Print";
-  static constexpr char scan[] = "Scan";
-  static constexpr char copy[] = "Copy";
-  static constexpr char usb[] = "USB";
+  static constexpr char scan[]  = "Scan";
+  static constexpr char copy[]  = "Copy";
+  static constexpr char usb[]   = "USB";
 };
 
 constexpr auto tile = []<page Page> {
-  return lv::button({.size = {80 * px, 60 * px}, .on_clicked = [] { shown = Page; }})[
-      lv::label({.text = lv::like<Page, labels>})];
+  return lv::button(
+    {.size = {80 * px, 60 * px},
+     .on_clicked =
+       [] {
+         shown = Page;
+       }},
+    lv::label({.text = lv::like<Page, labels>})
+  );
 };
 
-constexpr auto home = lv::row({.size = {100 * pct, lv::size_content}})[
-    lv::for_each<page, lv::but<page::none>>(tile)];
+constexpr auto home =
+  lv::row({.size = {100 * pct, lv::size_content}}, lv::for_each<page, lv::but<page::none>>(tile));
 ```
 
 Checked: no tool checks this rule yet.
@@ -235,26 +266,39 @@ A theme is written once, its styles are constants in read-only memory, and the t
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 constexpr auto paper = lv::theme({
-    .arc = {.style = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
-            .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
-            .style_knob = {.bg_opa = tok.opacity.none}},
-    .button = {.style = {.bg_color = tok.color.accent,
-                         .pad_hor = tok.space.button_x,
-                         .pad_ver = tok.space.button_y,
-                         .radius = tok.radius.button,
-                         .shadow_width = tok.space.none,
-                         .text_color = tok.color.on_accent},
-               .style_pressed = {.bg_color = tok.color.ink}},
-    .obj = {.style = {.bg_opa = tok.opacity.none,
-                      .border_width = tok.space.none,
-                      .pad_all = tok.space.edge,
-                      .pad_gap = tok.space.gap,
-                      .text_color = tok.color.ink}},
-    .screen = {.style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque}},
+  .arc = {
+    .style           = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
+    .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
+    .style_knob      = {.bg_opa = tok.opacity.none},
+  },
+  .button = {
+    .style = {
+      .bg_color     = tok.color.accent,
+      .pad_hor      = tok.space.button_x,
+      .pad_ver      = tok.space.button_y,
+      .radius       = tok.radius.button,
+      .shadow_width = tok.space.none,
+      .text_color   = tok.color.on_accent,
+    },
+    .style_pressed = {.bg_color = tok.color.ink},
+  },
+  .obj = {
+    .style = {
+      .bg_opa       = tok.opacity.none,
+      .border_width = tok.space.none,
+      .pad_all      = tok.space.edge,
+      .pad_gap      = tok.space.gap,
+      .text_color   = tok.color.ink,
+    },
+  },
+  .screen = {
+    .style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque},
+  },
 });
 ```
 
@@ -279,8 +323,8 @@ int main() {
 
   auto root = lv::mount<app::ui>(display.screen());
   if (!root) return 2;
-  app::start(root);                         // the application's task, on the mounted tree
-  return app.run();                         // until the window is closed
+  app::start(root);  // the application's task, on the mounted tree
+  return app.run();  // until the window is closed
 }
 ```
 
@@ -296,18 +340,45 @@ The library builds the page or the dialog that is current and ends the one befor
 
 <!-- snippet: examples/pages/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::row({.size = {320 * px, 240 * px}})[
-    lv::column({.size = {80 * px, 240 * px}})[
-        lv::button({.on_clicked = [] { current = page::home; }})[lv::label({.text = "Home"})],
-        lv::button({.on_clicked = [] { current = page::settings; }})[lv::label({.text = "Settings"})],
-        lv::button({.on_clicked = [] { current = page::about; }})[lv::label({.text = "About"})]],
-    lv::column({.size = {240 * px, 240 * px}})[
-        lv::group({.size = {240 * px, 30 * px}})[lv::when(offline)[offline_banner]],
-        lv::group({.size = {240 * px, 200 * px}})[
-            lv::shown(current, {.enter = slide_in, .leave = slide_out})[
-                lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
-                lv::is<page::settings>(settings),
-                lv::is<page::about>(about)]]]];
+constexpr auto ui = lv::row(
+  {.size = {320 * px, 240 * px}},
+  lv::column(
+    {.size = {80 * px, 240 * px}},
+    lv::button(
+      {.on_clicked =
+         [] {
+           current = page::home;
+         }},
+      lv::label({.text = "Home"})
+    ),
+    lv::button(
+      {.on_clicked =
+         [] {
+           current = page::settings;
+         }},
+      lv::label({.text = "Settings"})
+    ),
+    lv::button(
+      {.on_clicked =
+         [] {
+           current = page::about;
+         }},
+      lv::label({.text = "About"})
+    )
+  ),
+  lv::column(
+    {.size = {240 * px, 240 * px}},
+    lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+    lv::group(
+      {.size = {240 * px, 200 * px}},
+      lv::shown(
+        current, {.enter = slide_in, .leave = slide_out},
+        lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+        lv::is<page::settings>(settings), lv::is<page::about>(about)
+      )
+    )
+  )
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -336,8 +407,8 @@ struct track {
   lv::counter plays;
 };
 
-constinit lv::list<track, 8> tracks;               // room for eight rows
-constinit lv::state current{track_id{0}};          // the selected row; no track has the id 0
+constinit lv::list<track, 8> tracks;       // room for eight rows
+constinit lv::state current{track_id{0}};  // the selected row; no track has the id 0
 ```
 
 Checked: no tool checks this rule yet.
@@ -447,16 +518,17 @@ A font or a picture made by the compiler is constant data in flash, drawn with n
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 constexpr auto type = lv::typeface({
-    {"Barlow", 500, barlow_ttf},
-    {"Barlow Condensed", 600, condensed_ttf, "0123456789:"},  // only what a clock shows
+  {"Barlow", 500, barlow_ttf},
+  {"Barlow Condensed", 600, condensed_ttf, "0123456789:"},  // only what a clock shows
 });
 
-constexpr auto label = type(tok.text.label);
-constexpr auto title = type(tok.text.title);
+constexpr auto label   = type(tok.text.label);
+constexpr auto title   = type(tok.text.title);
 constexpr auto numeral = type(tok.text.numeral);
 ```
 
@@ -504,13 +576,23 @@ LVGL skips a hidden widget when it draws. A covered widget, or one at opacity ze
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -529,7 +611,8 @@ A binding works only when the value changes, and sets only the widgets that show
 ```cpp
 constinit lv::state cups{lv::counter{2}};  // a value that widgets follow
 
-constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
+constexpr auto cups_text =
+  lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
 ```
 
 Checked: no tool checks this rule yet.
@@ -635,8 +718,10 @@ constexpr unsigned char sun_png[] = {
 #embed "sun.png"
 };
 
-constexpr auto sky = lv::image_file<sky_png>;  // every pixel opaque: stored as the display's own pixels
-constexpr auto sun = lv::image_file<sun_png>;  // see-through around the sun: stored with an alpha plane
+constexpr auto sky =
+  lv::image_file<sky_png>;  // every pixel opaque: stored as the display's own pixels
+constexpr auto sun =
+  lv::image_file<sun_png>;  // see-through around the sun: stored with an alpha plane
 ```
 
 Checked by the compiler. The test `image_too_large` pins the message.
@@ -657,13 +742,23 @@ The compiler pays for a widget kind once in each file; what one node adds on top
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -902,13 +997,23 @@ A new enumerator then reaches every place that lists the choices, and an `lv::ma
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 Checked by the compiler. The test `match_missing_case` pins the message.
@@ -930,12 +1035,29 @@ The tree then reads as what the screen means, and a computed that nothing binds 
 using grams = decltype(beans.get());
 
 constexpr auto least_dose = 12 * g;  // the dose of the mildest cup
-constexpr auto dose_step = 2 * g;    // what one step of strength adds
+constexpr auto dose_step  = 2 * g;   // what one step of strength adds
 
 // Values made from states, and from each other. They store nothing; binding one makes it follow.
-constinit lv::computed dose{[](strength s) { return least_dose + s.value * dose_step; }, bold};
-constinit lv::computed needed{[](lv::counter c, grams d) { return c.value * d; }, cups, dose};
-constinit lv::computed enough{[](grams n, grams b) { return n <= b; }, needed, beans};
+constinit lv::computed dose{
+  [](strength s) {
+    return least_dose + s.value * dose_step;
+  },
+  bold
+};
+constinit lv::computed needed{
+  [](lv::counter c, grams d) {
+    return c.value * d;
+  },
+  cups,
+  dose
+};
+constinit lv::computed enough{
+  [](grams n, grams b) {
+    return n <= b;
+  },
+  needed,
+  beans
+};
 ```
 
 Checked: no tool checks this rule yet.
@@ -963,14 +1085,21 @@ The tree says what an element is, the token file says how it looks, and a design
 <!-- snippet: examples/looks/screen.hpp tree -->
 ```cpp
 constexpr auto tile = []<action Action> {
-  return lv::button({.style = lv::look<"tile"> | lv::look_of<"tile", Action>})[
-      lv::label({.text = lv::like<Action, names>})];
+  return lv::button(
+    {.style = lv::look<"tile"> | lv::look_of<"tile", Action>},
+    lv::label({.text = lv::like<Action, names>})
+  );
 };
 
-constexpr auto ui = lv::group({.style = lv::look<"page">})[
-    lv::label({.text = "Printer", .style = lv::look<"title">}),
-    lv::group({.style = lv::look<"tiles">})[lv::for_each<action, lv::but<action::none>>(tile)],
-    lv::label({.checked = true, .text = "Ready to print", .style = lv::look<"status">})];
+constexpr auto ui = lv::group(
+  {.style = lv::look<"page">}, lv::label({.text = "Printer", .style = lv::look<"title">}),
+  lv::group({.style = lv::look<"tiles">}, lv::for_each<action, lv::but<action::none>>(tile)),
+  lv::label({
+    .checked = true,
+    .text    = "Ready to print",
+    .style   = lv::look<"status">,
+  })
+);
 ```
 
 Checked: no tool checks this rule yet.
@@ -1062,10 +1191,24 @@ A wrong argument is then refused at the call, with the name of the concept, and 
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button(
+      {.on_clicked =
+         [] {
+           --Count;
+         }},
+      lv::label({.text = "-"})
+    ),
+    shown,
+    lv::button(
+      {.on_clicked =
+         [] {
+           ++Count;
+         }},
+      lv::label({.text = "+"})
+    )
+  );
 }
 ```
 
@@ -1091,10 +1234,24 @@ A handler in a constant tree is a plain function pointer and captures nothing; a
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button(
+      {.on_clicked =
+         [] {
+           --Count;
+         }},
+      lv::label({.text = "-"})
+    ),
+    shown,
+    lv::button(
+      {.on_clicked =
+         [] {
+           ++Count;
+         }},
+      lv::label({.text = "+"})
+    )
+  );
 }
 ```
 
@@ -1117,7 +1274,8 @@ A library of parts then serves several products, each with its own tokens, and n
 ```cpp
 template <>
 inline constexpr lv::design_of<decltype(looks::tok)> lv::design<lv::override>{
-    .tokens = looks::tok, .type = lv::typeface({{"Barlow", 500, looks::barlow}})};
+  .tokens = looks::tok, .type = lv::typeface({{"Barlow", 500, looks::barlow}})
+};
 ```
 
 Checked: no tool checks this rule yet.
@@ -1141,8 +1299,8 @@ int main() {
 
   auto root = lv::mount<app::ui>(display.screen());
   if (!root) return 2;
-  app::start(root);                         // the application's task, on the mounted tree
-  return app.run();                         // until the window is closed
+  app::start(root);  // the application's task, on the mounted tree
+  return app.run();  // until the window is closed
 }
 ```
 

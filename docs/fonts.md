@@ -28,16 +28,17 @@ A font is part of the design, so its family, weight and size come from a typogra
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 constexpr auto type = lv::typeface({
-    {"Barlow", 500, barlow_ttf},
-    {"Barlow Condensed", 600, condensed_ttf, "0123456789:"},  // only what a clock shows
+  {"Barlow", 500, barlow_ttf},
+  {"Barlow Condensed", 600, condensed_ttf, "0123456789:"},  // only what a clock shows
 });
 
-constexpr auto label = type(tok.text.label);
-constexpr auto title = type(tok.text.title);
+constexpr auto label   = type(tok.text.label);
+constexpr auto title   = type(tok.text.title);
 constexpr auto numeral = type(tok.text.numeral);
 ```
 
@@ -51,10 +52,21 @@ The tokens of this example are [examples/fonts/tokens.json](../examples/fonts/to
 
 <!-- snippet: examples/fonts/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.text = "Wake up", .style = {.text_font = title}}),
-    lv::label({.text = "06:45", .style = {.text_font = numeral}}),
-    lv::label({.text = "Tomorrow, in 7 hours", .style = {.text_font = label}})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({
+    .text  = "Wake up",
+    .style = {.text_font = title},
+  }),
+  lv::label({
+    .text  = "06:45",
+    .style = {.text_font = numeral},
+  }),
+  lv::label({
+    .text  = "Tomorrow, in 7 hours",
+    .style = {.text_font = label},
+  })
+);
 ```
 
 ## A font without a token
@@ -83,14 +95,19 @@ A font made by the compiler has one size. Where the size is only known on the de
 ```cpp
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};  // the size of the token: 16 px
 
-constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
-    lv::label({.id = "reading", .text = "21.5", .style = {.text_font = lv::bind(reading)}})];
+constexpr auto ui = lv::column(
+  {.size = {320 * px, 240 * px}}, lv::label({
+                                    .id    = "reading",
+                                    .text  = "21.5",
+                                    .style = {.text_font = lv::bind(reading)},
+                                  })
+);
 ```
 
 <!-- snippet: examples/scaled_font/main.cpp resize -->
 ```cpp
-  reading.resize(tok.text.title);     // 28 px: the label follows
-  reading.resize(lv::raw(31 * px));   // a size that no token names
+  reading.resize(tok.text.title);    // 28 px: the label follows
+  reading.resize(lv::raw(31 * px));  // a size that no token names
 ```
 
 - Its size comes from a typography token too. A size that no token names is `lv::raw(...)`.
