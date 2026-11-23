@@ -182,10 +182,12 @@ The stack of one run-time `set()` on a Cortex-M4 is read from the report of the 
 
 ### Judging a night
 
-- **The threshold is 0.5 percent of `Ir` for a compile probe, 5 percent for a visibility row and 2 percent for the stack.** There is no noise to set it by, as `Ir` did not move between two runs. 0.5 percent of `include_lv` is 47 M instructions.
-- **The baseline of a probe is the last night that did not rise beyond the threshold.** It moves when the probe is new or got cheaper beyond the threshold. It stays while the probe is inside, so a slow creep adds up until it crosses.
-- **A rise must also stand against the median of the last seven nights**, by at least half the threshold, so that one odd baseline cannot raise it. Before three nights there is only the baseline.
-- **A rise beyond the threshold fails the job `cost-collect`, and the `report` job opens the issue of the night.** The summary of the job has the table and the `git log` range since the baseline. A fall beyond the threshold moves the baseline and shows in the summary.
+- **Two rules, with the owner's numbers (2026-11-23).** They are data in `tools/metrics/probes.json`, and a probe may name its own. `Ir` does not move between two runs, so a limit is not set by noise: 0.25 percent of `include_lv` is 15 M instructions, and 2 percent of `port_page` is 6 G.
+- **A change is judged per probe against its base** (`tools/cost_history.py judge-pr`): up to +0.25 percent (`warn_percent`) it merges with no comment; up to +1.0 percent (`block_percent`) it merges with the cost table and a one-line reason in the pull request; above +1.0 percent it waits until it is fixed or the owner accepts it.
+- **The drift is judged every night.** A probe is a regression when it is more than +2.0 percent (`drift_percent`) above its baseline, and it stays one until it is back under +1.0 percent (`clear_percent`): the verdict of the night before is in the history, so the gate does not flap around the limit. The visibility rows and the stack keep their old tolerance as their block and drift limits (5 and 2 percent).
+- **The baseline of a probe moves when the probe is new, got cheaper than the baseline by more than `warn_percent`, or the owner accepts a rise** (`accept_cost` of the nightly, with a reason). It never moves up by itself, so small rises that each merge add up until they cross the drift limit.
+- **The median of the last nights is no longer part of the rule.** It let a rise that stayed for four nights clear itself without anyone deciding, which the baseline and the hysteresis now forbid. The history keeps every night, and `site/metrics.html` draws the trend.
+- **A regression fails the job `cost-collect`, and the `report` job opens the issue of the night.** The summary of the job has the table and the `git log` range since the baseline.
 - **The history is `history.jsonl` on the branch `metrics`, with `baseline.json`.** Only a run on `main` writes it. `pages.yml` draws `site/metrics.html` from it. A manual run on another branch judges against what is there and writes nothing.
 - **Nothing is added to the pull-request run.** `tools/check_eager.py` and `tests/include_only.cpp` stay its guards; the nightly measure sees total work, which they cannot.
 
