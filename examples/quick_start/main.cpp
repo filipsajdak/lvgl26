@@ -9,19 +9,30 @@
 using namespace lv::units;
 using namespace mp_units::si::unit_symbols;
 
+//! [readme]
 //! [state]
 constinit lv::state speed{0 * km / h};
-
-void reset() { speed = 0 * km / h; }
 //! [state]
 
 //! [tree]
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.text = "Speed"}),
-    lv::arc({.range = {0, 240}, .size = {120 * px, 120 * px}, .value = lv::bind(speed)})[
-        lv::label({.align = "center", .text = lv::bind(speed)})],
-    lv::button({.on_clicked = &reset})[lv::label({.text = "Reset"})]];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+  },
+  lv::label({.text = "Speed"}),
+  lv::arc(
+    {
+      .range = {0, 240},
+      .size  = {120 * px, 120 * px},
+      .value = lv::bind(speed),
+    },
+    lv::label({.align = "center", .text = lv::bind(speed)})
+  ),
+  lv::button({.on_clicked = [] { speed = 0 * km / h; }}, lv::label({.text = "Reset"}))
+);
 //! [tree]
+//! [readme]
 
 //! [main]
 constinit lv::frame<320, 240> frame;  // the display's memory
