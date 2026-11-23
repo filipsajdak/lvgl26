@@ -7,9 +7,11 @@
 A tree is written with a trailing comma in every property list that is to be laid out one property per
 line (`lv::label({.id = "a", .text = "x",})`), and without it where the list stays on one line. clang-format
 does the layout from that comma. It does not document this: tests/test_format_ui.py pins what it does, so
-that a new clang-format shows a change. After clang-format, one pass joins `.style =` and the `{` that it
-puts on the next line into `.style = {`, and moves the block left: it changes white space only, and the
-tool refuses a result whose text differs from the file's apart from white space.
+that a new clang-format shows a change. After clang-format, a pass joins `.style =` and the `{` that it
+puts on the next line into `.style = {`, and moves the block left; another gives such a line one space
+before the `=` and its body one step in; a third writes `b * px` back where clang-format reads it as a
+pointer (`b* px`). They change white space only, and the tool refuses a result
+whose text differs from the file's apart from white space.
 
 Needs clang-format 21 to 23 (CLANG_FORMAT names the program). Uses the standard library only.
 """
@@ -87,13 +89,47 @@ def join_blocks(text: str) -> str:
     return "\n".join(lines)
 
 
+OPENER = re.compile(r"^(\s*)(\.\w+)\s+= \{$")
+
+
+def tighten_blocks(text: str) -> str:
+    """A property that opens a block is `.name = {` with one space, and its body is one step in.
+
+    clang-format pads `.style  =` to the `=` of the lines above it and then puts the body three columns in.
+    """
+    lines = text.split("\n")
+    for i in range(len(lines) - 1):
+        found = OPENER.match(lines[i])
+        if not found:
+            continue
+        lines[i] = f"{found.group(1)}{found.group(2)} = {{"
+        delta = indent_of(lines[i]) + 2 - indent_of(lines[i + 1])
+        if delta:
+            end = block_end(lines, i)
+            lines[i + 1 : end] = [(" " * delta + line if delta > 0 else line[-delta:]) if line.strip() else line
+                                  for line in lines[i + 1 : end]]
+            lines[end] = " " * indent_of(lines[i]) + lines[end].lstrip()
+    return "\n".join(lines)
+
+
+# The units of lv::units. clang-format reads `b * px` after a comma as a declaration of a pointer
+# and writes `b* px`; it is a product, and the pass writes the spaces back.
+UNITS = r"(?:px|pct|ms|sec|min|deg)"
+POINTER_LOOK = re.compile(r"(?<=[\w)\]])\* (" + UNITS + r")\b")
+
+
+def restore_products(text: str) -> str:
+    """`height* px` becomes `height * px`. It changes white space only."""
+    return POINTER_LOOK.sub(r" * \1", text)
+
+
 def squeezed(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
 def format_text(text: str, name: str, program: str) -> str:
     """The text as the repository writes it. Raises if more than white space would change."""
-    formatted = join_blocks(run_clang_format(text, name, program))
+    formatted = restore_products(tighten_blocks(join_blocks(run_clang_format(text, name, program))))
     if squeezed(formatted) != squeezed(text):
         raise RuntimeError(f"{name}: the format would change more than white space")
     return formatted

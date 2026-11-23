@@ -65,6 +65,27 @@ class JoinBlocks(unittest.TestCase):
         self.assertEqual(tool.join_blocks(once), once)
 
 
+class TightenBlocks(unittest.TestCase):
+    def test_a_padded_opener_and_its_body_are_tightened(self):
+        before = "  .align  = 1,\n  .style  = {\n     .a = 1,\n     .b = {\n        .c = 2,\n     },\n  },\n"
+        after = "  .align  = 1,\n  .style = {\n    .a = 1,\n    .b = {\n      .c = 2,\n    },\n  },\n"
+        self.assertEqual(tool.tighten_blocks(before), after)
+
+    def test_a_block_in_order_is_left_alone(self):
+        text = "  .style = {\n    .a = 1,\n  },\n"
+        self.assertEqual(tool.tighten_blocks(text), text)
+
+
+class RestoreProducts(unittest.TestCase):
+    def test_a_product_that_looks_like_a_pointer_gets_its_spaces_back(self):
+        self.assertEqual(tool.restore_products(".size = {width * px, height* px},"), ".size = {width * px, height * px},")
+        self.assertEqual(tool.restore_products("{(a + b)* px, x[1]* pct}"), "{(a + b) * px, x[1] * pct}")
+
+    def test_a_real_pointer_is_left_alone(self):
+        text = "const char* const keys[] = {nullptr}; int* px_count; void f(char* p);"
+        self.assertEqual(tool.restore_products(text), text)
+
+
 @needs_clang_format
 class Lever(unittest.TestCase):
     """What clang-format does with a trailing comma, in the versions the repository is pinned for."""

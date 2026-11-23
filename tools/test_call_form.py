@@ -40,6 +40,10 @@ class ChildrenIntoCall(unittest.TestCase):
                          "lv::shown(page, lv::is<p::a>(a), lv::otherwise())")
         self.assertEqual(moved("lv::when(online)[banner]"), "lv::when(online, banner)")
 
+    def test_a_comment_that_starts_the_children_stays_on_its_own_line(self):
+        self.assertEqual(moved("lv::group({.id = a})[\n    //! [list]\n    lv::label({})]"),
+                         "lv::group({.id = a},\n//! [list]\n    lv::label({}))")
+
     def test_when_with_options_has_no_call_form_and_is_left(self):
         text = "lv::when(online, {.enter = f})[banner]"
         self.assertEqual(tool.children_into_call(text), (text, 0, [1]))

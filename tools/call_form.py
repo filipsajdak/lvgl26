@@ -63,7 +63,9 @@ def children_into_call(text: str) -> tuple[str, int, list[int]]:
             position = found.end()
             continue
         kids = text[bracket + 1 : end].strip()
-        inner = (args.rstrip() + ", " if args.strip() else "") + kids
+        # A comment that starts the children stays on a line of its own.
+        joint = ",\n" if kids.startswith(("//", "/*")) else ", "
+        inner = (args.rstrip() + joint if args.strip() else "") + kids
         text = text[: found.start()] + head + "(" + inner + ")" + text[end + 1 :]
         count += 1
         position = found.start()
