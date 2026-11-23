@@ -11,6 +11,7 @@ These files hold what has already been looked up for lvgl26, with sources. Read 
 | [example-ports.md](example-ports.md) | The examples of Qt, Slint, TouchGFX, emWin, Embedded Wizard, Crank and Altia: what exists, under which licence, and what we may do with it. |
 | [port-thermostat.md](port-thermostat.md) | The design of the port of Qt Quick's Thermostat demo: its licences, screens, state, files and tests, and the gaps to settle first. |
 | [port-media-player.md](port-media-player.md) | The design of a media player port: Qt Quick's Media Player demo or LVGL's music demo, the screens, state, files and tests, and the gaps to settle first. |
+| [tutorial-coffee.md](tutorial-coffee.md) | The design of the coffee machine tutorial: what the reader builds, its seven steps as built programs, the layout of a project split into files, its tests, what waits, and the questions for the owner. |
 | [device-ui.md](device-ui.md) | What drives the UI of each device class. Standards for process panels, medical alarms and charger prices. Touch target sizes. Text size by viewing distance. |
 | [instrument-cluster.md](instrument-cluster.md) | The information hierarchy of a cluster, glance limits, what the steering wheel hides, telltales, warning priority, tyre pressure, speedometer studies. |
 | [3d-and-effects.md](3d-and-effects.md) | 3D in LVGL, the plan for microcontrollers, generating 3D models, shadows and blur. |
