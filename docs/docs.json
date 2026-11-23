@@ -6,7 +6,8 @@
   "repository": "https://github.com/filipsajdak/lvgl26",
   "outline": [
     "lists.md",
-    "state.md"
+    "state.md",
+    "tree.md"
   ],
   "sections": [
     {
