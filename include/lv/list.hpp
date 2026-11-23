@@ -1172,29 +1172,33 @@ struct each_node {
 // first argument after the key is the options in braces (`O` keeps its default), or the row template.
 template <detail::row_source S, class T, class K, class O = detail::each_options<T, K>, class... R>
   requires std::same_as<typename S::value_type, T>
-constexpr auto each(const S& rows, K T::* key, const O& first = {}, const R&... row_template) {
+constexpr auto each(const S& rows, K T::* key, O&& first = {}, R&&... row_template) {
   static_assert(detail::row_key<K>,
                 "lv: a key names one row, and is compared as a state compares its value. Give it a "
                 "named type, `struct track_id { int value; };`, or an enum. To allow plain integers, "
                 "set rules.raw_integer_state in the settings.");
-  if constexpr (tree_node<O>) {
+  // Forwarding references, as the deleted fallback below has: for a row written in the call
+  // (`lv::each(tracks, &track::id, lv::label({...}))`) the fallback would bind the temporary better
+  // than a `const&` would, and win.
+  using options_type = std::remove_cvref_t<O>;
+  if constexpr (tree_node<options_type>) {
     static_assert(sizeof...(R) == 0,
                   "lv: the last argument of lv::each is its row template, one widget: "
                   "lv::each(tracks, &track::id, {...}, track_row).");
-    return detail::each_node<S, T, K, O>{&rows, key, {}, {first}};
-  } else {
-    static_assert(std::same_as<O, detail::each_options<T, K>>,
+    return detail::each_node<S, T, K, options_type>{&rows, key, {}, {first}};
+  } else if constexpr (!std::same_as<options_type, detail::each_options<T, K>>) {
+    static_assert(false,
                   "lv: lv::each takes the options in braces, then the row template: "
                   "lv::each(tracks, &track::id, {...}, track_row).");
-    if constexpr (sizeof...(R) == 0) {
-      return detail::each_node<S, T, K>{&rows, key, first, {}};
-    } else {
-      static_assert(sizeof...(R) == 1 && (tree_node<R> && ...),
-                    "lv: the last argument of lv::each is its row template, one widget: "
-                    "lv::each(tracks, &track::id, {...}, track_row).");
-      // Built in one step, as each(rows, key, options)[row_template] would be in two.
-      return detail::each_node<S, T, K, R...>{&rows, key, first, {row_template...}};
-    }
+    return detail::each_node<S, T, K>{&rows, key, {}, {}};
+  } else if constexpr (sizeof...(R) == 0) {
+    return detail::each_node<S, T, K>{&rows, key, first, {}};
+  } else {
+    static_assert(sizeof...(R) == 1 && (tree_node<std::remove_cvref_t<R>> && ...),
+                  "lv: the last argument of lv::each is its row template, one widget: "
+                  "lv::each(tracks, &track::id, {...}, track_row).");
+    // Built in one step, as each(rows, key, options)[row_template] would be in two.
+    return detail::each_node<S, T, K, std::remove_cvref_t<R>...>{&rows, key, first, {row_template...}};
   }
 }
 
