@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/filipsajdak/lvgl26/actions/workflows/ci.yml/badge.svg)](https://github.com/filipsajdak/lvgl26/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/github/license/filipsajdak/lvgl26)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/filipsajdak/lvgl26?include_prereleases)](https://github.com/filipsajdak/lvgl26/releases)
 
 A C++26 framework over [LVGL](https://github.com/lvgl/lvgl) for embedded user interfaces. A screen is a tree that the compiler checks, and widgets follow typed state.
 
