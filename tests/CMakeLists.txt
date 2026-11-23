@@ -946,6 +946,23 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_fonts_picture PROPERTIES FIXTURES_REQUIRED example_fonts_picture)
 endif()
 
+# The same screen with each font drawn in a file of its own (docs/fonts.md): its picture must be
+# the one of the example above, pixel for pixel.
+set(fonts_split_dir ${PROJECT_SOURCE_DIR}/examples/fonts_split)
+add_executable(example_fonts_split ${fonts_split_dir}/main.cpp ${fonts_split_dir}/font_text_label.cpp
+                                   ${fonts_split_dir}/font_text_title.cpp ${fonts_split_dir}/font_text_numeral.cpp)
+target_compile_options(example_fonts_split PRIVATE --embed-dir=${fonts_split_dir} --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_fonts_split PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out)
+add_test(NAME example_fonts_split COMMAND example_fonts_split WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out)
+set_tests_properties(example_fonts_split PROPERTIES FIXTURES_SETUP example_fonts_split_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_fonts_split_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out/fonts_split.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/fonts.png)
+  set_tests_properties(example_fonts_split_picture PROPERTIES FIXTURES_REQUIRED example_fonts_split_picture)
+endif()
+
 # The reference data: what reflection finds in the LVGL of this build, as JSON. The
 # committed file must be what the program prints.
 add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
