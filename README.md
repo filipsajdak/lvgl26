@@ -8,8 +8,6 @@ A C++26 framework over [LVGL](https://github.com/lvgl/lvgl) for embedded user in
 
 Public preview: GCC 16.2 or newer only.
 
-One UI framework, from a low-cost microcontroller up. lvgl26 and LVGL are both MIT: no royalty per device, and no licence per developer seat.
-
 <!-- snippet: examples/quick_start/main.cpp readme -->
 ```cpp
 constinit lv::state speed{0 * km / h};
@@ -39,7 +37,7 @@ The dial and its label follow `speed`, and the button's lambda sets it. This is 
 ## Why lvgl26
 
 - **Mistakes are compile errors that say how to fix them.** A width without a unit, a misspelled LVGL value, an id that does not exist: each stops the build with a message. More than 340 [compile-fail tests](tests/fail) pin those messages.
-- **No heap of its own.** The compiler builds the tree and sizes what it keeps. Styles, looks and constant texts stay in read-only memory. What needs memory at run time takes it from LVGL's heap, measured every night on a Cortex-M4 ([Targets](docs/targets.md)).
+- **A screen takes no heap of lvgl26's own.** The compiler builds the tree and sizes what it keeps. Styles, looks and constant texts stay in read-only memory. Bindings and tasks take their memory from LVGL's own pool, measured every night on a Cortex-M4 ([Targets](docs/targets.md)). The setting `"allow": {"allocation": false}` stops the build at each part that would use the system heap ([Settings](docs/settings.md)).
 - **Made for AI agents as much as for people.** A [Claude Code skill](skills/write-ui/SKILL.md) tells an agent how to write a screen. A program can serve its screen to an agent over MCP: a [tree dump, screenshots and patches by id](examples/agent/mcp_host.cpp).
 
 Compile time is measured per feature, every night: [the compile cost](docs/research/compile-time.md).
@@ -218,7 +216,7 @@ cmake --preset host-v96 && cmake --build --preset host-v96 && ctest --preset hos
 
 ## On a microcontroller
 
-The library builds with `-fno-exceptions -fno-rtti`. A slice of it runs on an Arm Cortex-M4 in QEMU every night. [Targets](docs/targets.md) says how to build it, and what it costs.
+One UI framework, from a low-cost microcontroller up. The library builds with `-fno-exceptions -fno-rtti`. A slice of it runs on an Arm Cortex-M4 in QEMU every night. [Targets](docs/targets.md) says how to build it, and what it costs.
 
 ## With Claude Code
 
@@ -239,4 +237,4 @@ The site, <https://filipsajdak.github.io/lvgl26/>, is the plain HTML and CSS in 
 
 ## Licence
 
-MIT, as is LVGL. [NOTICE.md](NOTICE.md) lists the borrowed parts and their licences.
+MIT, as is LVGL: no royalty per device, and no licence per developer seat. [NOTICE.md](NOTICE.md) lists the borrowed parts and their licences.
