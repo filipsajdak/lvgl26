@@ -77,8 +77,8 @@
       "parts": 3
     },
     "include/lv/detail/deferred.hpp": {
-      "tests": "^shown$|^example_pages$",
-      "targets": "shown example_pages"
+      "tests": "^deferred$|^shown$|^example_pages$",
+      "targets": "deferred shown example_pages"
     },
     "include/lv/detail/one_of_region.hpp": {
       "tests": "^one_of$|one_of_violation",

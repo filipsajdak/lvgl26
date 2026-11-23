@@ -203,5 +203,15 @@
     "header": "include/lv/detail/api.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/deferred.hpp",
+    "mutant": "n.next = nullptr;  ->  /*n.next = nullptr;*/",
+    "reason": "Equivalent. A node out of the queue always has next set to nullptr (its constructor, and remove), so add sets it to what it holds."
+  },
+  {
+    "header": "include/lv/detail/deferred.hpp",
+    "mutant": "}  ->  continue;",
+    "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
   }
 ]
