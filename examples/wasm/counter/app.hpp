@@ -32,32 +32,35 @@ inline void fewer() {
   ++clicks;
 }
 
+inline constexpr auto dial_view = lv::arc(
+  {
+    .range = {0, 100},
+    .size  = {130 * px, 130 * px},
+    .value = lv::bind(dial),
+  },
+  lv::label({.align = "center", .text = lv::bind(dial, "{}")})
+);
+
+inline constexpr auto stepper = lv::row(
+  {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+  lv::button({.on_clicked = &fewer}, lv::label({.text = "-"})),
+  lv::label({.text = lv::bind(clicks, "{} clicks")}),
+  lv::button({.on_clicked = &more}, lv::label({.text = "+"}))
+);
+
+inline constexpr auto switches = lv::row(
+  {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+  lv::slider({
+    .range = {0, 100},
+    .size  = {200 * px, 12 * px},
+    .value = lv::bind(volume),
+  }),
+  lv::toggle({.checked = lv::bind(lamp)}), lv::label({.text = lv::bind(ticks, "{} ticks")})
+);
+
 inline constexpr auto ui = lv::column(
   {.flex_align = {"center", "center", "center"}, .size = {width * px, height * px}},
-  lv::label({.text = "lvgl26 in the browser"}),
-  lv::arc(
-    {
-      .range = {0, 100},
-      .size  = {130 * px, 130 * px},
-      .value = lv::bind(dial),
-    },
-    lv::label({.align = "center", .text = lv::bind(dial, "{}")})
-  ),
-  lv::row(
-    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::button({.on_clicked = &fewer}, lv::label({.text = "-"})),
-    lv::label({.text = lv::bind(clicks, "{} clicks")}),
-    lv::button({.on_clicked = &more}, lv::label({.text = "+"}))
-  ),
-  lv::row(
-    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::slider({
-      .range = {0, 100},
-      .size  = {200 * px, 12 * px},
-      .value = lv::bind(volume),
-    }),
-    lv::toggle({.checked = lv::bind(lamp)}), lv::label({.text = lv::bind(ticks, "{} ticks")})
-  )
+  lv::label({.text = "lvgl26 in the browser"}), dial_view, stepper, switches
 );
 
 // The task that makes the screen live without input.

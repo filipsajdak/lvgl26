@@ -63,6 +63,45 @@ constexpr auto slide_in =
 constexpr auto slide_out =
   lv::transition({.x = {0 * px, page_width * px}}, tok.motion.slide_time, tok.motion.slide);
 
+constexpr auto pages = lv::group(
+  {.size = {page_width * px, 100 * pct}, .x = sidebar_width * px},
+  lv::shown(
+    active_page, lv::is<page::home>(home_page), lv::is<page::settings>(settings_page),
+    lv::is<page::ink>(ink_page)
+  )
+);
+
+// Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
+constexpr auto subpages = lv::group(
+  {
+    .clickable = false,
+    .size      = {page_width * px, 100 * pct},
+    .x         = sidebar_width * px,
+  },
+  lv::shown(
+    active_subpage, {.enter = slide_in, .leave = slide_out}, lv::is<subpage::none>(),
+    lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
+    lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)
+  )
+);
+
+constexpr auto sidebar = lv::group(
+  {
+    .flex_align = {"start", "center", "center"},
+    .flex_flow  = "column",
+    .size       = {sidebar_width * px, 100 * pct},
+    .style = {
+      .bg_color = tok.sidebar.background,
+      .bg_opa   = tok.solid,
+      .pad_gap  = tok.space.edge,
+      .pad_top  = tok.space.edge,
+    },
+  },
+  side_icon<icons::home>(is_home, &go<page::home>),
+  side_icon<icons::settings>(is_settings, &go<page::settings>),
+  side_icon<icons::ink>(is_ink, &go<page::ink>)
+);
+
 constexpr auto ui = lv::group(
   {
     .size = {window_width * px, window_height * px},
@@ -73,42 +112,7 @@ constexpr auto ui = lv::group(
       .radius      = tok.window.radius,
     },
   },
-  lv::group(
-    {.size = {page_width * px, 100 * pct}, .x = sidebar_width * px},
-    lv::shown(
-      active_page, lv::is<page::home>(home_page), lv::is<page::settings>(settings_page),
-      lv::is<page::ink>(ink_page)
-    )
-  ),
-  // Over the page, and not clickable itself: with no sub-page shown, taps reach the page below.
-  lv::group(
-    {
-      .clickable = false,
-      .size      = {page_width * px, 100 * pct},
-      .x         = sidebar_width * px,
-    },
-    lv::shown(
-      active_subpage, {.enter = slide_in, .leave = slide_out}, lv::is<subpage::none>(),
-      lv::is<subpage::print>(print_page), lv::is<subpage::scan>(scan_page),
-      lv::is<subpage::copy>(copy_page), lv::is<subpage::usb>(usb_page)
-    )
-  ),
-  lv::group(
-    {
-      .flex_align = {"start", "center", "center"},
-      .flex_flow  = "column",
-      .size       = {sidebar_width * px, 100 * pct},
-      .style = {
-        .bg_color = tok.sidebar.background,
-        .bg_opa   = tok.solid,
-        .pad_gap  = tok.space.edge,
-        .pad_top  = tok.space.edge,
-      },
-    },
-    side_icon<icons::home>(is_home, &go<page::home>),
-    side_icon<icons::settings>(is_settings, &go<page::settings>),
-    side_icon<icons::ink>(is_ink, &go<page::ink>)
-  )
+  pages, subpages, sidebar
 );
 //! [shown]
 
