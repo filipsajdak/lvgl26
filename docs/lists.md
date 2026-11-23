@@ -31,9 +31,7 @@ constinit lv::state current{track_id{0}};  // the selected row; no track has the
 <!-- snippet: examples/lists/main.cpp tree -->
 ```cpp
 constinit lv::computed has_tracks{
-  [](lv::counter n) {
-    return n.value > 0;
-  },
+  [](lv::counter n) { return n.value > 0; },
   tracks.count(),
 };
 
@@ -151,9 +149,7 @@ constexpr track playlist[] = {
 <!-- snippet: examples/lists/main.cpp changes -->
 ```cpp
 void play(std::size_t row) {
-  tracks.update(row, [](track& t) {
-    ++t.plays;
-  });  // that row's labels are set again
+  tracks.update(row, [](track& t) { ++t.plays; });  // that row's labels are set again
 }
 ```
 

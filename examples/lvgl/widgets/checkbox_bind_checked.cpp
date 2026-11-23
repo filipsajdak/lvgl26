@@ -29,9 +29,7 @@ constexpr auto note = lv::label({
 
 void widgets::checkbox_bind_checked(lv::obj screen) {
   // Once, however often the example is built: the note follows the box from now on.
-  static const auto following = details_wanted.observe([](bool wanted) {
-    note_hidden = !wanted;
-  });
+  static const auto following = details_wanted.observe([](bool wanted) { note_hidden = !wanted; });
   if (following == nullptr) return;  // LVGL had no memory for the observer
   // Both sit on the screen itself: the note is wider than the screen, and the
   // scrollbar this gives must be the screen's own. A tree has one root, so each

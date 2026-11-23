@@ -22,12 +22,8 @@ constexpr auto ui = lv::group(
 lv::task<> report(lv::view<"slider"> slider, lv::view<"label"> status) {
   for (;;) {
     const bool released = co_await lv::first(
-      slider.next().value_changed.then([] {
-        return false;
-      }),
-      slider.next().released.then([] {
-        return true;
-      })
+      slider.next().value_changed.then([] { return false; }),
+      slider.next().released.then([] { return true; })
     );
     const std::int32_t value = slider.get<"value">();
     const std::string text =

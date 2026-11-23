@@ -24,9 +24,8 @@ constexpr auto ui = lv::group(
 
 void widgets::switch_event(lv::obj screen) {
   // Once, however often the example is built: the text follows the switch from now on.
-  static const auto following = on.observe([](bool now) {
-    status = now ? "State: ON" : "State: OFF";
-  });
+  static const auto following =
+    on.observe([](bool now) { status = now ? "State: ON" : "State: OFF"; });
   if (following == nullptr) return;  // LVGL had no memory for the observer
   lv::place<ui>(screen);
 }

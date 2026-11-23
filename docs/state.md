@@ -113,26 +113,9 @@ constexpr auto least_dose = 12 * g;  // the dose of the mildest cup
 constexpr auto dose_step  = 2 * g;   // what one step of strength adds
 
 // Values made from states, and from each other. They store nothing; binding one makes it follow.
-constinit lv::computed dose{
-  [](strength s) {
-    return least_dose + s.value * dose_step;
-  },
-  bold
-};
-constinit lv::computed needed{
-  [](lv::counter c, grams d) {
-    return c.value * d;
-  },
-  cups,
-  dose
-};
-constinit lv::computed enough{
-  [](grams n, grams b) {
-    return n <= b;
-  },
-  needed,
-  beans
-};
+constinit lv::computed dose{[](strength s) { return least_dose + s.value * dose_step; }, bold};
+constinit lv::computed needed{[](lv::counter c, grams d) { return c.value * d; }, cups, dose};
+constinit lv::computed enough{[](grams n, grams b) { return n <= b; }, needed, beans};
 ```
 
 The function takes the values of the dependencies in their order. Its result follows the rules of a state, so it cannot be a plain integer either.
@@ -150,12 +133,7 @@ A computed can depend only on objects defined before it, so a cycle cannot be wr
 grams grinder_dose{};  // what the grinder is set to: outside the screen
 
 // An action that follows a value: it runs at start() and after every change of `needed`.
-constinit lv::effect grinder{
-  [](grams n) {
-    grinder_dose = n;
-  },
-  needed
-};
+constinit lv::effect grinder{[](grams n) { grinder_dose = n; }, needed};
 ```
 
 An effect does nothing until `start()`, which runs it at once. `reset()` stops it.
@@ -180,21 +158,9 @@ template <auto& Count>
 constexpr auto stepper(lv::tree_node auto shown) {
   return lv::row(
     {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::button(
-      {.on_clicked =
-         [] {
-           --Count;
-         }},
-      lv::label({.text = "-"})
-    ),
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
     shown,
-    lv::button(
-      {.on_clicked =
-         [] {
-           ++Count;
-         }},
-      lv::label({.text = "+"})
-    )
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
   );
 }
 ```

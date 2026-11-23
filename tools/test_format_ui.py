@@ -102,6 +102,10 @@ class Lever(unittest.TestCase):
     def test_the_lever_works_in_every_level_of_a_tree(self):
         self.assertEqual(tool.format_text(NESTED, "a.cpp", PROGRAM), NESTED_FORMATTED)
 
+    def test_a_short_handler_stays_on_one_line(self):
+        text = "constexpr auto b = lv::button({.on_clicked = [] { current = 1; }});\n"
+        self.assertEqual(tool.format_text(text, "a.cpp", PROGRAM), text)
+
     def test_the_equals_signs_of_a_list_are_aligned(self):
         out = tool.format_text(WITH_COMMA, "a.cpp", PROGRAM).split("\n")
         self.assertEqual({line.index("=") for line in out[1:4]}, {8})

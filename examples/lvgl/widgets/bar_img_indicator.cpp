@@ -16,15 +16,11 @@ constinit lv::state lit{lv::counter{20}};
 
 // The count stays between 0 and 100, the limits the C example gives its subject.
 void one_less() {
-  lit.update([](lv::counter c) {
-    return c.value > 0 ? --c : c;
-  });
+  lit.update([](lv::counter c) { return c.value > 0 ? --c : c; });
 }
 
 void one_more() {
-  lit.update([](lv::counter c) {
-    return c.value < 100 ? ++c : c;
-  });
+  lit.update([](lv::counter c) { return c.value < 100 ? ++c : c; });
 }
 
 // Each part is a picture, with no fill of its own and square corners.

@@ -43,27 +43,9 @@ constexpr auto slide_out = lv::transition({.x = {0 * px, -240 * px}}, 250 * ms, 
 // The buttons that choose the page.
 constexpr auto menu = lv::column(
   {.size = {80 * px, 240 * px}},
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::home;
-       }},
-    lv::label({.text = "Home"})
-  ),
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::settings;
-       }},
-    lv::label({.text = "Settings"})
-  ),
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::about;
-       }},
-    lv::label({.text = "About"})
-  )
+  lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+  lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+  lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
 );
 
 // The page that follows `current`, and a banner above it while the device is offline.

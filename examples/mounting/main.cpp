@@ -57,11 +57,8 @@ int dialogs(lv::application& app, lv::display& display) {
   app.advance(50 * ms), app.step();
   if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
   status.visit(
-    [](lv::held<failed> f) {
-      f->get<"reason">().set({.text = "The card is full"});
-    },
-    [](const auto&) {
-    }
+    [](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+    [](const auto&) {}
   );  // saving has nothing to update
   //! [slot-use]
   return status.holds<failed>() ? 0 : 8;

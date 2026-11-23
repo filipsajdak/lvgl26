@@ -9,9 +9,7 @@ using namespace lv::units;
 constinit lv::state<bool> dark{false};
 
 void flip_theme() {
-  dark.update([](bool now) {
-    return !now;
-  });
+  dark.update([](bool now) { return !now; });
 }
 
 // One difference from the C example: that one adds a style to the panel while the

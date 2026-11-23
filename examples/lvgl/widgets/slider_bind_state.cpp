@@ -26,9 +26,7 @@ constexpr auto ui = lv::group(
 
 void widgets::slider_bind_state(lv::obj screen) {
   // Once, however often the example is built: too_high follows level from now on.
-  static const auto following = level.observe([](auto now) {
-    too_high = now > 80 * percent;
-  });
+  static const auto following = level.observe([](auto now) { too_high = now > 80 * percent; });
   if (following == nullptr) return;  // LVGL had no memory for the observer
   lv::place<ui>(screen);
 }

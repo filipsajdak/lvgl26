@@ -65,9 +65,7 @@ constexpr auto track_row = lv::button(
 
 //! [tree]
 constinit lv::computed has_tracks{
-  [](lv::counter n) {
-    return n.value > 0;
-  },
+  [](lv::counter n) { return n.value > 0; },
   tracks.count(),
 };
 
@@ -118,9 +116,7 @@ constexpr track playlist[] = {
 
 //! [changes]
 void play(std::size_t row) {
-  tracks.update(row, [](track& t) {
-    ++t.plays;
-  });  // that row's labels are set again
+  tracks.update(row, [](track& t) { ++t.plays; });  // that row's labels are set again
 }
 //! [changes]
 

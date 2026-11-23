@@ -192,9 +192,7 @@ constexpr std::array down{key{0, 119},   key{200, 119}, key{220, 120}, key{240, 
 
 // A value between two keyframes, on a straight line.
 int between(std::span<const key> keys, int frame) {
-  const auto after = std::ranges::find_if(keys, [frame](const key& k) {
-    return k.frame >= frame;
-  });
+  const auto after = std::ranges::find_if(keys, [frame](const key& k) { return k.frame >= frame; });
   if (after == keys.begin()) return after->value;
   if (after == keys.end()) return keys.back().value;
   const key& before = *(after - 1);

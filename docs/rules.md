@@ -127,21 +127,9 @@ template <auto& Count>
 constexpr auto stepper(lv::tree_node auto shown) {
   return lv::row(
     {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::button(
-      {.on_clicked =
-         [] {
-           --Count;
-         }},
-      lv::label({.text = "-"})
-    ),
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
     shown,
-    lv::button(
-      {.on_clicked =
-         [] {
-           ++Count;
-         }},
-      lv::label({.text = "+"})
-    )
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
   );
 }
 ```
@@ -159,9 +147,7 @@ The list builds, moves and deletes the widgets of one row at a time. A loop that
 <!-- snippet: examples/lists/main.cpp tree -->
 ```cpp
 constinit lv::computed has_tracks{
-  [](lv::counter n) {
-    return n.value > 0;
-  },
+  [](lv::counter n) { return n.value > 0; },
   tracks.count(),
 };
 
@@ -223,11 +209,7 @@ struct labels {
 
 constexpr auto tile = []<page Page> {
   return lv::button(
-    {.size = {80 * px, 60 * px},
-     .on_clicked =
-       [] {
-         shown = Page;
-       }},
+    {.size = {80 * px, 60 * px}, .on_clicked = [] { shown = Page; }},
     lv::label({.text = lv::like<Page, labels>})
   );
 };
@@ -343,27 +325,9 @@ The library builds the page or the dialog that is current and ends the one befor
 // The buttons that choose the page.
 constexpr auto menu = lv::column(
   {.size = {80 * px, 240 * px}},
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::home;
-       }},
-    lv::label({.text = "Home"})
-  ),
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::settings;
-       }},
-    lv::label({.text = "Settings"})
-  ),
-  lv::button(
-    {.on_clicked =
-       [] {
-         current = page::about;
-       }},
-    lv::label({.text = "About"})
-  )
+  lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+  lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+  lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
 );
 
 // The page that follows `current`, and a banner above it while the device is offline.
@@ -1039,26 +1003,9 @@ constexpr auto least_dose = 12 * g;  // the dose of the mildest cup
 constexpr auto dose_step  = 2 * g;   // what one step of strength adds
 
 // Values made from states, and from each other. They store nothing; binding one makes it follow.
-constinit lv::computed dose{
-  [](strength s) {
-    return least_dose + s.value * dose_step;
-  },
-  bold
-};
-constinit lv::computed needed{
-  [](lv::counter c, grams d) {
-    return c.value * d;
-  },
-  cups,
-  dose
-};
-constinit lv::computed enough{
-  [](grams n, grams b) {
-    return n <= b;
-  },
-  needed,
-  beans
-};
+constinit lv::computed dose{[](strength s) { return least_dose + s.value * dose_step; }, bold};
+constinit lv::computed needed{[](lv::counter c, grams d) { return c.value * d; }, cups, dose};
+constinit lv::computed enough{[](grams n, grams b) { return n <= b; }, needed, beans};
 ```
 
 Checked: no tool checks this rule yet.
@@ -1194,21 +1141,9 @@ template <auto& Count>
 constexpr auto stepper(lv::tree_node auto shown) {
   return lv::row(
     {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::button(
-      {.on_clicked =
-         [] {
-           --Count;
-         }},
-      lv::label({.text = "-"})
-    ),
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
     shown,
-    lv::button(
-      {.on_clicked =
-         [] {
-           ++Count;
-         }},
-      lv::label({.text = "+"})
-    )
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
   );
 }
 ```
@@ -1237,21 +1172,9 @@ template <auto& Count>
 constexpr auto stepper(lv::tree_node auto shown) {
   return lv::row(
     {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
-    lv::button(
-      {.on_clicked =
-         [] {
-           --Count;
-         }},
-      lv::label({.text = "-"})
-    ),
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
     shown,
-    lv::button(
-      {.on_clicked =
-         [] {
-           ++Count;
-         }},
-      lv::label({.text = "+"})
-    )
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
   );
 }
 ```

@@ -24,15 +24,11 @@ inline constinit lv::state volume{lv::counter{}};  // the slider
 inline constinit lv::state lamp{false};            // the switch
 
 inline void more() {
-  dial.update([](lv::counter c) {
-    return c.value + step_of_dial > 100 ? c : c += step_of_dial;
-  });
+  dial.update([](lv::counter c) { return c.value + step_of_dial > 100 ? c : c += step_of_dial; });
   ++clicks;
 }
 inline void fewer() {
-  dial.update([](lv::counter c) {
-    return c.value - step_of_dial < 0 ? c : c -= step_of_dial;
-  });
+  dial.update([](lv::counter c) { return c.value - step_of_dial < 0 ? c : c -= step_of_dial; });
   ++clicks;
 }
 

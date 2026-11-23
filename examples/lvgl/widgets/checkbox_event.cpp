@@ -24,9 +24,8 @@ constexpr auto ui = lv::group(
 
 void widgets::checkbox_event(lv::obj screen) {
   // Once, however often the example is built: the text follows the box from now on.
-  static const auto following = enabled.observe([](bool now) {
-    status = now ? "Feature: ON" : "Feature: OFF";
-  });
+  static const auto following =
+    enabled.observe([](bool now) { status = now ? "Feature: ON" : "Feature: OFF"; });
   if (following == nullptr) return;  // LVGL had no memory for the observer
   lv::place<ui>(screen);
 }

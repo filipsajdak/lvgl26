@@ -18,14 +18,10 @@ constinit lv::state copies{lv::counter{1}};
 constinit lv::state pages{lv::counter{1}};
 
 void fewer_copies() {
-  copies.update([](lv::counter c) {
-    return --c;
-  });
+  copies.update([](lv::counter c) { return --c; });
 }
 void more_copies() {
-  copies.update([](lv::counter c) {
-    return ++c;
-  });
+  copies.update([](lv::counter c) { return ++c; });
 }
 //! [state]
 
@@ -61,16 +57,8 @@ constexpr auto counting_spin_box(const char* name) {
   return spin_box(
     name,
     Count,
-    [] {
-      Count.update([](lv::counter c) {
-        return --c;
-      });
-    },
-    [] {
-      Count.update([](lv::counter c) {
-        return ++c;
-      });
-    }
+    [] { Count.update([](lv::counter c) { return --c; }); },
+    [] { Count.update([](lv::counter c) { return ++c; }); }
   );
 }
 

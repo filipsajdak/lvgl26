@@ -74,11 +74,8 @@ constinit lv::one_of<saving, failed> status;  // a window that shows one of two 
   app.advance(50 * ms), app.step();
   if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
   status.visit(
-    [](lv::held<failed> f) {
-      f->get<"reason">().set({.text = "The card is full"});
-    },
-    [](const auto&) {
-    }
+    [](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+    [](const auto&) {}
   );  // saving has nothing to update
 ```
 

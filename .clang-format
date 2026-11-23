@@ -11,4 +11,4 @@ ReflowComments: false
 AlignConsecutiveAssignments: Consecutive
 AlignAfterOpenBracket: BlockIndent
 BinPackArguments: false
-AllowShortLambdasOnASingleLine: None
+AllowShortLambdasOnASingleLine: Inline

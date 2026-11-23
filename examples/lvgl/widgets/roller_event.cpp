@@ -20,9 +20,7 @@ constexpr const char* status_texts[] = {
 };
 
 constinit lv::computed status{
-  [](day d) {
-    return status_texts[std::to_underlying(d)];
-  },
+  [](day d) { return status_texts[std::to_underlying(d)]; },
   chosen,
 };
 
