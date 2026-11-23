@@ -1019,6 +1019,7 @@ if(Python3_FOUND)
   # The format of UI code (tools/format_ui.py, .clang-format). Its lever tests need clang-format, which
   # only the editor image has; they skip where it is missing, and the job editor runs them.
   add_test(NAME editor_format_ui COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_format_ui.py)
+  add_test(NAME call_form_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_call_form.py)
   # The build checks the includes of every file of a target that links lvgl26 (cmake/check_includes.cmake):
   # the check of tests/smoke.cpp left its stamp.
   if(LVGL26_CHECK_INCLUDES)
