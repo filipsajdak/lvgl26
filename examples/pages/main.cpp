@@ -40,45 +40,46 @@ constexpr auto slide_out = lv::transition({.x = {0 * px, -240 * px}}, 250 * ms, 
 //! [transitions]
 
 //! [tree]
-constexpr auto ui = lv::row(
-  {.size = {320 * px, 240 * px}},
-  lv::column(
-    {.size = {80 * px, 240 * px}},
-    lv::button(
-      {.on_clicked =
-         [] {
-           current = page::home;
-         }},
-      lv::label({.text = "Home"})
-    ),
-    lv::button(
-      {.on_clicked =
-         [] {
-           current = page::settings;
-         }},
-      lv::label({.text = "Settings"})
-    ),
-    lv::button(
-      {.on_clicked =
-         [] {
-           current = page::about;
-         }},
-      lv::label({.text = "About"})
-    )
+// The buttons that choose the page.
+constexpr auto menu = lv::column(
+  {.size = {80 * px, 240 * px}},
+  lv::button(
+    {.on_clicked =
+       [] {
+         current = page::home;
+       }},
+    lv::label({.text = "Home"})
   ),
-  lv::column(
-    {.size = {240 * px, 240 * px}},
-    lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
-    lv::group(
-      {.size = {240 * px, 200 * px}},
-      lv::shown(
-        current, {.enter = slide_in, .leave = slide_out},
-        lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
-        lv::is<page::settings>(settings), lv::is<page::about>(about)
-      )
-    )
+  lv::button(
+    {.on_clicked =
+       [] {
+         current = page::settings;
+       }},
+    lv::label({.text = "Settings"})
+  ),
+  lv::button(
+    {.on_clicked =
+       [] {
+         current = page::about;
+       }},
+    lv::label({.text = "About"})
   )
 );
+
+// The page that follows `current`, and a banner above it while the device is offline.
+constexpr auto pages = lv::shown(
+  current, {.enter = slide_in, .leave = slide_out},
+  lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+  lv::is<page::settings>(settings), lv::is<page::about>(about)
+);
+
+constexpr auto content = lv::column(
+  {.size = {240 * px, 240 * px}},
+  lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+  lv::group({.size = {240 * px, 200 * px}}, pages)
+);
+
+constexpr auto ui = lv::row({.size = {320 * px, 240 * px}}, menu, content);
 //! [tree]
 
 constinit lv::frame<320, 240> frame;
