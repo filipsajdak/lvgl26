@@ -23,6 +23,62 @@ constexpr auto main_screen() {
   constexpr auto value_font   = digits_face(tok.text.value);
   constexpr auto clock_font   = digits_face(tok.text.clock);
 
+  // The bar behind the three buttons.
+  constexpr auto button_backdrop = lv::group({
+    .size  = {button_bar.w * px, button_bar.h * px},
+    .x     = button_bar.x * px,
+    .y     = button_bar.y * px,
+    .style = {
+      .bg_color     = C.button_bar,
+      .bg_opa       = tok.solid,
+      .border_color = tok.line.stroke,
+      .border_width = tok.line.width,
+      .radius       = tok.bar.radius,
+    },
+  });
+
+  constexpr auto heart_info = info_panel<pictures::heart>(
+    heart_panel, "HEART RATE", lv::bind(heart_rate, "{}"), caption_font, count_font, C.black
+  );
+  constexpr auto elevation_info = info_panel<pictures::elevation>(
+    elevation_panel, "ELEVATION", lv::bind(elevation, "{}"), caption_font, count_font, C.black
+  );
+
+  // The three looks, the one on screen marked.
+  constexpr auto look_buttons = at(
+    theme_buttons,
+    look_button<look::light, Active == look::light>(0, "Light", label_font, C.primary, C.secondary),
+    look_button<look::dark, Active == look::dark>(1, "Dark", label_font, C.primary, C.secondary),
+    look_button<look::sporty, Active == look::sporty>(
+      2, "Sporty", label_font, C.primary, C.secondary
+    )
+  );
+
+  constexpr auto incline_settings = settings_panel<Incline>(
+    incline_panel,
+    "INCLINE",
+    "(%)",
+    lv::bind(incline, "{}"),
+    &flatter,
+    &steeper,
+    value_font,
+    label_font,
+    unit_font,
+    C.primary
+  );
+  constexpr auto speed_settings = settings_panel<Speed>(
+    speed_panel,
+    "SPEED",
+    "(MPH)",
+    lv::bind(speed_text),
+    &slower,
+    &faster,
+    value_font,
+    label_font,
+    unit_font,
+    C.primary
+  );
+
   return lv::group(
     {
       .size  = {screen_width * px, screen_height * px},
@@ -32,18 +88,7 @@ constexpr auto main_screen() {
     filled(ground, C.background),
     filled(nav_bar, C.nav_bar),
     filled(hairline, tok.line.stroke),
-    lv::group({
-      .size = {button_bar.w * px, button_bar.h * px},
-      .x    = button_bar.x * px,
-      .y    = button_bar.y * px,
-      .style = {
-        .bg_color     = C.button_bar,
-        .bg_opa       = tok.solid,
-        .border_color = tok.line.stroke,
-        .border_width = tok.line.width,
-        .radius       = tok.bar.radius,
-      },
-    }),
+    button_backdrop,
     picture<pictures::wordmark_small>(wordmark.x, wordmark.y),
     filled(divider_left, tok.line.divider),
     filled(divider_right, tok.line.divider),
@@ -56,48 +101,12 @@ constexpr auto main_screen() {
 
     track_view_of<C>(label_font, unit_font, pace_font, clock_font),
     runner_dot(),
-
-    info_panel<pictures::heart>(
-      heart_panel, "HEART RATE", lv::bind(heart_rate, "{}"), caption_font, count_font, C.black
-    ),
-    info_panel<pictures::elevation>(
-      elevation_panel, "ELEVATION", lv::bind(elevation, "{}"), caption_font, count_font, C.black
-    ),
+    heart_info,
+    elevation_info,
     mode_toggle(mode_switch, C.black, C.secondary),
-    at(
-      theme_buttons,
-      look_button<look::light, Active == look::light>(
-        0, "Light", label_font, C.primary, C.secondary
-      ),
-      look_button<look::dark, Active == look::dark>(1, "Dark", label_font, C.primary, C.secondary),
-      look_button<look::sporty, Active == look::sporty>(
-        2, "Sporty", label_font, C.primary, C.secondary
-      )
-    ),
-    settings_panel<Incline>(
-      incline_panel,
-      "INCLINE",
-      "(%)",
-      lv::bind(incline, "{}"),
-      &flatter,
-      &steeper,
-      value_font,
-      label_font,
-      unit_font,
-      C.primary
-    ),
-    settings_panel<Speed>(
-      speed_panel,
-      "SPEED",
-      "(MPH)",
-      lv::bind(speed_text),
-      &slower,
-      &faster,
-      value_font,
-      label_font,
-      unit_font,
-      C.primary
-    )
+    look_buttons,
+    incline_settings,
+    speed_settings
   );
 }
 
