@@ -1,6 +1,6 @@
 # The coffee machine of the tutorial (docs/research/tutorial-coffee.md): one whole program for
 # each step, each of which writes the picture of its step.
-foreach(step 1-screen)
+foreach(step 1-screen 2-values)
   string(REGEX MATCH "^[0-9]+" number ${step})
   set(target coffee_${number})
   add_executable(${target} ${step}/main.cpp)
