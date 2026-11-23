@@ -49,6 +49,24 @@
       "stands_for": "a theme that styles every widget of a kind"
     },
     {
+      "id": "fonts_in_place",
+      "kind": "compile",
+      "file": "examples/fonts/main.cpp",
+      "stands_for": "a screen that draws its three fonts in the file that writes it (type(token))"
+    },
+    {
+      "id": "fonts_named",
+      "kind": "compile",
+      "file": "examples/fonts_split/main.cpp",
+      "stands_for": "the same screen with its three fonts named by lv::font_of and drawn in other files: what a file that uses a font costs"
+    },
+    {
+      "id": "fonts_drawn",
+      "kind": "compile",
+      "file": "examples/fonts_split/font_text_title.cpp",
+      "stands_for": "the file that draws one font of a project (lv::draw): what a font costs once for the program"
+    },
+    {
       "id": "port_page",
       "kind": "compile",
       "file": "examples/ports/slint/printer/print_page.cpp",
