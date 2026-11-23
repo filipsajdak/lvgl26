@@ -203,5 +203,30 @@
     "header": "include/lv/detail/api.hpp",
     "mutant": "}  ->  continue;",
     "reason": "Equivalent. `continue;` as the last statement of a loop body changes nothing."
+  },
+  {
+    "header": "include/lv/detail/one_of_region.hpp",
+    "mutant": "constexpr alternatives() {}  ->  /*constexpr alternatives() {}*/",
+    "reason": "Equivalent. The union has a default member initializer, so the implicit constructor does what `{}` does."
+  },
+  {
+    "header": "include/lv/detail/one_of_region.hpp",
+    "mutant": "if constexpr (I == 0)  ->  if constexpr (I <= 0)",
+    "reason": "Equivalent. I is unsigned, so `== 0` and `<= 0` agree."
+  },
+  {
+    "header": "include/lv/detail/one_of_region.hpp",
+    "mutant": "if constexpr (I == 0) {  ->  if constexpr (I <= 0) {",
+    "reason": "Equivalent. I is unsigned, so `== 0` and `<= 0` agree."
+  },
+  {
+    "header": "include/lv/detail/one_of_region.hpp",
+    "mutant": "std::construct_at(&a.rest);  ->  /*std::construct_at(&a.rest);*/",
+    "reason": "Arid. Starting the member `rest` only makes it the active member of the union; no compiler or sanitizer in the build reads the difference, and reading a.rest.first works either way."
+  },
+  {
+    "header": "include/lv/detail/one_of_region.hpp",
+    "mutant": "no_alternative none{};  ->  /*no_alternative none{};*/",
+    "reason": "Arid. The union alternatives<> is the end of the chain and is never made: start_alternative stops at the object, so its default member initializer is never run."
   }
 ]
