@@ -22,7 +22,7 @@ The nightly run of 2026-11-21 measured this, with LVGL's default configuration, 
 
 | What | Size |
 |---|---|
-| Code of the slice | 279 KB |
+| Code of the slice (text) | 279,188 bytes |
 | LVGL's heap for the screen | 988 bytes |
 | LVGL's heap for the task | 128 bytes |
 
