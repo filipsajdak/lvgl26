@@ -128,7 +128,7 @@ constexpr auto brewing =
 // The ring fills while the seconds count down. Both end when the brewing page goes: Cancel
 // deletes the ring, which owns them.
 lv::task<> fill(lv::view<"arc"> view) {
-  co_await lv::animate(view, {.value = {0, 100}}, brew_span, lv::ease::in_out);
+  co_await lv::animate(view, {.value = {0, 100}}, brew_span, *tok.motion.brew);
 }
 
 lv::task<> brew(lv::view<"arc"> view) {
