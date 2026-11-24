@@ -1,6 +1,6 @@
 // Ports lv_example_buttonmatrix_recolor. Re-ordered: lv_buttonmatrix_set_map runs first. The
 // controls, set by lv_buttonmatrix_set_button_ctrl_all in place of lv_buttonmatrix_set_ctrl_map,
-// run before lv_obj_set_size.
+// run last, as in the C example.
 
 #include "widgets.hpp"
 

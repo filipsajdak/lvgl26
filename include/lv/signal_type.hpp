@@ -11,7 +11,8 @@
 // lv/signal.hpp with those fonts: all text is `body`, and the text of a button is
 // `label`. The compiler draws the two fonts in every file that includes this header:
 // about 7 seconds, and 13 KB of flash. That is why it is a header of its own:
-// lv/signal.hpp alone draws no font.
+// lv/signal.hpp alone draws no font. A program of many files links the fonts once instead:
+// lv/signal_fonts.hpp and the library lvgl26::signal_type.
 //
 // The larger styles are yours to make, once each, where you use them:
 //
@@ -27,8 +28,20 @@
 // The fonts have no glyph for LVGL's symbols: the arrow of a drop-down list is drawn as
 // an empty box.
 
+#include <lv/detail/missing.hpp>
 #include <lv/font.hpp>
 #include <lv/signal.hpp>
+
+// One program takes Signal's fonts drawn in each file (this header) or linked from the library
+// (lv/signal_fonts.hpp), not both: each defines the same names.
+static_assert(!lv::detail::included<"lv/signal_fonts.hpp">,
+              "lv: lv/signal_type.hpp and lv/signal_fonts.hpp both give Signal's fonts, one drawn in each file and one "
+              "linked. Include one of them.");
+
+namespace lv::detail {
+template <>
+inline constexpr bool included<"lv/signal_type.hpp"> = true;
+}  // namespace lv::detail
 
 namespace lv::signal {
 
