@@ -1,4 +1,19 @@
 {
+ "fonts_drawn": {
+  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
+  "date": "2026-11-24",
+  "value": 67243759413
+ },
+ "fonts_in_place": {
+  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
+  "date": "2026-11-24",
+  "value": 153314464860
+ },
+ "fonts_named": {
+  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
+  "date": "2026-11-24",
+  "value": 39260793848
+ },
  "include_lv": {
   "commit": "31dfe1049c6f060f44fb1e65883e23bf6bbcb45e",
   "date": "2026-11-21",
@@ -33,6 +48,11 @@
   "commit": "31dfe1049c6f060f44fb1e65883e23bf6bbcb45e",
   "date": "2026-11-21",
   "value": 50942398456
+ },
+ "signal_linked": {
+  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
+  "date": "2026-11-24",
+  "value": 77993097310
  },
  "ten_kinds": {
   "commit": "31dfe1049c6f060f44fb1e65883e23bf6bbcb45e",
