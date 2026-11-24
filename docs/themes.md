@@ -94,6 +94,28 @@ constexpr auto ui = lv::column(
 - `numerals` makes a font with sixteen characters: the digits, the point, the colon, the minus, the percent sign, the degree sign and the space. Signal keeps its large numbers in such a font.
 - `numerals` holds Barlow Condensed at weight 700 only. A token of another style stops the build.
 
+### Signal's fonts linked once
+
+A program of several files draws no Signal font in any of them. Link the library and include the other header:
+
+```cmake
+set(LVGL26_SIGNAL_TYPE ON)           # before lvgl26 is added; the tests turn it on
+target_link_libraries(app PRIVATE lvgl26::signal_type)
+```
+
+```cpp
+#include <lv/signal_fonts.hpp>      // instead of <lv/signal_type.hpp>
+
+lv::display display{app, frame, lv::signal::dark_with_type};
+lv::label({.text = "21.5", .style = {.text_font = lv::font_of<"text.numeral-m", lv::signal::type_design>}})
+```
+
+- The names are those of `lv/signal_type.hpp`: `dark_with_type`, `day_with_type`, `body_font`, `label_font`, `type_tokens`. The fonts are the same glyphs, and the pictures are the same pixels. Include one of the two headers in a program, not both: the second stops the build and says so.
+- The library draws the eight text styles of Signal, each in a file of its own (`lib/signal_type`). `title`, `label`, `body` and `caption` have the characters from the space to the tilde; the four `numeral-*` sizes have the sixteen of `numerals`. The linker takes only the fonts that the program names.
+- A file that includes the header draws nothing: 78 G instructions instead of 250 G for the same screen. The library pays once, 108 G to 118 G for each font, side by side.
+- `lv::signal::type` and `lv::signal::numerals` exist only in `lv/signal_type.hpp`, since they hold the font files.
+- A font of the library is named with the design of Signal, `lv::font_of<"text.title", lv::signal::type_design>`. The build stops, before the link, when a file names one and the program links no library that draws it: `the font 'text.title' of the design lv::signal::type_design has no file that draws it. Link the library that draws it`.
+
 ### What the typefaces cost
 
 Measured once on one machine, with `-Os` for the flash. The 208 px rows were measured again once the compiler drew fonts glyph by glyph. The compile time comes on top of `lv/signal.hpp`.

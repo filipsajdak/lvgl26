@@ -264,6 +264,21 @@
       "evidence": {"source": "docs/research/compile-diagnosis.md", "date": "2026-11-19", "finding": "A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page.", "probe": "one_label"}
     },
     {
+      "id": "fast-build-6",
+      "quality": "fast-build",
+      "rule": "Draw each font in a file of its own, and name it everywhere else with `lv::font_of<\"text.title\">`.",
+      "why": "A file that names a font holds an address and draws nothing, so the drawing, which is most of the cost of a font, is paid once for the program and in parallel with the other files.",
+      "example": "examples/fonts_split/main.cpp tree",
+      "check": {
+        "by": "tool",
+        "tool": "tools/check_fonts.py",
+        "test": "check_fonts_missing",
+        "message": "the font 'text.small' has no file that draws it. Add font_text_small.cpp with template <> const lv::drawn_font lv::font_object<\"text.small\"> = lv::draw<\"text.small\">(type);"
+      },
+      "guide": "fonts.md",
+      "evidence": null
+    },
+    {
       "id": "fast-build-4",
       "quality": "fast-build",
       "rule": "Let the compiler decode pictures up to the limit in the settings, and decode larger ones on the device with `lv::encoded_image`.",
