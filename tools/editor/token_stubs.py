@@ -17,7 +17,6 @@ import pathlib
 import re
 
 MARK = "@lvgl26-editor-tokens:"
-SAMPLES = 1024
 FNV_OFFSET = 0xCBF29CE484222325
 FNV_PRIME = 0x100000001B3
 MASK = 0xFFFFFFFFFFFFFFFF
@@ -55,15 +54,15 @@ LONGEST_VALUE_IN_A_COMMENT = 100
 
 
 def key_of(data: bytes) -> int:
-    """The key of a token file: FNV-1a over its size and about a thousand of its bytes.
+    """The key of a token file: FNV-1a over its size and all of its bytes.
 
     lv::stub::token_key in tools/editor/stubs/lv/tokens.hpp works out the same number.
-    Zeros at the end do not count: the #embed idiom adds one.
+    Zeros at the end do not count: the #embed idiom adds one. Every byte counts, so two files
+    that differ in one character have two keys (a sample of the bytes gave them one).
     """
     data = data.rstrip(b"\0")
-    step = max(1, len(data) // SAMPLES)
     key = FNV_OFFSET
-    for byte in len(data).to_bytes(8, "little") + data[::step]:
+    for byte in len(data).to_bytes(8, "little") + data:
         key = ((key ^ byte) * FNV_PRIME) & MASK
     return key
 
