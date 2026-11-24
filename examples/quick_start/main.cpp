@@ -9,6 +9,7 @@
 using namespace lv::units;
 using namespace mp_units::si::unit_symbols;
 
+//! [readme]
 //! [state]
 constinit lv::state speed{0 * km / h};
 
@@ -30,6 +31,7 @@ constexpr auto ui = lv::column(
   lv::button({.on_clicked = &reset}, lv::label({.text = "Reset"}))
 );
 //! [tree]
+//! [readme]
 
 //! [main]
 constinit lv::frame<320, 240> frame;  // the display's memory

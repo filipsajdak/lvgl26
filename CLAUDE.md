@@ -247,7 +247,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 A feature pull request also:
 
 - Moves the feature's line from "planned" to "works today" in `site/status.html` (the comment at the top of that file says how).
-- Adds the feature to the feature list in `site/index.html` and in `README.md`.
+- Adds the feature to the feature list in `site/index.html`, and gives it a page under `docs/`. `README.md` changes when one of its feature sections changes, and always when the syntax it shows changes; it links to the site's list.
 - Adds or updates an example, and the site media in `site/media/` when the feature is visual.
 - Records any new rule in `CLAUDE.md`.
 - Updates `docs/migration/coverage.json` when it changes what a port can use: a row of a toolkit, or a gap that closes. The migration table of the status page is written from it: run `python3 tools/migration_matrix.py`. The tests `migration_matrix` and `migration_tools` fail when the page is out of date.
@@ -258,6 +258,7 @@ A feature pull request also:
 
 - `python3 tools/docs.py check` must pass. `python3 tools/docs.py build` renders the pages (needs pandoc); then `python3 tools/check_site.py`.
 - A code block that shows a file has the line `<!-- snippet: path name -->` before it and equals that part of the file. A test builds the file. `tools/docs.py sync` rewrites the blocks.
+- `README.md` is checked and synced as a page, and is never rendered: every C++ block in it is a snippet of a built file (`tools/docs.py`, `README`). It is a short front door: a hero, three claims, a few features with one snippet each, each linking its page. A feature's details go to its page under `docs/`, not into the README.
 - A page names no `lv_` function, `lv_..._t` type or `LV_` name in its code. Only a page about `raw()` may, and it says `<!-- c-api: shown -->`.
 - A new page goes into `docs/docs.json`, or it has no place in the sidebar and in `llms.txt`.
 - One line per paragraph. A picture on a page is written by a test (see `quick_start_picture`).

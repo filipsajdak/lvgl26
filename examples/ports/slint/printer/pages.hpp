@@ -8,6 +8,7 @@
 
 namespace printer {
 
+//! [pages]
 // The pages, each defined in its own file as lv::page_of<ui>: the shell shows them with
 // lv::shown, and none of their trees is compiled in the shell.
 extern const lv::page home_page;
@@ -17,5 +18,6 @@ extern const lv::page print_page;
 extern const lv::page scan_page;
 extern const lv::page copy_page;
 extern const lv::page usb_page;
+//! [pages]
 
 }  // namespace printer

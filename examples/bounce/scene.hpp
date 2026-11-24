@@ -148,6 +148,7 @@ inline lv::duration fall_time(int height) {
 
 constexpr int next_height(int height) { return height * kept_percent / 100; }
 
+//! [fall]
 // One fall from `height`, or one rise to it.
 inline lv::task<> fall(lv::view<"obj"> box_view, int height) {
   co_await lv::animate(
@@ -160,6 +161,7 @@ inline lv::task<> rise(lv::view<"obj"> box_view, int height) {
     box_view, {.y = {landing * px, (landing - height) * px}}, fall_time(height), *tok.motion.rise
   );
 }
+//! [fall]
 
 // The time the whole sequence of bounces takes, to move sideways at one speed meanwhile.
 inline lv::duration bounce_time() {
@@ -173,6 +175,7 @@ inline lv::task<> slide(lv::view<"obj"> box_view, int from, int to) {
   co_await lv::animate(box_view, {.x = {from * px, to * px}}, bounce_time());
 }
 
+//! [bounce]
 inline lv::task<> bounce(lv::view<"obj"> box_view) {
   for (bool to_right = true;; to_right = !to_right) {
     lv::spawn(slide(box_view, to_right ? left : right, to_right ? right : left), box_view);
@@ -187,6 +190,7 @@ inline lv::task<> bounce(lv::view<"obj"> box_view) {
     co_await lv::sleep(held);
   }
 }
+//! [bounce]
 
 // The widgets the motion changes.
 struct parts {

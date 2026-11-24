@@ -161,6 +161,23 @@ class Rules(unittest.TestCase):
         self.assertTrue(any("fast-run-2" in p for p in missing))
 
 
+class Readme(unittest.TestCase):
+    def test_a_cpp_block_without_a_snippet_line_fails(self):
+        found = docs.page_problems(docs.README, "# lvgl26\n\n```cpp\nint x;\n```\n", set())
+        self.assertEqual(found, ["README.md: 1 C++ block(s) without a `<!-- snippet: -->` line: show a part of a built file"])
+
+    def test_a_snippet_passes_and_a_stale_one_fails(self):
+        code = docs.source_of("tests/fail/each_plain_key.cpp", None)
+        fresh = f"<!-- snippet: tests/fail/each_plain_key.cpp -->\n```cpp\n{code}```\n"
+        self.assertEqual(docs.page_problems(docs.README, fresh, set()), [])
+        stale = fresh.replace("```cpp\n", "```cpp\n// changed\n")
+        self.assertTrue(any("differs from the file" in p for p in docs.page_problems(docs.README, stale, set())))
+
+    def test_it_is_checked_but_not_rendered(self):
+        self.assertIn(docs.README, docs.checked())
+        self.assertNotIn(docs.README, docs.pages())
+
+
 class OutlineList(unittest.TestCase):
     def test_a_name_that_is_no_page_fails(self):
         self.assertEqual(docs.outline_name_problems({"lists.md", "list.md"}),
