@@ -163,6 +163,20 @@ target_link_libraries(look PRIVATE lvgl26_test_data)
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)
 target_link_libraries(look_link PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME look_link COMMAND look_link)
+# Fonts drawn in files of their own: two files draw one font each, a third names them.
+add_executable(fonts_split fonts_split_main.cpp fonts_split_label.cpp fonts_split_small.cpp)
+target_link_libraries(fonts_split PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME fonts_split COMMAND fonts_split)
+# The build checks that every font a program names has a file that draws it (tools/check_fonts.py).
+add_test(NAME check_fonts_tool COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_fonts.py)
+add_test(NAME check_fonts_program
+         COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_fonts.py ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_main.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_label.cpp ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_small.cpp)
+add_test(NAME check_fonts_missing
+         COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_fonts.py ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_main.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/fonts_split_label.cpp)
+set_tests_properties(check_fonts_missing PROPERTIES PASS_REGULAR_EXPRESSION
+                     "fonts_split_main.cpp:[0-9]+: the font 'text.small' has no file that draws it. Add font_text_small.cpp")
 lvgl26_test(state)
 lvgl26_test(units)
 lvgl26_test(values)
@@ -229,6 +243,11 @@ add_executable(signal_type signal_type.cpp)
 target_link_libraries(signal_type PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME signal_type COMMAND signal_type A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
                                               A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
+# The same test with the fonts linked from lvgl26::signal_type (lv/signal_fonts.hpp): the same pictures.
+add_executable(signal_linked signal_linked.cpp)
+target_link_libraries(signal_linked PRIVATE lvgl26::signal_type lvgl26_warnings)
+add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_dark.png
+                                                  A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
 # Signal's tell-tale lamp colours, a header of its own.
 lvgl26_test(signal_lamps)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
@@ -375,7 +394,7 @@ lvgl26_widget_ports(checkbox bind_checked event states styling text)
 lvgl26_widget_ports(led brightness color styling)
 lvgl26_widget_ports(line points)
 lvgl26_widget_ports(obj bind_style)
-lvgl26_widget_ports(buttonmatrix event map popover recolor)
+lvgl26_widget_ports(buttonmatrix event map one_checked popover recolor styling)
 lvgl26_widget_ports(dropdown bind_value direction event text)
 # LVGL draws a roller with a left shift of a negative number (lv_roller.c, draw_main), which a
 # sanitizer stops on. The picture is compared in the builds that have none.
@@ -932,6 +951,23 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_fonts_picture PROPERTIES FIXTURES_REQUIRED example_fonts_picture)
 endif()
 
+# The same screen with each font drawn in a file of its own (docs/fonts.md): its picture must be
+# the one of the example above, pixel for pixel.
+set(fonts_split_dir ${PROJECT_SOURCE_DIR}/examples/fonts_split)
+add_executable(example_fonts_split ${fonts_split_dir}/main.cpp ${fonts_split_dir}/font_text_label.cpp
+                                   ${fonts_split_dir}/font_text_title.cpp ${fonts_split_dir}/font_text_numeral.cpp)
+target_compile_options(example_fonts_split PRIVATE --embed-dir=${fonts_split_dir} --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_fonts_split PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out)
+add_test(NAME example_fonts_split COMMAND example_fonts_split WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out)
+set_tests_properties(example_fonts_split PROPERTIES FIXTURES_SETUP example_fonts_split_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_fonts_split_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_fonts_split_out/fonts_split.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/fonts.png)
+  set_tests_properties(example_fonts_split_picture PROPERTIES FIXTURES_REQUIRED example_fonts_split_picture)
+endif()
+
 # The reference data: what reflection finds in the LVGL of this build, as JSON. The
 # committed file must be what the program prints.
 add_executable(lv_reference ${PROJECT_SOURCE_DIR}/tools/reference/reference.cpp)
@@ -1285,6 +1321,13 @@ lvgl26_compile_fail_message(look_group_in_layer constexpr "lv: in the look 'laye
 lvgl26_compile_fail_message(look_names_a_token constexpr "lv: the look 'tile.radius' names a token, not a group: 'tile.radius' holds one value. A look is a group of tokens, written lv::look<\"tile\">, and the style property is its entry 'radius'.")
 lvgl26_compile_fail_message(look_empty constexpr "lv: lv::look<\"  \"> names no look. Write the path of a group of the token file: lv::look<\"queue.card\">. The groups there: <<names>>.")
 lvgl26_compile_fail_message(look_empty_name constexpr "lv: the look 'tile..print' has an empty name between its dots. Write lv::look<\"queue.card\">.")
+# lv::font_of and lv::draw: a font named in a file of its own is checked against the token file.
+lvgl26_compile_fail_message(font_of_unknown_name constexpr "lv: the font 'text.lable' has no name 'lable' in 'text'. The names there: label, small. Did you mean 'label'?")
+lvgl26_compile_fail_message(font_of_not_typography constexpr "lv: the font 'color.blue' names a color, not a typography token. A font comes from a typography token: lv::font_of<\"text.title\">.")
+lvgl26_compile_fail_message(font_of_no_design static_assert "lv: no design is registered for lv::font_of. Name the token file once, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok};")
+lvgl26_compile_fail_message(font_draw_unknown_name constexpr "lv: the font 'text.title' has no name 'title' in 'text'. The names there: label, small.")
+lvgl26_compile_fail_message(signal_fonts_and_type static_assert "lv: lv/signal_type.hpp and lv/signal_fonts.hpp both give Signal's fonts, one drawn in each file and one linked. Include one of them.")
+lvgl26_compile_fail_message(signal_type_and_fonts static_assert "lv: lv/signal_fonts.hpp and lv/signal_type.hpp both give Signal's fonts, one linked and one drawn in each file. Include one of them.")
 lvgl26_compile_fail_message(look_no_design static_assert "lv: no design is registered for lv::look. Name the token file once, before the first look, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok}; If you did name it, the naming comes after a look that has already read the design: move it above every lv::look, as lv::cfg must come first.")
 lvgl26_compile_fail_message(look_design_too_late static_assert "lv: no design is registered for lv::look. Name the token file once, before the first look, in a header that every file includes: constexpr auto tok = lv::tokens<tokens_json>; template <> inline constexpr lv::design_of<decltype(tok)> lv::design<lv::override>{.tokens = tok}; If you did name it, the naming comes after a look that has already read the design: move it above every lv::look, as lv::cfg must come first.")
 lvgl26_compile_fail_message(look_string_token constexpr "lv: the look entry 'flex_flow' of 'stringtoken' is a string token, and a string is no standard value for the style property 'flex_flow', which takes a string that names an LVGL value. An LVGL value by name (\"flex_flow\": \"row\") goes in \"\$extensions\": {\"io.github.filipsajdak.lvgl26\": {...}} of the group.")
