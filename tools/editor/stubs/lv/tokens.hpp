@@ -42,14 +42,14 @@ constexpr std::uint64_t fnv(std::uint64_t key, std::uint64_t byte) {
   return (key ^ (byte & 0xff)) * 0x100000001b3ULL;
 }
 
-// The same number as key_of in tools/editor/token_stubs.py: FNV-1a over the size and
-// about a thousand of the bytes, the zeros at the end left out.
+// The same number as key_of in tools/editor/token_stubs.py: FNV-1a over the size and every
+// byte, the zeros at the end left out. The editor embeds a marker in place of a token file, so
+// this runs on a file that the editor did not replace only.
 constexpr std::uint64_t key_of_bytes(std::string_view text) {
   while (!text.empty() && text.back() == '\0') text.remove_suffix(1);
-  const std::size_t step = text.size() / 1024 > 0 ? text.size() / 1024 : 1;
   std::uint64_t key = 0xcbf29ce484222325ULL;
   for (int i = 0; i < 8; ++i) key = fnv(key, static_cast<std::uint64_t>(text.size()) >> (8 * i));
-  for (std::size_t i = 0; i < text.size(); i += step) key = fnv(key, static_cast<unsigned char>(text[i]));
+  for (const char c : text) key = fnv(key, static_cast<unsigned char>(c));
   return key;
 }
 
