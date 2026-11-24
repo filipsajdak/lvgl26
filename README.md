@@ -181,7 +181,7 @@ constexpr auto ui = lv::column(
 
 ![The screen in Signal: the title LIVING ROOM, the reading 21.5 degrees in large condensed digits, a line of text and a lime button that says HOLD](docs/media/theme-signal-type.png)
 
-The display takes the theme: `lv::display display{app, frame, lv::signal::dark_with_type};`. The compiler draws the two fonts from Signal's TrueType files into read-only memory.
+The display takes the theme: `lv::display display{app, frame, lv::signal::dark_with_type};`. The compiler draws the two fonts from Signal's TrueType files into read-only memory. A program of many files links them once, through the library `lvgl26::signal_type`.
 
 [Themes](docs/themes.md) has the rest, and how to make a theme of your own.
 

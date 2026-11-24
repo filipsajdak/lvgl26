@@ -35,6 +35,7 @@ Where two qualities pull apart, a rule says which one wins, and why.
 | [`fast-run-12`](#fast-run-12) | Animate the smallest widget that shows the motion, and let the animation end when the motion is over. |
 | [`fast-build-1`](#fast-build-1) | Include `<lv/lv.hpp>` and the header of each feature the file uses; include `<lv/all.hpp>` only in a first program. |
 | [`fast-build-2`](#fast-build-2) | Name drawn fonts in few files, and give the other files their text through the display's theme. |
+| [`fast-build-6`](#fast-build-6) | Draw each font in a file of its own, and name it everywhere else with `lv::font_of<"text.title">`. |
 | [`fast-build-4`](#fast-build-4) | Let the compiler decode pictures up to the limit in the settings, and decode larger ones on the device with `lv::encoded_image`. |
 | [`fast-build-5`](#fast-build-5) | Bind, name and style nodes freely: after its first use in a file, a binding, an id or a property costs little to compile. |
 | [`checked-1`](#checked-1) | Give every value a type that says what it is: a quantity, an `lv::counter`, or a struct of one member. |
@@ -668,6 +669,41 @@ Checked: no tool checks this rule yet.
 Measured on 2026-11-19, see [compile-diagnosis.md](https://github.com/filipsajdak/lvgl26/blob/main/docs/research/compile-diagnosis.md). A file with one mounted label: 54 G instructions. A drawn font adds about 45 G to a file. Five fonts were 234 G of the 341 G of the printer's Print page. The nightly probe `one_label` measures it again.
 
 Guide: Keeping builds fast (not written yet).
+
+### fast-build-6
+
+**Draw each font in a file of its own, and name it everywhere else with `lv::font_of<"text.title">`.**
+
+A file that names a font holds an address and draws nothing, so the drawing, which is most of the cost of a font, is paid once for the program and in parallel with the other files.
+
+<!-- snippet: examples/fonts_split/main.cpp tree -->
+```cpp
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({
+    .text  = "Wake up",
+    .style = {.text_font = lv::font_of<"text.title">},
+  }),
+  lv::label({
+    .text  = "06:45",
+    .style = {.text_font = lv::font_of<"text.numeral">},
+  }),
+  lv::label({
+    .text  = "Tomorrow, in 7 hours",
+    .style = {.text_font = lv::font_of<"text.label">},
+  })
+);
+```
+
+Checked by `tools/check_fonts.py`. The test `check_fonts_missing` pins the message.
+
+```text
+the font 'text.small' has no file that draws it. Add font_text_small.cpp with template <> const lv::drawn_font lv::font_object<"text.small"> = lv::draw<"text.small">(type);
+```
+
+Measured: not measured yet.
+
+Guide: [Fonts](fonts.md).
 
 ### fast-build-4
 
