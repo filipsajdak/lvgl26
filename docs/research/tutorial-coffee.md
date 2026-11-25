@@ -57,7 +57,9 @@ coffee/
     tokens.json       the design tokens
     design.hpp        names the token file, the looks
     theme.hpp         Signal's theme, for the files that make a display
+    fonts.hpp         the fonts as styles to merge: title_text, body_text
     font_text_title.cpp   the only file that draws the font of text.title
+    font_text_body.cpp    the only file that draws the font of text.body
     fonts/            a copy of Barlow and its licence
   platform/
     window.cpp        the only file that knows SDL
@@ -71,8 +73,9 @@ coffee/
 - The CMake rules of a split step are two functions in `examples/coffee/CMakeLists.txt`: `coffee_files` (the pages, the program, the window) and `coffee_picture`.
 - Step 7's `lvgl26.json` forbids threads and floating point. It cannot forbid allocation, which `lv::spawn` needs for a task's frame. Nor can it forbid files, which `lv::write_png` needs (`measured` 2026-11-25: a scratch copy that forbids files stops `main.cpp` at `lv::write_png`).
 - Step 7's softener follows the water's hardness through an `lv::effect`. The service page starts it in its `.on_shown`; `start()` does nothing while the effect runs.
-- The titles are in the reader's own typeface, a typography token `text.title` in Barlow (owner, 2026-11-25). Step 5 draws it in its one file. Step 6 moves it into `design/font_text_title.cpp`, and the title part names it with `lv::font_of<"text.title">`.
-- A look cannot carry that font in a split program. A look draws a font through the design's typeface (`detail::font_of` in `include/lv/look.hpp`), and a design header that every file includes must hold none. So the title part merges its look with the font: `lv::look<"title"> | lv::style({.text_font = ...})`.
+- The titles and the text are in the reader's own typeface, the typography tokens `text.title` and `text.body` in Barlow (owner, 2026-11-25). Step 5 draws them in its one file. Step 6 moves each into `design/font_<name>.cpp`, and `design/fonts.hpp` names them with `lv::font_of`.
+- The body font is on each label and on the buttons' text, through the `go_to` part (owner, 2026-11-25, option A). It is not on the drop-down lists. A list keeps LVGL's font, so its arrow is drawn (see the gap below). A text part was not used: no public concept says what `.text` takes, a literal or a binding, and a part's parameters take a concept. So each label merges a named style, `.style = body_text`.
+- A look cannot carry that font in a split program. A look draws a font through the design's typeface (`detail::font_of` in `include/lv/look.hpp`), and a design header that every file includes must hold none. So the fonts are styles of their own, merged with a look where a label has one: `lv::look<"title"> | title_text`.
 - The includes are relative to the file that names them (`#include "../state.hpp"`). The build's font and include checks follow a quoted include only beside that file (`program_files` in `tools/check_fonts.py`, `provided` in `tools/check_includes.py`). Through an include directory the font check passed without the font file (`measured` 2026-11-25).
 
 ## Tests
@@ -86,7 +89,7 @@ coffee/
 
 | Gap | The form today |
 |---|---|
-| A drawn font holds no LVGL symbol, and no token names LVGL's own font. A font that reaches a drop-down list turns its arrow into a box: the arrow takes the font of the list's indicator part (`lv_dropdown.c:1088`), which inherits it, and LVGL's theme sets a font on the screen only (`lv_theme_default.c:250`) (`measured` 2026-11-25, by reading the code) | Signal's theme without its typefaces in step 5, and the reader's own font on the titles only. A body font waits for the owner's choice |
+| A drawn font holds no LVGL symbol, and no token names LVGL's own font. A font that reaches a drop-down list turns its arrow into a box: the arrow takes the font of the list's indicator part (`lv_dropdown.c:1088`), which inherits it, and LVGL's theme sets a font on the screen only (`lv_theme_default.c:250`) (`measured` 2026-11-25, by reading the code) | Signal's theme without its typefaces in step 5. The reader's body font is on the labels and the buttons' text, and not on the lists. The gap is `font-symbols` in `docs/migration/coverage.json` |
 | `lv::run<fn>`, a task that a tree declares (`task-handles.md`) | `lv::spawn(brew(page), page)` in `.on_shown` |
 | A time such as `0:25` in one binding | The seconds left: "25 s" |
 | The layout check of `extendable-1` | The layout by hand. Fonts drawn once are built, so the check is next, with the program of "An application that grows" |

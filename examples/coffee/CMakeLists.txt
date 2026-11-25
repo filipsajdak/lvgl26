@@ -59,12 +59,12 @@ endfunction()
 
 # Step 6 is the program of step 5 split into files by screen: its picture is step 5's.
 coffee_files(6 6-files shell.cpp screens/drinks.cpp screens/cup.cpp screens/brewing.cpp screens/enjoy.cpp
-             design/font_text_title.cpp)
+             design/font_text_title.cpp design/font_text_body.cpp)
 coffee_picture(6 coffee_6 coffee-5.png)
 
 # Step 7 adds a page and the program's settings, which apply to the pages too.
 coffee_files(7 7-service shell.cpp screens/drinks.cpp screens/cup.cpp screens/brewing.cpp screens/enjoy.cpp
-             screens/service.cpp design/font_text_title.cpp)
+             screens/service.cpp design/font_text_title.cpp design/font_text_body.cpp)
 lvgl26_settings(coffee_7 7-service/lvgl26.json)
 if(TARGET coffee_7_window)
   lvgl26_settings(coffee_7_window 7-service/lvgl26.json)

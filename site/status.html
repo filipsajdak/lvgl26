@@ -232,7 +232,7 @@
       <div class="no">Migration</div>
       <div>
         <h2>Coming from another toolkit.</h2>
-        <p>What lvgl26 covers of Qt Quick, Slint and TouchGFX, and what a port still has to work around. Written from <code>docs/migration/coverage.json</code>, updated 2026-11-20.</p>
+        <p>What lvgl26 covers of Qt Quick, Slint and TouchGFX, and what a port still has to work around. Written from <code>docs/migration/coverage.json</code>, updated 2026-11-25.</p>
       </div>
     </div>
 
@@ -244,6 +244,7 @@
       <li id="gap-translations"><strong>Translations and text resources</strong> <span>Text per language, plural forms and a switch of language at run time.</span> <small>Unblocks: Qt qsTr; Slint @tr; TouchGFX text resources; LVGL label_translation</small></li>
       <li id="gap-runtime-theming"><strong>A style that follows a state</strong> <span>A style property bound to a state, so a theme or a look can change in place instead of mounting the tree again.</span> <small>Unblocks: Slint's four printer themes; the three looks of the Qt treadmill; dark and light switching</small></li>
       <li id="gap-gradients"><strong>More gradients</strong> <span>Diagonal gradients and gradients with several stops. Today a gradient is vertical or horizontal with two colors.</span> <small>Unblocks: the printer panel's tiles and color button; designer-made backgrounds</small></li>
+      <li id="gap-font-symbols"><strong>LVGL's symbols with a drawn font</strong> <span>A font drawn from a TrueType file holds no LVGL symbol, and no token names LVGL's own font. A drop-down list draws its arrow in the font of its indicator part, which inherits it (lv_dropdown.c), and LVGL's theme sets a font on the screen only (lv_theme_default.c). So a body font that reaches the list turns the arrow into a box.</span> <small>Unblocks: a body font for all text of the coffee machine tutorial; Signal's typefaces with a drop-down list</small></li>
       <li id="gap-animate-opacity"><strong>Animate a widget's opacity</strong> <span>A fade of a whole widget. LVGL has no setter for it, so <code>lv::animate</code> has no member for it.</span> <small>Unblocks: the splash fades of the Qt treadmill; Qt and Slint opacity animations</small></li>
       <li id="gap-bind-layout"><strong>Bind position and size to a state</strong> <span>Follow a state with x, y, width and height, and with a text that formats several values.</span> <small>Unblocks: moving a dot along a track; a time such as 6:05 in one binding</small></li>
       <li id="gap-add-calls"><strong>Children that a widget creates itself</strong> <span>The add calls of LVGL as nodes: list items, tabs, message boxes, menu pages.</span> <small>Unblocks: about 20 of LVGL's examples; Qt TabBar and Dialog; Slint TabWidget and PopupWindow</small></li>

@@ -3,6 +3,7 @@
 #include "brewing.hpp"
 
 #include "../design/design.hpp"
+#include "../design/fonts.hpp"
 #include "../parts/go_to.hpp"
 #include "../parts/title.hpp"
 #include "../state.hpp"
@@ -32,7 +33,7 @@ constexpr auto ring = lv::arc(
     .size  = {140 * px, 140 * px},
     .value = 0,
   },
-  lv::label({.align = "center", .text = lv::bind(left)})  // shows "25 s"
+  lv::label({.align = "center", .text = lv::bind(left), .style = body_text})  // shows "25 s"
 );
 
 constexpr auto brewing =

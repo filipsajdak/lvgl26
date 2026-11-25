@@ -4,6 +4,7 @@
 #include "service.hpp"
 
 #include "../design/design.hpp"
+#include "../design/fonts.hpp"
 #include "../parts/go_to.hpp"
 #include "../parts/title.hpp"
 #include "../state.hpp"
@@ -46,15 +47,17 @@ constinit lv::effect tell_softener{[](hardness h) { softener = h; }, water};
 //! [effect]
 
 //! [page]
+// The list keeps LVGL's font: a drawn font has no symbol for its arrow.
 constexpr auto water_menu = lv::dropdown({
   .options  = lv::options_of<hardness>,
   .selected = lv::bind(water),
   .width    = 240 * px,
 });
 
-constexpr auto made_text = lv::label({.text = lv::bind(cups, "{} cups since descaling")});
+constexpr auto made_text =
+  lv::label({.text = lv::bind(cups, "{} cups since descaling"), .style = body_text});
 constexpr auto due_text =
-  lv::label({.text = lv::bind(due, "Descale in {} cups"), .style = lv::look<"price">});
+  lv::label({.text = lv::bind(due, "Descale in {} cups"), .style = lv::look<"price"> | body_text});
 
 constexpr auto descaled =
   lv::button({.on_clicked = [] { cups = lv::counter{}; }}, lv::label({.text = "Descaled"}));
