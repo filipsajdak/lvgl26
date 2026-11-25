@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Tests of tools/check_fonts.py: ctest check_fonts_tool."""
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -10,14 +12,17 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import check_fonts as tool  # noqa: E402
 
 
-def program(files: dict[str, str], *, defined=()) -> list[str]:
+def program(files: dict[str, str], *, defined=(), include_dirs=()) -> list[str]:
+    """The missing fonts of a program of `files`, the first of them a source; `include_dirs` are named under the root."""
     with tempfile.TemporaryDirectory() as d:
         paths = []
         for name, text in files.items():
             p = pathlib.Path(d) / name
+            p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(text)
             paths.append(p)
-        return tool.missing_fonts(tool.program_files(paths), set(defined))
+        sources = [p for p in paths if p.suffix == ".cpp"]
+        return tool.missing_fonts(tool.program_files(sources, [pathlib.Path(d) / i for i in include_dirs]), set(defined))
 
 
 USE = 'constexpr auto f = lv::font_of<"text.title">;\n'
@@ -64,6 +69,36 @@ class Fonts(unittest.TestCase):
     def test_a_definition_of_one_design_is_none_for_the_other(self):
         define = 'template <> const lv::drawn_font lv::font_object<"text.title", other> = lv::draw<"text.title", other>(t);\n'
         self.assertEqual(len(program({"main.cpp": USE, "font_text_title.cpp": define})), 1)
+
+    def test_a_header_reached_through_an_include_directory_is_followed(self):
+        files = {"src/main.cpp": '#include "design/design.hpp"\n', "include/design/design.hpp": USE}
+        self.assertEqual(len(program(files, include_dirs=["include"])), 1)
+
+    def test_a_definition_reached_through_an_include_directory_counts(self):
+        files = {
+            "src/main.cpp": '#include "design/design.hpp"\n#include "design/fonts.hpp"\n',
+            "include/design/design.hpp": USE,
+            "include/design/fonts.hpp": DEFINE,
+        }
+        self.assertEqual(program(files, include_dirs=["include"]), [])
+
+    def test_an_angle_include_of_the_program_is_followed_through_a_directory(self):
+        files = {"src/main.cpp": "#include <design/design.hpp>\n", "include/design/design.hpp": USE}
+        self.assertEqual(len(program(files, include_dirs=["include"])), 1)
+
+    def test_an_include_that_no_directory_has_is_a_warning_never_a_pass_without_a_word(self):
+        files = {"src/main.cpp": '#include "design/design.hpp"\n', "include/design/design.hpp": USE}
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            found = program(files)
+        self.assertEqual(found, [])
+        self.assertIn('main.cpp:1: warning: check_fonts.py could not find the include "design/design.hpp"', err.getvalue())
+
+    def test_the_files_of_lvgl26_and_the_library_are_not_warned_about(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            program({"main.cpp": "#include <lv/lv.hpp>\n#include <vector>\n"})
+        self.assertEqual(err.getvalue(), "")
 
     def test_the_file_of_a_name_with_a_dash(self):
         self.assertEqual(tool.file_name_of("text.body-large"), "font_text_body_large.cpp")

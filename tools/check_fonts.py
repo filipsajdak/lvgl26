@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks that every font that a program names has a file that draws it.
 
-    python3 tools/check_fonts.py main.cpp screens.hpp font_title.cpp ...
+    python3 tools/check_fonts.py [-I dir ...] main.cpp screens.hpp font_title.cpp ...
     python3 tools/check_fonts.py --defined text.body main.cpp
 
 A file that styles with lv::font_of<"text.title"> holds the address of an object that another
@@ -12,12 +12,14 @@ the font is named:
     screens.hpp:12: the font 'text.title' has no file that draws it. Add font_text_title.cpp with
     template <> const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type);
 
-The files are the sources of one program and the files they include with quotes. Comments and
+The files are the sources of one program and the files they include, beside the file that names
+them or through an include directory (-I dir, as the target has them: tools/include_graph.py). An
+include that no directory resolves is a warning on stderr, never read as a file without fonts. Comments and
 strings are not read, so a name in a comment or in a text is no use. --defined NAME says that a
 library that the program links draws that font (the property LVGL26_FONTS of a target): `text.title`, or
 `text.title@lv::signal::type_design` for a font of another design.
 
---build STAMP DEPFILE sources... is the form a build runs (cmake/check_fonts.cmake): it writes
+--build STAMP DEPFILE [-I dir ...] sources... is the form a build runs (cmake/check_fonts.cmake): it writes
 STAMP when all is well, and DEPFILE, so that the check runs again only when a file changes.
 Exits with 1 if a font is missing. Uses the standard library only.
 """
@@ -26,7 +28,9 @@ import pathlib
 import re
 import sys
 
-INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import include_graph  # noqa: E402
+
 # A font of the project is named by its token alone; a font of another design adds the design
 # (lv::font_of<"text.title", lv::signal::type_design>), and is told apart by it.
 USE = re.compile(r'\bfont_of\s*<\s*"([^"]+)"\s*(?:,\s*([\w:]+)\s*)?>')
@@ -49,18 +53,11 @@ def without_comments(text: str) -> str:
     return COMMENT.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
 
 
-def program_files(sources: list[pathlib.Path]) -> list[pathlib.Path]:
-    """The sources and the files they include with quotes that exist beside them."""
-    seen: dict[pathlib.Path, None] = {}
-    todo = [s.resolve() for s in sources]
-    while todo:
-        path = todo.pop(0)
-        if path in seen or not path.is_file():
-            continue
-        seen[path] = None
-        for name in INCLUDE.findall(without_comments(path.read_text(errors="replace"))):
-            todo.append((path.parent / name).resolve())
-    return list(seen)
+def program_files(sources: list[pathlib.Path], include_dirs: list[pathlib.Path] = ()) -> list[pathlib.Path]:
+    """The sources and the files they include, beside them or through an include directory."""
+    files, unresolved = include_graph.files_of(sources, list(include_dirs))
+    include_graph.warn(unresolved, "check_fonts.py")
+    return files
 
 
 def missing_fonts(files: list[pathlib.Path], defined: set[str]) -> list[str]:
@@ -104,7 +101,8 @@ def main(argv: list[str]) -> int:
         else:
             print(f"unknown option {flag}", file=sys.stderr)
             return 2
-    files = program_files([pathlib.Path(a) for a in args])
+    include_dirs, args = include_graph.split_include_dirs(args)
+    files = program_files([pathlib.Path(a) for a in args], include_dirs)
     problems = missing_fonts(files, defined)
     for problem in problems:
         print(problem)
