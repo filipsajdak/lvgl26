@@ -1,10 +1,14 @@
 // The setting that allows plain integer states, for code that has no better name for a number.
+#include <lv/list.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"
 
 template <>
 inline constexpr lv::config lv::cfg<lv::override>{.rules = {.raw_integer_state = true}};
+
+// With the setting, a plain integer names a row too; a number with a fraction still does not.
+static_assert(lv::detail::row_key<int> && !lv::detail::row_key<double>);
 
 int main() {
   lv_init();
