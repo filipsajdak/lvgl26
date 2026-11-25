@@ -70,6 +70,9 @@ static_assert(lv::look<"pct">.width.set && lv::look<"pct">.height.set);
 static_assert(lv::look<"alpha">.bg_opa.set && lv::look<"alpha">.bg_color.set);
 static_assert(!lv::look<"alpha">.text_opa.set, "an opaque color sets no opacity");
 static_assert(lv::look<"alpha-explicit">.bg_opa.set);
+// `alt` sorts before `any`, and is a state like the others; the opacity of a long name (`border_color`) is its own.
+static_assert(lv::look<"alt-layer">.layers.count == 1);
+static_assert(lv::look<"alpha-border">.border_opa.set && lv::look<"alpha-border">.border_color.set);
 
 // A group named for the default state (the token reader names its member default_) adds no selector:
 // its entries are the look's own, and beat the entries beside it.
@@ -112,6 +115,10 @@ constexpr auto on_shorthands_ui = lv::box({.id = "on_shorthands", .checked = tru
 constexpr auto own_shorthands_ui = lv::box({.id = "own_shorthands", .style = shorthands_style});
 constexpr auto shorthand_theme = lv::theme({.obj = {.style = shorthands_style}});
 constexpr auto lit_ui = lv::box({.id = "lit", .style = lv::look<"lit">});
+// The default group is written first, and still beats the entry beside it.
+constexpr auto lit_first_ui = lv::box({.id = "lit_first", .style = lv::look<"lit-first">});
+constexpr auto pct99_ui = lv::box({.id = "pct99", .style = lv::look<"pct99">});
+constexpr auto alpha_border_ui = lv::box({.id = "alpha_border", .style = lv::look<"alpha-border">});
 constexpr auto ext_layer_ui = lv::label({.id = "ext", .checked = true, .text = "x", .style = lv::look<"flex-ext">});
 
 // Defaults of a factory give way to a look that says it.
@@ -243,6 +250,23 @@ void a_default_state_group_is_a_layer() {
   check(built.has_value());
   if (!built) return;
   check(lv_obj_get_style_radius(built->get<"lit">().raw(), LV_PART_MAIN) == 9);
+}
+
+void the_default_group_beats_the_entry_beside_it_wherever_it_is_written() {
+  auto built = lv::mount<lit_first_ui>(lv::screen_active());
+  check(built.has_value());
+  if (!built) return;
+  check(lv_obj_get_style_radius(built->get<"lit_first">().raw(), LV_PART_MAIN) == 9);
+}
+
+void a_percentage_of_nines_and_a_long_color_name() {
+  auto nines = lv::mount<pct99_ui>(lv::screen_active());
+  auto border = lv::mount<alpha_border_ui>(lv::screen_active());
+  check(nines.has_value() && border.has_value());
+  if (!nines || !border) return;
+  check(lv_obj_get_style_width(nines->get<"pct99">().raw(), LV_PART_MAIN) == LV_PCT(99));
+  // border_color has twelve characters: its opacity is border_opa, set from the alpha of the color.
+  check(lv_obj_get_style_border_opa(border->get<"alpha_border">().raw(), LV_PART_MAIN) == 0x80);
 }
 
 void a_later_look_wins_in_a_layer_too() {
@@ -501,6 +525,8 @@ int main() {
   a_look_sets_what_its_entries_name();
   looks_with_the_same_font_share_it();
   a_percentage_is_read_from_the_extensions();
+  the_default_group_beats_the_entry_beside_it_wherever_it_is_written();
+  a_percentage_of_nines_and_a_long_color_name();
   a_color_with_alpha_sets_its_opacity();
   the_extensions_of_a_layer_are_its_own();
   a_state_group_is_a_layer();
