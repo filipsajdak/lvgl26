@@ -67,6 +67,12 @@ if(LVGL26_BUILD_TESTS OR LVGL26_BUILD_WINDOW_EXAMPLES)
   lvgl26_skip_analyzer(examples/bounce)
 endif()
 
+# The coffee machine of the tutorial: a program for each step, with mp-units for its values.
+if(LVGL26_BUILD_TESTS AND TARGET mp-units::mp-units)
+  add_subdirectory(examples/coffee)
+  lvgl26_skip_analyzer(examples/coffee)
+endif()
+
 # The Qt Design Studio port counts speeds with mp-units.
 if(TARGET mp-units::mp-units)
   add_subdirectory(examples/ports/qt/treadmill)
