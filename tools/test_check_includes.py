@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Tests of tools/check_includes.py. Run: python3 tools/test_check_includes.py"""
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -19,6 +21,41 @@ def check(files: dict[str, str], main: str = "main.cpp", exact: bool = False) ->
         for name, text in files.items():
             (root / name).write_text(text)
         return [p.split(": ", 1)[1] for p in tool.problems(root / main, TABLE, exact)]
+
+
+class ThroughIncludeDirectories(unittest.TestCase):
+    """A header reached through an include directory of the target counts, as one beside the file does."""
+
+    def layout(self, root: pathlib.Path) -> pathlib.Path:
+        (root / "include" / "design").mkdir(parents=True)
+        (root / "src").mkdir()
+        (root / "include" / "design" / "design.hpp").write_text("#include <lv/list.hpp>\n")
+        main = root / "src" / "main.cpp"
+        main.write_text('#include <lv/lv.hpp>\n#include "design/design.hpp"\nlv::list<int, 2> rows;\n')
+        return main
+
+    def test_the_include_of_a_header_reached_through_a_directory_satisfies_a_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            main = self.layout(root)
+            self.assertEqual(tool.problems(main, TABLE, include_dirs=[root / "include"]), [])
+
+    def test_without_the_directory_the_header_is_not_seen_and_the_include_is_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            main = self.layout(root)
+            self.assertEqual(len(tool.problems(main, TABLE)), 1)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                tool.followed(main)
+            self.assertIn('warning: check_includes.py could not find the include "design/design.hpp"', err.getvalue())
+
+    def test_followed_gives_the_header_of_the_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            main = self.layout(root)
+            names = [f.name for f in tool.followed(main, [root / "include"])]
+            self.assertEqual(names, ["main.cpp", "design.hpp"])
 
 
 class CheckIncludes(unittest.TestCase):

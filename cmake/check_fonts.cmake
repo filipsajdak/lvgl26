@@ -83,10 +83,11 @@ function(lvgl26_check_fonts target)
   foreach(font IN LISTS fonts)
     list(APPEND defined --defined ${font})
   endforeach()
+  lvgl26_include_directories(${target} include_flags)
   set(stamp ${CMAKE_BINARY_DIR}/lvgl26_fonts/${target}.stamp)
   add_custom_command(
     OUTPUT ${stamp}
-    COMMAND Python3::Interpreter ${LVGL26_CHECK_FONTS_SCRIPT} ${defined} --build ${stamp} ${stamp}.d ${files}
+    COMMAND Python3::Interpreter ${LVGL26_CHECK_FONTS_SCRIPT} ${defined} --build ${stamp} ${stamp}.d ${include_flags} ${files}
     DEPENDS ${files} ${LVGL26_CHECK_FONTS_SCRIPT}
     DEPFILE ${stamp}.d
     COMMENT "lvgl26: checking the fonts of ${target}"

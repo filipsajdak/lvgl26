@@ -303,6 +303,8 @@ target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
 # The call form builds the node that the subscript form builds.
 lvgl26_test(call_form)
+# The members of a props struct are in the order a tree is written in.
+lvgl26_test(props_order)
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
@@ -521,7 +523,7 @@ lvgl26_compile_fail(pointer_queue_too_large "Capacity <= .*most_pointer_samples"
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail_message(each_without_row static_assert "lv: lv::each needs a row template: lv::each(tracks, &track::id)[lv::label(...)].")
 lvgl26_compile_fail_message(each_plain_key static_assert "lv: a key names one row, and is compared as a state compares its value. Give it a named type, `struct track_id { int value; };`, or an enum. To allow plain integers, set rules.raw_integer_state in the settings.")
-lvgl26_compile_fail(each_not_a_list "lv::each takes an lv::list and the member of its rows that holds the key")
+lvgl26_compile_fail_message(each_not_a_list deleted "lv: lv::each takes an lv::list and the member of its rows that holds the key: lv::each(tracks, &track::id, track_row).")
 lvgl26_compile_fail(each_key_of_another_row "lv::each takes an lv::list and the member of its rows that holds the key")
 lvgl26_compile_fail_message(each_twice_in_one_widget static_assert "lv: a widget holds at most one lv::each. Put each one in a widget of its own: lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].")
 lvgl26_compile_fail_message(row_field_outside_each static_assert "lv: lv::bind(&T::field) follows a field of a row, and this node is not in a row. Use it in the row template of lv::each: lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].")
@@ -552,6 +554,7 @@ lvgl26_compile_fail(eager_scan "evaluation operation count exceeds limit of ${lv
 target_compile_options(fail_eager_scan PRIVATE -fconstexpr-ops-limit=${lvgl26_include_only_ops})
 lvgl26_compile_fail_message(set_inline_style deleted "lv: a style in set() is made with lv::style({...}): view.set({.style = lv::style({.radius = ...})}).")
 lvgl26_compile_fail_message(set_named_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
+lvgl26_compile_fail_message(set_named_set_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail_message(set_constexpr_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail_message(props_needs_unit static_assert "lv: wrong value for this property. It takes a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length). You gave int.")
@@ -689,7 +692,8 @@ lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this 
 lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
 lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
 lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
-lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail_message(restrict_spawn static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
+lvgl26_compile_fail_message(restrict_spawn_owned static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
 lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
@@ -1389,6 +1393,7 @@ lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::compu
 lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(children_alone_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(each_row_not_a_tree static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
+lvgl26_compile_fail_message(each_row_then_more static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(each_plain_row_not_a_tree static_assert "lv: lv::each takes the options in braces, then the row template: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(when_second_not_a_tree deleted "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).")
 lvgl26_compile_fail(shown_arms_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")

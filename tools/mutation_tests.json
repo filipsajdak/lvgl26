@@ -11,7 +11,7 @@
       "logic": true
     },
     "include/lv/view.hpp": {
-      "tests": "^concepts$|^handlers$|^l1_views$|^l2_tree$|fail_part_|fail_handler_",
+      "tests": "^concepts$|^handlers$|^l1_views$|^l2_tree$|fail_part_|fail_handler_|fail_set_",
       "targets": "concepts handlers l1_views l2_tree"
     },
     "include/lv/computed.hpp": {
@@ -33,16 +33,16 @@
       "targets": "concepts state state_plain"
     },
     "include/lv/list.hpp": {
-      "tests": "^lists$|^lists_selection$|fail_each|fail_list|fail_row",
-      "targets": "lists lists_selection"
+      "tests": "^lists$|^lists_selection$|^state_plain$|fail_each|fail_list|fail_row",
+      "targets": "lists lists_selection state_plain"
     },
     "include/lv/owned.hpp": {
       "tests": "^l1_views$|^l2_tree$|fail_weak|fail_owned",
       "targets": "l1_views l2_tree"
     },
     "include/lv/props.hpp": {
-      "tests": "^l1_views$|^l2_tree$|^smoke$|^values$|^options$|fail_options",
-      "targets": "l1_views l2_tree smoke values options",
+      "tests": "^l1_views$|^l2_tree$|^smoke$|^values$|^options$|fail_options|^props_order$|^reference_data$|^options_docs$",
+      "targets": "l1_views l2_tree smoke values options props_order lv_reference options_docs",
       "parts": 3
     },
     "include/lv/runtime.hpp": {
@@ -269,11 +269,11 @@
       "targets": "signal_lamps"
     },
     "include/lv/signal_type.hpp": {
-      "tests": "^signal_type$|^font_bytes$",
+      "tests": "^signal_type$|^font_bytes$|^fail_signal_fonts_and_type$|^fail_signal_type_and_fonts$",
       "targets": "signal_type font_bytes"
     },
     "include/lv/task.hpp": {
-      "tests": "^task$|^app_loop$",
+      "tests": "^task$|^app_loop$|^fail_restrict_spawn$|^fail_restrict_spawn_owned$",
       "targets": "task app_loop"
     },
     "include/lv/theme.hpp": {
