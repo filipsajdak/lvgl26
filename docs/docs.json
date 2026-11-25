@@ -20,7 +20,10 @@
     {
       "title": "Core ideas",
       "pages": [
+        "tree.md",
         "state.md",
+        "views.md",
+        "values.md",
         "mounting.md"
       ]
     },
@@ -29,12 +32,16 @@
       "pages": [
         "lists.md",
         "repetition.md",
-        "options.md"
+        "options.md",
+        "match.md",
+        "tasks.md",
+        "animation.md"
       ]
     },
     {
       "title": "How it looks",
       "pages": [
+        "tokens.md",
         "themes.md",
         "looks.md",
         "fonts.md",
@@ -44,8 +51,10 @@
     {
       "title": "The program",
       "pages": [
+        "application.md",
         "input.md",
-        "settings.md"
+        "settings.md",
+        "targets.md"
       ]
     },
     {

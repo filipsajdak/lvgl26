@@ -4,7 +4,7 @@ lvgl26 is a C++26 framework over LVGL for embedded user interfaces. The compiler
 
 ## The pages
 
-The groups are the layers of the framework, in the order of the sidebar. `docs.json` holds the sidebar. The [README](../README.md) tours the features, and `docs/reference/` holds the widgets, properties and settings as data.
+The groups are the layers of the framework, in the order of the sidebar. `docs.json` holds the sidebar. The [README](../README.md) shows the main features in short, and `docs/reference/` holds the widgets, properties and settings as data.
 
 ### Start
 
@@ -18,8 +18,11 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 
 | Page | What it gives you |
 |---|---|
+| [The tree and its widgets](tree.md) | A screen as one constant tree: children as arguments, properties generated from LVGL, their order |
 | [State and bindings](state.md) | Values that widgets follow, values made from them, and actions that follow them |
-| [Where a tree lives](mounting.md) | Mounting a tree in a variable or a global, unmounting it, and one slot for one of several trees |
+| [Views and ids](views.md) | A typed handle to one widget, reached by its id; who owns a widget; the untyped way |
+| [Values and units](values.md) | Typed property values, measures with mp-units, angles in the unit LVGL means, and LVGL's values by name |
+| [Where a tree lives](mounting.md) | Mounting a tree in a variable or a global, unmounting it, pages that follow a state, and one slot for one of several trees |
 
 ### A screen that changes
 
@@ -28,11 +31,15 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 | [Lists](lists.md) | Rows that change, with a fixed capacity: only the widgets of the changed row are touched |
 | [Repetition](repetition.md) | Parts that the compiler repeats, for each enumerator, each captioned member or each record |
 | [Option lists](options.md) | The options of a dropdown or a roller as a list, or from the enumerators of an enum |
+| [Match](match.md) | A choice by value that the compiler checks: every value has exactly one arm |
+| [Tasks](tasks.md) | Coroutines on LVGL's loop: wait for events, time and the first of several; work from another thread |
+| [Animation](animation.md) | One property moved from one value to another, with an easing curve, awaited by a task |
 
 ### How it looks
 
 | Page | What it gives you |
 |---|---|
+| [Design tokens](tokens.md) | A Design Tokens Format file read by the compiler; styles that take tokens only; three tiers |
 | [Themes](themes.md) | One look for every widget: the built-in Signal theme with its typefaces, and a theme of your own from a token file |
 | [Looks](looks.md) | A named group of design tokens used as a style, with parts, states and variants |
 | [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
@@ -42,8 +49,10 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 
 | Page | What it gives you |
 |---|---|
+| [Application and loop](application.md) | Two objects start LVGL: the application, its clock and loop, and a display with its frame or band |
 | [A pointer](input.md) | A mouse or a touch panel, the application's loop, and a window that closes, hides and shows |
 | [Project settings](settings.md) | One JSON file for the whole program: what it may use, how strict the library is, and what the compiler may do |
+| [Targets](targets.md) | A desktop window, a Cortex-M4 with what it measures, and the experimental browser target |
 
 ### Growing
 
@@ -82,6 +91,7 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 - A longer valid form stands beside a short one only when it is a built file too, labelled "the long way". There is no hand-written bad code.
 - A picture on a page is written by a test, as `quick_start_picture` writes its own.
 - `python3 tools/docs.py check` must pass.
+- The root `README.md` is checked like a page, and `python3 tools/check_readme.py` holds it to the code: a change of syntax or of a feature updates it in the same pull request.
 
 ### The outline of a guide
 

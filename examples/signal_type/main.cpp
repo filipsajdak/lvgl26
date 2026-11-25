@@ -11,6 +11,7 @@ using namespace lv::units;
 
 namespace {
 
+//! [readme]
 //! [fonts]
 // A copy: a reference to the tokens would keep the token file in the program.
 constexpr auto text = lv::signal::type_tokens.text;
@@ -37,6 +38,7 @@ constexpr auto ui = lv::column(
   lv::label({.text = "Heating to 22 degrees."}), lv::button(lv::label({.text = "HOLD"}))
 );
 //! [tree]
+//! [readme]
 
 constinit lv::frame<320, 240> frame;
 

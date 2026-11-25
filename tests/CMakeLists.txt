@@ -1036,6 +1036,11 @@ if(Python3_FOUND)
   add_test(NAME docs_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/docs.py check)
   # The outline of a guide, its messages tied to compile-fail tests, and its rules.
   add_test(NAME docs_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_docs.py)
+  # The README follows the code: no old form, no C name, its links, and the facts it repeats.
+  add_test(NAME readme_check COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_readme.py)
+  add_test(NAME readme_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_readme.py)
+  # The hook that reminds an agent of the README before a commit of syntax or features.
+  add_test(NAME readme_reminder_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_readme_reminder.py)
   # The rules of good code are data; the page "Writing good lvgl26 code" is written from it.
   add_test(NAME rules_page COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/rules.py
                                    --check-page ${PROJECT_SOURCE_DIR}/docs/rules.md)

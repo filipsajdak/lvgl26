@@ -173,6 +173,16 @@ A state that one screen uses lives in the file of that screen, next to its tree.
 
 What does not follow a state: a value read with `get()` and kept in a variable. It is a copy of the value at that moment.
 
+### Share it with C code
+
+A state keeps its own list of followers, so following it needs no LVGL subject and no observer.
+
+`speed.raw()` gives an `lv_subject_t`, made on its first use, that C code can share. A value C code writes reaches the widgets, and a value set from C++ reaches C observers.
+
+The followers of lvgl26 are told first, then the C observers, whatever the order in which they were added. `raw()` of an `lv::computed` makes its subject on first use too.
+
+Some properties keep LVGL's own bind function, and with it a subject and an observer. One kind is a setter that takes an animation flag beside its value: the value of a bar or a slider, the selected row of a roller. LVGL animates those after the first draw, and its public API does not say when that is. The other is `checked`.
+
 ## What the compiler checks
 
 A state of a plain integer is refused, and the message says what to write instead:

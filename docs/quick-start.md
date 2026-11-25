@@ -19,7 +19,7 @@ constinit lv::state speed{0 * km / h};
 void reset() { speed = 0 * km / h; }
 ```
 
-**A screen.** It is a tree, written as one constant. Properties go in `()`, children in `[]`. `lv::bind(speed)` ties a property to the value.
+**A screen.** It is a tree, written as one constant. Each widget takes its properties in braces, then its children. `lv::bind(speed)` ties a property to the value.
 
 <!-- snippet: examples/quick_start/main.cpp tree -->
 ```cpp
@@ -113,7 +113,7 @@ In the container, leave the two `-D` options out. The first build takes a minute
 
 | Idea | In the program | It gives you |
 |---|---|---|
-| The tree | `constexpr auto ui = lv::column(...)[...]` | The compiler reads the screen. A wrong property or a missing unit stops the build. |
+| The tree | `constexpr auto ui = lv::column({...}, children...)` | The compiler reads the screen. A wrong property or a missing unit stops the build. |
 | Typed values | `120 * km / h`, `320 * px` | A length is not a speed, and a number is not a length. |
 | State and binding | `lv::state`, `lv::bind(speed)` | Change the value; the dial and the text follow. |
 | Names, not C | `.align = "center"` | An LVGL value is its name in quotes. A wrong name lists the right ones. |
@@ -141,7 +141,7 @@ error: static assertion failed: lv: wrong value for this property. It takes a wi
 ## Where next
 
 - [Themes](themes.md) shows Signal's other form, and how to make a theme of your own.
-- The [README](../README.md) tours the rest: styles and design tokens, derived values, coroutines, animation.
+- The [README](../README.md) shows the main features in short, and links the page of each.
 - [examples](../examples/README.md) holds LVGL's own examples, rewritten with lvgl26.
 - [Coming from Qt Quick](from-qt.md), [Slint](from-slint.md) and [TouchGFX](from-touchgfx.md) give the steps of a port and the decisions you must make.
 - [Port walkthrough: the Slint printer panel](port-slint-printer.md) shows a whole application ported, with its pictures and code.
