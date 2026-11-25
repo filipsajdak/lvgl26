@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-20",
+  "updated": "2026-11-25",
   "about": "What lvgl26 covers of the toolkits people migrate from. The status page is written from this file by tools/migration_matrix.py. A skill or a person reads it to see what a port can use and what is missing.",
   "statuses": {
     "works": "Works",
@@ -14,6 +14,7 @@
     {"id": "translations", "title": "Translations and text resources", "what": "Text per language, plural forms and a switch of language at run time.", "status": "planned", "design": "not designed", "unblocks": ["Qt qsTr", "Slint @tr", "TouchGFX text resources", "LVGL label_translation"]},
     {"id": "runtime-theming", "title": "A style that follows a state", "what": "A style property bound to a state, so a theme or a look can change in place instead of mounting the tree again.", "status": "planned", "design": "not designed", "unblocks": ["Slint's four printer themes", "the three looks of the Qt treadmill", "dark and light switching"]},
     {"id": "gradients", "title": "More gradients", "what": "Diagonal gradients and gradients with several stops. Today a gradient is vertical or horizontal with two colors.", "status": "planned", "design": "not designed", "unblocks": ["the printer panel's tiles and color button", "designer-made backgrounds"]},
+    {"id": "font-symbols", "title": "LVGL's symbols with a drawn font", "what": "A font drawn from a TrueType file holds no LVGL symbol, and no token names LVGL's own font. A drop-down list draws its arrow in the font of its indicator part, which inherits it (lv_dropdown.c), and LVGL's theme sets a font on the screen only (lv_theme_default.c). So a body font that reaches the list turns the arrow into a box.", "status": "planned", "design": "not designed", "unblocks": ["a body font for all text of the coffee machine tutorial", "Signal's typefaces with a drop-down list"]},
     {"id": "animate-opacity", "title": "Animate a widget's opacity", "what": "A fade of a whole widget. LVGL has no setter for it, so lv::animate has no member for it.", "status": "planned", "design": "not designed", "unblocks": ["the splash fades of the Qt treadmill", "Qt and Slint opacity animations"]},
     {"id": "bind-layout", "title": "Bind position and size to a state", "what": "Follow a state with x, y, width and height, and with a text that formats several values.", "status": "planned", "design": "not designed", "unblocks": ["moving a dot along a track", "a time such as 6:05 in one binding"]},
     {"id": "add-calls", "title": "Children that a widget creates itself", "what": "The add calls of LVGL as nodes: list items, tabs, message boxes, menu pages.", "status": "planned", "design": "decided: a child-creating add function becomes a node, such as lv::list_button", "unblocks": ["about 20 of LVGL's examples", "Qt TabBar and Dialog", "Slint TabWidget and PopupWindow"]},
