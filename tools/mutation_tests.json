@@ -269,7 +269,7 @@
       "targets": "signal_lamps"
     },
     "include/lv/signal_type.hpp": {
-      "tests": "^signal_type$|^font_bytes$",
+      "tests": "^signal_type$|^font_bytes$|^fail_signal_fonts_and_type$|^fail_signal_type_and_fonts$",
       "targets": "signal_type font_bytes"
     },
     "include/lv/task.hpp": {
