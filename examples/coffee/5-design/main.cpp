@@ -1,8 +1,8 @@
 // Step 5 of the coffee machine tutorial (docs/research/tutorial-coffee.md): a design system you
 // can reuse. Signal, which comes with lvgl26, draws the screen, the boxes, the buttons and the
 // ring; the program's own looks keep what is the machine's: the layout of a page, the title, the
-// price and the sliders, which Signal does not draw. The titles are set in the machine's own
-// typeface, drawn in this file.
+// price and the sliders, which Signal does not draw. The titles and the text are set in the
+// machine's own typeface, drawn in this file.
 //
 //   coffee_5    writes coffee_5.png: the page of your cup
 
@@ -56,26 +56,27 @@ constinit lv::state<step> current{step::drinks};
 //! [state]
 
 //! [font]
-// The machine's own typeface, and the font of its titles from the typography token.
+// The machine's own typeface, and the fonts of its titles and of its text, as styles to merge.
 constexpr unsigned char barlow_ttf[] = {
 #embed "fonts/Barlow-Medium.ttf"
 };
 constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
 
-constexpr auto title_font = type(tok.text.title);
+constexpr auto title_text = lv::style({.text_font = type(tok.text.title)});
+constexpr auto body_text  = lv::style({.text_font = type(tok.text.body)});
 //! [font]
 
 //! [parts]
 // A page's title, and a button that goes to another step.
 constexpr auto title(const char* text) {
-  return lv::label(
-    {.text = text, .style = lv::look<"title"> | lv::style({.text_font = title_font})}
-  );
+  return lv::label({.text = text, .style = lv::look<"title"> | title_text});
 }
 
 template <step To>
 constexpr auto go_to(const char* text) {
-  return lv::button({.on_clicked = [] { current = To; }}, lv::label({.text = text}));
+  return lv::button(
+    {.on_clicked = [] { current = To; }}, lv::label({.text = text, .style = body_text})
+  );
 }
 //! [parts]
 
@@ -85,13 +86,15 @@ constexpr const char* prices[] = {"2.20 EUR", "2.40 EUR", "3.10 EUR", "3.30 EUR"
 
 constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
 
+// The list keeps LVGL's font: a drawn font has no symbol for its arrow.
 constexpr auto menu = lv::dropdown({
   .options  = lv::options_of<drink>,
   .selected = lv::bind(chosen),
   .width    = 240 * px,
 });
 
-constexpr auto price_tag = lv::label({.text = lv::bind(price), .style = lv::look<"price">});
+constexpr auto price_tag =
+  lv::label({.text = lv::bind(price), .style = lv::look<"price"> | body_text});
 
 constexpr auto drinks = lv::group(
   {.style = lv::look<"screen">}, title("Coffee"), menu, price_tag, go_to<step::cup>("Next")
@@ -111,8 +114,9 @@ constexpr auto size_slider = lv::slider(
   {.range = {20, 200}, .value = lv::bind(cup), .width = 240 * px, .style = lv::look<"slider">}
 );
 constexpr auto size_text =
-  lv::label({.text = lv::bind(cup)});  // a quantity shows its unit: "40 mL"
-constexpr auto beans_text = lv::label({.text = lv::bind(beans, "{} g of beans")});
+  lv::label({.text = lv::bind(cup), .style = body_text});  // a quantity shows its unit: "40 mL"
+constexpr auto beans_text =
+  lv::label({.text = lv::bind(beans, "{} g of beans"), .style = body_text});
 
 constexpr auto your_cup = lv::group(
   {.style = lv::look<"screen">}, title("Your cup"), strength_slider, size_slider, size_text,
@@ -133,7 +137,7 @@ constexpr auto ring = lv::arc(
     .size  = {140 * px, 140 * px},
     .value = 0,
   },
-  lv::label({.align = "center", .text = lv::bind(left)})  // shows "25 s"
+  lv::label({.align = "center", .text = lv::bind(left), .style = body_text})  // shows "25 s"
 );
 
 constexpr auto brewing =
@@ -158,7 +162,7 @@ void start_brewing(lv::held<brewing> page) {
 //! [brewing]
 
 //! [enjoy]
-constexpr auto ready = lv::label({.text = lv::bind(price)});
+constexpr auto ready = lv::label({.text = lv::bind(price), .style = body_text});
 
 constexpr auto enjoy =
   lv::group({.style = lv::look<"screen">}, title("Enjoy"), ready, go_to<step::drinks>("Again"));

@@ -3,6 +3,7 @@
 #include "cup.hpp"
 
 #include "../design/design.hpp"
+#include "../design/fonts.hpp"
 #include "../parts/go_to.hpp"
 #include "../parts/title.hpp"
 #include "../state.hpp"
@@ -41,8 +42,9 @@ constexpr auto size_slider = lv::slider(
   {.range = {20, 200}, .value = lv::bind(cup), .width = 240 * px, .style = lv::look<"slider">}
 );
 constexpr auto size_text =
-  lv::label({.text = lv::bind(cup)});  // a quantity shows its unit: "40 mL"
-constexpr auto beans_text = lv::label({.text = lv::bind(beans, "{} g of beans")});
+  lv::label({.text = lv::bind(cup), .style = body_text});  // a quantity shows its unit: "40 mL"
+constexpr auto beans_text =
+  lv::label({.text = lv::bind(beans, "{} g of beans"), .style = body_text});
 
 constexpr auto your_cup = lv::group(
   {.style = lv::look<"screen">}, title("Your cup"), strength_slider, size_slider, size_text,
