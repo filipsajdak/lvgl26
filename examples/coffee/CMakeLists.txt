@@ -19,7 +19,7 @@ foreach(step 1-screen 2-values 3-pages 4-time 5-design)
 endforeach()
 
 # The machine's typeface is a copy of the site's Barlow, beside each design that embeds it.
-foreach(copy 5-design/fonts 6-files/design/fonts)
+foreach(copy 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
   string(REGEX MATCH "^[0-9]+" number ${copy})
   foreach(file Barlow-Medium.ttf OFL.txt)
     add_test(NAME example_coffee_${number}_font_${file}
@@ -61,3 +61,13 @@ endfunction()
 coffee_files(6 6-files shell.cpp screens/drinks.cpp screens/cup.cpp screens/brewing.cpp screens/enjoy.cpp
              design/font_text_title.cpp)
 coffee_picture(6 coffee_6 coffee-5.png)
+
+# Step 7 adds a page and the program's settings, which apply to the pages too.
+coffee_files(7 7-service shell.cpp screens/drinks.cpp screens/cup.cpp screens/brewing.cpp screens/enjoy.cpp
+             screens/service.cpp design/font_text_title.cpp)
+lvgl26_settings(coffee_7 7-service/lvgl26.json)
+if(TARGET coffee_7_window)
+  lvgl26_settings(coffee_7_window 7-service/lvgl26.json)
+endif()
+coffee_picture(7 coffee_7 coffee-7.png)
+coffee_picture(7 coffee_7_service coffee-7-service.png)
