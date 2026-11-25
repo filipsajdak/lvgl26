@@ -1,6 +1,6 @@
 # The coffee machine of the tutorial (docs/research/tutorial-coffee.md): one whole program for
 # each step, each of which writes the picture of its step.
-foreach(step 1-screen 2-values 3-pages 4-time)
+foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   string(REGEX MATCH "^[0-9]+" number ${step})
   set(target coffee_${number})
   add_executable(${target} ${step}/main.cpp)
@@ -16,4 +16,14 @@ foreach(step 1-screen 2-values 3-pages 4-time)
                      ${PROJECT_SOURCE_DIR}/docs/media/coffee-${number}.png)
     set_tests_properties(example_${target}_picture PROPERTIES FIXTURES_REQUIRED ${target}_picture)
   endif()
+endforeach()
+
+# The machine's typeface is a copy of the site's Barlow, beside each design that embeds it.
+foreach(copy 5-design/fonts)
+  string(REGEX MATCH "^[0-9]+" number ${copy})
+  foreach(file Barlow-Medium.ttf OFL.txt)
+    add_test(NAME example_coffee_${number}_font_${file}
+             COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/${file}
+                     ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
+  endforeach()
 endforeach()
