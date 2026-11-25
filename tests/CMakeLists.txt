@@ -300,6 +300,8 @@ set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_fil
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+# The members of a props struct are in the order a tree is written in.
+lvgl26_test(props_order)
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
