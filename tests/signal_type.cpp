@@ -7,6 +7,9 @@
 
 #include "check.hpp"
 
+// The header says that it was read, and that lv/signal_fonts.hpp, which gives the same names, was not.
+static_assert(lv::detail::included<"lv/signal_type.hpp"> && !lv::detail::included<"lv/signal_fonts.hpp">);
+
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
