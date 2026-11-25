@@ -521,6 +521,7 @@ lvgl26_compile_fail(eager_scan "evaluation operation count exceeds limit of ${lv
 target_compile_options(fail_eager_scan PRIVATE -fconstexpr-ops-limit=${lvgl26_include_only_ops})
 lvgl26_compile_fail_message(set_inline_style deleted "lv: a style in set() is made with lv::style({...}): view.set({.style = lv::style({.radius = ...})}).")
 lvgl26_compile_fail_message(set_named_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
+lvgl26_compile_fail_message(set_named_set_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail_message(set_constexpr_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail_message(props_needs_unit static_assert "lv: wrong value for this property. It takes a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length). You gave int.")
@@ -658,7 +659,8 @@ lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this 
 lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
 lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
 lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
-lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail_message(restrict_spawn static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
+lvgl26_compile_fail_message(restrict_spawn_owned static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
 lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
