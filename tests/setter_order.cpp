@@ -38,6 +38,46 @@ static_assert(lv::detail::setter_phase_of<"textarea">("cursor_pos") == lv::detai
 static_assert(lv::detail::setter_phase_of<"buttonmatrix">("one_checked") == lv::detail::setter_normal);
 static_assert(lv::detail::setter_phase_of<"label">("map") == lv::detail::setter_normal);
 
+// The three phases are -1, 0 and 1: the order of the groups is the number plus one.
+static_assert(lv::detail::setter_first == -1 && lv::detail::setter_normal == 0 && lv::detail::setter_last == 1);
+
+// A widget has a rule by its name alone, not by where its name sorts: widgets on both sides of the two
+// that have one in alphabetical order have none, and none of their names is first or last.
+static_assert(!lv::detail::has_setter_rule<"arc"> && !lv::detail::has_setter_rule<"bar"> &&
+              !lv::detail::has_setter_rule<"button"> && !lv::detail::has_setter_rule<"tileview"> &&
+              !lv::detail::has_setter_rule<"win"> && !lv::detail::has_setter_rule<"table">);
+
+// Every property of the two widgets that have rules has the phase that the rules give, and no other
+// property is first or last: a name that sorts before or after a rule's name is not that rule.
+template <lv::detail::fixed W>
+consteval bool phases_are_the_rules() {
+  using namespace std::string_view_literals;
+  for (auto m : std::meta::nonstatic_data_members_of(^^lv::props<W>, std::meta::access_context::unchecked())) {
+    const std::string_view name = std::meta::identifier_of(m);
+    int expected = lv::detail::setter_normal;
+    if constexpr (W.sv() == "buttonmatrix"sv) {
+      if (name == "map"sv) expected = lv::detail::setter_first;
+      if (name == "ctrl_map"sv || name == "button_ctrl"sv || name == "button_ctrl_all"sv) expected = lv::detail::setter_last;
+    } else {
+      if (name == "cursor_pos"sv) expected = lv::detail::setter_last;
+    }
+    if (lv::detail::setter_phase_of<W>(name) != expected) return false;
+  }
+  return true;
+}
+static_assert(phases_are_the_rules<"buttonmatrix">() && phases_are_the_rules<"textarea">());
+
+// The names of a rule on a widget that has none, and on the other widget that has rules.
+static_assert(lv::detail::setter_phase_of<"arc">("map") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"arc">("cursor_pos") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"arc">("ctrl_map") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"tileview">("map") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"tileview">("cursor_pos") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"label">("cursor_pos") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"button">("button_ctrl") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"textarea">("map") == lv::detail::setter_normal &&
+              lv::detail::setter_phase_of<"buttonmatrix">("cursor_pos") == lv::detail::setter_normal);
+
 constexpr auto matrix = lv::widget<"buttonmatrix">({.id = "keys", .ctrl_map = controls, .map = keys, .one_checked = true});
 constexpr auto area = lv::textarea({.id = "area", .cursor_pos = 2, .one_line = true, .text = "Block"});
 constexpr auto one_button = lv::widget<"buttonmatrix">({.id = "keys", .button_ctrl = {1, "checked"}, .map = keys, .one_checked = true});

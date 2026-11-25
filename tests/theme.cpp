@@ -5,6 +5,9 @@
 
 #include "check.hpp"
 
+// The header says that it was read: a name that lv/detail/missing.hpp declares for it then takes the real definition.
+static_assert(lv::detail::included<"lv/theme.hpp">);
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
