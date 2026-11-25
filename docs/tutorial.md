@@ -1,0 +1,453 @@
+# Build a coffee machine in seven steps
+
+This tutorial builds the screen of a coffee machine, 480 x 320, in seven programs. Each step adds one idea, and the page shows only what changed.
+
+![The finished machine: a title in Barlow, a list of drinks set to espresso, its price, and the buttons Next and Service](media/coffee-7.png)
+
+Each step is a whole program in [`examples/coffee/`](https://github.com/filipsajdak/lvgl26/tree/main/examples/coffee). A test builds it, runs it without a window, and compares the picture it draws with the one on this page.
+
+| Step | Folder | What it adds |
+|---|---|---|
+| 1 | `1-screen` | A screen as one tree, a state, and looks from your own token file |
+| 2 | `2-values` | Values that say what they are |
+| 3 | `3-pages` | A page per step, which slides in |
+| 4 | `4-time` | A task that brews, with a ring that fills |
+| 5 | `5-design` | A design system you can reuse, and a font of your own |
+| 6 | `6-files` | The same program, split into files by screen |
+| 7 | `7-service` | A service page, and the program's settings |
+
+## 1. A screen
+
+The reader picks a drink and sees its price. The drink is a state of an enum, and the price follows it.
+
+<!-- snippet: examples/coffee/1-screen/main.cpp state -->
+```cpp
+// What the reader chooses.
+enum class drink { espresso, lungo, cappuccino, latte };
+
+constinit lv::state chosen{drink::espresso};
+```
+
+A screen is a tree, written as one constant. The drop-down list takes its options from the enum, and `lv::bind` ties both the list and the price to the state. `lv::computed` makes the price from the drink, and stores nothing.
+
+<!-- snippet: examples/coffee/1-screen/main.cpp drinks -->
+```cpp
+// The price of each drink, in the order of the enum.
+constexpr const char* prices[] = {"2.20 EUR", "2.40 EUR", "3.10 EUR", "3.30 EUR"};
+
+constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
+
+constexpr auto menu = lv::dropdown({
+  .options  = lv::options_of<drink>,
+  .selected = lv::bind(chosen),
+  .width    = 240 * px,
+});
+
+constexpr auto price_tag = lv::label({.text = lv::bind(price), .style = lv::look<"price">});
+
+constexpr auto ui = lv::group({.style = lv::look<"screen">}, title("Coffee"), menu, price_tag);
+```
+
+A node names its look, and the token file says how it looks. The project names its token file once, as `lv::design<lv::override>`. Each group is a look; its entries are named for the style properties they set.
+
+<!-- snippet: examples/coffee/1-screen/tokens.json -->
+```json
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "The design of step 1 of the coffee machine tutorial (docs/tutorial.md): values first, then one group for each look. A look's entries are named for the style properties they set.",
+  "color": {
+    "$type": "color",
+    "crema": {"$value": {"hex": "#f6efe7", "colorSpace": "srgb", "components": [0.9647, 0.9373, 0.9059]}},
+    "roast": {"$value": {"hex": "#3b2418", "colorSpace": "srgb", "components": [0.2314, 0.1412, 0.0941]}},
+    "bean": {"$value": {"hex": "#6f4e37", "colorSpace": "srgb", "components": [0.4353, 0.3059, 0.2157]}},
+    "muted": {"$value": {"hex": "#8a7363", "colorSpace": "srgb", "components": [0.5412, 0.451, 0.3882]}}
+  },
+  "space": {
+    "$type": "dimension",
+    "page": {"$value": {"value": 16, "unit": "px"}},
+    "gap": {"$value": {"value": 12, "unit": "px"}}
+  },
+  "screen": {
+    "bg_color": {"$value": "{color.crema}"},
+    "bg_opa": {"$type": "number", "$value": 1},
+    "pad_all": {"$value": "{space.page}"},
+    "pad_row": {"$value": "{space.gap}"},
+    "text_color": {"$value": "{color.roast}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "column"
+      }
+    }
+  },
+  "title": {
+    "text_color": {"$value": "{color.bean}"}
+  },
+  "price": {
+    "text_color": {"$value": "{color.muted}"}
+  }
+}
+```
+
+![Step 1: the title Coffee, a list set to lungo and the price 2.40 EUR, on a cream ground](media/coffee-1.png)
+
+See [The tree and its widgets](tree.md), [State and bindings](state.md) and [Looks](looks.md).
+
+## 2. Values that say what they are
+
+The cup has a strength and a size. A plain `int` would say neither, so the strength is a struct of one member and the size is an mp-units quantity.
+
+<!-- snippet: examples/coffee/2-values/main.cpp state -->
+```cpp
+// What the reader chooses.
+enum class drink { espresso, lungo, cappuccino, latte };
+
+struct strength {
+  int value;
+};
+
+constinit lv::state chosen{drink::espresso};
+constinit lv::state bold{strength{3}};
+constinit lv::state cup{40 * ml};
+```
+
+The beans are made from the strength. A quantity shows its unit when it is bound to a label, so the size reads "40 mL".
+
+<!-- snippet: examples/coffee/2-values/main.cpp cup -->
+```cpp
+constexpr auto least_dose = 6 * g;  // the beans of the mildest cup
+constexpr auto dose_step  = 2 * g;  // what one step of strength adds
+
+constinit lv::computed beans{[](strength s) { return least_dose + s.value * dose_step; }, bold};
+
+constexpr auto strength_slider = lv::slider(
+  {.range = {1, 5}, .value = lv::bind(bold), .width = 240 * px, .style = lv::look<"slider">}
+);
+constexpr auto size_slider = lv::slider(
+  {.range = {20, 200}, .value = lv::bind(cup), .width = 240 * px, .style = lv::look<"slider">}
+);
+constexpr auto size_text =
+  lv::label({.text = lv::bind(cup)});  // a quantity shows its unit: "40 mL"
+constexpr auto beans_text = lv::label({.text = lv::bind(beans, "{} g of beans")});
+
+constexpr auto ui = lv::group(
+  {.style = lv::look<"screen">}, title("Coffee"), menu, price_tag, strength_slider, size_slider,
+  size_text, beans_text
+);
+```
+
+A state of a plain integer does not compile:
+
+<!-- message: state_plain_int -->
+```text
+error: static assertion failed: lv: a state of a plain integer does not say what the number is. If it is a measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For anything else, name it: `struct tab_index { int value; };`. To allow plain integers, set rules.raw_integer_state in the settings.
+```
+
+![Step 2: the drinks, two sliders for the strength and the size, "60 mL" and "14 g of beans"](media/coffee-2.png)
+
+See [Values and units](values.md).
+
+## 3. Pages
+
+Each step of the machine gets a page of its own. The pages follow one state, `current`, and a button sets it.
+
+<!-- snippet: examples/coffee/3-pages/main.cpp parts -->
+```cpp
+// A page's title, and a button that goes to another step.
+constexpr auto title(const char* text) {
+  return lv::label({.text = text, .style = lv::look<"title">});
+}
+
+template <step To>
+constexpr auto go_to(const char* text) {
+  return lv::button(
+    {.style = lv::look<"action">, .on_clicked = [] { current = To; }}, lv::label({.text = text})
+  );
+}
+```
+
+`lv::shown` builds the page of the current step and deletes the old one. With a transition, the new page slides in while the old one slides out.
+
+<!-- snippet: examples/coffee/3-pages/main.cpp pages -->
+```cpp
+// A page slides in from the right, and the old one slides out to the left.
+constexpr auto slide_in  = lv::transition({.x = {480 * px, 0 * px}}, 250 * lv::ms, lv::ease::out);
+constexpr auto slide_out = lv::transition({.x = {0 * px, -480 * px}}, 250 * lv::ms, lv::ease::in);
+
+constexpr auto ui = lv::group(
+  lv::shown(
+    current, {.enter = slide_in, .leave = slide_out}, lv::is<step::drinks>(drinks),
+    lv::is<step::cup>(your_cup), lv::is<step::brewing>(brewing), lv::is<step::enjoy>(enjoy)
+  )
+);
+```
+
+![Step 3: the page of your cup, with the sliders, the size, the beans and the button Brew](media/coffee-3.png)
+
+See [Mounting and slots](mounting.md).
+
+## 4. Time
+
+Brewing takes 25 seconds. A task counts them down and fills a ring, then goes to the last page. The brewing page starts it when it is built, with the ring as its owner, so Cancel ends it.
+
+<!-- snippet: examples/coffee/4-time/main.cpp brewing -->
+```cpp
+constexpr auto brew_time = 25 * s;    // the time the machine brews, a value of the program
+constexpr auto brew_span = 25 * sec;  // the same time, as LVGL counts it for the ring
+
+constinit lv::state left{brew_time};
+
+constexpr auto ring = lv::arc(
+  {
+    .id    = "ring",
+    .range = {0, 100},
+    .size  = {140 * px, 140 * px},
+    .value = 0,
+    .style = lv::look<"ring">,
+  },
+  lv::label({.align = "center", .text = lv::bind(left)})  // shows "25 s"
+);
+
+constexpr auto brewing =
+  lv::group({.style = lv::look<"screen">}, title("Brewing"), ring, go_to<step::cup>("Cancel"));
+
+// The ring fills while the seconds count down. Both end when the brewing page goes: Cancel
+// deletes the ring, which owns them.
+lv::task<> fill(lv::view<"arc"> view) {
+  co_await lv::animate(view, {.value = {0, 100}}, brew_span, *tok.motion.brew);
+}
+
+lv::task<> brew(lv::view<"arc"> view) {
+  lv::spawn(fill(view), view);
+  for (left = brew_time; left.get() > 0 * s; left -= 1 * s) co_await lv::sleep(1 * sec);
+  current = step::enjoy;
+}
+
+void start_brewing(lv::held<brewing> page) {
+  const auto view = page->get<"ring">();
+  lv::spawn(brew(view), view);
+}
+```
+
+The arm of the brewing page names the hook: `lv::is<step::brewing>(brewing, {.on_shown = &start_brewing})`. The ring eases in and out with a token of the token file, `motion.brew`, a cubic Bézier curve.
+
+![Step 4: the brewing page ten seconds in, the ring partly filled around "15 s", and the button Cancel](media/coffee-4.png)
+
+See [Tasks](tasks.md) and [Animation](animation.md).
+
+## 5. A design system you can reuse
+
+Signal is the design system that comes with lvgl26, in `<lv/signal.hpp>`. Given to the display, it draws every screen, box, button and ring of the machine.
+
+<!-- snippet: examples/coffee/5-design/main.cpp main -->
+```cpp
+int main() {
+  lv::application app;
+  lv::display display{app, coffee::frame, lv::signal::day};
+  auto root = lv::mount<coffee::ui>(display.screen());
+  if (!root) return 1;
+```
+
+The token file loses the looks that Signal covers. It keeps what is the machine's own: the layout of a page, the title, the price and the sliders, which Signal does not draw.
+
+<!-- snippet: examples/coffee/5-design/tokens.json -->
+```json
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "The design of step 5 of the coffee machine tutorial (docs/tutorial.md): Signal draws the screen, the boxes, the buttons and the ring, so this file keeps only what is the machine's own. A look's entries are named for the style properties they set.",
+  "color": {
+    "$type": "color",
+    "roast": {"$value": {"hex": "#3b2418", "colorSpace": "srgb", "components": [0.2314, 0.1412, 0.0941]}},
+    "bean": {"$value": {"hex": "#6f4e37", "colorSpace": "srgb", "components": [0.4353, 0.3059, 0.2157]}},
+    "muted": {"$value": {"hex": "#8a7363", "colorSpace": "srgb", "components": [0.5412, 0.451, 0.3882]}},
+    "track": {"$value": {"hex": "#e3d5c8", "colorSpace": "srgb", "components": [0.8902, 0.8353, 0.7843]}}
+  },
+  "font": {
+    "text": {"$type": "fontFamily", "$value": "Barlow"}
+  },
+  "text": {
+    "$type": "typography",
+    "title": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.2}}
+  },
+  "motion": {
+    "$type": "cubicBezier",
+    "$description": "The ring fills slowly at first and at the end, as a cup does.",
+    "brew": {"$value": [0.4, 0, 0.6, 1]}
+  },
+  "screen": {
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "column"
+      }
+    }
+  },
+  "title": {
+    "text_color": {"$value": "{color.bean}"}
+  },
+  "price": {
+    "text_color": {"$value": "{color.muted}"}
+  },
+  "slider": {
+    "bg_color": {"$value": "{color.track}"},
+    "bg_opa": {"$type": "number", "$value": 1},
+    "indicator": {
+      "bg_color": {"$value": "{color.bean}"}
+    },
+    "knob": {
+      "bg_color": {"$value": "{color.roast}"}
+    }
+  }
+}
+```
+
+The titles are set in the machine's own typeface, the typography token `text.title` in Barlow. The program draws the font from the TrueType file, in the compiler, and merges it into the look of the title.
+
+<!-- snippet: examples/coffee/5-design/main.cpp font -->
+```cpp
+// The machine's own typeface, and the font of its titles from the typography token.
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
+
+constexpr auto title_font = type(tok.text.title);
+```
+
+<!-- snippet: examples/coffee/5-design/main.cpp parts -->
+```cpp
+// A page's title, and a button that goes to another step.
+constexpr auto title(const char* text) {
+  return lv::label(
+    {.text = text, .style = lv::look<"title"> | lv::style({.text_font = title_font})}
+  );
+}
+
+template <step To>
+constexpr auto go_to(const char* text) {
+  return lv::button({.on_clicked = [] { current = To; }}, lv::label({.text = text}));
+}
+```
+
+![Step 5: the page of your cup in Signal's day theme: a white ground, the title in Barlow, the brown sliders and a black button Brew](media/coffee-5.png)
+
+See [Themes](themes.md) and [Fonts](fonts.md).
+
+## 6. Split into files
+
+The program of step 5 grows by screen, so it gets a file for each screen. Nothing else changes: the test of this step compares its picture with the picture of step 5.
+
+```text
+6-files/
+  main.cpp                 starts the application and draws the pictures
+  shell.cpp, shell.hpp     shows the page of the current step
+  state.hpp                what several screens share
+  screens/                 a file for each screen, with the states only it uses
+  parts/                   functions that return a piece of tree
+  design/                  the token file, the theme, and the file that draws the font
+  platform/window.cpp      the same program in a window, the only file that knows SDL
+```
+
+Each screen defines its page. Its header declares only the page, so a screen's tree is compiled in its own file and nowhere else.
+
+<!-- snippet: examples/coffee/6-files/screens/drinks.cpp page -->
+```cpp
+constinit const lv::page drinks_page = lv::page_of<drinks>;
+```
+
+The shell names the pages as `lv::shown` named the trees in step 3. A page's hook is named with the page.
+
+<!-- snippet: examples/coffee/6-files/shell.cpp pages -->
+```cpp
+// A page slides in from the right, and the old one slides out to the left.
+constexpr auto slide_in  = lv::transition({.x = {width * px, 0 * px}}, 250 * lv::ms, lv::ease::out);
+constexpr auto slide_out = lv::transition({.x = {0 * px, -width * px}}, 250 * lv::ms, lv::ease::in);
+
+constexpr auto ui = lv::group(
+  lv::shown(
+    current, {.enter = slide_in, .leave = slide_out}, lv::is<step::drinks>(drinks_page),
+    lv::is<step::cup>(cup_page), lv::is<step::brewing>(brewing_page),
+    lv::is<step::enjoy>(enjoy_page)
+  )
+);
+```
+
+<!-- snippet: examples/coffee/6-files/screens/brewing.cpp page -->
+```cpp
+// The page's hook is named with the page, as an arm of lv::shown names it.
+constinit const lv::page brewing_page = lv::page_of<brewing, {.on_shown = &start_brewing}>;
+```
+
+The font is drawn in one file, `design/font_text_title.cpp`. Every other file names it with `lv::font_of<"text.title">` and draws nothing. The build stops, before the link, when a file names a font that no file draws.
+
+<!-- snippet: examples/coffee/6-files/design/font_text_title.cpp font -->
+```cpp
+namespace {
+
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
+
+}  // namespace
+
+template <>
+const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type);
+```
+
+- The shell cannot see the size of a page of another file, so the pages take one block of LVGL's heap when the shell is mounted. Step 5 keeps them in the tree.
+- The includes are written relative to the file that names them, `#include "../state.hpp"`. The build's checks follow an include beside its file.
+
+See [Mounting and slots](mounting.md) and [Fonts](fonts.md).
+
+## 7. A service page
+
+One more screen, in a file of its own. It holds the hardness of the water and counts down the cups to the next descaling. The cups made are shared with brewing, so they live in `state.hpp`.
+
+<!-- snippet: examples/coffee/7-service/screens/service.cpp service -->
+```cpp
+enum class hardness { soft, medium, hard };
+
+constinit lv::state water{hardness::medium};
+
+// Harder water scales the machine sooner: the cups between two descalings, in the order of the
+// enum.
+constexpr int cups_between[] = {200, 100, 50};
+
+constinit lv::computed due{
+  [](lv::counter made, hardness h) {
+    return lv::counter{std::max(0, cups_between[std::to_underlying(h)] - made.value)};
+  },
+  cups,
+  water
+};
+```
+
+The machine's softener lies outside the screen. An `lv::effect` sets it whenever the hardness changes.
+
+<!-- snippet: examples/coffee/7-service/screens/service.cpp effect -->
+```cpp
+hardness softener = hardness::medium;  // what the machine's softener is set to: outside the screen
+
+// The softener follows the setting: once when the page is first shown, and after every change.
+constinit lv::effect tell_softener{[](hardness h) { softener = h; }, water};
+```
+
+A program's settings are one file, `lvgl26.json`. The coffee machine's controller has no threads and no floating-point unit, so the file forbids both. A program that uses them stops at the line that does, with a message that names the setting.
+
+<!-- snippet: examples/coffee/7-service/lvgl26.json -->
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/filipsajdak/lvgl26/main/docs/reference/lvgl26-settings.schema.json",
+  "allow": {"threads": false, "floating_point": false}
+}
+```
+
+![Step 7: the service page twelve cups later: the hardness medium, "12 cups since descaling", "Descale in 88 cups", and the buttons Descaled and Done](media/coffee-7-service.png)
+
+See [Settings](settings.md) and [State and bindings](state.md).
+
+## What comes next
+
+- Run the machine in a window: build with `-DLVGL26_BUILD_WINDOW_EXAMPLES=ON` and start `coffee_7_window`.
+- A body font for all text waits for a library gap: a drawn font holds no LVGL symbol, so the arrow of a drop-down list would show as a box. The [status page](https://filipsajdak.github.io/lvgl26/status.html) lists what is planned.
