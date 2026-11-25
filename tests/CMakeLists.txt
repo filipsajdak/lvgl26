@@ -149,8 +149,9 @@ foreach(case unmount_empty get_other held_after_remount error_of_mounted)
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
-# unmount() of a tree that is not mounted, and mount() of one that is, end the program.
-foreach(case unmount_not_mounted mount_twice unmount_after_parent)
+# unmount() of a tree that is not mounted, mount() of one that is, a view of a tree that is not mounted, and
+# mount_in() in memory that is too small or not aligned, end the program.
+foreach(case unmount_not_mounted mount_twice unmount_after_parent get_not_mounted mount_in_too_small mount_in_misaligned)
   add_test(NAME mounted_storage_violation_${case}
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:mounted_storage> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
@@ -300,6 +301,8 @@ set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_fil
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+# The call form builds the node that the subscript form builds.
+lvgl26_test(call_form)
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
