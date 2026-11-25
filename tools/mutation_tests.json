@@ -11,7 +11,7 @@
       "logic": true
     },
     "include/lv/view.hpp": {
-      "tests": "^concepts$|^handlers$|^l1_views$|^l2_tree$|fail_part_|fail_handler_",
+      "tests": "^concepts$|^handlers$|^l1_views$|^l2_tree$|fail_part_|fail_handler_|fail_set_",
       "targets": "concepts handlers l1_views l2_tree"
     },
     "include/lv/computed.hpp": {
@@ -273,7 +273,7 @@
       "targets": "signal_type font_bytes"
     },
     "include/lv/task.hpp": {
-      "tests": "^task$|^app_loop$",
+      "tests": "^task$|^app_loop$|^fail_restrict_spawn$|^fail_restrict_spawn_owned$",
       "targets": "task app_loop"
     },
     "include/lv/theme.hpp": {
