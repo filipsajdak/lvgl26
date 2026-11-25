@@ -12,7 +12,7 @@ Each step is a whole program in [`examples/coffee/`](https://github.com/filipsaj
 | 2 | `2-values` | Values that say what they are |
 | 3 | `3-pages` | A page per step, which slides in |
 | 4 | `4-time` | A task that brews, with a ring that fills |
-| 5 | `5-design` | A design system you can reuse, and a font of your own |
+| 5 | `5-design` | A design system you can reuse, and fonts of your own |
 | 6 | `6-files` | The same program, split into files by screen |
 | 7 | `7-service` | A service page, and the program's settings |
 
@@ -267,7 +267,8 @@ The token file loses the looks that Signal covers. It keeps what is the machine'
   },
   "text": {
     "$type": "typography",
-    "title": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.2}}
+    "title": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.2}},
+    "body": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 16, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.3}}
   },
   "motion": {
     "$type": "cubicBezier",
@@ -301,35 +302,38 @@ The token file loses the looks that Signal covers. It keeps what is the machine'
 }
 ```
 
-The titles are set in the machine's own typeface, the typography token `text.title` in Barlow. The program draws the font from the TrueType file, in the compiler, and merges it into the look of the title.
+The titles and the text are set in the machine's own typeface, the typography tokens `text.title` and `text.body` in Barlow. The program draws each font from the TrueType file, in the compiler. A font is a style of its own, merged with a look where a label has one.
 
 <!-- snippet: examples/coffee/5-design/main.cpp font -->
 ```cpp
-// The machine's own typeface, and the font of its titles from the typography token.
+// The machine's own typeface, and the fonts of its titles and of its text, as styles to merge.
 constexpr unsigned char barlow_ttf[] = {
 #embed "fonts/Barlow-Medium.ttf"
 };
 constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf}});
 
-constexpr auto title_font = type(tok.text.title);
+constexpr auto title_text = lv::style({.text_font = type(tok.text.title)});
+constexpr auto body_text  = lv::style({.text_font = type(tok.text.body)});
 ```
 
 <!-- snippet: examples/coffee/5-design/main.cpp parts -->
 ```cpp
 // A page's title, and a button that goes to another step.
 constexpr auto title(const char* text) {
-  return lv::label(
-    {.text = text, .style = lv::look<"title"> | lv::style({.text_font = title_font})}
-  );
+  return lv::label({.text = text, .style = lv::look<"title"> | title_text});
 }
 
 template <step To>
 constexpr auto go_to(const char* text) {
-  return lv::button({.on_clicked = [] { current = To; }}, lv::label({.text = text}));
+  return lv::button(
+    {.on_clicked = [] { current = To; }}, lv::label({.text = text, .style = body_text})
+  );
 }
 ```
 
-![Step 5: the page of your cup in Signal's day theme: a white ground, the title in Barlow, the brown sliders and a black button Brew](media/coffee-5.png)
+The drop-down list keeps LVGL's font. A drawn font has no glyph for LVGL's symbols, so the arrow of the list would show as a box.
+
+![Step 5: the page of your cup in Signal's day theme: a white ground, the title and the text in Barlow, the brown sliders and a black button Brew](media/coffee-5.png)
 
 See [Themes](themes.md) and [Fonts](fonts.md).
 
@@ -344,7 +348,7 @@ The program of step 5 grows by screen, so it gets a file for each screen. Nothin
   state.hpp                what several screens share
   screens/                 a file for each screen, with the states only it uses
   parts/                   functions that return a piece of tree
-  design/                  the token file, the theme, and the file that draws the font
+  design/                  the token file, the theme, the fonts and the files that draw them
   platform/window.cpp      the same program in a window, the only file that knows SDL
 ```
 
@@ -378,7 +382,13 @@ constexpr auto ui = lv::group(
 constinit const lv::page brewing_page = lv::page_of<brewing, {.on_shown = &start_brewing}>;
 ```
 
-The font is drawn in one file, `design/font_text_title.cpp`. Every other file names it with `lv::font_of<"text.title">` and draws nothing. The build stops, before the link, when a file names a font that no file draws.
+Each font is drawn in a file of its own, `design/font_text_title.cpp` and `design/font_text_body.cpp`. `design/fonts.hpp` names them with `lv::font_of`, so a file that includes it draws nothing. The build stops, before the link, when a file names a font that no file draws.
+
+<!-- snippet: examples/coffee/6-files/design/fonts.hpp fonts -->
+```cpp
+inline constexpr auto title_text = lv::style({.text_font = lv::font_of<"text.title">});
+inline constexpr auto body_text  = lv::style({.text_font = lv::font_of<"text.body">});
+```
 
 <!-- snippet: examples/coffee/6-files/design/font_text_title.cpp font -->
 ```cpp
@@ -395,7 +405,7 @@ template <>
 const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type);
 ```
 
-- The shell cannot see the size of a page of another file, so the pages take one block of LVGL's heap when the shell is mounted. Step 5 keeps them in the tree.
+- The shell cannot see the size of a page of another file. So the pages take one block of LVGL's heap when the shell is mounted, where step 5 keeps them in the tree.
 - The includes are written relative to the file that names them, `#include "../state.hpp"`. The build's checks follow an include beside its file.
 
 See [Mounting and slots](mounting.md) and [Fonts](fonts.md).
@@ -450,4 +460,4 @@ See [Settings](settings.md) and [State and bindings](state.md).
 ## What comes next
 
 - Run the machine in a window: build with `-DLVGL26_BUILD_WINDOW_EXAMPLES=ON` and start `coffee_7_window`.
-- A body font for all text waits for a library gap: a drawn font holds no LVGL symbol, so the arrow of a drop-down list would show as a box. The [status page](https://filipsajdak.github.io/lvgl26/status.html) lists what is planned.
+- The drop-down lists keep LVGL's font until a drawn font can hold LVGL's symbols. The [status page](https://filipsajdak.github.io/lvgl26/status.html) lists that gap, with what else is planned.
