@@ -5,8 +5,12 @@
   "site": "https://filipsajdak.github.io/lvgl26/",
   "repository": "https://github.com/filipsajdak/lvgl26",
   "outline": [
+    "application.md",
     "lists.md",
-    "state.md"
+    "state.md",
+    "tree.md",
+    "values.md",
+    "views.md"
   ],
   "sections": [
     {
