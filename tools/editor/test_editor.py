@@ -178,6 +178,9 @@ class Tokens(unittest.TestCase):
         self.assertEqual(token_stubs.key_of(b""), 0xA8C7F832281A39C5)
         large = bytes(range(256)) * 20
         self.assertNotEqual(token_stubs.key_of(large), token_stubs.key_of(large + b"x"))
+        # Two files that differ in one byte far from the start and the end have two keys.
+        long_file = b" " * 100000
+        self.assertNotEqual(token_stubs.key_of(long_file + b"a" + long_file), token_stubs.key_of(long_file + b"b" + long_file))
         self.assertEqual(token_stubs.marker(7), "@lvgl26-editor-tokens:7\n")
 
     def test_two_files_with_the_same_bytes_are_one_struct(self):
@@ -204,6 +207,20 @@ class Generator(unittest.TestCase):
                              ["ui/tokens.json"])
             with self.assertRaises(SystemExit):
                 generate.find_token_files([], [root / "other.json"])
+
+    def test_two_token_files_that_differ_in_one_late_byte_are_two_markers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            padding = "x" * 100000
+            for name, last in (("a", "1"), ("b", "2")):
+                document = {"$description": padding + last, "color": {"$type": "color", "ink": {"$value": "#000000"}}}
+                (root / name).mkdir()
+                (root / name / "tokens.json").write_text(json.dumps(document))
+            out = root / "out"
+            tokens = generate.find_token_files([root], [])
+            self.assertEqual(len(tokens), 2)
+            generate.generate(ROOT / "docs" / "reference" / "lvgl-v9.6.0.json", out, tokens, ROOT / "include")
+            self.assertEqual(len(list((out / "embed").iterdir())), 2)
 
     def test_everything_is_written_and_a_second_run_changes_nothing(self):
         with tempfile.TemporaryDirectory() as directory:

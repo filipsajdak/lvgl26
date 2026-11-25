@@ -12,11 +12,19 @@ Both pictures show this screen. It has no style in it.
 
 <!-- snippet: examples/theme/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::label({.text = "Battery"}),
-    lv::arc({.range = {0, 100}, .size = {110 * px, 110 * px}, .value = 72})[
-        lv::label({.align = "center", .text = "72 %"})],
-    lv::button[lv::label({.text = "Charge"})]];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::label({.text = "Battery"}),
+  lv::arc(
+    {
+      .range = {0, 100},
+      .size  = {110 * px, 110 * px},
+      .value = 72,
+    },
+    lv::label({.align = "center", .text = "72 %"})
+  ),
+  lv::button(lv::label({.text = "Charge"}))
+);
 ```
 
 ## Use Signal
@@ -58,24 +66,55 @@ The larger styles are yours to make, once each, in the file that shows them. `lv
 // A copy: a reference to the tokens would keep the token file in the program.
 constexpr auto text = lv::signal::type_tokens.text;
 
-constexpr auto title = lv::signal::type(text.title);            // 24 px, the space to the tilde
-constexpr auto reading = lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
+constexpr auto title = lv::signal::type(text.title);  // 24 px, the space to the tilde
+constexpr auto reading =
+  lv::signal::numerals(text.numeral_l);  // 72 px, the sixteen characters of a reading
 ```
 
 <!-- snippet: examples/signal_type/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"},
-                                .size = {320 * px, 240 * px},
-                                .style = {.pad_gap = lv::signal::dark_tokens.space._2}})[
-    lv::label({.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}),  // and its spacing
-    lv::label({.text = "21.5°", .style = {.text_font = reading}}),
-    lv::label({.text = "Heating to 22 degrees."}),
-    lv::button[lv::label({.text = "HOLD"})]];
+constexpr auto ui = lv::column(
+  {
+    .flex_align = {"center", "center", "center"},
+    .size       = {320 * px, 240 * px},
+    .style      = {.pad_gap = lv::signal::dark_tokens.space._2},
+  },
+  lv::label(
+    {.text = "LIVING ROOM", .style = lv::style({.text_font = title}) | text.title}
+  ),  // and its spacing
+  lv::label({
+    .text  = "21.5°",
+    .style = {.text_font = reading},
+  }),
+  lv::label({.text = "Heating to 22 degrees."}), lv::button(lv::label({.text = "HOLD"}))
+);
 ```
 
 - `type` makes a font with the characters from the space to the tilde.
 - `numerals` makes a font with sixteen characters: the digits, the point, the colon, the minus, the percent sign, the degree sign and the space. Signal keeps its large numbers in such a font.
 - `numerals` holds Barlow Condensed at weight 700 only. A token of another style stops the build.
+
+### Signal's fonts linked once
+
+A program of several files draws no Signal font in any of them. Link the library and include the other header:
+
+```cmake
+set(LVGL26_SIGNAL_TYPE ON)           # before lvgl26 is added; the tests turn it on
+target_link_libraries(app PRIVATE lvgl26::signal_type)
+```
+
+```cpp
+#include <lv/signal_fonts.hpp>      // instead of <lv/signal_type.hpp>
+
+lv::display display{app, frame, lv::signal::dark_with_type};
+lv::label({.text = "21.5", .style = {.text_font = lv::font_of<"text.numeral-m", lv::signal::type_design>}})
+```
+
+- The names are those of `lv/signal_type.hpp`: `dark_with_type`, `day_with_type`, `body_font`, `label_font`, `type_tokens`. The fonts are the same glyphs, and the pictures are the same pixels. Include one of the two headers in a program, not both: the second stops the build and says so.
+- The library draws the eight text styles of Signal, each in a file of its own (`lib/signal_type`). `title`, `label`, `body` and `caption` have the characters from the space to the tilde; the four `numeral-*` sizes have the sixteen of `numerals`. The linker takes only the fonts that the program names.
+- A file that includes the header draws nothing: 78 G instructions instead of 250 G for the same screen. The library pays once, 108 G to 118 G for each font, side by side.
+- `lv::signal::type` and `lv::signal::numerals` exist only in `lv/signal_type.hpp`, since they hold the font files.
+- A font of the library is named with the design of Signal, `lv::font_of<"text.title", lv::signal::type_design>`. The build stops, before the link, when a file names one and the program links no library that draws it: `the font 'text.title' of the design lv::signal::type_design has no file that draws it. Link the library that draws it`.
 
 ### What the typefaces cost
 
@@ -121,26 +160,39 @@ A theme is one constant. It has a member for each kind of widget, and each membe
 ```cpp
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 constexpr auto tok = lv::tokens<tokens_json>;
 
 constexpr auto paper = lv::theme({
-    .arc = {.style = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
-            .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
-            .style_knob = {.bg_opa = tok.opacity.none}},
-    .button = {.style = {.bg_color = tok.color.accent,
-                         .pad_hor = tok.space.button_x,
-                         .pad_ver = tok.space.button_y,
-                         .radius = tok.radius.button,
-                         .shadow_width = tok.space.none,
-                         .text_color = tok.color.on_accent},
-               .style_pressed = {.bg_color = tok.color.ink}},
-    .obj = {.style = {.bg_opa = tok.opacity.none,
-                      .border_width = tok.space.none,
-                      .pad_all = tok.space.edge,
-                      .pad_gap = tok.space.gap,
-                      .text_color = tok.color.ink}},
-    .screen = {.style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque}},
+  .arc = {
+    .style           = {.arc_color = tok.color.rule, .arc_width = tok.stroke.ring},
+    .style_indicator = {.arc_color = tok.color.accent, .arc_width = tok.stroke.ring},
+    .style_knob      = {.bg_opa = tok.opacity.none},
+  },
+  .button = {
+    .style = {
+      .bg_color     = tok.color.accent,
+      .pad_hor      = tok.space.button_x,
+      .pad_ver      = tok.space.button_y,
+      .radius       = tok.radius.button,
+      .shadow_width = tok.space.none,
+      .text_color   = tok.color.on_accent,
+    },
+    .style_pressed = {.bg_color = tok.color.ink},
+  },
+  .obj = {
+    .style = {
+      .bg_opa       = tok.opacity.none,
+      .border_width = tok.space.none,
+      .pad_all      = tok.space.edge,
+      .pad_gap      = tok.space.gap,
+      .text_color   = tok.color.ink,
+    },
+  },
+  .screen = {
+    .style = {.bg_color = tok.color.paper, .bg_opa = tok.opacity.opaque},
+  },
 });
 ```
 

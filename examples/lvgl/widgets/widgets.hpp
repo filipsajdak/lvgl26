@@ -19,26 +19,27 @@ namespace widgets {
 
 constexpr char tokens_json[] = {
 #embed "tokens.json"
-    , 0};
+  , 0
+};
 
 // Every color, length and opacity of these examples.
 inline constexpr auto tok = lv::tokens<tokens_json>;
 
 // Children in the middle of a flex container, on both axes.
-inline constexpr auto centered = lv::style({.flex_cross_place = "center",
-                                            .flex_main_place = "center",
-                                            .flex_track_place = "center"});
+inline constexpr auto centered = lv::style({
+  .flex_cross_place = "center",
+  .flex_main_place  = "center",
+  .flex_track_place = "center",
+});
 
 // Children spread evenly along a row, each in the middle of the row's height.
-inline constexpr auto spread_out = lv::style({.flex_main_place = "space_evenly",
-                                              .flex_track_place = "center"});
+inline constexpr auto spread_out =
+  lv::style({.flex_main_place = "space_evenly", .flex_track_place = "center"});
 
 // An opacity that the C example gives as a step of 255 (80, 120, 180). An opacity
 // token is a number from 0 to 1 that is rounded to a whole percent, and no whole
 // percent gives these steps, so they are the stated exception to "styles take tokens".
-constexpr auto opacity_step(std::uint8_t of_255) {
-  return lv::raw(lv::opa::from_raw(of_255));
-}
+constexpr auto opacity_step(std::uint8_t of_255) { return lv::raw(lv::opa::from_raw(of_255)); }
 
 // label
 void label_bind_text(lv::obj screen);         // lv_example_label_bind_text
@@ -109,8 +110,12 @@ void line_points(lv::obj screen);  // lv_example_line_points
 void obj_bind_style(lv::obj screen);  // lv_example_obj_bind_style
 
 // buttonmatrix
-void buttonmatrix_event(lv::obj screen);  // lv_example_buttonmatrix_event
-void buttonmatrix_map(lv::obj screen);    // lv_example_buttonmatrix_map
+void buttonmatrix_event(lv::obj screen);        // lv_example_buttonmatrix_event
+void buttonmatrix_map(lv::obj screen);          // lv_example_buttonmatrix_map
+void buttonmatrix_one_checked(lv::obj screen);  // lv_example_buttonmatrix_one_checked
+void buttonmatrix_popover(lv::obj screen);      // lv_example_buttonmatrix_popover
+void buttonmatrix_recolor(lv::obj screen);      // lv_example_buttonmatrix_recolor
+void buttonmatrix_styling(lv::obj screen);      // lv_example_buttonmatrix_styling
 
 // dropdown
 void dropdown_bind_value(lv::obj screen);  // lv_example_dropdown_bind_value
@@ -122,6 +127,7 @@ void dropdown_text(lv::obj screen);        // lv_example_dropdown_text
 void roller_bind_value(lv::obj screen);    // lv_example_roller_bind_value
 void roller_event(lv::obj screen);         // lv_example_roller_event
 void roller_options(lv::obj screen);       // lv_example_roller_options
+void roller_styling(lv::obj screen);       // lv_example_roller_styling
 void roller_visible_rows(lv::obj screen);  // lv_example_roller_visible_rows
 
 // spinbox
@@ -135,11 +141,12 @@ void spinbox_value(lv::obj screen);       // lv_example_spinbox_value
 void spinner_basic(lv::obj screen);  // lv_example_spinner_basic
 
 // textarea
+void textarea_cursor(lv::obj screen);       // lv_example_textarea_cursor
 void textarea_placeholder(lv::obj screen);  // lv_example_textarea_placeholder
 
 // image
-void image_inner_align(lv::obj screen);     // lv_example_image_inner_align
-void image_src(lv::obj screen);             // lv_example_image_src
+void image_inner_align(lv::obj screen);      // lv_example_image_inner_align
+void image_src(lv::obj screen);              // lv_example_image_src
 void image_transformations(lv::obj screen);  // lv_example_image_transformations
 
 // scale

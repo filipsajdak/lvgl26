@@ -11,6 +11,7 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | How many are ported? | 69, in `examples/lvgl/widgets/`, each compared pixel for pixel with its C original |
 | How many more can be ported today? | 6: `checkbox_styling`, `roller_event`, `roller_visible_rows`, `slider_styling`, `spinner_basic`, `switch_styling`. `roller_styling` looked portable, and CI showed that it needs its setters in another order (2026-11-22, `measured`) |
 | What stops the other 88? | A form that lvgl26 does not have yet; the table "The blockers" counts them |
+| What changed since? | Pull request 209 ported the six. The setter order of pull request 212 runs a button matrix's map first and a text area's cursor last, and properties come before styles since pull request 204: `buttonmatrix_popover`, `buttonmatrix_recolor`, `roller_styling` and `textarea_cursor` are ported (2026-11-23). The setter rules of pull request 222 run `button_ctrl` and `button_ctrl_all` last: `buttonmatrix_one_checked` and `buttonmatrix_styling` are ported too (2026-11-23). 81 of 163 are ported, and 82 wait |
 | Which one feature would open the most? | A child made by an `add_` function: 36 examples (charts, tab views, menus, message boxes, calendars, lists, spans, scale sections, a tile view, a window) |
 
 ## How the list was made
@@ -18,7 +19,7 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 - Each `lv_example_<folder>_<name>.c` of LVGL v9.6.0 was matched with `examples/lvgl/widgets/<folder>_<name>.cpp`.
 - For each one without a port, every call to LVGL was listed. A create or set function has a form in lvgl26; any other call needs one. What a set function takes is in `docs/reference/lvgl-v9.6.0.json`.
 - Three facts of lvgl26's own code decide several rows:
-  - A node sets its properties in the order of the members of its props struct, which is alphabetical (`apply_node` in `include/lv/tree.hpp`). LVGL needs some setters in another order.
+  - A node sets its properties in the order of the members of its props struct, which was alphabetical on 2026-11-22. Since pull requests 204, 212 and 222 the members come in four groups, and a table (`include/lv/detail/setter_order.hpp`) runs the setters that LVGL needs first or last.
   - A node sets a property once. A setter that LVGL calls several times with different arguments, such as a table's cells, has one value per node.
   - A property that takes a whole number cannot take a percentage, which LVGL writes `LV_PCT(80)`.
 - The examples of `list`, `menu` and `win` are not in the v10 pin. A port is compared on both LVGL versions, so these would need a test on v9.6.0 only.
@@ -32,10 +33,6 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | arclabel | `arclabel_curved_text` | No: a feature of its own | `.radius` takes a whole number, and the example gives `LV_PCT(80)`: a percentage has no form there |
 | buttonmatrix | `buttonmatrix_button_ctrl` | No: one setter, several calls | A different control for each button: `.ctrl_map` takes an array of C enumerators, and `.button_ctrl` is set once |
 | buttonmatrix | `buttonmatrix_button_width` | No: one setter, several calls | A different width for three buttons: `.button_width` is set once |
-| buttonmatrix | `buttonmatrix_one_checked` | No: the order of setters | `.button_ctrl_all` is set before `.map`, and a new map clears the controls |
-| buttonmatrix | `buttonmatrix_popover` | No: the order of setters | The same: the controls must follow the map |
-| buttonmatrix | `buttonmatrix_recolor` | No: the order of setters | The same: the controls must follow the map |
-| buttonmatrix | `buttonmatrix_styling` | No: the order of setters | The same: the controls must follow the map |
 | calendar | `calendar_basic` | No: an added child | The header is made by `lv_calendar_add_header_arrow` |
 | calendar | `calendar_chinese` | No: an added child | `lv_calendar_add_header_dropdown`, and `LV_USE_CALENDAR_CHINESE`, off in the test build |
 | calendar | `calendar_highlighted_days` | No: an added child | The header, and `.highlighted_dates`, which takes an array of C structs |
@@ -87,7 +84,6 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | obj | `obj_transform` | No: a build option | A transform matrix (`lv_matrix_*`), with `LV_DRAW_TRANSFORM_USE_MATRIX` |
 | roller | `roller_event` | Now | The label follows the selected day through a state of an enum and a computed text |
 | roller | `roller_fade_mask` | No: drawing | A fading mask drawn on a canvas layer |
-| roller | `roller_styling` | No: the order of setters | The count of visible rows works out the height from the font and line space of that moment. The C example sets it before its styles; a node adds its style first, so the port's roller was taller |
 | roller | `roller_visible_rows` | Now | Two rollers with a different count of visible rows |
 | scale | `scale_bind_section` | No: an added child | A section by `lv_scale_add_section`, bound to sliders |
 | scale | `scale_compass` | No: drawing | Labels recolored in a draw-task event, and an `lv_anim` |
@@ -116,7 +112,6 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | tabview | `tabview_tab_bar_style` | No: an added child | Tabs, and the tab bar reached by `lv_tabview_get_tab_bar` |
 | tabview | `tabview_tab_button_content` | No: an added child | Tabs, and a tab's button reached by `lv_tabview_get_tab_button` |
 | textarea | `textarea_buttonmatrix` | No: a call | `lv_textarea_add_text` and `lv_textarea_delete_char` from a button matrix |
-| textarea | `textarea_cursor` | No: the order of setters | `.cursor_pos` is set before `.text`, and setting the text moves the cursor to its end |
 | textarea | `textarea_format` | No: a call | `lv_textarea_add_char` from an event handler |
 | textarea | `textarea_password` | No: a widget as a pointer | A keyboard joined to the text area: `.textarea` takes it as a pointer |
 | tileview | `tileview_l_shape` | No: an added child | Tiles by `lv_tileview_add_tile` |
@@ -129,7 +124,6 @@ Marks follow [README.md](README.md). Every row below is `source`: the C file was
 | A child made by an `add_` function, or by a create function that takes more than a parent | 36 | `calendar_basic`, `calendar_chinese`, `calendar_highlighted_days`, `chart_area_gradient`, `chart_circular_gap`, `chart_cursor`, `chart_pressed_tooltip`, `chart_recolor_bars`, `chart_scatter`, `chart_scrollable`, `chart_series`, `chart_ticks_labels`, `chart_types`, `list_reorder`, `list_sections`, `menu_custom_back_button`, `menu_floating_button`, `menu_navigation`, `menu_root_back_button`, `menu_sidebar`, `menu_sub_page`, `msgbox_blur`, `msgbox_modal`, `msgbox_settings`, `scale_bind_section`, `scale_heart_rate`, `scale_sunset_sunrise`, `span_hittest`, `span_styling`, `tabview_active_tab`, `tabview_basic`, `tabview_tab_bar_position`, `tabview_tab_bar_style`, `tabview_tab_button_content`, `tileview_l_shape`, `win_toolbar` |
 | Drawing: a canvas layer (`lv_canvas_init_layer`, `lv_draw_*`) or a draw-task event | 16 | `canvas_alpha`, `canvas_arc`, `canvas_blur`, `canvas_image`, `canvas_label`, `canvas_line`, `canvas_rectangle`, `canvas_rotate`, `canvas_triangle`, `canvas_vector`, `canvas_wave_text`, `canvas_windstorm_text`, `keyboard_custom_draw`, `roller_fade_mask`, `scale_compass`, `scale_label_recolor` |
 | One setter called several times with different arguments: a node sets a property once | 11 | `buttonmatrix_button_ctrl`, `buttonmatrix_button_width`, `spinner_styling`, `table_cells`, `table_file_browser`, `table_merge_cells`, `table_rows_columns`, `table_scroll`, `table_scrollable_list`, `table_styling`, `table_width` |
-| The order of the setters: properties are set in alphabetical order, and LVGL needs another | 6 | `buttonmatrix_one_checked`, `buttonmatrix_popover`, `buttonmatrix_recolor`, `buttonmatrix_styling`, `roller_styling`, `textarea_cursor` |
 | A call that is neither a create nor a set function | 5 | `animimg_play`, `arc_knob_widget`, `spinbox_with_buttons`, `textarea_buttonmatrix`, `textarea_format` |
 | An LVGL build option that the test build leaves off | 5 | `image_svg`, `lottie_approve`, `lottie_from_data`, `lottie_from_file`, `obj_transform` |
 | A property that takes another widget as a pointer | 3 | `keyboard_custom_map`, `scale_needles`, `textarea_password` |

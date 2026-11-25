@@ -15,7 +15,7 @@ An `lv::mounted` is never copied or moved. LVGL's handler on the root widget poi
 
 `if (!shown)`, or `shown.has_value()`, tells whether LVGL had memory for the widgets, and `shown.error()` says why it had not. `shown->get<"id">()` reaches a widget by its id, as with `std::expected`. When the variable goes, the widgets go with it.
 
-`set({...})` changes properties of a widget at run time, written in place as in a tree. A style in it is a named style, a look, or a style made with `lv::style({...})`: `set` holds a style by reference so that its argument stays small on the stack, and a style written out inline (`.style = {.radius = ...}`) is a compile error that says so. A prepared set of properties is a function that calls `set`, not a variable: a variable given to `set` is a compile error.
+`set({...})` changes properties of a widget at run time, written in place as in a tree. A style in it is a named style, a look, or a style made with `lv::style({...})`: `set` holds a style by reference so that its argument stays small on the stack, and a style written out inline (`.style = {.radius = ...}`) is a compile error that says so. A prepared set of properties is a function that calls `set`, not a variable: a variable given to `set` is a compile error. A `set` calls the setters in the same order as a tree does, so what a tree sets in one order, a `set` sets in that order too.
 
 What a `set` costs in stack on a Cortex-M4: 3.5 KB for plain properties (`set({.value = 60})`), the same with a named style or a look, since the call holds a reference to it, and about 6.1 KB with a style written inline as `lv::style({...})`, which is built in the call. The budget of 4 KB that a nightly check keeps covers the first two. On a small stack, name the style or use a look.
 
@@ -55,7 +55,55 @@ constinit lv::mounted<dialog> asked;    // a window that opens and closes
 
 `mount(parent)` works whenever the global is not mounted: never mounted, after `unmount()`, after a failed mount, and after the parent deleted the widgets. Mounting a global that is mounted breaks a precondition, and so does `unmount()` of one that is not.
 
-`unmount()` is for the life of a root: a window that closes, a screen that is torn down. Pages that take turns inside a tree are switched with `lv::shown`, which is planned and not built yet. It keeps one page alive at a time in memory of the tree's own.
+`unmount()` is for the life of a root: a window that closes, a screen that is torn down. Pages that take turns inside a tree are switched with `lv::shown`, below.
+
+## Pages that follow a state
+
+Pages inside a tree follow a state: the tree shows the page of the state's value. `lv::shown` is in its own header, `#include <lv/shown.hpp>`.
+
+<!-- snippet: examples/pages/main.cpp state -->
+```cpp
+enum class page { home, settings, about };
+constinit lv::state<page> current{page::home};
+constinit lv::state<bool> offline{false};
+```
+
+<!-- snippet: examples/pages/main.cpp tree -->
+```cpp
+// The buttons that choose the page.
+constexpr auto menu = lv::column(
+  {.size = {80 * px, 240 * px}},
+  lv::button({.on_clicked = [] { current = page::home; }}, lv::label({.text = "Home"})),
+  lv::button({.on_clicked = [] { current = page::settings; }}, lv::label({.text = "Settings"})),
+  lv::button({.on_clicked = [] { current = page::about; }}, lv::label({.text = "About"}))
+);
+
+// The page that follows `current`, and a banner above it while the device is offline.
+constexpr auto pages = lv::shown(
+  current, {.enter = slide_in, .leave = slide_out},
+  lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
+  lv::is<page::settings>(settings), lv::is<page::about>(about)
+);
+
+constexpr auto content = lv::column(
+  {.size = {240 * px, 240 * px}},
+  lv::group({.size = {240 * px, 30 * px}}, lv::when(offline, offline_banner)),
+  lv::group({.size = {240 * px, 200 * px}}, pages)
+);
+
+constexpr auto ui = lv::row({.size = {320 * px, 240 * px}}, menu, content);
+```
+
+- `lv::shown(current, arms...)` shows the tree of the current value of a state of an enum or a bool. A page that is not shown has no widgets.
+- `lv::when(offline, offline_banner)` shows a tree while a flag is true, and nothing while it is false.
+- Every value has one arm, and the compiler checks it. The arms are the patterns of [lv::match](match.md), and `lv::otherwise()` takes the values left.
+- With `{.enter = slide_in, .leave = slide_out}` the pages slide, through `lv::transition`. The new page is built before the old one leaves.
+- `.on_shown` runs each time a page is built. `.on_front` runs each time it comes to the front.
+- A switch waits for the start of the display's next refresh, and lvgl26 allocates nothing for it. `lv::settle()` switches at once.
+
+A page of another file is declared where the tree is, `extern const lv::page home_page;`. Its own file defines it: `constinit const lv::page home_page = lv::page_of<ui>;`.
+
+Nobody writes a size. The pages of other files take one block of LVGL's heap at mount: two slots of the largest page. The [printer walkthrough](port-slint-printer.md) keeps each page in a file of its own.
 
 ## A window that shows one of several trees
 
@@ -73,8 +121,10 @@ constinit lv::one_of<saving, failed> status;  // a window that shows one of two 
   if (!status.mount<saving>(display.screen())) return 6;
   app.advance(50 * ms), app.step();
   if (!status.mount<failed>(display.screen())) return 7;  // saving ends first, in the same memory
-  status.visit([](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
-               [](const auto&) {});                    // saving has nothing to update
+  status.visit(
+    [](lv::held<failed> f) { f->get<"reason">().set({.text = "The card is full"}); },
+    [](const auto&) {}
+  );  // saving has nothing to update
 ```
 
 The slot carries its failure as `lv::mounted` does: `if (!status)`, `status.has_value()`, and `status.error()`, which is `lv::mount_error::not_mounted` while it holds no tree. `status.holds<failed>()` tells which tree is mounted. `unmount()` deletes the widgets, and so does the parent or C code: the slot is empty afterwards.

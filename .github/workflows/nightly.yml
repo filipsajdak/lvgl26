@@ -30,7 +30,7 @@ on:
       accept_cost:
         description: >-
           Probes (comma separated) whose rise in this run is accepted: the baseline moves to this run's value, with the
-          reason. Only a run on main writes the baseline. Needs accept_reason. It accepts one rise, not a larger threshold.
+          reason. Only a run on main writes the baseline. Needs accept_reason. It accepts one rise, not a larger limit.
         required: false
         type: string
         default: ''
@@ -318,7 +318,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: web-modules
       - name: Run the pages
@@ -350,8 +350,8 @@ jobs:
   # What a file costs the compiler, measured as Valgrind's instruction count of one cc1plus
   # (tools/compile_cost.py, probes in tools/metrics/probes.json). One job for each probe, in
   # parallel. The collecting job compares the night with the baseline, appends it to the history
-  # on the branch `metrics` (only on main), and fails when a probe got dearer beyond its
-  # threshold, which the report job turns into the issue of the night. docs/research/compile-time.md, "The nightly measure".
+  # on the branch `metrics` (only on main), and fails when a probe is more than its
+  # drift limit above its baseline, which the report job turns into the issue of the night. docs/research/compile-time.md, "The nightly measure".
   cost-plan:
     if: ${{ !inputs.web_only && !inputs.arm_only }}
     runs-on: ubuntu-latest
@@ -417,12 +417,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: cost-*
           path: rows
           merge-multiple: true
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
           name: stack-report
@@ -473,7 +473,7 @@ jobs:
       - name: Fail on a regression, so that the report job opens the issue of the night
         if: ${{ steps.judge.outputs.regression == 'true' }}
         run: |
-          echo "A probe got dearer beyond its threshold: see the summary of this job."
+          echo "A probe is more than its drift limit above its baseline: see the summary of this job."
           exit 1
 
   # Mutation testing of the lines of include/lv that changed since the last good run: one

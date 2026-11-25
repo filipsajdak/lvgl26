@@ -22,8 +22,8 @@ struct track {
   lv::counter plays;
 };
 
-constinit lv::list<track, 8> tracks;               // room for eight rows
-constinit lv::state current{track_id{0}};          // the selected row; no track has the id 0
+constinit lv::list<track, 8> tracks;       // room for eight rows
+constinit lv::state current{track_id{0}};  // the selected row; no track has the id 0
 ```
 
 `lv::each(tracks, &track::id, track_row)` puts one `track_row` into the tree for each row. The rows go where `lv::each` stands: here in a column, from top to bottom. The braces before the row hold its options, such as the selected row: `lv::each(tracks, &track::id, {.selected = lv::bind(current)}, track_row)`.
@@ -31,9 +31,7 @@ constinit lv::state current{track_id{0}};          // the selected row; no track
 <!-- snippet: examples/lists/main.cpp tree -->
 ```cpp
 constinit lv::computed has_tracks{
-  [](lv::counter n) {
-    return n.value > 0;
-  },
+  [](lv::counter n) { return n.value > 0; },
   tracks.count(),
 };
 
@@ -136,10 +134,12 @@ The rows to start with are one constant array. `assign` replaces all rows with c
 <!-- snippet: examples/lists/main.cpp rows -->
 ```cpp
 // The playlist to start with, in one constant.
-constexpr track playlist[] = {{{4}, "Overture", lv::counter{0}},
-                              {{1}, "Intro", lv::counter{3}},
-                              {{2}, "Northern Lights", lv::counter{1}},
-                              {{3}, "Harbour", lv::counter{12}}};
+constexpr track playlist[] = {
+  {{4}, "Overture", lv::counter{0}},
+  {{1}, "Intro", lv::counter{3}},
+  {{2}, "Northern Lights", lv::counter{1}},
+  {{3}, "Harbour", lv::counter{12}}
+};
 ```
 
 `assign`, `insert` and `push_back` return `std::expected`. `lv::list_error::full` says the list has no room; then nothing changed. `lv::list_error::out_of_memory` says LVGL had no memory for the widgets of a row.

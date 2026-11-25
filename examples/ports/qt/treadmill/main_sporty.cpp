@@ -5,7 +5,8 @@
 namespace treadmill {
 namespace {
 
-constexpr auto ui = main_screen<tok.theme.sporty, pictures::incline, pictures::speed, look::sporty>();
+constexpr auto ui =
+  main_screen<tok.theme.sporty, pictures::incline, pictures::speed, look::sporty>();
 
 }  // namespace
 

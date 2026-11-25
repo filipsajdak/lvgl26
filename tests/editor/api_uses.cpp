@@ -364,6 +364,9 @@ static_assert(lv::page_of<popup>.size > 0);
 // The same with the children as arguments: properties first, then each child.
 constexpr auto pager_call = lv::group(lv::shown(
     current_page, lv::is<screen_page::main>(ui), lv::is<screen_page::popup_page>(popup), lv::otherwise()));
+constexpr auto sliding_call = lv::group(lv::shown(
+    current_page, {.alive = 2, .enter = slide_in, .leave = slide_out}, lv::is<screen_page::main>(ui),
+    lv::otherwise()));
 constexpr auto spinner_call = lv::group({.id = "spin"}, lv::when(busy, popup));
 static_assert(std::same_as<decltype(lv::when(busy, popup)), decltype(lv::when(busy)[popup])>);
 static_assert(std::same_as<decltype(lv::shown(current_page, lv::is<screen_page::main>(ui), lv::otherwise())),
@@ -545,6 +548,11 @@ constexpr auto playlist_call = lv::column(
     {.size = {100 * pct, lv::size_content}},
     lv::each(tracks, &track::id, {.on_row = &row_built, .selected = lv::bind(picked)}, track_row));
 constexpr auto playlist_plain = lv::column(lv::each(tracks, &track::id, track_row));
+// A row written in the call: a temporary, which the deleted fallback of lv::each would bind better
+// than a const reference.
+constexpr auto playlist_inline = lv::column(lv::each(tracks, &track::id, lv::label({.text = lv::bind(&track::title)})));
+static_assert(std::same_as<std::remove_const_t<decltype(playlist_inline)>,
+                           decltype(lv::column[lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})]])>);
 static_assert(std::same_as<std::remove_const_t<decltype(playlist_plain)>,
                            decltype(lv::column[lv::each(tracks, &track::id)[track_row]])>);
 
@@ -746,6 +754,10 @@ struct plain_design {};
 template <>
 inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
 
+// A font that a file of its own draws. A file that defines the object does so before it names it.
+template <>
+const lv::drawn_font lv::font_object<"text.label"> = lv::draw<"text.label">(api_uses::type);
+
 namespace api_uses {
 
 constexpr auto printed = lv::button({.style = lv::look<"tile"> | lv::look<"tile-print">});
@@ -759,5 +771,10 @@ constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per
 template <class Design = lv::override>
 constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
 constexpr auto chips = lv::row[chip<>, chip<plain_design>];
+
+// A font that another file draws: named here, defined in the file that draws it.
+constexpr auto split_label = lv::font_of<"text.label">;
+static_assert(std::same_as<decltype(split_label), const lv::token<const lv_font_t*>>);  // C API
+constexpr auto split_text = lv::label({.text = "a", .style = {.text_font = split_label}});
 
 }  // namespace api_uses

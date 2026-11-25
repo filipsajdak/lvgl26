@@ -4,7 +4,8 @@ name: docs
 # This run checks it: the snippets against their files, then the rendered site.
 on:
   pull_request:
-    paths: ['docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
+    paths: ['README.md', 'CLAUDE.md', 'examples/README.md', 'tools/check_readme.py', 'tools/test_check_readme.py',
+            'docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
             'tools/rules.py', 'tools/check_includes.py', 'tools/test_docs.py', 'tools/test_rules.py',
             'tools/check_site.py', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
             '.github/workflows/docs.yml']
@@ -18,6 +19,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check the snippets, the links, the code for C names, the messages and the outline
         run: python3 tools/docs.py check
+      - name: Check the README against the code
+        run: |
+          python3 tools/check_readme.py
+          python3 tools/test_check_readme.py
       - name: Check the rules and their page
         run: python3 tools/rules.py --check-page docs/rules.md
       - name: Test the tools that check the pages

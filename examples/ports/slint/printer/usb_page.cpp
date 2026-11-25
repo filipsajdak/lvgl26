@@ -27,14 +27,18 @@ constexpr unsigned char snake_jpg[] = {
 #embed "photos/snake.jpg"
 };
 
-constexpr std::array photos{lv::encoded_image<cat_jpg>, lv::encoded_image<dog_jpg>, lv::encoded_image<elephant_jpg>,
-                            lv::encoded_image<snake_jpg>};
+constexpr std::array photos{
+  lv::encoded_image<cat_jpg>,
+  lv::encoded_image<dog_jpg>,
+  lv::encoded_image<elephant_jpg>,
+  lv::encoded_image<snake_jpg>
+};
 constexpr const char* names[] = {"cat.jpg", "dog.jpg", "elephant.jpg", "snake.jpg"};
 
-constexpr int column = page_width / 2;
-constexpr int photo_width = column - 2 * 20;
-constexpr int photo_height = window_height - header_height - 2 * 20;
-constexpr int side = 20;
+constexpr int column        = page_width / 2;
+constexpr int photo_width   = column - 2 * 20;
+constexpr int photo_height  = window_height - header_height - 2 * 20;
+constexpr int side          = 20;
 constexpr int control_width = column - 2 * side;
 
 using options = job_options<job_kind::usb>;
@@ -46,28 +50,55 @@ void start() {
 
 constexpr auto title_font = type(tok.text.title);
 constexpr auto label_font = type(tok.text.label);
-constexpr auto body_font = type(tok.text.body);
+constexpr auto body_font  = type(tok.text.body);
 
-constexpr int y_file = header_height + side;
+constexpr int y_file   = header_height + side;
 constexpr int y_copies = y_file + choice_height + side;
-constexpr int y_color = y_copies + control_height + side;
-constexpr int y_start = y_color + 22 + 4 + 50 + side;
+constexpr int y_color  = y_copies + control_height + side;
+constexpr int y_start  = y_color + 22 + 4 + 50 + side;
 
-constexpr auto ui = lv::group({.size = {100 * pct, 100 * pct},
-                               .style = {.bg_color = tok.window.background, .bg_opa = tok.solid}})[
-    back_header("USB", "Choose Settings", title_font, body_font),
-    lv::image({.id = "photo", .size = {photo_width * px, photo_height * px}, .src = photos[0],
-               .x = side * px, .y = y_file * px, .style = {.radius = tok.window.radius}}),
-    lv::group({.x = (column + side) * px, .y = y_file * px})[
-        choice("Select File:", "cat.jpg\ndog.jpg\nelephant.jpg\nsnake.jpg", label_font, control_width, "file")],
-    lv::group({.x = (column + side) * px, .y = y_copies * px})[
-        spin_box("Copies", options::count, &options::fewer, &options::more, body_font)],
-    lv::label({.text = "Color", .x = (column + side) * px,
-               .y = y_color * px, .style = {.text_color = tok.label.primary, .text_font = label_font}}),
-    lv::group({.x = (column + side) * px, .y = (y_color + 26) * px})[
-        color_button(options::color_label, control_width, 50, &options::toggle_color, body_font)],
-    lv::group({.x = (column + side) * px, .y = (y_start + 26) * px})[
-        wide_button("Start printing", control_width, 60, &start, tok.button.primary, tok.button.primary, label_font)]];
+constexpr auto ui = lv::group(
+  {
+    .size  = {100 * pct, 100 * pct},
+    .style = {.bg_color = tok.window.background, .bg_opa = tok.solid},
+  },
+  back_header("USB", "Choose Settings", title_font, body_font),
+  lv::image({
+    .id    = "photo",
+    .size  = {photo_width * px, photo_height * px},
+    .src   = photos[0],
+    .x     = side * px,
+    .y     = y_file * px,
+    .style = {.radius = tok.window.radius},
+  }),
+  lv::group(
+    {.x = (column + side) * px, .y = y_file * px},
+    choice(
+      "Select File:", "cat.jpg\ndog.jpg\nelephant.jpg\nsnake.jpg", label_font, control_width, "file"
+    )
+  ),
+  lv::group(
+    {.x = (column + side) * px, .y = y_copies * px},
+    spin_box("Copies", options::count, &options::fewer, &options::more, body_font)
+  ),
+  lv::label({
+    .text  = "Color",
+    .x     = (column + side) * px,
+    .y     = y_color * px,
+    .style = {.text_color = tok.label.primary, .text_font = label_font},
+  }),
+  lv::group(
+    {.x = (column + side) * px, .y = (y_color + 26) * px},
+    color_button(options::color_label, control_width, 50, &options::toggle_color, body_font)
+  ),
+  lv::group(
+    {.x = (column + side) * px, .y = (y_start + 26) * px},
+    wide_button(
+      "Start printing", control_width, 60, &start, tok.button.primary, tok.button.primary,
+      label_font
+    )
+  )
+);
 
 // The photo follows the file that is chosen.
 lv::task<> show_chosen(lv::view<"image"> photo, lv::view<"dropdown"> file) {

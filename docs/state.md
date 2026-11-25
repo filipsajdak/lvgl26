@@ -14,7 +14,8 @@ Header: `<lv/lv.hpp>`, the core.
 ```cpp
 constinit lv::state cups{lv::counter{2}};  // a value that widgets follow
 
-constexpr auto cups_text = lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
+constexpr auto cups_text =
+  lv::label({.text = lv::bind(cups, "{} cups")});  // shows it, and follows it
 ```
 
 Once the label is mounted, a new value is all the program writes. The label then shows "4 cups", and all else that follows `cups` changes with it.
@@ -73,13 +74,23 @@ A text binding without a format shows a quantity with its unit, such as "60 g". 
 
 <!-- snippet: examples/state/main.cpp tree -->
 ```cpp
-constexpr auto ui = lv::column({.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}})[
-    lv::dropdown({.options = lv::options_of<drink>, .selected = lv::bind(chosen), .width = 140 * px}),
-    stepper<cups>(cups_text),
-    lv::slider({.range = {1, 5}, .value = lv::bind(bold), .width = 200 * px}),  // follows, and writes back
-    lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
-    lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
-    lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})];
+constexpr auto ui = lv::column(
+  {.flex_align = {"center", "center", "center"}, .size = {320 * px, 240 * px}},
+  lv::dropdown({
+    .options  = lv::options_of<drink>,
+    .selected = lv::bind(chosen),
+    .width    = 140 * px,
+  }),
+  stepper<cups>(cups_text),
+  lv::slider({
+    .range = {1, 5},
+    .value = lv::bind(bold),
+    .width = 200 * px,
+  }),                                                    // follows, and writes back
+  lv::label({.text = lv::bind(dose)}),                   // a quantity shows its unit: "18 g"
+  lv::label({.text = lv::bind(needed, "{} g in all")}),  // a format shows the number only
+  lv::label({.hidden = lv::bind(enough), .text = "Not enough beans"})
+);
 ```
 
 The dropdown lists the enumerators of `drink` and follows `chosen` both ways. The slider follows `bold` and writes the user's choice into it.
@@ -99,7 +110,7 @@ A handler that only changes a state is a lambda in the tree, as in the part belo
 using grams = decltype(beans.get());
 
 constexpr auto least_dose = 12 * g;  // the dose of the mildest cup
-constexpr auto dose_step = 2 * g;    // what one step of strength adds
+constexpr auto dose_step  = 2 * g;   // what one step of strength adds
 
 // Values made from states, and from each other. They store nothing; binding one makes it follow.
 constinit lv::computed dose{[](strength s) { return least_dose + s.value * dose_step; }, bold};
@@ -145,10 +156,12 @@ A part is a function that returns a piece of tree. It takes its state as a templ
 template <auto& Count>
   requires lv::dependency<std::remove_cvref_t<decltype(Count)>>
 constexpr auto stepper(lv::tree_node auto shown) {
-  return lv::row({.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}})[
-      lv::button({.on_clicked = [] { --Count; }})[lv::label({.text = "-"})],
-      shown,
-      lv::button({.on_clicked = [] { ++Count; }})[lv::label({.text = "+"})]];
+  return lv::row(
+    {.flex_align = {"center", "center", "center"}, .size = {lv::size_content, lv::size_content}},
+    lv::button({.on_clicked = [] { --Count; }}, lv::label({.text = "-"})),
+    shown,
+    lv::button({.on_clicked = [] { ++Count; }}, lv::label({.text = "+"}))
+  );
 }
 ```
 
@@ -159,6 +172,16 @@ The tree above calls it as `stepper<cups>(cups_text)`. [Concepts for parts](conc
 A state that one screen uses lives in the file of that screen, next to its tree. A state that several screens read lives in a header of its own, as an `inline constinit` global.
 
 What does not follow a state: a value read with `get()` and kept in a variable. It is a copy of the value at that moment.
+
+### Share it with C code
+
+A state keeps its own list of followers, so following it needs no LVGL subject and no observer.
+
+`speed.raw()` gives an `lv_subject_t`, made on its first use, that C code can share. A value C code writes reaches the widgets, and a value set from C++ reaches C observers.
+
+The followers of lvgl26 are told first, then the C observers, whatever the order in which they were added. `raw()` of an `lv::computed` makes its subject on first use too.
+
+Some properties keep LVGL's own bind function, and with it a subject and an observer. One kind is a setter that takes an animation flag beside its value: the value of a bar or a slider, the selected row of a roller. LVGL animates those after the first draw, and its public API does not say when that is. The other is `checked`.
 
 ## What the compiler checks
 

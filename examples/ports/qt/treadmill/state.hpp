@@ -14,10 +14,12 @@ namespace treadmill {
 
 // The speed counts in tenths of a mile an hour, as the original's buttons step it.
 inline constexpr struct tenth_mph final
-    : mp_units::named_unit<"0.1 mi/h", mp_units::mag_ratio<1, 10> * mp_units::international::mile / mp_units::si::hour> {
+    : mp_units::named_unit<
+        "0.1 mi/h",
+        mp_units::mag_ratio<1, 10> * mp_units::international::mile / mp_units::si::hour> {
 } tenth_mph;
 
-using speed_t = mp_units::quantity<tenth_mph, int>;
+using speed_t   = mp_units::quantity<tenth_mph, int>;
 using seconds_t = mp_units::quantity<mp_units::si::second, int>;
 
 enum class look { light, dark, sporty };

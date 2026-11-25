@@ -61,6 +61,20 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --preset ${{ matrix.preset }} -LE compile-fail -j "$(nproc)"
+      # A picture test compares a picture that a program wrote with one in the repository. When
+      # one fails, the pictures of the run are kept, so that a new or changed picture can be read
+      # and committed without a local build.
+      - name: The pictures the tests wrote, if a test failed
+        if: failure() && matrix.preset == 'host-v96'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-pictures
+          path: |
+            build/host-v96/tests/*_out/*.png
+            build/host-v96/tests/quick_start/*.png
+            build/host-v96/examples/coffee/*_out/*.png
+          retention-days: 7
+          if-no-files-found: ignore
 
   # The compile-fail tests: each compiles one file that must be refused, and checks the
   # message. They are most of the suite and each is a whole compile, so they are spread
@@ -181,12 +195,16 @@ jobs:
           g++-16 --version | head -n 1
           clang++ --version
           clangd --version
+          # editor_format_examples is registered only where CMake finds clang-format: a missing
+          # tool must fail this job, not drop the check.
+          clang-format --version
           # Where Clang finds its standard library: the stubs are read with it.
           clang++ -v -x c++ -fsyntax-only /dev/null 2>&1 | grep -E 'Selected GCC|Target|^ /'
       - name: Configure
         run: |
           cmake --preset host-v96
           grep -E 'LVGL26_CLANG(XX|D):' build/host-v96/CMakeCache.txt
+          grep -E 'LVGL26_CLANG_FORMAT:FILEPATH=/' build/host-v96/CMakeCache.txt
       - name: Build the list of public names
         run: cmake --build --preset host-v96 --target lv_names
       - name: Test

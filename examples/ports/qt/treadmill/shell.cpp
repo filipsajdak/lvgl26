@@ -9,18 +9,24 @@
 namespace treadmill {
 namespace {
 
-constexpr auto ui = lv::group({.size = {screen_width * px, screen_height * px}})[
-    lv::group({.id = "main", .size = {screen_width * px, screen_height * px}}),
-    lv::group({.id = "splash", .size = {screen_width * px, screen_height * px}})];
+constexpr auto ui = lv::group(
+  {.size = {screen_width * px, screen_height * px}},
+  lv::group({.id = "main", .size = {screen_width * px, screen_height * px}}),
+  lv::group({.id = "splash", .size = {screen_width * px, screen_height * px}})
+);
 
 constexpr lv::duration splash_time = 5000 * ms;
-constexpr lv::duration hand_over = 1 * ms;  // a page is not deleted inside the click that asked for it
+constexpr lv::duration hand_over =
+  1 * ms;  // a page is not deleted inside the click that asked for it
 
 constexpr make_page main_maker(look l) {
   switch (l) {
-    case look::light: return &mount_main_light;
-    case look::dark: return &mount_main_dark;
-    case look::sporty: return &mount_main_sporty;
+    case look::light:
+      return &mount_main_light;
+    case look::dark:
+      return &mount_main_dark;
+    case look::sporty:
+      return &mount_main_sporty;
   }
   return &mount_main_light;
 }

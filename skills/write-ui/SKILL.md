@@ -32,8 +32,15 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 
 | To write | Read |
 |---|---|
+| A screen as one tree, its properties and their order | [docs/tree.md](../../docs/tree.md) |
 | Values that widgets follow, values made from them, an action that follows them | [docs/state.md](../../docs/state.md) |
-| Mounting a tree, unmounting, one of several trees in a slot | [docs/mounting.md](../../docs/mounting.md) |
+| A widget of a tree by its id, and who owns a widget | [docs/views.md](../../docs/views.md) |
+| Units, angles, and LVGL's values by name | [docs/values.md](../../docs/values.md) |
+| Mounting a tree, pages that follow a state, one of several trees in a slot | [docs/mounting.md](../../docs/mounting.md) |
+| A choice by value that covers every case | [docs/match.md](../../docs/match.md) |
+| A sequence of steps over time, work from another thread | [docs/tasks.md](../../docs/tasks.md) |
+| A property that moves | [docs/animation.md](../../docs/animation.md) |
+| Design tokens, and styles that take them | [docs/tokens.md](../../docs/tokens.md) |
 | A look for all widgets of a kind | [docs/themes.md](../../docs/themes.md) |
 | A look named by the design, from the token file | [docs/looks.md](../../docs/looks.md) |
 | Rows that change | [docs/lists.md](../../docs/lists.md) |
@@ -41,7 +48,9 @@ The compiler is GCC 16.2 or newer, with `-std=c++26 -freflection`. No other comp
 | A choice among options, from an enum | [docs/options.md](../../docs/options.md) |
 | Fonts | [docs/fonts.md](../../docs/fonts.md) |
 | Pictures | [docs/images.md](../../docs/images.md) |
+| The program's `main`: the application, its clock, a display and its panel | [docs/application.md](../../docs/application.md) |
 | A pointer, the loop of a program, a window | [docs/input.md](../../docs/input.md) |
+| A microcontroller, and what a program costs there | [docs/targets.md](../../docs/targets.md) |
 | A function that returns a piece of tree | [docs/concepts.md](../../docs/concepts.md) |
 | What the program may use, and the library's strictness | [docs/settings.md](../../docs/settings.md), and the skill `settings` |
 | Completion and errors in the editor | [docs/editor-support.md](../../docs/editor-support.md) |
@@ -55,7 +64,10 @@ Look a name up there; do not guess it from LVGL's C names.
 - A program starts LVGL with `lv::application` and gets its screen from an `lv::display`. It calls no `lv_init`, `lv_display_*`, `lv_tick_*` or `lv_timer_handler`.
 - Application code names no `lv_` function, `lv_..._t` type or `LV_` name. `raw()` is the one door to the C API, for what lvgl26 has no form for.
 - An LVGL enumerator is a name in quotes: `.align = "center"`.
+- A tree and a `view.set` call the setters in the order of the properties, except for the few that LVGL needs in another (the map of a button matrix first, its controls and the cursor of a text area last): [detail/setter_order.hpp](../../include/lv/detail/setter_order.hpp) lists them. Write the properties in the order of the group rule below; nothing else is needed.
 - Properties go in four groups, each alphabetical: the `id`, the properties (`size`, `text`, ...), the styles (`style`, `style_pressed`), the handlers (`on_clicked`). A list out of order is a compile error that names one field; `python3 tools/order_properties.py <files>` puts the properties of existing code in order.
+- Children are arguments of the call: `lv::group({...}, child, child)`. Build a screen from named pieces (small constants, each at most about three levels deep) that the screen lists. A comma after the last property puts one property on each line. Then run `python3 tools/format_ui.py <files>` (clang-format 21 to 23): it lays the tree out, and a check fails on a file it would change. `python3 tools/call_form.py <files>` turns `[...]` children into arguments.
+- A project of several files draws each font once, in a file of its own: `font_<token>.cpp` defines `lv::font_object<"text.title">` with `lv::draw<"text.title">(type)`, and every other file writes `.text_font = lv::font_of<"text.title">`. A one-file program keeps `type(token)`. The build names a missing file; see [docs/fonts.md](../../docs/fonts.md).
 - A style takes design tokens. Add a missing token to the project's token file; `lv::raw(...)` marks a reasoned exception.
 - A measure is a quantity with a unit (`120 * px`, `120 * km / h`), a count is `lv::counter`, anything else a named type. A plain integer in a state is refused.
 - Only `lv::mount` and `lv::owned` own widgets. A view never deletes one.
@@ -76,6 +88,7 @@ lvgl26 turns a mistake into a compile error whose message says how to fix it.
 
 - Build and run the program's tests; a tree that compiles is already checked against the widgets' properties.
 - For a picture of the screen, write one with `lv::write_png` from `<lv/png.hpp>`, as the quick start does.
+- A change of syntax or of a feature in this repository also updates `README.md` and `site/index.html`; `python3 tools/check_readme.py` holds the README to the code.
 
 ## What not to do
 

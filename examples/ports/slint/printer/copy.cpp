@@ -10,7 +10,8 @@ namespace {
 //! [page]
 constexpr page_fonts fonts{type(tok.text.title), type(tok.text.label), type(tok.text.body)};
 
-constexpr auto ui = job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
+constexpr auto ui =
+  job_page<job_kind::copy>("Copy", "Size", "100%\n75%\n50%", "Start copying", fonts);
 
 }  // namespace
 

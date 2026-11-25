@@ -179,10 +179,10 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
       </figure>
       <div class="prose">
         <span class="tag">LVGL's own examples</span>
-        <h3>75 of LVGL's 163 widget examples</h3>
+        <h3>81 of LVGL's 163 widget examples</h3>
         <p>LVGL's C examples, rewritten with lvgl26. The four <code>get_started</code> examples are ported too.</p>
         <dl class="spec">
-          <div><dt>Ported</dt><dd>75 of the 163 widget examples of LVGL v9.6.0, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> counts the ones that wait by what each needs.</dd></div>
+          <div><dt>Ported</dt><dd>81 of the 163 widget examples of LVGL v9.6.0, and 4 of 4 <code>get_started</code>. <code>examples/README.md</code> counts the ones that wait by what each needs.</dd></div>
           <div><dt>Checked by</dt><dd><code>tests/examples_get_started.cpp</code> and <code>tests/examples_widgets_*.cpp</code> draw the C original and the port, and compare them pixel for pixel, also after clicks, drags and time.</dd></div>
         </dl>
         <ul class="links">
@@ -302,7 +302,7 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         <h3>A match that must cover every case</h3>
         <p>For an enum, reflection checks that every enumerator has exactly one arm.</p>
         <figure class="code mt-s">
-          <figcaption><span>README.md</span><span>lv/match.hpp</span></figcaption>
+          <figcaption><span>docs/match.md</span><span>lv/match.hpp</span></figcaption>
 <pre tabindex="0"><code><span class="k">enum class</span> mode { off, eco, sport };
 
 <span class="k">const char</span>* name = <span class="t">lv::match</span>(m)(
@@ -325,14 +325,15 @@ speedo.set({.value = <span class="n">60</span>});</code></pre>
         </ul>
       </div>
       <figure class="code">
-        <figcaption><span>README.md</span><span>lv/state.hpp</span></figcaption>
+        <figcaption><span>docs/state.md</span><span>lv/state.hpp</span></figcaption>
 <pre tabindex="0"><code><span class="k">constinit</span> <span class="t">lv::state</span> speed{<span class="n">0</span> * km / h};
 <span class="k">constinit</span> <span class="t">lv::state</span> clicks{<span class="t">lv::counter</span>{}};
 
-<span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>[
-    <span class="t">lv::arc</span>({.range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="t">lv::bind</span>(speed)}),   <span class="c">// follows, and writes back</span>
-    <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(speed)}),                     <span class="c">// shows "0 km/h"</span>
-    <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(clicks, <span class="s">"{} clicks"</span>)})];
+<span class="k">constexpr</span> <span class="k">auto</span> ui = <span class="t">lv::column</span>(
+  <span class="t">lv::arc</span>({.range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="t">lv::bind</span>(speed)}),  <span class="c">// follows, and writes back</span>
+  <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(speed)}),                    <span class="c">// shows &quot;0 km/h&quot;</span>
+  <span class="t">lv::label</span>({.text = <span class="t">lv::bind</span>(clicks, <span class="s">&quot;{} clicks&quot;</span>)})
+);
 
 speed = <span class="n">120</span> * km / h;   <span class="c">// the widgets update</span>
 speed = <span class="n">2</span> * km / min;   <span class="c">// converted: nothing is lost</span>
@@ -404,7 +405,7 @@ speed = <span class="n">3</span> * m;          <span class="c">// error: not a s
         </ul>
       </div>
       <figure class="code">
-        <figcaption><span>README.md</span><span>lv/task.hpp, lv/animate.hpp</span></figcaption>
+        <figcaption><span>docs/tasks.md</span><span>lv/task.hpp, lv/animate.hpp</span></figcaption>
 <pre tabindex="0"><code><span class="t">lv::task</span>&lt;<span class="k">bool</span>&gt; confirm(<span class="t">lv::view</span>&lt;<span class="s">"button"</span>&gt; ok, <span class="t">lv::view</span>&lt;<span class="s">"button"</span>&gt; cancel) {
   <span class="k">co_return co_await</span> <span class="t">lv::first</span>(
       ok.next().clicked.then([] { <span class="k">return true</span>; }),
@@ -441,7 +442,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Design tokens</strong> from W3C DTCG JSON through <code>#embed</code></li>
         <li><strong>Themes</strong>: one constant styles every widget of a kind; Signal is built in</li>
         <li><strong>Images</strong> decoded by the compiler from a PNG file into the display's pixels</li>
-        <li><strong>Fonts</strong> made by the compiler from a TrueType file, chosen by a typography token</li>
+        <li><strong>Fonts</strong> made by the compiler from a TrueType file, chosen by a typography token, and drawn once for a program of many files</li>
         <li><strong>Signal's typefaces</strong>: a second header sets the theme's text in Barlow and makes a font of digits for a large reading</li>
         <li><strong>Token-only styles</strong> in read-only memory</li>
         <li><strong>Selectors</strong>: a style for one part in one state, <code>lv::on("knob", "pressed", {...})</code>, in a node or a theme</li>
@@ -460,7 +461,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <li><strong>Agent kit</strong>: tree dump, PNG screenshot, MCP server in the host program</li>
         <li><strong>Project settings</strong> in one JSON file for the whole program: <code>"allow": {"threads": false}</code> makes every part of lvgl26 that needs threads a compile error that names the key</li>
         <li><strong>Editor support</strong>: completion, documentation and marks on mistakes in clangd, from one CMake line</li>
-        <li><strong>Example ports</strong>: 79 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
+        <li><strong>Example ports</strong>: 85 of LVGL's own examples, pixel for pixel with the C original, and two UIs of other frameworks: a <a href="#port-slint">Slint printer panel</a> and a <a href="#port-qt">Qt treadmill panel</a></li>
         <li><strong>Migration guides</strong> for <a href="docs/from-qt.html">Qt Quick</a>, <a href="docs/from-slint.html">Slint</a> and <a href="docs/from-touchgfx.html">TouchGFX</a>: what you know, and what lvgl26 has today</li>
       </ul>
       <p class="cap">The <a href="status.html">status page</a> names the header and the test behind each, and lists what is planned.</p>
@@ -671,26 +672,31 @@ cmake --preset host-v10 &amp;&amp; cmake --build --preset host-v10 &amp;&amp; ct
       </div></li>
       <li><div>
         <h3>Write a screen</h3>
-        <p>One header. Properties go in <code>({...})</code>, and the children follow them as arguments. Link the CMake target <code>lvgl26::lvgl26</code>.</p>
+        <p>Properties go in <code>({...})</code>, and the children follow them as arguments. Link the CMake target <code>lvgl26::lvgl26</code>.</p>
         <figure class="code">
-          <figcaption><span>README.md</span><span>C++26</span></figcaption>
-<pre tabindex="0"><code><span class="k">#include</span> <span class="s">&lt;lv/all.hpp&gt;</span>
-<span class="k">using namespace</span> <span class="t">lv::units</span>;
+          <figcaption><span>examples/quick_start/main.cpp</span><span>C++26</span></figcaption>
+<pre tabindex="0"><code><span class="k">constinit</span> <span class="t">lv::state</span> speed{<span class="n">0</span> * km / h};
 
-<span class="k">void</span> reset();
+<span class="k">void</span> reset() { speed = <span class="n">0</span> * km / h; }
 
-<span class="k">constexpr auto</span> ui = <span class="t">lv::column</span>({.size = {<span class="n">320</span> * px, <span class="n">240</span> * px}})[
-    <span class="t">lv::label</span>({.id = <span class="s">"title"</span>, .text = <span class="s">"Speed"</span>}),
-    <span class="t">lv::arc</span>({.id = <span class="s">"speedo"</span>, .range = {<span class="n">0</span>, <span class="n">240</span>}, .value = <span class="n">120</span>}),
-    <span class="t">lv::button</span>({.on_clicked = &amp;reset})[<span class="t">lv::label</span>({.text = <span class="s">"Reset"</span>})]];
-
-<span class="k">auto</span> root = <span class="t">lv::mount</span>&lt;ui&gt;(display.screen());   <span class="c">// built in place; owns the widgets</span>
-root-&gt;get&lt;<span class="s">"speedo"</span>&gt;().set({.value = <span class="n">0</span>});          <span class="c">// a typed view of the arc</span></code></pre>
+<span class="k">constexpr</span> <span class="k">auto</span> ui = <span class="t">lv::column</span>(
+  {.flex_align = {<span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>, <span class="s">&quot;center&quot;</span>}, .size = {<span class="n">320</span> * px, <span class="n">240</span> * px}},
+  <span class="t">lv::label</span>({.text = <span class="s">&quot;Speed&quot;</span>}),
+  <span class="t">lv::arc</span>(
+    {
+      .range = {<span class="n">0</span>, <span class="n">240</span>},
+      .size  = {<span class="n">120</span> * px, <span class="n">120</span> * px},
+      .value = <span class="t">lv::bind</span>(speed),
+    },
+    <span class="t">lv::label</span>({.align = <span class="s">&quot;center&quot;</span>, .text = <span class="t">lv::bind</span>(speed)})
+  ),
+  <span class="t">lv::button</span>({.on_clicked = &amp;reset}, <span class="t">lv::label</span>({.text = <span class="s">&quot;Reset&quot;</span>}))
+);</code></pre>
         </figure>
       </div></li>
       <li><div>
         <h3>Read on</h3>
-        <p>The <a href="https://github.com/filipsajdak/lvgl26#readme">README</a> covers every feature with examples. Each header in <code>include/lv/</code> starts with how to use it. To give the screen to an agent, see <a href="agents.html">Agents</a>. For what is done and what is planned, see <a href="status.html">Status</a>.</p>
+        <p>The <a href="https://github.com/filipsajdak/lvgl26#readme">README</a> shows the main features in short, and the <a href="docs/index.html">documentation</a> has a page for each. Each header in <code>include/lv/</code> starts with how to use it. To give the screen to an agent, see <a href="agents.html">Agents</a>. For what is done and what is planned, see <a href="status.html">Status</a>.</p>
       </div></li>
     </ol>
   </div>

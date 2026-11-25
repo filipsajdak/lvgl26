@@ -53,8 +53,8 @@ constexpr auto held = lv::style({
   .outline_width = tok.slider.styled.pressed.ring_width,
 });
 
-constexpr auto look = track | lv::on("indicator", indicator) | lv::on("knob", knob) |
-                      lv::on("knob", "pressed", held);
+constexpr auto look =
+  track | lv::on("indicator", indicator) | lv::on("knob", knob) | lv::on("knob", "pressed", held);
 
 constexpr auto ui = lv::group(
   {
@@ -72,6 +72,4 @@ constexpr auto ui = lv::group(
 
 }  // namespace
 
-void widgets::slider_styling(lv::obj screen) {
-  lv::place<ui>(screen);
-}
+void widgets::slider_styling(lv::obj screen) { lv::place<ui>(screen); }
