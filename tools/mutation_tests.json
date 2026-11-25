@@ -41,8 +41,8 @@
       "targets": "l1_views l2_tree"
     },
     "include/lv/props.hpp": {
-      "tests": "^l1_views$|^l2_tree$|^smoke$|^values$|^options$|fail_options",
-      "targets": "l1_views l2_tree smoke values options",
+      "tests": "^l1_views$|^l2_tree$|^smoke$|^values$|^options$|fail_options|^props_order$|^reference_data$|^options_docs$",
+      "targets": "l1_views l2_tree smoke values options props_order lv_reference options_docs",
       "parts": 3
     },
     "include/lv/runtime.hpp": {
