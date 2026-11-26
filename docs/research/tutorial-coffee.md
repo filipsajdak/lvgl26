@@ -33,7 +33,7 @@ Each step is a whole program that a test builds, and that writes the picture the
 
 Steps 1 to 5 are one program each, growing. Each step is a whole program in `examples/coffee/1-screen/`, `2-values/`, `3-pages/`, `4-time/`, `5-design/`, `6-files/` and `7-service/`, a small CI target with its picture. Step 6 is the turning point of the tutorial: the reader sees the one file become the layout, with the same picture.
 
-Signal's theme matches a widget by its exact class (`include/lv/detail/theme_styles.hpp`, `measured` 2026-11-25 by reading the code). So it draws the screen, the boxes, the buttons and the ring of the machine, and not its sliders or its drop-down list. Step 5 drops the looks that Signal covers. Its token file keeps the column layout of a page, the title, the price and the sliders.
+Signal's theme matches a widget by its exact class (`include/lv/detail/theme_styles.hpp`, `measured` 2026-11-25 by reading the code). So it draws the screen, the buttons and the ring of the machine, and not its sliders or its drop-down list. Nor does it reach a page: `lv::group` removes every style of its widget, the theme's too (`start_widget` in `include/lv/tree.hpp`), so Signal's spacing of a box never applies there. The first pictures of step 5 had pages with no padding and no gap (`measured` 2026-11-26). Step 5 drops the looks that Signal covers. Its token file keeps the column layout and the spacing of a page, the title, the price and the sliders.
 
 ## The layout of step 6 and 7
 
