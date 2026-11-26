@@ -237,7 +237,7 @@ See [Tasks](tasks.md) and [Animation](animation.md).
 
 ## 5. A design system you can reuse
 
-Signal is the design system that comes with lvgl26, in `<lv/signal.hpp>`. Given to the display, it draws every screen, box, button and ring of the machine.
+Signal is the design system that comes with lvgl26, in `<lv/signal.hpp>`. Given to the display, it draws the screen, the buttons and the ring of the machine.
 
 <!-- snippet: examples/coffee/5-design/main.cpp main -->
 ```cpp
@@ -248,19 +248,24 @@ int main() {
   if (!root) return 1;
 ```
 
-The token file loses the looks that Signal covers. It keeps what is the machine's own: the layout of a page, the title, the price and the sliders, which Signal does not draw.
+The token file loses the looks that Signal covers. It keeps what is the machine's own: the layout and spacing of a page, the title, the price and the sliders, which Signal does not draw. A page is an `lv::group`, which takes no theme style, so its spacing stays in the look.
 
 <!-- snippet: examples/coffee/5-design/tokens.json -->
 ```json
 {
   "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
-  "$description": "The design of step 5 of the coffee machine tutorial (docs/tutorial.md): Signal draws the screen, the boxes, the buttons and the ring, so this file keeps only what is the machine's own. A look's entries are named for the style properties they set.",
+  "$description": "The design of step 5 of the coffee machine tutorial (docs/tutorial.md): Signal draws the screen, the buttons and the ring, so this file keeps only what is the machine's own. A look's entries are named for the style properties they set.",
   "color": {
     "$type": "color",
     "roast": {"$value": {"hex": "#3b2418", "colorSpace": "srgb", "components": [0.2314, 0.1412, 0.0941]}},
     "bean": {"$value": {"hex": "#6f4e37", "colorSpace": "srgb", "components": [0.4353, 0.3059, 0.2157]}},
     "muted": {"$value": {"hex": "#8a7363", "colorSpace": "srgb", "components": [0.5412, 0.451, 0.3882]}},
     "track": {"$value": {"hex": "#e3d5c8", "colorSpace": "srgb", "components": [0.8902, 0.8353, 0.7843]}}
+  },
+  "space": {
+    "$type": "dimension",
+    "page": {"$value": {"value": 16, "unit": "px"}},
+    "gap": {"$value": {"value": 12, "unit": "px"}}
   },
   "font": {
     "text": {"$type": "fontFamily", "$value": "Barlow"}
@@ -276,6 +281,8 @@ The token file loses the looks that Signal covers. It keeps what is the machine'
     "brew": {"$value": [0.4, 0, 0.6, 1]}
   },
   "screen": {
+    "pad_all": {"$value": "{space.page}"},
+    "pad_row": {"$value": "{space.gap}"},
     "$extensions": {
       "io.github.filipsajdak.lvgl26": {
         "layout": "flex",
