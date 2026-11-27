@@ -107,6 +107,51 @@ class WrittenFiles(unittest.TestCase):
                 sync.signal_tokens.OUT = original
 
 
+class Motion(unittest.TestCase):
+    """The motion section of the design becomes motion.json: durations and easings, by their prefix."""
+
+    def written(self, tokens):
+        return json.loads(sync.signal_tokens.motion({"motion": {"tokens": tokens}}))
+
+    def test_a_duration_and_an_easing_go_to_their_groups_without_the_prefix(self):
+        doc = self.written([{"name": "duration-press", "value": "120ms", "usage": ""},
+                            {"name": "ease-back", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "usage": ""}])
+        self.assertEqual(doc["duration"], {"$type": "duration", "press": {"$value": {"value": 120, "unit": "ms"}}})
+        self.assertEqual(doc["ease"], {"$type": "cubicBezier", "back": {"$value": [0.34, 1.56, 0.64, 1]}})
+
+    def test_a_whole_number_of_a_curve_is_written_as_an_integer(self):
+        doc = self.written([{"name": "ease-in-out", "value": "cubic-bezier(0.42, 0, 0.58, 1)", "usage": ""}])
+        self.assertEqual(json.dumps(doc["ease"]["in-out"]["$value"]), "[0.42, 0, 0.58, 1]")
+
+    def test_a_curve_whose_x_leaves_the_unit_interval_stops_the_tool(self):
+        for value in ("cubic-bezier(1.2, 0, 0.5, 1)", "cubic-bezier(0.2, 0, -0.1, 1)"):
+            with self.assertRaises(SystemExit) as stop:
+                self.written([{"name": "ease-odd", "value": value, "usage": ""}])
+            self.assertIn("ease-odd", str(stop.exception))
+
+    def test_a_curve_without_four_numbers_stops_the_tool(self):
+        for value in ("cubic-bezier(0.2, 0.7, 1)", "ease-out", "cubic-bezier(0.2, 0.7, 0.2, 1, 0)"):
+            with self.assertRaises(SystemExit):
+                self.written([{"name": "ease-out", "value": value, "usage": ""}])
+
+    def test_a_duration_that_is_no_time_stops_the_tool(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.written([{"name": "duration-press", "value": "120px", "usage": ""}])
+        self.assertIn("duration-press", str(stop.exception))
+
+    def test_a_name_with_another_prefix_stops_the_tool(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.written([{"name": "speed-fast", "value": "120ms", "usage": ""}])
+        self.assertIn("speed-fast", str(stop.exception))
+
+    def test_motion_is_not_in_the_files_of_the_themes(self):
+        design = json.loads(sync.DESIGN.read_text())
+        for name, text in sync.signal_tokens.documents(design).items():
+            if name != "motion.json":
+                self.assertNotIn("cubicBezier", text, name)
+                self.assertNotIn('"duration"', text, name)
+
+
 class Repository(unittest.TestCase):
     def test_the_repository_copy_its_record_and_the_written_files_agree(self):
         self.assertEqual(sync.check(), [])

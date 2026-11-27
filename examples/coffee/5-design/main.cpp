@@ -1,4 +1,4 @@
-// Step 5 of the coffee machine tutorial (docs/research/tutorial-coffee.md): a design system you
+// Step 5 of the coffee machine tutorial (docs/tutorial.md): a design system you
 // can reuse. Signal, which comes with lvgl26, draws the screen, the buttons and the ring; the
 // program's own looks keep what is the machine's: the layout and spacing of a page, the title, the
 // price and the sliders, which Signal does not draw. The titles and the text are set in the
