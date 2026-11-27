@@ -338,9 +338,8 @@ constexpr auto your_cup = lv::group(
 );
 //! [cup]
 
-// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
-// which main checks.
-constinit lv::frame<480, 320> frame;
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height.
+constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
 
 //! [geometry]
 // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
