@@ -420,3 +420,55 @@ The spike reads no kerning and applies no hinting. It follows font-rs closely: s
 23. Do not pursue MSDF for this route. Revisit only with a GPU draw unit and a need for free scaling.
 24. `.otf` with CFF outlines stays out of scope. Detect sfnt version `OTTO` and fail with a clear message.
 25. Measure before claiming: compile time with `/usr/bin/time`, pixels against lv_font_conv output for the same size.
+
+## Extra characters on top of the default set (2026-11-27)
+
+Marks: `source` is read in this repository, `measured` is a probe compiled here (macOS, GCC 16.2, Barlow Medium at 16 px, `tools/compile_report.py` instructions and `size -m` of the object file), `reasoned` is mine.
+
+### The problem
+
+A drawn font has the characters from the space to the tilde when `characters` is empty, and only the characters named when it is not (`make_font`, `characters_of` in `include/lv/font.hpp`). `source`. So a price "2.20 €" or a line "4 of 5 · Strong" needs the euro sign and the middle dot, and naming them means typing all 95 ASCII characters again beside them. The coffee steps need both.
+
+### What it costs for each extra glyph
+
+| Characters | Compile time (instructions) | Constant data in the object file |
+|---|---:|---:|
+| 95 (the default) | 63.95 G | 110,361 bytes |
+| 95 + 2 (`€` and `·`) | 65.50 G (+1.55 G, +2.4%) | 110,601 bytes (+240) |
+| 95 + 10 (`€ · é è ä ö ü ß ° ×`) | 71.26 G (+7.3 G, +11.4%) | 111,599 bytes (+1,238) |
+
+`measured`. An extra glyph costs about 0.75 G instructions, the same as one of the 95 (0.67 G each), and about 120 bytes of flash at 16 px, depending on its shape: its bitmap, its entry in the glyph table and 2 bytes in the character list.
+
+Two facts that do not depend on how many are added, `source` and `reasoned`:
+
+- The default characters are one range, and the character map of the font is the tiny form that needs no list. The first character outside the range, such as U+20AC, turns it into the sparse form: a list of 2 bytes for each character of the font, the 95 as well, about 200 bytes once. LVGL then finds a glyph by binary search over the list and not by an offset: a few more steps for each drawn character at run time. `stored_cmap` already does this for any non-contiguous set.
+- The limits stay: a font holds at most 255 characters (`make_font`), and the list takes the distance from the first character in 16 bits, so characters up to U+FFFF (emoji are out, as today).
+
+### The API: three forms
+
+All three give a font of the default set plus the characters named.
+
+| | A. A named constant of the set | B. A member of the typeface entry | C. A marker in the string |
+|---|---|---|---|
+| Typeface | `{"Barlow", 500, barlow_ttf, lv::ascii_plus<"€·">}` | `{"Barlow", 500, barlow_ttf, {}, "€·"}` | `{"Barlow", 500, barlow_ttf, "+€·"}` |
+| One font | `lv::font<ttf>(16 * px, lv::ascii_plus<"€·">)` | `lv::font<ttf>(16 * px, {}, "€·")` | `lv::font<ttf>(16 * px, "+€·")` |
+| Change to `face_file` | none: `characters` is already a view that a constant gives | a fifth member and its constructor | a rule in `characters_of` |
+| Reads as | the set, then the extras, in one word | two strings, one of them empty | a convention hidden in a character |
+| A mistake | a character the file lacks is the existing message, naming it | the same | a text that starts with `+` and means just that, no way out |
+| Compose with other sets | yes: `lv::ascii_plus<"€·">` is a view; a Latin-1 preset would be another constant | no | no |
+
+My recommendation is A: it changes no type, it is a constant like `lv::glyphs<...>` of the icons (`include/lv/icons.hpp`), and it also serves `lv::font<ttf>(size, characters)` and the split form (`lv::draw<"text.label">(type)`), which take the same `typeface`. `ascii_plus<"€·">` is a variable template of a fixed string, evaluated once and as a static string. The compile-fail test is a character that the file lacks, and a text that is not valid UTF-8.
+
+### What I cannot settle
+
+1. The name: `lv::ascii_plus<"...">` (my choice), `lv::ascii_and<"...">`, or `lv::with_ascii<"...">`.
+2. Is a preset worth having beside it? `lv::latin1` would be the default set and U+00A0..U+00FF, 191 characters in all: it costs 96 more glyphs (about 72 G instructions and 12 KB at 16 px), which a project pays on purpose. The coffee steps need only `€` and `·`.
+3. Should the sparse list be avoided for the default characters by sorting the extras into a second range (a second character map for U+20AC and the rest), so that the default range stays direct? It saves about 200 bytes and the binary search at run time, and costs a second map in LVGL's table (`cmap_num = 2`). I would not build it now.
+4. `lv::scaled_font` (the device draws the glyphs) takes a TrueType file and draws any character, so nothing changes there. Is that right for the owner's list?
+
+### Tests and checks to write with it
+
+- `font`: the font of `lv::ascii_plus<"€·">` has the 95 and both glyphs (the glyph descriptor of U+20AC and U+00B7 is found, with a width); a character twice is one; the order of the extras does not matter.
+- A test that the sparse form is used only when an extra is named: the default font stays on the tiny form.
+- Compile-fail: a character the file lacks names it; an extra that makes more than 255 characters says so.
+- The docs page `docs/fonts.md` gets the section, with the cost table above as ranges.
