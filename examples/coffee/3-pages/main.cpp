@@ -401,7 +401,7 @@ int main() {
   // The reader goes on to the cup: the page slides in, on a clock that steps 10 ms at a time.
   // Half way, the picture shows both pages.
   coffee::go<coffee::screen::your_cup>();
-  coffee::steps(app, 7);
+  coffee::steps(app, 10);
   if (!lv::write_png(display.screen(), "coffee_3.png")) return 3;
 
   // When the slide has ended, BACK goes back the same way.
