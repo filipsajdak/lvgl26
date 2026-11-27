@@ -23,6 +23,7 @@
 #include <lv/shown.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
+#include <lv/signal_motion.hpp>
 #include <lv/signal_type.hpp>
 #include <lv/theme.hpp>
 #include <lv/ui_scheduler.hpp>
@@ -158,6 +159,8 @@ constexpr auto signal_fonts = std::pair{lv::signal::body_font, lv::signal::label
 constexpr lv::length signal_spacing = lv::signal::label_spacing;
 static_assert(std::same_as<decltype(lv::signal::lamps.dark.green), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::lamps.day.blue), lv::token<lv_color_t>>);  // C API
+static_assert(std::same_as<decltype(lv::signal::motion.duration.settle), lv::token<lv::duration>>);
+static_assert(std::same_as<decltype(lv::signal::motion.ease.back), lv::token<lv::bezier>>);
 
 // ---- styles and themes ------------------------------------------------------------
 

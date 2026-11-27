@@ -251,6 +251,8 @@ add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/
                                                   A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
 # Signal's tell-tale lamp colours, a header of its own.
 lvgl26_test(signal_lamps)
+# Signal's durations and easings, a header of its own.
+lvgl26_test(signal_motion)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)

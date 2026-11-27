@@ -59,7 +59,11 @@ A state is never colour alone. Each priority has a colour, a number of triangles
 ## Motion
 
 - Motion says what changed, and then stops. Nothing loops except an alarm.
-- A value moves to its new place in 150 ms, a page slides in 250 ms, both starting fast and ending slowly. A high-priority alarm blinks; nothing else does.
+- `duration-press` (120 ms) is the answer to a press: a button or a tile changes under the finger in this time.
+- `duration-enter` (220 ms) brings a page, a panel or a value into view. `duration-settle` (480 ms) moves a ring, a bar or a page to its new place, where it comes to rest.
+- `ease-out` is the curve of what arrives: fast at first, then slowly to rest. `ease-in-out` moves something from one place on the screen to another. `ease-back` overshoots a little and comes back: a selection or a confirmed press, once per gesture, never on a reading.
+- A high-priority alarm blinks; nothing else does.
+- In code the motion is in `lv/signal_motion.hpp`, not in the theme headers: `lv::signal::motion.duration.enter`, `*lv::signal::motion.ease.out`.
 - A device may turn motion off without losing meaning: every change is also visible when it is still.
 
 ## Words
