@@ -175,6 +175,18 @@ co_await lv::animate(view, {.value = {0, 100}}, lv::signal::motion.duration.sett
 - The tokens are in `include/lv/signal/motion.json`, written from the motion section of the design file by `tools/signal_tokens.py`: a token named `duration-...` or `ease-...` goes there, and not into the files of the themes.
 - `lv/signal.hpp` and `lv/signal_type.hpp` do not include the header, so a program that animates nothing pays nothing for it.
 
+### Gestures
+
+Signal's gesture limits are LVGL's own defaults, in a header of their own, and a pointer takes them:
+
+```cpp
+#include <lv/signal_gesture.hpp>
+
+lv::pointer mouse{display, lv::signal::gesture};
+```
+
+`gesture.swipe_distance` is 50 px, `gesture.swipe_speed` 3 px in each read of 33 ms, `gesture.scroll_limit` 10 px and `gesture.long_press` 400 ms. They are written from the gesture section of the design file into `include/lv/signal/gesture.json` by `tools/signal_tokens.py`. The design file is the repository's copy: nothing is written back to Claude Design, so a change of these values there needs the owner's yes. See [Swipes and holds](gestures.md).
+
 ## Make your own
 
 A theme is one constant. It has a member for each kind of widget, and each member holds the styles a node of a tree can have: `style`, `style_pressed`, `style_indicator` and the rest.

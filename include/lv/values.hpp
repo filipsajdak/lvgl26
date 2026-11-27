@@ -125,19 +125,29 @@ concept tree_handler = detail::without_captures__name_the_state_as_a_template_ar
 // An event handler stored in a props struct: a function or a lambda without captures.
 // For a handler with state, use view.on<LV_EVENT_...>() instead.
 // No default member initializers: see lv::arg. An empty handler is `handler{}`.
+// The way a finger moved in a swipe: the direction of the movement.
+enum class swipe { left, right, up, down };
+
 struct handler {
   void (*plain)();
   void (*with_event)(event);
+  void (*with_swipe)(swipe);
 
   constexpr handler() = default;
 
   template <class F>
     requires std::convertible_to<F, void (*)()>
-  constexpr handler(F f) : plain(f), with_event(nullptr) {}
+  constexpr handler(F f) : plain(f), with_event(nullptr), with_swipe(nullptr) {}
 
   template <class F>
     requires(!std::convertible_to<F, void (*)()>) && std::convertible_to<F, void (*)(event)>
-  constexpr handler(F f) : plain(nullptr), with_event(f) {}
+  constexpr handler(F f) : plain(nullptr), with_event(f), with_swipe(nullptr) {}
+
+  // For on_swiped: it gets the direction of the swipe.
+  template <class F>
+    requires(!std::convertible_to<F, void (*)()>) && (!std::convertible_to<F, void (*)(event)>) &&
+            std::convertible_to<F, void (*)(swipe)>
+  constexpr handler(F f) : plain(nullptr), with_event(nullptr), with_swipe(f) {}
 };
 
 namespace detail {
@@ -179,7 +189,7 @@ consteval std::string how_to_write_kind(std::meta::info t) {
            "break between the options";
   if (t == ^^handler)
     return "a function or a lambda that captures nothing: `&function`, `[] { ... }` or "
-           "`[](lv::event e) { ... }`. A handler in a constexpr tree is a plain function pointer, "
+           "`[](lv::event e) { ... }`, or for on_swiped `[](lv::swipe d) { ... }`. A handler in a constexpr tree is a plain function pointer, "
            "so it cannot hold state: name the state as a template argument "
            "(`template <lv::dependency auto& Count>`) and use it in the lambda, or add the handler to "
            "the view with on<LV_EVENT_...>()";

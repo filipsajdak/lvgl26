@@ -9,6 +9,8 @@
 #include <lv/detail/missing.hpp>
 #include <lv/display.hpp>
 
+#include <lv/units.hpp>
+
 #include <cstddef>
 #include <type_traits>
 
@@ -23,6 +25,24 @@ namespace lv {
 enum class contact : bool { released, pressed };
 inline constexpr contact released = contact::released;
 inline constexpr contact pressed = contact::pressed;
+
+/// The thresholds of the gestures a pointer makes; the defaults are LVGL's. A design's token group `gesture`
+/// has these members: lv::pointer mouse{display, tok.gesture}.
+struct gesture_limits {
+  length swipe_distance = length::px(50);
+  length swipe_speed = length::px(3);
+  length scroll_limit = length::px(10);
+  duration long_press = duration{400};
+};
+
+/// What a pointer takes as its gestures: a struct with these four members.
+template <class L>
+concept gesture_settings = requires(const L& g) {
+  { static_cast<length>(g.swipe_distance) };
+  { static_cast<length>(g.swipe_speed) };
+  { static_cast<length>(g.scroll_limit) };
+  { static_cast<duration>(g.long_press) };
+};
 
 /// What a pointer reports: where it is, and whether it touches.
 struct pointer_sample {
@@ -53,9 +73,14 @@ template <std::size_t Capacity>
 class pointer<Capacity> {
  public:
   explicit pointer(display&) {}
+  /// A pointer with the thresholds of a design: lv::pointer mouse{display, tok.gesture}.
+  template <gesture_settings L>
+  pointer(display&, const L&) {}
   /// A pointer that `feeder`, a platform object such as a window, feeds.
   template <pointer_feeder F>
   pointer(display&, F&) {}
+  template <pointer_feeder F, gesture_settings L>
+  pointer(display&, F&, const L&) {}
   /// What a platform object keeps to feed this pointer.
   pointer_feed handle() noexcept { __builtin_unreachable(); }
   pointer(const pointer&) = delete;
@@ -82,10 +107,14 @@ class pointer<0> {
 };
 
 explicit pointer(display&) -> pointer<>;
+template <gesture_settings L>
+pointer(display&, const L&) -> pointer<>;
 template <pointer_feeder F>
 pointer(display&, F&) -> pointer<>;
+template <pointer_feeder F, gesture_settings L>
+pointer(display&, F&, const L&) -> pointer<>;
 template <class F>
-  requires(!pointer_feeder<std::remove_cvref_t<F>>)
+  requires(!pointer_feeder<std::remove_cvref_t<F>> && !gesture_settings<std::remove_cvref_t<F>>)
 pointer(display&, F&&) -> pointer<0>;
 
 }  // namespace lv

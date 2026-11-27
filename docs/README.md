@@ -45,6 +45,7 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 | [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
 | [Icons](icons.md) | Phosphor's icons by name, checked by the compiler, in a font of only the icons you use |
 | [Images](images.md) | A PNG file becomes pixels in read-only memory, decoded by the compiler into the display's own format |
+| [Swipes and holds](gestures.md) | A swipe gives its direction, a hold gives its progress; the limits belong to the pointer |
 
 ### The program
 

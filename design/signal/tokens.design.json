@@ -368,5 +368,29 @@
         "usage": "A small overshoot that comes back: a selection or a confirmed press. Once per gesture, never on a reading."
       }
     ]
+  },
+  "gesture": {
+    "tokens": [
+      {
+        "name": "swipe-distance",
+        "value": "50px",
+        "usage": "How far the finger goes before a swipe is sent. LVGL's own default."
+      },
+      {
+        "name": "swipe-speed",
+        "value": "3px",
+        "usage": "How far the finger goes in each read of the pointer, 33 ms: a slower drag starts the count of a swipe again. LVGL's own default."
+      },
+      {
+        "name": "scroll-limit",
+        "value": "10px",
+        "usage": "How far the finger goes before a drag is a scroll and no longer a press. LVGL's own default."
+      },
+      {
+        "name": "long-press",
+        "value": "400ms",
+        "usage": "The time of LVGL's own long press, one for the whole pointer. A hold has its own time in each call. LVGL's own default."
+      }
+    ]
   }
 }

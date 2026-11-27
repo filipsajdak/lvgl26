@@ -45,6 +45,7 @@
         {"concept": "Property binding and expressions", "status": "works", "answer": "lv::bind and lv::computed"},
         {"concept": "A model object with properties", "status": "works", "answer": "lv::state, typed, with units for a measure"},
         {"concept": "Timer, Connections", "status": "works", "answer": "A coroutine: co_await lv::sleep(...) and co_await button.next().clicked"},
+        {"concept": "SwipeView gestures, a long press with progress", "status": "works", "answer": "lv::swiped gives the direction of a swipe, lv::hold gives a progress; the limits are tokens given to lv::pointer"},
         {"concept": "NumberAnimation, Behavior, easing", "status": "partial", "answer": "lv::animate with easing, one number for each property, and style properties such as opacity. A Behavior that animates on every change is not built"},
         {"concept": "State and Transition", "status": "partial", "answer": "lv::match on a state and animations in a task. There is no declarative state list"},
         {"concept": "Image with a PNG or JPEG", "status": "works", "answer": "lv::image_file and lv::encoded_image"},

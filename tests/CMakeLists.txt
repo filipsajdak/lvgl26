@@ -101,6 +101,7 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+lvgl26_test(gesture)
 lvgl26_test(input_queue)
 # back() of an empty queue ends the program.
 add_test(NAME input_queue_violation_back_of_empty
@@ -257,6 +258,7 @@ add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/
 lvgl26_test(signal_lamps)
 # Signal's durations and easings, a header of its own.
 lvgl26_test(signal_motion)
+lvgl26_test(signal_gesture)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
@@ -487,7 +489,7 @@ lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one po
 # A part that constrains its parameters with the public concepts (docs/concepts.md).
 # The whole message of a handler that holds state, sentence by sentence: each says what to do.
 string(CONCAT handler_state_message "It takes a function or a lambda that captures nothing: `&function`, `\\[\\] \\{ \\.\\.\\. \\}` or "
-    "`\\[\\]\\(lv::event e\\) \\{ \\.\\.\\. \\}`\\. A handler in a constexpr tree is a plain function pointer, "
+    "`\\[\\]\\(lv::event e\\) \\{ \\.\\.\\. \\}`, or for on_swiped `\\[\\]\\(lv::swipe d\\) \\{ \\.\\.\\. \\}`\\. A handler in a constexpr tree is a plain function pointer, "
     "so it cannot hold state: name the state as a template argument "
     "\\(`template <lv::dependency auto& Count>`\\) and use it in the lambda, or add the handler to "
     "the view with on<LV_EVENT_\\.\\.\\.>\\(\\)\\.")
@@ -1448,3 +1450,7 @@ lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of
 # Icons (lv/icons.hpp): a name that is no icon lists the nearest.
 lvgl26_compile_fail_message(icon_unknown_name constexpr "lv: there is no icon 'arow-left' in Phosphor. Did you mean 'arrow-left'? The nearest names: arrow-left, caret-left, align-left, copyleft, arrow-down.")
 lvgl26_compile_fail_message(icon_far_name constexpr "lv: there is no icon 'steam-engine' in Phosphor. The nearest names: steam-logo, gear-fine, bell-ringing, champagne, dots-nine.")
+
+# Gestures (lv/gesture.hpp).
+lvgl26_compile_fail_message(hold_progress_not_percent deleted "lv: the progress of lv::hold is an lv::state<lv::percent>: lv::state<lv::percent> progress{lv::percent{0}}. It goes from 0 to 100 while the finger stays.")
+lvgl26_compile_fail(swiped_not_a_view "no matching function for call to 'swiped\\(int\\)'")
