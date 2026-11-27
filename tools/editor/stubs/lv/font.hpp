@@ -36,6 +36,15 @@ inline constexpr detail::font_file<File> font{};
 template <detail::fixed Extra>
 inline constexpr std::string_view ascii_plus{};
 
+/// The default characters and the accents of Latin-1 (U+00A0 to U+00FF), 191 characters, and `Extra` on top:
+/// lv::latin1_plus<"€">. It is the dear one: about 86 G instructions of compile time and 12 KB of flash for each
+/// font at 16 px.
+template <detail::fixed Extra>
+inline constexpr std::string_view latin1_plus{};
+
+/// The default characters and the accents of Latin-1: the cost of lv::latin1_plus<"">.
+inline constexpr std::string_view latin1{};
+
 /// One file of a typeface: {"Barlow", 500, barlow_ttf}, with the characters to keep
 /// as an optional fourth value.
 struct face_file {
