@@ -32,6 +32,8 @@ static_assert(lv::latin1_plus<""> == latin1_text);
 static_assert(lv::latin1_plus<"€">.size() == latin1_text.size() + 3);
 static_assert(lv::latin1_plus<"€">.starts_with(lv::latin1));
 static_assert(lv::detail::characters_of(latin1_text).size() == 95 + 96);
+// Latin-1 stops at U+00FF: the Polish ł (U+0142) and the euro sign are not in it.
+static_assert(lv::detail::characters_of(latin1_text).back() == 0xff);
 static_assert(lv::detail::characters_of(lv::latin1_plus<"€·">).size() == 95 + 96 + 1);  // the dot is in Latin-1
 
 // The font of the price and of the strength: the default set, the euro sign, the middle dot and three letters.

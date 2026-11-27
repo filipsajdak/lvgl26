@@ -429,7 +429,8 @@ inline constexpr std::string_view ascii_plus = std::define_static_string(detail:
 // The default characters and the accents of Latin-1 (U+00A0 to U+00FF), 191 characters, and `Extra` on top:
 // lv::latin1_plus<"€"> for a price in a language with accents. It is the dear one: 96 more glyphs than the default
 // set, about 86 G instructions of compile time (a build of 11 seconds and 0.9 GB) and 12 KB of flash for each font at 16 px (docs/fonts.md). Name the
-// accents that a text needs with lv::ascii_plus when it needs a few.
+// accents that a text needs with lv::ascii_plus when it needs a few. Latin-1 stops at U+00FF: Polish letters (ł ą ę),
+// Czech, Turkish and the euro sign are outside it, and go in `Extra`.
 template <detail::fixed Extra>
 inline constexpr std::string_view latin1_plus = std::define_static_string(detail::ascii_plus_text(Extra.sv(), "lv::latin1_plus", true));
 
