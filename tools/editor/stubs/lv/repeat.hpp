@@ -70,12 +70,33 @@ inline constexpr bool is_structural<repeated_stub> = true;
 }  // namespace detail
 
 /// The enumerator V of an enum, as a text: name_of<subpage::print> is "print".
+/// The editor cannot read the name, so the stub is an empty text: still a constant, as an id or a
+/// text made from it must be.
 template <auto V>
-inline constexpr const char* name_of = nullptr;
+inline constexpr const char* name_of = "";
+
+namespace stub {
+
+template <class T>
+inline constexpr bool is_property_holder = false;
+template <class... Ts>
+inline constexpr bool is_property_holder<lv::arg<Ts...>> = true;
+
+/// What lv::like names, which the editor cannot find: a value of the type of any property. It
+/// does not convert to a property's holder (lv::arg), so `.text = lv::like<...>` is read one way.
+struct member_of_scope {
+  template <class T>
+    requires(!is_property_holder<std::remove_cvref_t<T>>)
+  constexpr operator T() const {
+    return T{};
+  }
+};
+
+}  // namespace stub
 
 /// What the enumerator V names in Scope, a struct or an enum: lv::like<subpage::print, icons>.
 template <auto V, class Scope>
-inline constexpr stub::anything like{};
+inline constexpr stub::member_of_scope like{};
 
 /// One part for each enumerator of E (without those in Left, if given).
 template <class E, class Left = but<>, repeat_part F>

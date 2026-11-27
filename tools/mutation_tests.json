@@ -315,6 +315,10 @@
     "include/lv/signal_gesture.hpp": {
       "tests": "^signal_gesture$",
       "targets": "signal_gesture"
+    },
+    "include/lv/icons_font.hpp": {
+      "tests": "^icons_font$",
+      "targets": "icons_font"
     }
   }
 }
