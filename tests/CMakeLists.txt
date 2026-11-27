@@ -229,6 +229,14 @@ lvgl26_test(application)
 lvgl26_test(theme)
 # One theme's styles take the place of another's in the widgets that exist.
 lvgl26_test(theme_restyle)
+# A display that follows a state: Signal's day and dark, with the pictures of both, and two themes of different shapes.
+add_executable(theme_follow theme_follow.cpp)
+target_link_libraries(theme_follow PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME theme_follow COMMAND theme_follow A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_day.png
+                                                A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_dark.png)
+add_test(NAME theme_follow_violation_shape
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:theme_follow> -DCASE=shape
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
 if(LVGL26_NO_DEFAULT_THEME)
   lvgl26_test(no_default_theme)
@@ -755,6 +763,8 @@ lvgl26_compile_fail_message(in_unknown_part constexpr "lv: widgets have no part 
 lvgl26_compile_fail_message(in_unknown_state constexpr "lv: widgets have no state 'presed'. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
 lvgl26_compile_fail_message(in_unknown_name constexpr "lv: 'pressd' is neither a part nor a state. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
 lvgl26_compile_fail(in_widget_setter "no matching function for call to .animate")
+# display.follow takes the state of an enum.
+lvgl26_compile_fail(follow_not_an_enum "no matching function for call to .*follow|constraints not satisfied")
 lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct.. You gave int")
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail_message(match_missing_case static_assert "lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`.")
@@ -958,6 +968,12 @@ target_compile_options(example_scaled_font PRIVATE --embed-dir=${PROJECT_SOURCE_
                                                    --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
 target_link_libraries(example_scaled_font PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_scaled_font COMMAND example_scaled_font)
+
+# The example of docs/themes.md: a display that follows a state.
+add_executable(example_theme_follow ${PROJECT_SOURCE_DIR}/examples/theme_follow/main.cpp)
+target_link_libraries(example_theme_follow PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_follow_out)
+add_test(NAME example_theme_follow COMMAND example_theme_follow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_follow_out)
 
 # The example of docs/fonts.md. Its picture is the one on the page.
 add_executable(example_fonts ${PROJECT_SOURCE_DIR}/examples/fonts/main.cpp)
