@@ -43,6 +43,7 @@ The groups are the layers of the framework, in the order of the sidebar. `docs.j
 | [Themes](themes.md) | One look for every widget: the built-in Signal theme with its typefaces, and a theme of your own from a token file |
 | [Looks](looks.md) | A named group of design tokens used as a style, with parts, states and variants |
 | [Fonts](fonts.md) | A TrueType file becomes a font in read-only memory, made by the compiler and chosen by a typography token |
+| [Icons](icons.md) | Phosphor's icons by name, checked by the compiler, in a font of only the icons you use |
 | [Images](images.md) | A PNG file becomes pixels in read-only memory, decoded by the compiler into the display's own format |
 
 ### The program
