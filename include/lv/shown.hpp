@@ -1018,7 +1018,7 @@ struct shown_node {
   // The transition of the way back: the one given, else the one of the way forward.
   template <const transition_spec& Back, const transition_spec& Forward>
   static consteval transition_spec back_or() {
-    return Back.step != nullptr ? Back : Forward;
+    return !is_null(Back.step) ? Back : Forward;
   }
 
   // Where the state's value stands among the enumerators: the direction of a change. None for a bool.
