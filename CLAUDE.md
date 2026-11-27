@@ -282,6 +282,8 @@ clangd cannot parse the headers, so editors read stubs: the public API as plain 
 - Every function of a template in a stub has a body, `{ __builtin_unreachable(); }` when nothing else fits. Clang warns about a function without one when its arguments have no linkage. The stub tests run with `-Werror`.
 - The stubs are read by Clang only, and may use what our own code may not (`__builtin_unreachable`, an include guard in `tools/editor/fallback/contracts`).
 - A new member kind or value text in the reference data needs a rule in `tools/editor/reference_stubs.py`: `editor_tools` fails when a value becomes `stub::anything`.
+- A token stub holds the value of a length in pixels, a time, a number and a font weight, through its aliases (`initial_value` in `tools/editor/token_stubs.py`), so that code which needs a token's value while it compiles, such as the size of a frame, reads in the editor. A colour, a curve and the composite tokens hold their default: a stub that cannot hold a value exactly holds none.
+- `lv::like` is a `stub::member_of_scope`: it converts to the type of any property but not to `lv::arg`, so a property reads it one way. `lv::name_of` is an empty text, a constant as an id or a text made from it must be. `tests/editor/api_uses.cpp` uses both in properties.
 - A file under `examples/` that needs a build setting the editor check lacks, such as the SDL driver, says `// editor-check: skip, <reason>` in its first ten lines. The check prints it as skipped.
 
 ## Research

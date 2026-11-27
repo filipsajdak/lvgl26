@@ -146,6 +146,12 @@ constexpr lv::length gap = tok.space.gap;
 constexpr auto raw_gap = lv::raw(3 * px);
 static_assert(std::same_as<decltype(raw_gap), const lv::raw_value<lv::length>>);
 static_assert(gap == *tok.space.gap && raw_gap.value == 3 * px);
+
+// A stub token holds the value of a length, a time and a number, so code that needs a token's
+// value while it compiles, such as the size of a frame, reads in the editor as it builds.
+static_assert(tok.space.gap->raw() == 8 && tok.space._2xl->raw() == 32);
+static_assert(tok.time.quick->raw() == 150 && *tok.opacity.half == 0.5);
+static_assert(lv::frame<tok.space._2xl->raw(), tok.space.gap->raw()>::width == 32);
 static_assert(std::same_as<decltype(lv::signal::dark_tokens.color.muted), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::day_tokens.color.ground), lv::token<lv_color_t>>);  // C API
 
@@ -199,6 +205,23 @@ constexpr auto odd_font = lv::font<barlow_ttf>(12 * px, "0123456789");
 constexpr lv::face_file face{"Barlow", 500, barlow_ttf};
 static_assert(std::same_as<decltype(label_font), const lv::token<const lv_font_t*>>);  // C API
 static_assert(std::same_as<decltype(odd_font), const lv_font_t* const>);  // C API
+
+// lv::like and lv::name_of in a property: the editor reads each as a value of the property's type.
+enum class roast { light, dark };
+struct roast_names {
+  static constexpr char light[] = "Light";
+  static constexpr char dark[]  = "Dark";
+};
+struct roast_pictures {
+  static constexpr auto light = lv::image_file<picture_png>;
+  static constexpr auto dark  = lv::image_file<picture_png>;
+};
+template <roast R>
+constexpr auto roast_tile() {
+  return lv::button(lv::image({.src = lv::like<R, roast_pictures>}),
+                    lv::label({.text = lv::like<R, roast_names>}), lv::label({.text = lv::name_of<R>}));
+}
+constexpr auto roast_tiles = lv::row(roast_tile<roast::light>(), roast_tile<roast::dark>());
 static_assert(face.weight == 500 && face.family == "Barlow" && face.characters.empty());
 
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};

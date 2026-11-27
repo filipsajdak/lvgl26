@@ -104,6 +104,41 @@ def token_type(root: dict, token: dict, inherited: str | None, depth: int = 0) -
     return token_type(root, target[0], target[1], depth + 1) if target else None
 
 
+def resolved_value(root: dict, token: dict, depth: int = 0) -> object:
+    """The value of a token, through its aliases; None when an alias leads nowhere."""
+    value = token.get("$value")
+    if not is_alias(value):
+        return value
+    target = alias_target(root, value) if depth <= LONGEST_ALIAS_CHAIN else None
+    return resolved_value(root, target[0], depth + 1) if target else None
+
+
+def number_text(value: float) -> str:
+    """A number as C++ writes it: an integer without a point, anything else as it is."""
+    return str(int(value)) if float(value).is_integer() else repr(float(value))
+
+
+def initial_value(value_type: str, value: object) -> str | None:
+    """The C++ value a stub token holds, for the types whose value an editor can work with: a
+    length in pixels, a time, a number and a font weight. None for the others, which hold their
+    default: a stub that cannot know a value must not invent one.
+
+    A program uses such values where the compiler needs them, such as the size of a frame
+    (lv::frame<tok.size.width->raw(), ...>), so a stub that held 0 failed checks the real build passes.
+    """
+    if value_type == "length" and isinstance(value, dict) and value.get("unit") == "px" \
+            and float(value.get("value", 0.5)).is_integer():
+        return f"::lv::length::px({number_text(value['value'])})"
+    if value_type == "duration" and isinstance(value, dict) and value.get("unit") in ("ms", "s"):
+        ms = value["value"] * (1000 if value["unit"] == "s" else 1)
+        return f"::lv::duration{{{number_text(ms)}}}" if float(ms).is_integer() and ms >= 0 else None
+    if value_type == "double" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return repr(float(value))
+    if value_type == "std::int32_t" and isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    return None
+
+
 def is_token_file(document: object) -> bool:
     """Whether `document` is a DTCG file: an object with a "$value" somewhere in it."""
     if not isinstance(document, dict):
@@ -161,7 +196,9 @@ def group_struct(root: dict, group: dict, name: str, inherited: str | None, inde
         value_type = VALUE_TYPES.get(token_type(root, child, inherited) or "")
         if value_type is not None:
             lines.append(f"{inner}/// {comment_of(child)}")
-            lines.append(f"{inner}token<{value_type}> {member}{{}};")
+            value = initial_value(value_type, resolved_value(root, child))
+            initializer = f"{value}, ::lv::detail::from_design_tokens{{}}" if value is not None else ""
+            lines.append(f"{inner}token<{value_type}> {member}{{{initializer}}};")
     lines.append(f"{indent}}};")
     return lines
 
