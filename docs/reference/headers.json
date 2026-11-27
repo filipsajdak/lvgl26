@@ -1,5 +1,5 @@
 {
-  "lv/animate.hpp": ["from_to", "animatable", "animate"],
+  "lv/animate.hpp": ["from_to", "animatable", "animatable_style", "animate", "view_in", "in"],
   "lv/application.hpp": ["heap_use", "loop_source", "waiting_loop_source", "in_loop", "application"],
   "lv/but.hpp": ["but"],
   "lv/computed.hpp": ["computed", "dependency", "bind", "effect"],
@@ -10,7 +10,7 @@
   "lv/event.hpp": ["event"],
   "lv/events.hpp": ["event_ref"],
   "lv/font.hpp": ["font", "face_file", "typeface"],
-  "lv/image.hpp": ["image_file"],
+  "lv/image.hpp": ["image_file", "mask_file"],
   "lv/list.hpp": ["list", "each", "list_error", "bind", "row_view"],
   "lv/look.hpp": ["look", "design_of", "design", "drawn_font", "font_object", "look_of", "font_of", "draw"],
   "lv/lv.hpp": ["screen_active"],

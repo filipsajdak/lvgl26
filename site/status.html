@@ -146,6 +146,7 @@
       <li><strong><code>lv::computed</code> and <code>lv::effect</code></strong> <span>A value derived from states, bound to a widget like a state, and code that runs when states change. The dependencies are fixed at compile time; nothing is registered at run time.</span> <small>computed.hpp; computed.cpp</small></li>
       <li><strong>Coroutine tasks</strong> <span><code>lv::task&lt;T&gt;</code> on LVGL's loop. <code>view.next().clicked</code> and every other event, <code>lv::sleep</code>, <code>lv::first</code>, <code>lv::spawn</code>. A deleted widget cancels the task. <code>lv::spawn(task, owner)</code> starts a task that ends with a widget.</span> <small>task.hpp; task.cpp</small></li>
       <li><strong>Animation</strong> <span><code>lv::animate(widget, {.property = {from, to}}, time)</code> for a property that takes one number: a whole number, a length, an angle or an opacity. The result says whether it ran to its end.</span> <small>animate.hpp; animate.cpp</small></li>
+      <li><strong>Animate style properties</strong> <span><code>lv::animate(label, {.opa = {0 * pct, 100 * pct}, ...}, time)</code> moves a local style value of the main part: every style property that takes one number (opacity, <code>translate_x</code>, <code>transform_scale</code>, <code>arc_width</code>, ...), with its own type. <code>lv::in&lt;"knob", "pressed"&gt;(view)</code> names the part and the state. A name that is also a widget setter (<code>width</code>, <code>x</code>) stays the widget's in the plain call.</span> <small>animate.hpp; animate_style, fail/in_*.cpp, editor/api_uses.cpp</small></li>
       <li><strong>Easing curves for animations</strong> <span>A fourth argument of <code>lv::animate</code>: a name from <code>lv::ease</code> (LVGL\'s six animation paths and its 24 named curves), a <code>cubicBezier</code> design token, or an <code>lv::bezier</code> as in CSS. Without it the value moves at one speed.</span> <small>easing.hpp, animate.hpp; animate.cpp</small></li>
       <li><strong>Other threads</strong> <span><code>lv::ui_scheduler</code>: <code>post()</code> from any thread, <code>co_await ui.schedule()</code> in a task. Hosted only. Needs no LVGL build option.</span> <small>ui_scheduler.hpp; ui_scheduler.cpp, under ThreadSanitizer</small></li>
       <li><strong>Match</strong> <span><code>lv::match</code> with <code>lv::is&lt;...&gt;</code> and <code>lv::otherwise</code>. For an enum, every enumerator needs exactly one arm.</span> <small>match.hpp; match.cpp</small></li>
@@ -246,7 +247,6 @@
       <li id="gap-runtime-theming"><strong>A style that follows a state</strong> <span>A style property bound to a state, so a theme or a look can change in place instead of mounting the tree again.</span> <small>Unblocks: Slint's four printer themes; the three looks of the Qt treadmill; dark and light switching</small></li>
       <li id="gap-gradients"><strong>More gradients</strong> <span>Diagonal gradients and gradients with several stops. Today a gradient is vertical or horizontal with two colors.</span> <small>Unblocks: the printer panel's tiles and color button; designer-made backgrounds</small></li>
       <li id="gap-font-symbols"><strong>LVGL's symbols with a drawn font</strong> <span>A font drawn from a TrueType file holds no LVGL symbol, and no token names LVGL's own font. A drop-down list draws its arrow in the font of its indicator part, which inherits it (lv_dropdown.c), and LVGL's theme sets a font on the screen only (lv_theme_default.c). So a body font that reaches the list turns the arrow into a box.</span> <small>Unblocks: a body font for all text of the coffee machine tutorial; Signal's typefaces with a drop-down list</small></li>
-      <li id="gap-animate-opacity"><strong>Animate a widget's opacity</strong> <span>A fade of a whole widget. LVGL has no setter for it, so <code>lv::animate</code> has no member for it.</span> <small>Unblocks: the splash fades of the Qt treadmill; Qt and Slint opacity animations</small></li>
       <li id="gap-bind-layout"><strong>Bind position and size to a state</strong> <span>Follow a state with x, y, width and height, and with a text that formats several values.</span> <small>Unblocks: moving a dot along a track; a time such as 6:05 in one binding</small></li>
       <li id="gap-add-calls"><strong>Children that a widget creates itself</strong> <span>The add calls of LVGL as nodes: list items, tabs, message boxes, menu pages.</span> <small>Unblocks: about 20 of LVGL's examples; Qt TabBar and Dialog; Slint TabWidget and PopupWindow</small></li>
       <li id="gap-charts"><strong>Charts and results that are not widgets</strong> <span>Chart series, scale sections and other things that an add call returns that are not widgets.</span> <small>Unblocks: the Slint energy monitor; Qt Charts; TouchGFX graphs</small></li>
@@ -278,7 +278,7 @@
           <tr><th scope="row">Property binding and expressions</th><td><span class="pill ok">Works</span></td><td><code>lv::bind</code> and <code>lv::computed</code></td><td></td></tr>
           <tr><th scope="row">A model object with properties</th><td><span class="pill ok">Works</span></td><td><code>lv::state</code>, typed, with units for a measure</td><td></td></tr>
           <tr><th scope="row">Timer, Connections</th><td><span class="pill ok">Works</span></td><td>A coroutine: <code>co_await lv::sleep(...)</code> and <code>co_await button.next().clicked</code></td><td></td></tr>
-          <tr><th scope="row">NumberAnimation, Behavior, easing</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property. Opacity is missing</td><td><a href="#gap-animate-opacity">Animate a widget's opacity</a></td></tr>
+          <tr><th scope="row">NumberAnimation, Behavior, easing</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property, and style properties such as opacity. A Behavior that animates on every change is not built</td><td></td></tr>
           <tr><th scope="row">State and Transition</th><td><span class="pill part">Partial</span></td><td><code>lv::match</code> on a state and animations in a task. There is no declarative state list</td><td></td></tr>
           <tr><th scope="row">Image with a PNG or JPEG</th><td><span class="pill ok">Works</span></td><td><code>lv::image_file</code> and <code>lv::encoded_image</code></td><td></td></tr>
           <tr><th scope="row">Image with an SVG, AnimatedImage</th><td><span class="pill plan">Planned</span></td><td>Not built</td><td><a href="#gap-svg-animated">SVG, Lottie and animated pictures</a></td></tr>
@@ -306,7 +306,7 @@
     </div>
 
     <h3 id="migration-slint">Slint</h3>
-    <p class="note">15 of 27 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
+    <p class="note">16 of 27 concepts work. <a href="docs/from-slint.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -319,7 +319,7 @@
           <tr><th scope="row">Two-way binding with &lt;=&gt;</th><td><span class="pill ok">Works</span></td><td><code>lv::bind</code> on an arc or a slider follows the state and writes back</td><td></td></tr>
           <tr><th scope="row">A property made from others</th><td><span class="pill ok">Works</span></td><td><code>lv::computed</code></td><td></td></tr>
           <tr><th scope="row">callback and clicked =&gt;</th><td><span class="pill ok">Works</span></td><td>A function pointer, or a coroutine that waits for the event</td><td></td></tr>
-          <tr><th scope="row">animate with duration and easing</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code>, one number for each property. Opacity is missing</td><td><a href="#gap-animate-opacity">Animate a widget's opacity</a></td></tr>
+          <tr><th scope="row">animate with duration and easing</th><td><span class="pill ok">Works</span></td><td><code>lv::animate</code>, one number for each property, style properties included</td><td></td></tr>
           <tr><th scope="row">states and transitions</th><td><span class="pill part">Partial</span></td><td><code>lv::match</code> on a state and animations in a task</td><td></td></tr>
           <tr><th scope="row">Timer</th><td><span class="pill ok">Works</span></td><td><code>co_await lv::sleep(...)</code> in a task</td><td></td></tr>
           <tr><th scope="row">Image with @image-url</th><td><span class="pill ok">Works</span></td><td><code>lv::image_file</code> and <code>lv::encoded_image</code></td><td></td></tr>
@@ -350,14 +350,14 @@
         <tbody>
           <tr><th scope="row">A screen made in Designer</th><td><span class="pill part">Partial</span></td><td>A constexpr tree written as code. A live preview is planned</td><td><a href="#gap-live-preview">Live preview that reloads on save</a></td></tr>
           <tr><th scope="row">Box, Container</th><td><span class="pill ok">Works</span></td><td><code>lv::box</code>, <code>lv::group</code>, <code>lv::column</code>, <code>lv::row</code></td><td></td></tr>
-          <tr><th scope="row">Image</th><td><span class="pill ok">Works</span></td><td><code>lv::image</code> with <code>lv::image_file</code></td><td></td></tr>
+          <tr><th scope="row">Image</th><td><span class="pill ok">Works</span></td><td><code>lv::image</code> with <code>lv::image_file</code>, or <code>lv::mask_file</code> for a shape that a style tints</td><td></td></tr>
           <tr><th scope="row">TextArea, Button, ToggleButton</th><td><span class="pill ok">Works</span></td><td><code>lv::label</code>, <code>lv::button</code>, <code>lv::toggle</code></td><td></td></tr>
           <tr><th scope="row">Slider, Gauge, CircularProgress</th><td><span class="pill ok">Works</span></td><td><code>lv::slider</code>, <code>lv::arc</code>, <code>lv::bar</code></td><td></td></tr>
           <tr><th scope="row">ScrollWheel</th><td><span class="pill ok">Works</span></td><td><code>lv::roller</code>, with an enumerator name beside the options</td><td></td></tr>
           <tr><th scope="row">ScrollList, a dynamic list</th><td><span class="pill ok">Works</span></td><td><code>lv::each</code> over an <code>lv::list</code> of fixed capacity; a list that refills a few rows as they scroll in is planned</td><td></td></tr>
           <tr><th scope="row">Model and Presenter</th><td><span class="pill ok">Works</span></td><td><code>lv::state</code> and <code>lv::computed</code></td><td></td></tr>
           <tr><th scope="row">Screen transitions</th><td><span class="pill ok">Works</span></td><td><code>lv::shown</code>(state, {.enter = ..., .leave = ...}) with <code>lv::transition:</code> the new page is built first, the old one leaves while both are alive</td><td></td></tr>
-          <tr><th scope="row">Animations and easing equations</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property</td><td><a href="#gap-animate-opacity">Animate a widget's opacity</a></td></tr>
+          <tr><th scope="row">Animations and easing equations</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property, style properties included</td><td></td></tr>
           <tr><th scope="row">handleTickEvent</th><td><span class="pill ok">Works</span></td><td><code>co_await lv::sleep(...)</code> in a task</td><td></td></tr>
           <tr><th scope="row">Fonts and typography</th><td><span class="pill ok">Works</span></td><td><code>lv::typeface</code>, made by the compiler</td><td></td></tr>
           <tr><th scope="row">Colors and sizes</th><td><span class="pill ok">Works</span></td><td>Design tokens. A style takes tokens only</td><td></td></tr>

@@ -85,6 +85,13 @@ inline constexpr const lv_image_dsc_t* image_file = [] {
 
 template <const auto& File>
   requires detail::embedded_bytes<decltype(File)>
+inline constexpr const lv_image_dsc_t* mask_file = [] {
+  static_assert(detail::header_missing<decltype(File)>, "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>");
+  return static_cast<const lv_image_dsc_t*>(nullptr);
+}();
+
+template <const auto& File>
+  requires detail::embedded_bytes<decltype(File)>
 inline constexpr const lv_image_dsc_t* encoded_image = [] {
   static_assert(detail::header_missing<decltype(File)>,
                 "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>");
