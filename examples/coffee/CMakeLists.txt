@@ -18,10 +18,17 @@ foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   endif()
 endforeach()
 
-# The machine's typeface is a copy of the site's Barlow, beside each design that embeds it.
-foreach(copy 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
+# Steps 1 to 3 draw up to ten fonts each in the compiler. Two of them side by side, with the rest of
+# a build, need more memory than a CI runner has: they compile one at a time.
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS coffee_fonts=1)
+set_target_properties(coffee_1 coffee_2 coffee_3 PROPERTIES JOB_POOL_COMPILE coffee_fonts)
+
+# The machine's typeface is a copy of the site's Barlow, beside each design that embeds it:
+# every file of such a folder must equal the site's file of the same name.
+foreach(copy 1-screen/fonts 2-values/fonts 3-pages/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
   string(REGEX MATCH "^[0-9]+" number ${copy})
-  foreach(file Barlow-Medium.ttf OFL.txt)
+  file(GLOB copied RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${copy} ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/*)
+  foreach(file IN LISTS copied)
     add_test(NAME example_coffee_${number}_font_${file}
              COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/${file}
                      ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})

@@ -213,7 +213,7 @@
       "targets": "handlers l1_views"
     },
     "include/lv/font.hpp": {
-      "tests": "^concepts$|^font$|^font_bytes$|^look$|^fail_font_bitmap_too_large$|^fail_font_glyph_too_large$|^fail_font_glyph_too_tall$|^fail_font_lacks_table$|^fail_font_needs_token$|^fail_font_no_glyph$",
+      "tests": "^concepts$|^font$|^font_bytes$|^look$|^fail_font_bitmap_too_large$|^fail_font_glyph_too_large$|^fail_font_glyph_too_tall$|^fail_font_lacks_table$|^fail_font_needs_token$|^fail_font_no_glyph$|^fail_font_ascii_plus",
       "targets": "concepts font font_bytes look"
     },
     "include/lv/host.hpp": {
