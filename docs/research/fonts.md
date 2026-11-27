@@ -459,12 +459,12 @@ All three give a font of the default set plus the characters named.
 
 My recommendation is A: it changes no type, it is a constant like `lv::glyphs<...>` of the icons (`include/lv/icons.hpp`), and it also serves `lv::font<ttf>(size, characters)` and the split form (`lv::draw<"text.label">(type)`), which take the same `typeface`. `ascii_plus<"€·">` is a variable template of a fixed string, evaluated once and as a static string. The compile-fail test is a character that the file lacks, and a text that is not valid UTF-8.
 
-### What I cannot settle
+### Decisions of the owner (2026-11-27)
 
-1. The name: `lv::ascii_plus<"...">` (my choice), `lv::ascii_and<"...">`, or `lv::with_ascii<"...">`.
-2. Is a preset worth having beside it? `lv::latin1` would be the default set and U+00A0..U+00FF, 191 characters in all: it costs 96 more glyphs (about 72 G instructions and 12 KB at 16 px), which a project pays on purpose. The coffee steps need only `€` and `·`.
-3. Should the sparse list be avoided for the default characters by sorting the extras into a second range (a second character map for U+20AC and the rest), so that the default range stays direct? It saves about 200 bytes and the binary search at run time, and costs a second map in LVGL's table (`cmap_num = 2`). I would not build it now.
-4. `lv::scaled_font` (the device draws the glyphs) takes a TrueType file and draws any character, so nothing changes there. Is that right for the owner's list?
+1. The name and the form are A: `lv::ascii_plus<"€·">`, a constant usable wherever `characters` goes.
+2. A Latin-1 preset now, despite its cost: `lv::latin1` (the default set and U+00A0 to U+00FF, 191 characters) and `lv::latin1_plus<"€">`. Measured when built (Barlow Medium, 16 px): 150.0 G instructions against 63.95 G for the default set (+86 G, a build of 11 seconds and 0.9 GB) and 122,095 bytes of constant data against 110,361 (+11.7 KB). The doc comment of the preset and `docs/fonts.md` state it, so that people see it before using it.
+3. No second character map: the default range does not stay direct.
+4. `lv::scaled_font` needs nothing: the device draws any character of the file.
 
 ### Tests and checks to write with it
 
