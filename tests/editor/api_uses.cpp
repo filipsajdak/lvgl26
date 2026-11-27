@@ -808,6 +808,13 @@ static_assert(owner_caption.sv() == "owner");
 
 }  // namespace api_uses
 
+// ---- a display that follows a state --------------------------------------------------
+
+void follows_a_mode(lv::display& display, lv::state<lv::signal::mode>& mode) {
+  display.follow(mode, {lv::signal::day, lv::signal::dark});
+  mode = lv::signal::mode::dark;
+}
+
 // ---- looks --------------------------------------------------------------------------
 
 // The project names its tokens and typeface once, before the first look.

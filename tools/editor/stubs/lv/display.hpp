@@ -125,6 +125,13 @@ class display {
   /// Asks the panel to hide or show itself; a panel that cannot only changes visible().
   void hide();
   void show();
+
+  /// The display follows `state`: the theme of its value is the display's theme, and when it changes every widget
+  /// of the display is restyled in place. The themes are indexed by the enumerators of the state's enum in order:
+  /// display.follow(mode, {lv::signal::day, lv::signal::dark}). The themes have one shape.
+  template <class S, std::size_t N>
+    requires std::is_enum_v<typename S::value_type>
+  void follow(const S& state, const theme_styles (&themes)[N]) {}
 };
 
 /// The display a widget is on. The widget must be on an lv::display.
