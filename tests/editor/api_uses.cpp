@@ -8,6 +8,7 @@
 
 #include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
+#include <lv/icons.hpp>
 #include <lv/host.hpp>
 #include <lv/image.hpp>
 #include <lv/list.hpp>
@@ -203,10 +204,17 @@ static_assert(face.weight == 500 && face.family == "Barlow" && face.characters.e
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};
 constinit lv::scaled_font other_reading{barlow_ttf, lv::raw(20 * px)};
 
+constexpr auto gear_text = lv::glyph<"gear">;
+constexpr auto icon_list = lv::glyphs<"gear", "plus">;
+constexpr auto gear_icon = lv::icon<"gear">({.id = "gear"});
+static_assert(std::same_as<decltype(gear_text), const char* const>);
+
 constexpr auto dot = lv::image_file<picture_png>;
 constexpr auto kept_dot = lv::encoded_image<picture_png>;
+constexpr auto dot_mask = lv::mask_file<picture_png>;
 static_assert(std::same_as<decltype(dot), const lv_image_dsc_t* const>);  // C API
 static_assert(std::same_as<decltype(kept_dot), const lv_image_dsc_t* const>);  // C API
+static_assert(std::same_as<decltype(dot_mask), const lv_image_dsc_t* const>);  // C API
 
 // ---- state ------------------------------------------------------------------------
 
@@ -585,6 +593,15 @@ int use_lists(lv::obj screen) {
 
 // ---- tasks ------------------------------------------------------------------------
 
+
+// What lv::in gives, and the struct that it animates.
+template <class T>
+inline constexpr bool is_view_in = false;
+template <lv::detail::fixed W, lv_style_selector_t S>  // C API
+inline constexpr bool is_view_in<lv::view_in<W, S>> = true;
+static_assert(is_view_in<decltype(lv::in<"knob", "pressed">(std::declval<lv::view<"arc">>()))>);
+static_assert(std::same_as<decltype(lv::animatable_style<>{}.arc_width), lv::from_to<lv::length>>);
+
 lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
   co_await button.next().clicked;
   co_await button.next().value_changed;
@@ -596,6 +613,12 @@ lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
   co_await lv::animate(arc, {.width = {80 * px, 120 * px}}, 200 * ms, lv::ease::in_quad);
   co_await lv::animate(arc, {.rotation = {0 * deg, 90 * deg}}, 200 * ms, tok.motion.fall);
   co_await lv::animate(arc, {.value = {0, 1}}, 200 * ms, lv::bezier{0.33, 0, 0.67, 0.33});
+  // Local style values: of the main part, and of a part and a state behind lv::in.
+  co_await lv::animate(arc, {.opa = {0 * pct, 100 * pct}}, 220 * ms);
+  co_await lv::animate(arc, {.translate_y = {0 * px, -24 * px}}, 220 * ms, lv::ease::out_quad);
+  co_await lv::animate(lv::in<"indicator">(arc), {.arc_width = {2 * px, 8 * px}}, 120 * ms);
+  co_await lv::animate(lv::in<"pressed">(arc), {.transform_scale = {256, 280}}, 120 * ms);
+  co_await lv::animate(lv::in<"knob", "pressed">(arc), {.opa = {20 * pct, 100 * pct}}, 120 * ms);
   co_await button.next().gone;
 }
 

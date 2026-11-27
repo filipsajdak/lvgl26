@@ -184,16 +184,38 @@ def animatable_type(member: dict) -> str | None:
     return unit if unit in ANIMATABLE else None
 
 
+def style_animatable_type(member: dict) -> str | None:
+    """The type of a style property that lv::animate can run: a design value of one number, or nothing."""
+    takes = member.get("takes", [])
+    if len(takes) != 1 or "enum" in takes[0]:
+        return None
+    value = value_type(takes[0]["write"])
+    if not value.startswith("lv::styled<"):
+        return None
+    unit = value.removeprefix("lv::styled<").removesuffix(">")
+    return unit if unit in ANIMATABLE else None
+
+
 def animatable_struct(reference: dict, widget: str) -> str:
+    """The properties of `widget` that lv::animate runs: its setters of one number, then the style properties
+    that no setter of it names. The widget "" is the struct of lv::in: the style properties alone."""
     lines = []
-    for member in members_of(reference, widget):
+    names = set()
+    for member in members_of(reference, widget) if widget else []:
         unit = animatable_type(member)
         if unit is not None:
+            names.add(member["name"])
             lines.append(f"  /// From and to: {member['takes'][0]['write']}. Animates {member['sets']}.\n"
                          f"  lv::from_to<{unit}> {member['name']}{{}};")
-    name = identifier(widget)
+    for member in reference["style"]:
+        unit = style_animatable_type(member)
+        if unit is not None and member["name"] not in names:
+            lines.append(f"  /// From and to: a {unit.removeprefix('lv::')}. Animates the style property {member['name']}.\n"
+                         f"  lv::from_to<{unit}> {member['name']}{{}};")
+    name = identifier(widget) if widget else "style"
     members = "\n".join(lines)
-    return (f'/// The properties of "{widget}" that lv::animate can run, each with its two ends.\n'
+    what = f'"{widget}"' if widget else "a part and a state (lv::in)"
+    return (f'/// The properties of {what} that lv::animate can run, each with its two ends.\n'
             f"struct animatable_{name} {{\n{members}\n}};\n"
             f'template <>\nstruct animatable_for<"{widget}"> {{\n  using type = animatable_{name};\n}};')
 
@@ -263,7 +285,7 @@ def header(reference: dict, source: str) -> str:
         *enums,
         style_struct(reference),
         *[props_struct(reference, widget) for widget in widgets],
-        *[animatable_struct(reference, widget) for widget in widgets],
+        *[animatable_struct(reference, widget) for widget in [*widgets, ""]],
         *getters(reference),
         events_struct(reference),
         theme_structs(reference),
