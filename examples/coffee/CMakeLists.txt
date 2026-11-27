@@ -18,10 +18,12 @@ foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   endif()
 endforeach()
 
-# The machine's typeface is a copy of the site's Barlow, beside each design that embeds it.
-foreach(copy 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
+# The machine's typeface is a copy of the site's Barlow, beside each design that embeds it:
+# every file of such a folder must equal the site's file of the same name.
+foreach(copy 1-screen/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
   string(REGEX MATCH "^[0-9]+" number ${copy})
-  foreach(file Barlow-Medium.ttf OFL.txt)
+  file(GLOB copied RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${copy} ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/*)
+  foreach(file IN LISTS copied)
     add_test(NAME example_coffee_${number}_font_${file}
              COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/${file}
                      ${PROJECT_SOURCE_DIR}/site/media/fonts/${file})
