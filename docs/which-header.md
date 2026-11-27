@@ -18,7 +18,7 @@ The table is written from what each header declares, read by reflection (`docs/r
 |---|---|
 | `<lv/encoded_image.hpp>` | `lv::encoded_image` |
 | `<lv/font.hpp>` | `lv::face_file`, `lv::font`, `lv::typeface` |
-| `<lv/image.hpp>` | `lv::image_file` |
+| `<lv/image.hpp>` | `lv::image_file`, `lv::mask_file` |
 | `<lv/list.hpp>` | `lv::each`, `lv::list`, `lv::list_error`, `lv::row_view` |
 | `<lv/look.hpp>` | `lv::design`, `lv::design_of`, `lv::draw`, `lv::drawn_font`, `lv::font_object`, `lv::font_of`, `lv::look`, `lv::look_of` |
 | `<lv/one_of.hpp>` | `lv::held`, `lv::not_mounted`, `lv::one_of` |
