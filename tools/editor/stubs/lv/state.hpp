@@ -29,6 +29,8 @@ class state {
   T value_{};
 
  public:
+  using value_type = T;
+
   constexpr state() = default;
   constexpr explicit state(T initial) : value_(initial) {}
   state(const state&) = delete;
