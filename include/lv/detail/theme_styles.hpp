@@ -7,6 +7,7 @@
 #include <lvgl/lvgl.h>
 
 #include <cstddef>
+#include <cstdint>
 
 namespace lv {
 
@@ -27,6 +28,24 @@ inline void apply_theme(lv_theme_t* theme, lv_obj_t* o) {
   const lv_obj_class_t* widget = lv_obj_get_parent(o) != nullptr ? lv_obj_get_class(o) : nullptr;
   for (auto e = static_cast<const theme_entry*>(lv_theme_get_user_data(theme)); e->style != nullptr; ++e)
     if (e->widget == widget) static_cast<void>(add_style(o, e->style, e->selector));
+}
+
+// The entry that ends a theme's list.
+inline const theme_entry* theme_end(const theme_entry* first) {
+  while (first->style != nullptr) ++first;
+  return first;
+}
+
+// Puts the styles of the theme `to` where the theme `from` put its own, in this widget and in all it
+// holds. Entry i of `to` takes the place of entry i of `from`: LVGL swaps the style where it stands in the
+// widget's list, so a look or a node's style that was added after the theme still wins over it, and nothing
+// is allocated. A widget that holds no style of `from` (a group removed them all) is left as it is.
+// Both lists have the same shape: the same class and selector in each position.
+inline void restyle(lv_obj_t* o, const theme_entry* from, const theme_entry* to) {
+  const lv_obj_class_t* widget = lv_obj_get_parent(o) != nullptr ? lv_obj_get_class(o) : nullptr;
+  for (const theme_entry *a = from, *b = to; a->style != nullptr; ++a, ++b)
+    if (a->widget == widget && a->style != b->style) static_cast<void>(lv_obj_replace_style(o, a->style, b->style, a->selector));
+  for (std::uint32_t i = 0, n = lv_obj_get_child_count(o); i < n; ++i) restyle(lv_obj_get_child(o, static_cast<int32_t>(i)), from, to);
 }
 
 struct theme_access;

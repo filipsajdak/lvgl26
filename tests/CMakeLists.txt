@@ -227,6 +227,8 @@ add_test(NAME unsigned_values_violation_negative
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(application)
 lvgl26_test(theme)
+# One theme's styles take the place of another's in the widgets that exist.
+lvgl26_test(theme_restyle)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
 if(LVGL26_NO_DEFAULT_THEME)
   lvgl26_test(no_default_theme)

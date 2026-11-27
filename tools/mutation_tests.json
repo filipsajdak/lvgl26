@@ -173,8 +173,8 @@
       "targets": "task app_loop"
     },
     "include/lv/detail/theme_styles.hpp": {
-      "tests": "^theme$|^signal$",
-      "targets": "theme signal"
+      "tests": "^theme$|^signal$|^theme_restyle$",
+      "targets": "theme signal theme_restyle"
     },
     "include/lv/detail/ttf.hpp": {
       "tests": "^scaled_font$|^font$|^fail_scaled_font_needs_ttf$|^fail_scaled_font_raw_needs_ttf$",
