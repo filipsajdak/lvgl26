@@ -50,7 +50,7 @@ constexpr unsigned char condensed_bold_ttf[] = {
 };
 constexpr auto type = lv::typeface({
   {"Barlow", 500, barlow_ttf},
-  {"Barlow", 600, semibold_ttf},
+  {"Barlow", 600, semibold_ttf, lv::ascii_plus<"€">},
   {"Barlow", 700, bold_ttf},
   {"Barlow Condensed", 700, condensed_bold_ttf},
 });
@@ -150,7 +150,7 @@ constexpr auto tile() {
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
         lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
-        lv::label({.text = "EUR", .style = lv::look<"currency"> | currency_text})
+        lv::label({.text = "€", .style = lv::look<"currency"> | currency_text})
       )
     )
   );
