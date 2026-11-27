@@ -163,6 +163,11 @@ lvgl26_test(look)
 lvgl26_test(start_style)
 lvgl26_test(style_add)
 target_link_libraries(look PRIVATE lvgl26_test_data)
+# A look whose styles follow the mode of a display; the pictures are both modes.
+add_executable(mode_look mode_look.cpp)
+target_link_libraries(mode_look PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME mode_look COMMAND mode_look A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_day.png
+                                          A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_dark.png)
 # Two files of one program name looks, with the registration in a header they share.
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)
 target_link_libraries(look_link PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
@@ -1425,6 +1430,11 @@ lvgl26_compile_fail(missing_header_for_each_items "lv::for_each is in <lv/repeat
 lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
 lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
 lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
+lvgl26_compile_fail(missing_header_mode_look "lv::mode_look is in <lv/mode_look.hpp>: add #include <lv/mode_look.hpp>")
+lvgl26_compile_fail_message(mode_look_shape_property constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': the property 'border_width' is set in the first design only. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_shape_layer constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': it has 0 layer(s) (a part or a state), the first design has 1. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_unknown_group constexpr "lv: the look 'page' has no group 'page' in the token file. The groups there: <<names>>. Did you mean 'panel'?")
+lvgl26_compile_fail_message(mode_look_no_designs static_assert "lv: no designs are named for lv::mode_look. Name the token file of each mode once, in a header that every file includes: template <> inline constexpr lv::mode_designs_of<day, dark> lv::mode_designs<lv::override>{}; with lv::design<day> and lv::design<dark> specialized as lv::design<lv::override> is for lv::look.")
 lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_mask_file "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")

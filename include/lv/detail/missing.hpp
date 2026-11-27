@@ -65,6 +65,7 @@ inline constexpr fallback fallbacks[] = {
     {"list"sv, "lv/list.hpp"sv},           {"each"sv, "lv/list.hpp"sv},
     {"for_each"sv, "lv/repeat.hpp"sv},     {"for_each_field"sv, "lv/repeat.hpp"sv},
     {"theme"sv, "lv/theme.hpp"sv},         {"look"sv, "lv/look.hpp"sv},
+    {"mode_look"sv, "lv/mode_look.hpp"sv},
     {"image_file"sv, "lv/image.hpp"sv},    {"mask_file"sv, "lv/image.hpp"sv},
     {"encoded_image"sv, "lv/encoded_image.hpp"sv},
     {"runtime"sv, "lv/runtime.hpp"sv},     {"one_of"sv, "lv/one_of.hpp"sv},
@@ -109,6 +110,13 @@ theme_styles theme(detail::needs_theme_header) = delete("lv::theme is in <lv/the
 template <detail::fixed Paths, class D = override>
 inline constexpr auto look = [] {
   static_assert(detail::header_missing<D>, "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>");
+  return 0;
+}();
+
+// lv/mode_look.hpp
+template <detail::fixed Paths, class D = override>
+inline constexpr auto mode_look = [] {
+  static_assert(detail::header_missing<D>, "lv::mode_look is in <lv/mode_look.hpp>: add #include <lv/mode_look.hpp>");
   return 0;
 }();
 

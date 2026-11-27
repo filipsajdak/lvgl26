@@ -367,6 +367,13 @@ class display {
 
   void switch_to(std::size_t index) {
     if (followed_[index] != current_) install(followed_[index]);
+    if (index != mode_seen_) {
+      for (lv_obj_t* root : {lv_display_get_screen_active(raw_), lv_display_get_layer_bottom(raw_),
+                             lv_display_get_layer_top(raw_), lv_display_get_layer_sys(raw_)})
+        detail::switch_mode_in(root, mode_seen_, index);
+      mode_seen_ = index;
+    }
+    detail::mode_now = index;
   }
 
   template <class S>
@@ -407,6 +414,7 @@ class display {
   lv_display_t* raw_;
   lv_theme_t* theme_ = nullptr;
   const detail::theme_entry* current_ = nullptr;  // the entries that the widgets hold now
+  std::size_t mode_seen_ = 0;                     // the mode that the mode looks of its widgets are in
   follower follower_;
   std::array<const detail::theme_entry*, detail::most_followed_themes> followed_{};
   void* object_ = nullptr;
