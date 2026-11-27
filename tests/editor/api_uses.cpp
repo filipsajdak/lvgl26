@@ -145,6 +145,12 @@ constexpr lv::length gap = tok.space.gap;
 constexpr auto raw_gap = lv::raw(3 * px);
 static_assert(std::same_as<decltype(raw_gap), const lv::raw_value<lv::length>>);
 static_assert(gap == *tok.space.gap && raw_gap.value == 3 * px);
+
+// A stub token holds the value of a length, a time and a number, so code that needs a token's
+// value while it compiles, such as the size of a frame, reads in the editor as it builds.
+static_assert(tok.space.gap->raw() == 8 && tok.space._2xl->raw() == 32);
+static_assert(tok.time.quick->raw() == 150 && *tok.opacity.half == 0.5);
+static_assert(lv::frame<tok.space._2xl->raw(), tok.space.gap->raw()>::width == 32);
 static_assert(std::same_as<decltype(lv::signal::dark_tokens.color.muted), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::day_tokens.color.ground), lv::token<lv_color_t>>);  // C API
 
