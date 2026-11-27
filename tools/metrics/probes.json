@@ -73,6 +73,18 @@
       "stands_for": "a file that uses Signal's themes with fonts and fonts of its own when the library draws them (lv/signal_fonts.hpp)"
     },
     {
+      "id": "animate_style",
+      "kind": "compile",
+      "file": "tests/animate_style.cpp",
+      "stands_for": "a file that animates the local style values of a part and a state (lv::animate, lv::in)"
+    },
+    {
+      "id": "animate",
+      "kind": "compile",
+      "file": "tests/animate.cpp",
+      "stands_for": "a file that animates the properties of widgets: what lv::animate costs a file that uses it"
+    },
+    {
       "id": "port_page",
       "kind": "compile",
       "file": "examples/ports/slint/printer/print_page.cpp",
