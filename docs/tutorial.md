@@ -625,40 +625,93 @@ See [Values and units](values.md) and [State and bindings](state.md).
 
 ## 3. Pages
 
-Each step of the machine gets a page of its own. The pages follow one state, `current`, and a button sets it.
+The two screens become pages of one state, `current`. NEXT and BACK set it, and a button names the screen it goes to.
 
-<!-- snippet: examples/coffee/3-pages/main.cpp parts -->
+<!-- snippet: examples/coffee/3-pages/main.cpp screens -->
 ```cpp
-// A page's title, and a button that goes to another step.
-constexpr auto title(const char* text) {
-  return lv::label({.text = text, .style = lv::look<"title">});
-}
+// Where the machine is: one page for each screen, and a button that goes to one.
+enum class screen { drinks, your_cup };
 
-template <step To>
-constexpr auto go_to(const char* text) {
-  return lv::button(
-    {.style = lv::look<"action">, .on_clicked = [] { current = To; }}, lv::label({.text = text})
-  );
+constinit lv::state<screen> current{screen::drinks};
+
+template <screen To>
+void go() {
+  current = To;
 }
 ```
 
-`lv::shown` builds the page of the current step and deletes the old one. With a transition, the new page slides in while the old one slides out.
+The footer's buttons take what they do as a handler: a function, or a lambda that captures nothing.
+
+<!-- snippet: examples/coffee/3-pages/main.cpp parts -->
+```cpp
+// The header: the title top left, and the step top right as dots and "n / 4".
+constexpr auto dot(bool on) {
+  return lv::group({.style = on ? lv::look<"dot dot-on"> : lv::look<"dot">});
+}
+
+constexpr auto header(const char* title, int step, const char* count) {
+  return lv::group(
+    {.id = "header", .style = lv::look<"header">},
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
+      dot(step >= 1),
+      dot(step >= 2),
+      dot(step >= 3),
+      dot(step >= 4),
+      lv::label({.text = count, .style = lv::look<"step"> | caption_text})
+    )
+  );
+}
+
+// The footer: going back bottom left, going on bottom right.
+constexpr auto back(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"ghost">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"primary">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text) {
+  return lv::button({.style = lv::look<"primary">}, lv::label({.text = text, .style = label_text}));
+}
+
+// A screen with nothing to go back to keeps the place empty.
+constexpr auto no_back = lv::group({.size = {lv::size_content, lv::size_content}});
+
+constexpr auto footer(lv::tree_node auto back, lv::tree_node auto next) {
+  return lv::group({.id = "footer", .style = lv::look<"footer">}, back, next);
+}
+```
+
+`lv::shown` builds the page of the current screen. The new page slides in from the right while the old one slides out to the left, in the time and the curve of the token file. Only then is the old page deleted. Swipes come later, with the gesture feature.
 
 <!-- snippet: examples/coffee/3-pages/main.cpp pages -->
 ```cpp
-// A page slides in from the right, and the old one slides out to the left.
-constexpr auto slide_in  = lv::transition({.x = {480 * px, 0 * px}}, 250 * lv::ms, lv::ease::out);
-constexpr auto slide_out = lv::transition({.x = {0 * px, -480 * px}}, 250 * lv::ms, lv::ease::in);
+// The page of the current screen. A new page slides in from the right, and the old one slides out
+// to the left, in the time and the curve of the token file.
+constexpr auto width = tok.size.screen_width->raw();
+constexpr auto slide_in =
+  lv::transition({.x = {width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto slide_out =
+  lv::transition({.x = {0 * px, -width * px}}, *tok.duration.enter, *tok.ease.out);
 
 constexpr auto ui = lv::group(
   lv::shown(
-    current, {.enter = slide_in, .leave = slide_out}, lv::is<step::drinks>(drinks),
-    lv::is<step::cup>(your_cup), lv::is<step::brewing>(brewing), lv::is<step::enjoy>(enjoy)
+    current, {.enter = slide_in, .leave = slide_out}, lv::is<screen::drinks>(drinks),
+    lv::is<screen::your_cup>(your_cup)
   )
 );
 ```
 
-![Step 3: the page of your cup, with the sliders, the size, the beans and the button Brew](media/coffee-3.png)
+![Step 3: half way through the slide, the drinks page leaving to the left and the cup page coming in from the right](media/coffee-3.png)
 
 See [Mounting and slots](mounting.md).
 
