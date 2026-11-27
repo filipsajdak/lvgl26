@@ -170,7 +170,8 @@ constexpr auto ui = lv::group(
 );
 //! [drinks]
 
-constinit lv::frame<480, 320> frame;
+// The display's memory, as large as the screen of the token file.
+constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
 
 }  // namespace coffee
 
