@@ -1,4 +1,4 @@
-// Step 7 of the coffee machine tutorial (docs/research/tutorial-coffee.md): a service page in a
+// Step 7 of the coffee machine tutorial (docs/tutorial.md): a service page in a
 // file of its own, and the program's settings in lvgl26.json.
 //
 //   coffee_7    writes coffee_7.png, the finished machine as it starts, and coffee_7_service.png,

@@ -1,0 +1,368 @@
+<title>Coffee Machine Mock-up</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout concept: a review sheet. One live 480 x 320 panel up front, then every screen at 1:1, then the review that led to it.
+   Panel tokens are Signal's (day and dark); page chrome tokens are separate and follow the viewer's theme. */
+:root {
+  --page-bg: #f6f6f4; --page-fg: #16171a; --page-muted: #5a5d66; --page-line: #d9dadf; --page-card: #ffffff; --page-accent: #1f3fbf;
+  --font-text: "Barlow", system-ui, sans-serif; --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page-bg: #101114; --page-fg: #eceef2; --page-muted: #a3a7b2; --page-line: #2c2e36; --page-card: #181a1f; --page-accent: #9db4ff; color-scheme: dark } }
+:root[data-theme="dark"] { --page-bg: #101114; --page-fg: #eceef2; --page-muted: #a3a7b2; --page-line: #2c2e36; --page-card: #181a1f; --page-accent: #9db4ff; color-scheme: dark }
+body { background: var(--page-bg); color: var(--page-fg); font-family: var(--font-text); font-size: 15px; line-height: 1.5; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 56px; }
+main { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1 { font-family: var(--font-display); font-size: 44px; line-height: 1.05; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 8px; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 26px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 12px; }
+p { margin: 0 0 10px; max-width: 68ch; }
+.muted { color: var(--page-muted); }
+.row { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+.col { flex: 1 1 320px; min-width: 0; }
+.card { background: var(--page-card); border: 1px solid var(--page-line); padding: 16px 18px; }
+ul.plain { margin: 0; padding-left: 18px; } ul.plain li { margin-bottom: 4px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar button { font: inherit; font-weight: 600; padding: 8px 14px; border: 1px solid var(--page-line); background: var(--page-card); color: var(--page-fg); cursor: pointer; }
+.toolbar button[aria-pressed="true"] { background: var(--page-fg); color: var(--page-bg); }
+.toolbar button:focus-visible, .dev button:focus-visible { outline: 3px solid var(--page-accent); outline-offset: 2px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); gap: 32px 24px; }
+figure { margin: 0; min-width: 0; } figcaption { margin-top: 8px; font-size: 14px; color: var(--page-muted); max-width: 62ch; } figcaption b { color: var(--page-fg); }
+.frame { position: relative; } .frame > .scaled { transform-origin: top left; width: 480px; height: 320px; }
+.tablewrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; } th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--page-line); vertical-align: top; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; } .sw { width: 112px; border: 1px solid var(--page-line); background: var(--page-card); font-size: 12px; } .sw i { display: block; height: 28px; } .sw span { display: block; padding: 4px 6px; }
+
+/* ---------- the panel: every size, space, colour, font and stroke is a token (Signal's names) or a formula of tokens ---------- */
+.dev {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --target: 48px; --chip: 32px; --stroke-bar: 4px; --stroke-track: 8px; --stroke-ring: 16px;
+  --numeral-m-size: 40px; --numeral-m-line: 40px; --numeral-l-size: 72px; --numeral-l-line: 66px;
+  --title-size: 24px; --title-line: 28px; --title-track: 2px; --label-size: 16px; --label-line: 20px; --label-track: 1px;
+  --body-size: 16px; --body-line: 22px; --caption-size: 13px; --caption-line: 18px;
+  --ground: #ffffff; --surface: #ecedf0; --surface-raised: #dcdee3; --line: #c4c7cf; --line-strong: #5f626c; --reading: #0a0a0c; --muted: #4a4d57; --active: #0a0a0c; --on-active: #d4ff3a;
+  /* motion (proposed tokens): how long, and how it moves */
+  --motion-press: 120ms; --motion-enter: 220ms; --motion-settle: 480ms; --motion-steam: 5200ms; --ease-out: cubic-bezier(.2,.7,.2,1); --ease-back: cubic-bezier(.34,1.56,.64,1);
+  --screen-w: 480px; --screen-h: 320px;
+  --margin: var(--space-6); --gap: var(--space-3); --pad: var(--space-4);
+  --header-h: var(--target); --footer-h: calc(var(--target) + var(--space-4)); --content-h: calc(var(--screen-h) - var(--header-h) - var(--footer-h) - var(--gap));
+  --photo: calc(var(--target) * 1.5); --photo-l: calc(var(--target) * 3); --ring-size: calc(var(--target) * 4);
+  position: relative; width: var(--screen-w); height: var(--screen-h); overflow: hidden; background: var(--ground); color: var(--reading);
+  font-family: var(--font-text); font-weight: 500; font-size: var(--body-size); line-height: var(--body-line); user-select: none; }
+.dev[data-signal="dark"] { --ground: #0a0a0c; --surface: #1b1c22; --surface-raised: #26272f; --line: #34353d; --line-strong: #7b7e8a; --reading: #ffffff; --muted: #b4b7c0; --active: #d4ff3a; --on-active: #0a0a0c; }
+.dev * { box-sizing: border-box; }
+:where(.dev) button { font: inherit; color: inherit; background: transparent; border: 0; padding: 0; cursor: pointer; }
+.cap { font-size: var(--caption-size); line-height: var(--caption-line); color: var(--muted); }
+.lab { font-weight: 700; letter-spacing: var(--label-track); text-transform: uppercase; font-size: var(--caption-size); line-height: var(--caption-line); color: var(--muted); }
+.numm { font-family: var(--font-display); font-weight: 700; font-size: var(--numeral-m-size); line-height: var(--numeral-m-line); }
+.unit { font-family: var(--font-text); font-size: var(--body-size); line-height: var(--body-line); font-weight: 500; color: var(--muted); margin-left: var(--space-1); }
+.hd { position: absolute; left: var(--margin); right: var(--margin); top: 0; height: var(--header-h); display: flex; align-items: center; gap: var(--gap); }
+.hd h3 { margin: 0; font-size: var(--title-size); line-height: var(--title-line); font-weight: 600; letter-spacing: var(--title-track); text-transform: uppercase; flex: 1; }
+.steps { display: flex; align-items: center; gap: var(--space-2); } .steps i { width: var(--space-3); height: var(--space-3); background: var(--line); } .steps i.on { background: var(--active); } .steps span { margin-left: var(--space-1); }
+.icon { width: var(--target); height: var(--target); display: grid; place-items: center; color: var(--muted); margin-right: calc(var(--gap) * -1); } .icon svg { width: var(--space-6); height: var(--space-6); }
+.ct { position: absolute; left: var(--margin); right: var(--margin); top: var(--header-h); height: var(--content-h); }
+.ft { position: absolute; left: var(--margin); right: var(--margin); bottom: 0; height: var(--footer-h); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--gap); }
+.btn { height: var(--target); min-width: calc(var(--target) * 3); padding: 0 var(--space-6); font-weight: 700; font-size: var(--label-size); line-height: var(--label-line); letter-spacing: var(--label-track); text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.btn.primary { background: var(--active); color: var(--on-active); margin-left: auto; }
+.btn.outline { box-shadow: inset 0 0 0 var(--stroke-bar) var(--line-strong); }
+.btn.ghost { min-width: 0; padding: 0 var(--space-4) 0 0; color: var(--reading); } .btn svg { width: var(--space-4); height: var(--space-4); }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: var(--gap); height: 100%; }
+.tile { background: var(--surface); text-align: left; padding: 0 var(--pad); display: flex; align-items: center; gap: var(--pad); position: relative; min-width: 0; }
+.tile img { width: var(--photo); height: var(--photo); flex: none; object-fit: contain; }
+.tile .tx { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.tile .nm { font-weight: 700; letter-spacing: var(--label-track); text-transform: uppercase; font-size: var(--label-size); line-height: var(--label-line); }
+.tile .pr { font-family: var(--font-display); font-weight: 700; font-size: var(--title-size); line-height: var(--title-line); } .tile .pr small { font-family: var(--font-text); font-size: var(--caption-size); font-weight: 600; margin-left: var(--space-1); opacity: .8; }
+.tile .tick { position: absolute; right: 0; bottom: 0; width: var(--space-6); height: var(--space-6); display: none; place-items: center; background: var(--on-active); color: var(--active); font-weight: 700; font-size: var(--caption-size); line-height: 1; }
+.tile:active { background: var(--surface-raised); }
+.tile[aria-pressed="true"] { background: var(--active); color: var(--on-active); } .tile[aria-pressed="true"] .tick { display: grid; }
+.cup { display: grid; grid-template-columns: 1fr calc(var(--target) * 3); gap: var(--space-6); height: 100%; }
+.fields { display: flex; flex-direction: column; justify-content: space-between; }
+.field { display: flex; flex-direction: column; gap: var(--space-1); } .field .top { display: flex; justify-content: space-between; align-items: baseline; } .field .top b { font-size: var(--caption-size); line-height: var(--caption-line); font-weight: 700; }
+.step { display: grid; grid-template-columns: var(--target) 1fr var(--target); align-items: center; gap: var(--gap); height: var(--target); }
+.sq { width: var(--target); height: var(--target); box-shadow: inset 0 0 0 var(--stroke-bar) var(--line-strong); display: grid; place-items: center; font-size: var(--title-size); line-height: 1; font-weight: 700; } .sq:active { background: var(--surface-raised); } .sq[disabled] { opacity: .35; }
+.seg { display: flex; gap: var(--space-1); } .seg i { flex: 1; height: var(--stroke-track); background: var(--line); } .seg i.on { background: var(--active); }
+.val { text-align: center; }
+.sum { background: var(--surface); padding: var(--space-3) var(--pad) var(--pad); display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.sum img { width: var(--photo); height: var(--photo); object-fit: contain; align-self: center; }
+.sum .nm { font-weight: 700; letter-spacing: var(--label-track); text-transform: uppercase; font-size: var(--label-size); line-height: var(--label-line); margin-top: var(--space-1); }
+.sum .price { margin-top: auto; }
+.brew { display: grid; grid-template-columns: var(--ring-size) 1fr; gap: var(--space-6); height: 100%; align-items: center; }
+.ringwrap { position: relative; width: var(--ring-size); height: var(--ring-size); }
+.ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--active) calc(var(--p) * 1turn), var(--line) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--stroke-ring)), #000 calc(100% - var(--stroke-ring) + 1px)); mask: radial-gradient(farthest-side, transparent calc(100% - var(--stroke-ring)), #000 calc(100% - var(--stroke-ring) + 1px)); }
+.ringwrap .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ringwrap .c b { font-family: var(--font-display); font-weight: 700; font-size: var(--numeral-l-size); line-height: var(--numeral-l-line); }
+.side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.stage { display: flex; flex-direction: column; } .stage b { font-weight: 700; letter-spacing: var(--label-track); text-transform: uppercase; font-size: var(--label-size); line-height: var(--label-line); }
+.facts { display: flex; flex-direction: column; gap: var(--space-2); } .facts div { display: flex; justify-content: space-between; box-shadow: inset 0 calc(var(--stroke-bar) / -2) 0 var(--line); padding-bottom: var(--space-2); } .facts span { color: var(--muted); } .facts b { font-weight: 700; }
+.done { display: grid; grid-template-columns: var(--photo-l) 1fr; gap: var(--space-6); height: 100%; align-items: center; }
+.done img { width: 100%; height: 100%; object-fit: contain; }
+.done .okrow { display: flex; align-items: center; gap: var(--space-2); } .done .ok { width: var(--space-6); height: var(--space-6); background: var(--active); color: var(--on-active); display: grid; place-items: center; font-weight: 700; font-size: var(--caption-size); line-height: 1; }
+.done .big { font-family: var(--font-display); font-weight: 700; font-size: var(--numeral-m-size); line-height: var(--numeral-m-line); text-transform: uppercase; letter-spacing: var(--label-track); margin: var(--space-2) 0; }
+.rows { display: flex; flex-direction: column; gap: var(--space-1); } .rowi { height: var(--target); background: var(--surface); padding: 0 0 0 var(--pad); display: flex; align-items: center; justify-content: space-between; gap: var(--gap); }
+.rowi .v { display: flex; align-items: center; color: var(--muted); } .rowi .v b { color: var(--reading); font-weight: 700; margin-right: var(--space-1); }
+.rowi .go { width: var(--target); height: var(--target); display: grid; place-items: center; color: var(--muted); } .rowi .go svg { width: var(--space-4); height: var(--space-4); }
+.mini { display: flex; align-items: center; gap: var(--space-2); } .mini .sq { box-shadow: none; } .mini .trk { width: calc(var(--target) * 2); height: var(--stroke-track); background: var(--line); position: relative; } .mini .trk i { position: absolute; left: 0; top: 0; bottom: 0; width: 70%; background: var(--active); }
+.sw2 { width: calc(var(--target) + var(--space-2)); height: var(--chip); background: var(--line); position: relative; margin-right: var(--pad); } .sw2.on { background: var(--active); } .sw2::after { content: ""; position: absolute; top: var(--space-1); left: var(--space-1); width: calc(var(--chip) - var(--space-2)); height: calc(var(--chip) - var(--space-2)); background: var(--ground); } .sw2.on::after { left: calc(100% - var(--chip) + var(--space-1)); background: var(--on-active); }
+@property --p { syntax: "<number>"; inherits: false; initial-value: 0; }
+.hero { position: relative; width: var(--photo-l); height: var(--photo-l); } .hero img { position: absolute; inset: 0; }
+.steam { position: absolute; bottom: 54%; width: calc(var(--target) * 2); height: calc(var(--target) * 2); background: var(--line); -webkit-mask: var(--steam-mask) center / 100% 100% no-repeat; mask: var(--steam-mask) center / 100% 100% no-repeat; opacity: 0; transform-origin: 50% 100%; filter: blur(var(--space-1)); }
+.luminance-mask .dev .steam { -webkit-mask-source-type: luminance; mask-mode: luminance; }
+.steam.s1 { left: 2%; } .steam.s2 { left: 18%; transform: scaleX(-1); } .steam.s3 { left: 10%; }
+@keyframes rise { 0% { opacity: 0; transform: translateY(var(--space-3)) scale(.9, .6); } 30% { opacity: .5; } 100% { opacity: 0; transform: translateY(calc(var(--space-4) * -1)) scale(1.5, 1.1) skewX(-6deg); } }
+@keyframes rise2 { 0% { opacity: 0; transform: translateY(var(--space-3)) scale(-.9, .6); } 30% { opacity: .4; } 100% { opacity: 0; transform: translateY(calc(var(--space-4) * -1)) scale(-1.5, 1.1) skewX(6deg); } }
+@keyframes enter { from { opacity: 0; transform: translateX(calc(var(--space-6) * var(--dir, 1))); } to { opacity: 1; transform: none; } }
+@keyframes settle { from { opacity: 0; transform: scale(.6) translateY(var(--space-4)); } to { opacity: 1; transform: none; } }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes up { from { opacity: 0; transform: translateY(var(--space-3)); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .dev .tile, .dev .btn, .dev .sq { transition: background var(--motion-press), transform var(--motion-press); }
+  .dev .tile:active, .dev .btn:active, .dev .sq:active { transform: scale(.97); }
+  .dev .ring { transition: --p 200ms linear; }
+  .dev .steam { animation: rise var(--motion-steam) ease-in-out infinite; } .dev .steam.s2 { animation-name: rise2; animation-delay: calc(var(--motion-steam) * .4); } .dev .steam.s3 { animation-delay: calc(var(--motion-steam) * .7); }
+  .dev[data-nav] .ct > * > * { animation: enter var(--motion-enter) var(--ease-out) both; } .dev[data-nav="back"] { --dir: -1; }
+  .dev[data-nav] .ct > * > *:nth-child(2) { animation-delay: 50ms; } .dev[data-nav] .ct > * > *:nth-child(3) { animation-delay: 100ms; } .dev[data-nav] .ct > * > *:nth-child(4) { animation-delay: 150ms; }
+  .dev[data-nav] .hero { animation: settle var(--motion-settle) var(--ease-back) both; }
+  .dev[data-nav] .done .ok { animation: pop var(--motion-enter) var(--ease-back) 320ms both; }
+  .dev[data-nav] .done .big { animation: up var(--motion-enter) var(--ease-out) 380ms both; } .dev[data-nav] .done .cap { animation: up var(--motion-enter) var(--ease-out) 460ms both; }
+  .dev .tile[aria-pressed="true"] .tick { animation: pop var(--motion-enter) var(--ease-back) both; }
+}
+</style>
+
+<main>
+  <header>
+    <h1>Coffee machine, redesigned in Signal</h1>
+    <p class="muted">A 480 × 320 touch panel on Signal's day theme. Tap through the live panel, review every screen, then read what the review found and what changed.</p>
+  </header>
+
+  <section>
+    <h2>Live panel</h2>
+    <div class="toolbar" role="group" aria-label="Panel theme">
+      <button id="t-day" aria-pressed="true">Day</button><button id="t-dark" aria-pressed="false">Dark</button>
+      <button id="restart">Start over</button>
+      <button id="jump">Show Enjoy (cappuccino)</button>
+    </div>
+    <div class="row">
+      <div class="frame" id="live-frame"><div class="scaled"><div class="dev" id="live" data-signal="day"></div></div></div>
+      <div class="col card">
+        <p><b>Flow:</b> Drink → Your cup → Brewing → Enjoy. The gear opens Service.</p>
+        <p><b>One pattern on every screen:</b> the title is always top left, the step is always top right, going back is always bottom left, going on is always bottom right.</p>
+        <p class="muted">The drink photos were generated for this mock-up and cut out, so they sit on any tile colour. Swipe is proposed with the framework's gesture feature.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every screen, 1 : 1</h2>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section>
+    <h2>What the review found, and what changed</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Practice</th><th>Problem in the last version</th><th>Now</th></tr>
+      <tr><td>Consistency</td><td>The title jumped right when a back arrow appeared; the price was "2.20 €" on tiles and "2.20 EUR" in the summary.</td><td>Title fixed top left. Back and Cancel live bottom left, the forward action bottom right. One price format everywhere.</td></tr>
+      <tr><td>Recognition over recall</td><td>Abstract cup glyphs looked alike; step dots had no number.</td><td>A photo of each drink on its tile, in the summary and on the done screen. Dots carry "2 / 4".</td></tr>
+      <tr><td>Visible state, not colour alone</td><td>The selected tile differed only by colour. Strength showed bars with no value.</td><td>The selected tile also gets a tick. Strength says "4 of 5 · Strong"; size shows millilitres between its buttons.</td></tr>
+      <tr><td>Alignment and rhythm</td><td>The two steppers had different widths, so the + buttons did not line up. The summary panel touched the Brew button.</td><td>Both steppers share one grid: −, value, +. A token gap separates content from the footer on every screen.</td></tr>
+      <tr><td>Affordance</td><td>The back arrow was a small character. Service rows gave no hint of what they do. Tiles had lost their surface colour.</td><td>Back is a 48 px labelled button. Each service row ends in its control: a chevron, − and +, or a switch. Tiles sit on the surface colour again.</td></tr>
+      <tr><td>Feedback and error prevention</td><td>Brewing showed only a number. Enjoy did not say what happens next. A stepper could go below its range.</td><td>Brewing names its stage. Enjoy says when it returns to the drinks. − and + dim at the ends of the range.</td></tr>
+      <tr><td>Touch targets</td><td>Fine before.</td><td>Every control is still at least 48 × 48.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Motion, and the lvgl26 feature each one shows</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Where</th><th>What moves</th><th>Tokens</th><th>Built with</th></tr>
+      <tr><td>Every step</td><td>The content slides in from the side it came from, each block 50 ms after the last</td><td>motion-enter 220 ms, ease-out</td><td>The transition of a page that follows a state</td></tr>
+      <tr><td>Any control</td><td>A pressed tile or button shrinks a little and darkens</td><td>motion-press 120 ms</td><td>A style for the pressed state</td></tr>
+      <tr><td>Drinks</td><td>The tick pops on the chosen tile</td><td>motion-enter, ease-back</td><td>A task that waits for the click, then animates a scale</td></tr>
+      <tr><td>Brewing</td><td>The ring fills, the numeral counts down, the stage name changes: grinding, extracting, finishing</td><td>The brew time of the drink</td><td>One task: an animation of the ring's value, a loop that waits a second, and cancel as "whichever comes first"</td></tr>
+      <tr><td>Enjoy</td><td>The cup settles with a small overshoot; three steam wisps rise and fade in a loop; the mark pops; the name slides up</td><td>motion-settle 480 ms, ease-back; motion-steam 5.2 s</td><td>Tasks owned by the page: they start when it is shown and end when it leaves</td></tr>
+    </table></div>
+    <p class="muted" style="margin-top:10px">The steam is one small picture used three times and tinted from a token, so it works on both themes. The motion durations and curves are proposed design tokens. Whether a picture's opacity and position can both be animated today still has to be checked in the library.</p>
+  </section>
+
+  <section>
+    <h2>Steam: two ways to compare</h2>
+    <div class="tablewrap"><table>
+      <tr><th></th><th>Layers moved by code</th><th>Frames from a video</th></tr>
+      <tr><td>Look</td><td>A soft hint of steam. Simple, a little artificial.</td><td>Real steam: lit, turbulent, partly in front of the cup.</td></tr>
+      <tr><td>Pictures on the device</td><td>One cut-out cup and one small steam picture, used three times</td><td>30 frames of 144 × 144 for each drink</td></tr>
+      <tr><td>Flash, rough</td><td>About 70 KB for the cup, 10 KB for the steam</td><td>About 1.2 MB for each drink without transparency (30 × 41 KB); 12 frames would be 0.5 MB and look choppier</td></tr>
+      <tr><td>Themes</td><td>Works on both: the steam is tinted from a token</td><td>The frames carry their own white ground, so a dark theme needs a second set</td></tr>
+      <tr><td>In lvgl26 today</td><td>Tasks and animated properties; whether a picture's opacity and position animate still has to be checked</td><td>Needs a frame player, which the library does not have yet</td></tr>
+    </table></div>
+    <p class="muted" style="margin-top:10px">Decided (owner, 2026-11-26): the layers. The frames need a player that lvgl26 does not have and a second set for the dark theme, and the player stays out of scope.</p>
+  </section>
+
+  <section class="row">
+    <div class="col">
+      <h2>Tokens</h2>
+      <p class="muted">Every value on the panel is one of Signal's tokens, or a formula of them. No value is loose.</p>
+      <div class="tablewrap"><table style="min-width:0">
+        <tr><th>Kind</th><th>Tokens</th><th>Used for</th></tr>
+        <tr><td>Space</td><td>space-1 4 · 2 8 · 3 12 · 4 16 · 6 24</td><td>Margin = space-6, gaps = space-3, padding = space-4.</td></tr>
+        <tr><td>Size</td><td>target 48 · chip 32</td><td>Controls, header, rows; the switch is a chip high.</td></tr>
+        <tr><td>Stroke</td><td>bar 4 · track 8 · ring 16</td><td>Outlines, strength segments, the progress ring.</td></tr>
+        <tr><td>Type</td><td>numeral-l 72 · numeral-m 40 · title 24 · label 16 · body 16 · caption 13</td><td>Barlow Condensed numerals, Barlow text.</td></tr>
+        <tr><td>Derived</td><td>header = target · footer = target + space-4 · photo = 1.5 × target · ring = 4 × target</td><td>Layout is formulas of tokens. Only the panel size is a literal.</td></tr>
+      </table></div>
+      <div class="swatches" id="swatches" style="margin-top:12px"></div>
+    </div>
+    <div class="col">
+      <h2>Gestures (proposed)</h2>
+      <div class="tablewrap"><table style="min-width:0">
+        <tr><th>Gesture</th><th>Does</th><th>Also by</th></tr>
+        <tr><td>Swipe right</td><td>Back one step</td><td>Back button</td></tr>
+        <tr><td>Swipe left</td><td>Next step, when valid; next page of drinks</td><td>Primary button</td></tr>
+        <tr><td>Swipe down from the top</td><td>Opens Service</td><td>Gear</td></tr>
+        <tr><td>Hold the ring 1 s</td><td>Cancels the brew</td><td>Cancel button</td></tr>
+      </table></div>
+      <p class="muted" style="margin-top:10px">Every gesture has a visible control. This is the brief for the framework's gesture events.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // The pictures the device uses: a thumbnail of 72 px (1.5 x target) and a hero of 144 px (3 x target)
+  // for each drink, and the steam mask.
+  var ASSETS = "../../examples/coffee/assets/";
+  var STEAM = ASSETS + "steam.png";
+  var DRINKS = [
+    { id: "espresso", name: "Espresso", price: 2.2, ml: 40, min: 20, max: 60, g: 9, s: 25 },
+    { id: "lungo", name: "Lungo", price: 2.4, ml: 110, min: 80, max: 150, g: 9, s: 35 },
+    { id: "cappuccino", name: "Cappuccino", price: 3.1, ml: 180, min: 140, max: 240, g: 9, s: 45 },
+    { id: "latte", name: "Latte", price: 3.4, ml: 240, min: 180, max: 300, g: 9, s: 50 }
+  ];
+  var WORD = ["", "Mild", "Light", "Medium", "Strong", "Intense"];
+  var CHEV_L = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2 4 8l6 6" fill="none" stroke="currentColor" stroke-width="3"/></svg>';
+  var CHEV_R = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 2 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3"/></svg>';
+  var GEAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4v3l3 1 2-2 3 3-2 2 1 3h3v4h-3l-1 3 2 2-3 3-2-2-3 1v3h-4v-3l-3-1-2 2-3-3 2-2-1-3H2v-4h3l1-3-2-2 3-3 2 2 3-1z" fill="none" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="currentColor"/></svg>';
+  function fresh() { return { screen: "drinks", drink: "espresso", strength: 3, size: 40 }; }
+  var state = fresh();
+  function d(id) { return DRINKS.filter(function (x) { return x.id === id; })[0]; }
+  function eur(n) { return n.toFixed(2) + '<span class="unit">€</span>'; }
+  function img(id, px) { return '<img alt="" src="' + ASSETS + id + "-" + px + '.png">'; }
+  function header(title, step, gear) {
+    var s = "";
+    if (step) { s = '<div class="steps" aria-label="Step ' + step + ' of 4">'; for (var i = 1; i <= 4; i++) s += '<i class="' + (i <= step ? "on" : "") + '"></i>'; s += '<span class="cap">' + step + " / 4</span></div>"; }
+    return '<div class="hd"><h3>' + title + "</h3>" + s + (gear ? '<button class="icon" data-go="service" aria-label="Service">' + GEAR + "</button>" : "") + "</div>";
+  }
+  function back(to, label, outline) { return '<button class="btn ' + (outline ? "outline" : "ghost") + '" data-go="' + to + '">' + (outline ? "" : CHEV_L) + label + "</button>"; }
+  function next(to, label) { return '<button class="btn primary" data-go="' + to + '">' + label + "</button>"; }
+  function footer(l, r) { return '<div class="ft">' + (l || "<span></span>") + (r || "") + "</div>"; }
+  function stage(p) { return p < 0.2 ? "Grinding" : p < 0.9 ? "Extracting" : "Finishing"; }
+  function beans(x, s) { return Math.round(x.g * (0.5 + s.strength * 0.25)); }
+  var SCREENS = {
+    drinks: function (s) {
+      var t = DRINKS.map(function (x) { return '<button class="tile" data-drink="' + x.id + '" aria-pressed="' + (s.drink === x.id) + '">' + img(x.id, 72) + '<span class="tx"><span class="nm">' + x.name + '</span><span class="pr">' + x.price.toFixed(2) + '<small>€</small></span></span><span class="tick">✓</span></button>'; }).join("");
+      return header("Choose a drink", 1, true) + '<div class="ct"><div class="tiles">' + t + "</div></div>" + footer("", next("cup", "Next"));
+    },
+    cup: function (s) {
+      var x = d(s.drink), seg = ""; for (var i = 1; i <= 5; i++) seg += '<i class="' + (i <= s.strength ? "on" : "") + '"></i>';
+      return header("Your cup", 2) + '<div class="ct"><div class="cup"><div class="fields">' +
+        '<div class="field"><div class="top"><span class="lab">Strength</span><b>' + s.strength + " of 5 · " + WORD[s.strength] + '</b></div><div class="step"><button class="sq" data-str="-1" aria-label="Weaker"' + (s.strength <= 1 ? " disabled" : "") + '>−</button><div class="seg">' + seg + '</div><button class="sq" data-str="1" aria-label="Stronger"' + (s.strength >= 5 ? " disabled" : "") + ">+</button></div></div>" +
+        '<div class="field"><div class="top"><span class="lab">Size</span><b>' + x.min + " to " + x.max + ' mL</b></div><div class="step"><button class="sq" data-size="-10" aria-label="Smaller"' + (s.size <= x.min ? " disabled" : "") + '>−</button><div class="val"><span class="numm">' + s.size + '</span><span class="unit">mL</span></div><button class="sq" data-size="10" aria-label="Larger"' + (s.size >= x.max ? " disabled" : "") + ">+</button></div></div></div>" +
+        '<div class="sum">' + img(x.id, 72) + '<div class="nm">' + x.name + '</div><div class="cap">' + beans(x, s) + ' g of beans</div><div class="price numm">' + eur(x.price) + "</div></div></div></div>" +
+        footer(back("drinks", "Back"), next("brewing", "Brew"));
+    },
+    brewing: function (s) {
+      var x = d(s.drink), p = s.p == null ? 0.55 : s.p, left = Math.max(0, Math.round(x.s * (1 - p)));
+      return header("Brewing", 3) + '<div class="ct"><div class="brew"><div class="ringwrap"><div class="ring" style="--p:' + p.toFixed(2) + '"></div><div class="c"><b>' + left + '</b><span class="lab">seconds left</span></div></div>' +
+        '<div class="side"><div class="stage"><span class="lab">Now</span><b>' + stage(p) + '</b></div><div class="facts"><div><span>Drink</span><b>' + x.name + "</b></div><div><span>Strength</span><b>" + WORD[s.strength] + "</b></div><div><span>Size</span><b>" + s.size + " mL</b></div></div></div></div></div>" +
+        footer(back("cup", "Cancel", true), '<button class="btn primary" data-go="enjoy" style="display:none"></button>');
+    },
+    enjoy: function (s) {
+      var x = d(s.drink);
+      return header("Enjoy", 4) + '<div class="ct"><div class="done">' + '<div class="hero">' + img(x.id, 144) + (x.id === "latte" ? "" : '<span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>') + "</div>" + '<div><div class="okrow"><span class="ok">✓</span><span class="lab">Ready</span></div><div class="big">' + x.name + '</div><div class="cap">' + s.size + " mL · " + WORD[s.strength] + " · " + x.price.toFixed(2) + ' €</div><div class="cap">Back to the drinks in 10 s</div></div></div></div>' + footer("", next("drinks", "New drink"));
+    },
+    service: function () {
+      return header("Service", 0) + '<div class="ct" style="height:calc(var(--content-h) + var(--gap))"><div class="rows">' +
+        '<div class="rowi">Descale<span class="v"><b>12 days</b> left<span class="go">' + CHEV_R + "</span></span></div>" +
+        '<div class="rowi">Water hardness<span class="v"><b>3</b> of 5<span class="go">' + CHEV_R + "</span></span></div>" +
+        '<div class="rowi">Brightness<span class="mini"><button class="sq" aria-label="Darker">−</button><span class="trk"><i></i></span><button class="sq" aria-label="Brighter">+</button></span></div>' +
+        '<div class="rowi">Eco mode<span class="sw2 on" role="switch" aria-checked="true"></span></div></div></div>' + footer(back("drinks", "Back"), "");
+    }
+  };
+  function render(el, s) { el.innerHTML = SCREENS[s.screen](s); }
+  function fit(frame) {
+    var w = Math.min(480, frame.parentElement.clientWidth || 480), k = w / 480;
+    frame.querySelector(".scaled").style.transform = "scale(" + k + ")"; frame.style.width = 480 * k + "px"; frame.style.height = 320 * k + "px";
+  }
+  var live = document.getElementById("live");
+  var shown = null, timer = null, ORDER = ["service", "drinks", "cup", "brewing", "enjoy"];
+  function draw() {
+    if (shown !== state.screen) { live.dataset.nav = shown && ORDER.indexOf(state.screen) < ORDER.indexOf(shown) ? "back" : "on"; shown = state.screen; }
+    else live.removeAttribute("data-nav");
+    render(live, state);
+  }
+  function brew() {
+    clearInterval(timer); state.p = 0;
+    timer = setInterval(function () {
+      if (state.screen !== "brewing") { clearInterval(timer); return; }
+      state.p = Math.min(1, state.p + 0.02);
+      var x = d(state.drink), ring = live.querySelector(".ring"); if (!ring) return;
+      ring.style.setProperty("--p", state.p.toFixed(2));
+      live.querySelector(".ringwrap .c b").textContent = Math.max(0, Math.round(x.s * (1 - state.p)));
+      live.querySelector(".stage b").textContent = stage(state.p);
+      if (state.p >= 1) { clearInterval(timer); setTimeout(function () { if (state.screen === "brewing") { state.screen = "enjoy"; draw(); } }, 400); }
+    }, 120);
+  }
+  live.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || b.disabled) return;
+    if (b.dataset.drink) { state.drink = b.dataset.drink; state.size = d(state.drink).ml; }
+    if (b.dataset.str) state.strength = Math.max(1, Math.min(5, state.strength + +b.dataset.str));
+    if (b.dataset.size) { var x = d(state.drink); state.size = Math.max(x.min, Math.min(x.max, state.size + +b.dataset.size)); }
+    if (b.dataset.go) { state.screen = b.dataset.go; state.p = state.screen === "brewing" ? 0 : null; }
+    draw();
+    if (b.dataset.go === "brewing") brew();
+  });
+  function theme(mode) {
+    document.querySelectorAll(".dev").forEach(function (n) { n.dataset.signal = mode; });
+    document.getElementById("t-day").setAttribute("aria-pressed", mode === "day");
+    document.getElementById("t-dark").setAttribute("aria-pressed", mode === "dark");
+  }
+  document.getElementById("t-day").onclick = function () { theme("day"); };
+  document.getElementById("t-dark").onclick = function () { theme("dark"); };
+  document.getElementById("jump").onclick = function () { clearInterval(timer); state = { screen: "enjoy", drink: "cappuccino", strength: 3, size: 180 }; shown = null; draw(); };
+  document.getElementById("restart").onclick = function () { clearInterval(timer); state = fresh(); draw(); };
+  var CAPTIONS = {
+    drinks: "<b>1 Drink.</b> Four tiles with a photo, the name and the price as one centred group. The selected tile fills with the loud colour and gets a tick.",
+    cup: "<b>2 Your cup.</b> Two fields on one grid: −, value, +. Each says its value in words and its range. The summary repeats the drink and the price.",
+    brewing: "<b>3 Brewing.</b> The ring is the progress, the numeral is the time left, and the stage has a name. Cancel sits where Back sits.",
+    enjoy: "<b>4 Enjoy.</b> The cup settles in, steam rises in a loop, the ready mark pops and the name slides up. One filled button.",
+    service: "<b>Service.</b> Each row ends in its control: a chevron opens a page, − and + change a value, a switch toggles."
+  };
+  var gal = document.getElementById("gallery");
+  ["drinks", "cup", "brewing", "enjoy", "service"].forEach(function (k) {
+    var fig = document.createElement("figure");
+    fig.innerHTML = '<div class="frame"><div class="scaled"><div class="dev" data-signal="day"></div></div></div><figcaption>' + CAPTIONS[k] + "</figcaption>";
+    gal.appendChild(fig);
+    var cap = k === "enjoy" || k === "brewing";
+    render(fig.querySelector(".dev"), { screen: k, drink: cap ? "cappuccino" : "espresso", strength: k === "cup" ? 4 : 3, size: cap ? 180 : 40 });
+  });
+  var sw = [["ground", "#FFFFFF"], ["surface", "#ECEDF0"], ["surface-raised", "#DCDEE3"], ["line", "#C4C7CF"], ["line-strong", "#5F626C"], ["reading", "#0A0A0C"], ["muted", "#4A4D57"], ["active", "#0A0A0C"], ["on-active", "#D4FF3A"]];
+  document.getElementById("swatches").innerHTML = sw.map(function (c) { return '<div class="sw"><i style="background:' + c[1] + '"></i><span>' + c[0] + "<br>" + c[1] + "</span></div>"; }).join("");
+  (function () {
+    var im = new Image();
+    im.onload = function () {
+      var c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+      var g = c.getContext("2d"); g.drawImage(im, 0, 0);
+      var px;
+      try { px = g.getImageData(0, 0, c.width, c.height); } catch (e) {
+        // Opened from a file, the browser keeps the picture's pixels from the script: mask by luminance.
+        document.documentElement.style.setProperty("--steam-mask", 'url("' + STEAM + '")');
+        document.documentElement.classList.add("luminance-mask");
+        return;
+      }
+      var a = px.data;
+      for (var i = 0; i < a.length; i += 4) { var l = Math.max(a[i], a[i + 1], a[i + 2]); a[i] = a[i + 1] = a[i + 2] = 0; a[i + 3] = l < 10 ? 0 : Math.min(255, l * 1.1); }
+      g.putImageData(px, 0, 0);
+      document.documentElement.style.setProperty("--steam-mask", 'url("' + c.toDataURL("image/png") + '")');
+    };
+    im.src = STEAM;
+  })();
+  function fitAll() { document.querySelectorAll(".frame").forEach(fit); }
+  window.addEventListener("resize", fitAll); draw(); fitAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+})();
+</script>

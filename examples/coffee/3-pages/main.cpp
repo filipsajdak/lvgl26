@@ -1,4 +1,4 @@
-// Step 3 of the coffee machine tutorial (docs/research/tutorial-coffee.md): pages. Each step of the
+// Step 3 of the coffee machine tutorial (docs/tutorial.md): pages. Each step of the
 // machine is a page, and the page of the current step slides in.
 //
 //   coffee_3    writes coffee_3.png

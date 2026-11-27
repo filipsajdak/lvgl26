@@ -8,6 +8,7 @@ lvgl26 is under the MIT licence (see [LICENSE](LICENSE)). The parts below come f
 | `site/media/fonts/*.ttf` | [Barlow](https://github.com/jpt/barlow), Copyright 2017 The Barlow Project Authors | SIL Open Font License 1.1 (`site/media/fonts/OFL.txt`) |
 | `include/lv/signal/fonts/*.ttf` | Copies of the three files above, for `lv/signal_type.hpp` to embed | SIL Open Font License 1.1 (`include/lv/signal/fonts/OFL.txt`) |
 | `examples/coffee/*/fonts/Barlow-Medium.ttf`, `examples/coffee/*/design/fonts/Barlow-Medium.ttf` | Copies of `site/media/fonts/Barlow-Medium.ttf`, for the steps of the coffee machine tutorial to embed | SIL Open Font License 1.1 (the `OFL.txt` beside each copy) |
+| `examples/coffee/assets/*.png` | The four drink photos and the steam mask of the coffee machine, generated with AI for this repository (fal nano-banana-2; the photos cut out by background removal) | Free to use under the repository's licence (MIT) |
 | `tools/dtcg/2025.10/*.json` | The JSON Schemas of the [Design Tokens Community Group](https://github.com/design-tokens/community-group), unchanged | W3C Software and Document License, and W3C 3-clause BSD License (`tools/dtcg/LICENSE.md`) |
 | `design/signal` | See [design/signal/NOTICE.md](design/signal/NOTICE.md) | |
 
