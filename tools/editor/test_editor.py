@@ -123,7 +123,8 @@ class Tokens(unittest.TestCase):
     def test_types_come_from_the_token_the_group_or_the_alias(self):
         text = token_stubs.file_struct(json.dumps(self.document).encode(), "a test")
         for part in ["token<lv_color_t> ink{};", "token<lv_color_t> accent{};", "token<length> _2xl{};",
-                     "token<length> primary_500{};", "token<lv_color_t> far{};", "token<double> int_{};",
+                     "token<length> primary_500{};", "token<lv_color_t> far{};",
+                     "token<double> int_{1.0, ::lv::detail::from_design_tokens{}};",
                      "/// Text. Value: \"#000\"", "token<duration> deep{};"]:
             self.assertIn(part, text)
         self.assertNotIn("nowhere", text)
@@ -132,13 +133,43 @@ class Tokens(unittest.TestCase):
     def test_the_object_forms_are_typed_and_shown_as_a_designer_writes_them(self):
         text = token_stubs.file_struct(json.dumps(self.document).encode(), "a test")
         for part in ["token<lv_color_t> paper{};", "/// Value: #f4efe6", "/// Value: #000000 at alpha 0.5",
-                     "token<length> gap{};", "/// Value: 8px"]:
+                     "token<length> gap{::lv::length::px(8), ::lv::detail::from_design_tokens{}};", "/// Value: 8px"]:
             self.assertIn(part, text)
 
     def test_a_group_struct_never_has_the_name_of_a_member(self):
         text = token_stubs.file_struct(json.dumps(self.document).encode(), "a test")
         self.assertIn("struct nest_tokens_ {", text)
-        self.assertIn("token<double> nest_tokens{};", text)
+        self.assertIn("token<double> nest_tokens{1.0, ::lv::detail::from_design_tokens{}};", text)
+
+    def test_a_length_a_time_a_number_and_a_weight_hold_their_values(self):
+        value = token_stubs.initial_value
+        self.assertEqual(value("length", {"value": 48, "unit": "px"}), "::lv::length::px(48)")
+        self.assertEqual(value("length", {"value": -2, "unit": "px"}), "::lv::length::px(-2)")
+        self.assertEqual(value("duration", {"value": 220, "unit": "ms"}), "::lv::duration{220}")
+        self.assertEqual(value("duration", {"value": 1.5, "unit": "s"}), "::lv::duration{1500}")
+        self.assertEqual(value("double", 0.35), "0.35")
+        self.assertEqual(value("double", 1), "1.0")
+        self.assertEqual(value("std::int32_t", 700), "700")
+
+    def test_a_value_the_stub_cannot_hold_exactly_keeps_the_default(self):
+        value = token_stubs.initial_value
+        self.assertIsNone(value("length", {"value": 1, "unit": "rem"}))
+        self.assertIsNone(value("length", {"value": 1.5, "unit": "px"}))
+        self.assertIsNone(value("length", "32px"))
+        self.assertIsNone(value("duration", {"value": 0.5, "unit": "ms"}))
+        self.assertIsNone(value("double", True))
+        self.assertIsNone(value("lv_color_t", {"hex": "#000000"}))
+        self.assertIsNone(value("bezier", [0.2, 0.7, 0.2, 1]))
+
+    def test_an_alias_holds_the_value_of_the_token_it_names(self):
+        root = {"size": {"$type": "dimension", "target": {"$value": {"value": 48, "unit": "px"}},
+                         "header": {"$value": "{size.target}"}, "far": {"$value": "{size.header}"},
+                         "lost": {"$value": "{size.nothing}"}}}
+        self.assertEqual(token_stubs.resolved_value(root, root["size"]["far"]), {"value": 48, "unit": "px"})
+        self.assertIsNone(token_stubs.resolved_value(root, root["size"]["lost"]))
+        text = token_stubs.file_struct(json.dumps(root).encode(), "a test")
+        self.assertIn("token<length> header{::lv::length::px(48), ::lv::detail::from_design_tokens{}};", text)
+        self.assertIn("token<length> far{::lv::length::px(48), ::lv::detail::from_design_tokens{}};", text)
 
     def test_the_groups_a_look_can_name(self):
         root = {"tile": {"radius": {"$type": "dimension", "$value": "1px"},
