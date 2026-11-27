@@ -44,25 +44,31 @@ using namespace mp_units::si::unit_symbols;
 constexpr unsigned char barlow_ttf[] = {
 #embed "fonts/Barlow-Medium.ttf"
 };
-constexpr unsigned char condensed_semibold_ttf[] = {
-#embed "fonts/BarlowCondensed-SemiBold.ttf"
+constexpr unsigned char semibold_ttf[] = {
+#embed "fonts/Barlow-SemiBold.ttf"
+};
+constexpr unsigned char bold_ttf[] = {
+#embed "fonts/Barlow-Bold.ttf"
 };
 constexpr unsigned char condensed_bold_ttf[] = {
 #embed "fonts/BarlowCondensed-Bold.ttf"
 };
 constexpr auto type = lv::typeface({
   {"Barlow", 500, barlow_ttf},
-  {"Barlow Condensed", 600, condensed_semibold_ttf},
+  {"Barlow", 600, semibold_ttf},
+  {"Barlow", 700, bold_ttf},
   {"Barlow Condensed", 700, condensed_bold_ttf},
 });
 
-constexpr auto title_text   = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
-constexpr auto label_text   = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
-constexpr auto price_text   = lv::style({.text_font = type(tok.text.price)});
-constexpr auto caption_text = lv::style({.text_font = type(tok.text.caption)});
-constexpr auto sign_text    = lv::style({.text_font = type(tok.text.sign)});
-constexpr auto numeral_text = lv::style({.text_font = type(tok.text.numeral)});
-constexpr auto body_text    = lv::style({.text_font = type(tok.text.body)});
+constexpr auto title_text    = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
+constexpr auto label_text    = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
+constexpr auto price_text    = lv::style({.text_font = type(tok.text.price)});
+constexpr auto caption_text  = lv::style({.text_font = type(tok.text.caption)});
+constexpr auto currency_text = lv::style({.text_font = type(tok.text.currency)});
+constexpr auto note_text     = lv::style({.text_font = type(tok.text.note)});
+constexpr auto sign_text     = lv::style({.text_font = type(tok.text.sign)});
+constexpr auto numeral_text  = lv::style({.text_font = type(tok.text.numeral)});
+constexpr auto body_text     = lv::style({.text_font = type(tok.text.body)});
 constexpr auto overline_text =
   lv::style({.text_font = type(tok.text.overline)}) | tok.text.overline;
 //! [fonts]
@@ -252,7 +258,7 @@ constexpr auto tile() {
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
         lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
-        lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
+        lv::label({.text = "EUR", .style = lv::look<"currency"> | currency_text})
       )
     )
   );
@@ -299,7 +305,7 @@ constexpr auto field(
     lv::group(
       {.size = {100 * pct, lv::size_content}, .style = lv::look<"field-top">},
       lv::label({.text = text, .style = lv::look<"overline"> | overline_text}),
-      lv::label({.text = lv::bind(note), .style = caption_text})
+      lv::label({.text = lv::bind(note), .style = note_text})
     ),
     control
   );
