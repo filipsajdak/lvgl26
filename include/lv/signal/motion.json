@@ -1,0 +1,16 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "Signal, motion. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
+  "duration": {
+    "$type": "duration",
+    "press": {"$value": {"value":120,"unit":"ms"}},
+    "enter": {"$value": {"value":220,"unit":"ms"}},
+    "settle": {"$value": {"value":480,"unit":"ms"}}
+  },
+  "ease": {
+    "$type": "cubicBezier",
+    "out": {"$value": [0.2,0.7,0.2,1]},
+    "in-out": {"$value": [0.42,0,0.58,1]},
+    "back": {"$value": [0.34,1.56,0.64,1]}
+  }
+}
