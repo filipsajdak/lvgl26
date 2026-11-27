@@ -20,7 +20,7 @@ endforeach()
 
 # The machine's typeface is a copy of the site's Barlow, beside each design that embeds it:
 # every file of such a folder must equal the site's file of the same name.
-foreach(copy 1-screen/fonts 2-values/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
+foreach(copy 1-screen/fonts 2-values/fonts 3-pages/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
   string(REGEX MATCH "^[0-9]+" number ${copy})
   file(GLOB copied RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${copy} ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/*)
   foreach(file IN LISTS copied)

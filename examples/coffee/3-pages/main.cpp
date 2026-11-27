@@ -1,8 +1,10 @@
-// Step 3 of the coffee machine tutorial (docs/tutorial.md): pages. Each step of the
-// machine is a page, and the page of the current step slides in.
+// Step 3 of the coffee machine tutorial (docs/tutorial.md): pages. The screen of the drinks and
+// the screen of the cup are pages of one state; NEXT and BACK change it, and the new page slides in.
 //
-//   coffee_3    writes coffee_3.png
+//   coffee_3    writes coffee_3.png: the page of the cup half way in
 
+#include <lv/font.hpp>
+#include <lv/image.hpp>
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
@@ -10,6 +12,9 @@
 
 #include <mp-units/systems/si.h>
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
 #include <utility>
 
 namespace coffee {
@@ -33,118 +38,341 @@ namespace coffee {
 using namespace lv::units;
 using namespace mp_units::si::unit_symbols;
 
-constexpr auto ml = mp_units::si::milli<mp_units::si::litre>;
+//! [fonts]
+// The machine's own typeface, drawn from its files by the compiler, and the fonts of the
+// typography tokens as styles to merge.
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr unsigned char condensed_semibold_ttf[] = {
+#embed "fonts/BarlowCondensed-SemiBold.ttf"
+};
+constexpr unsigned char condensed_bold_ttf[] = {
+#embed "fonts/BarlowCondensed-Bold.ttf"
+};
+constexpr auto type = lv::typeface({
+  {"Barlow", 500, barlow_ttf},
+  {"Barlow Condensed", 600, condensed_semibold_ttf},
+  {"Barlow Condensed", 700, condensed_bold_ttf},
+});
+
+constexpr auto title_text   = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
+constexpr auto label_text   = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
+constexpr auto price_text   = lv::style({.text_font = type(tok.text.price)});
+constexpr auto caption_text = lv::style({.text_font = type(tok.text.caption)});
+constexpr auto sign_text    = lv::style({.text_font = type(tok.text.sign)});
+constexpr auto numeral_text = lv::style({.text_font = type(tok.text.numeral)});
+constexpr auto body_text    = lv::style({.text_font = type(tok.text.body)});
+constexpr auto overline_text =
+  lv::style({.text_font = type(tok.text.overline)}) | tok.text.overline;
+//! [fonts]
 
 //! [state]
-// What the reader chooses, and where the machine is.
+// What the reader chooses.
 enum class drink { espresso, lungo, cappuccino, latte };
-enum class step { drinks, cup, brewing, enjoy };
 
+constinit lv::state chosen{drink::espresso};
+
+// For each drink, whether it is the chosen one: a value made from the state.
+template <drink D>
+constinit lv::computed picked{[](drink d) { return d == D; }, chosen};
+//! [state]
+
+//! [values]
+// The strength of a cup, from 1 to 5: a struct of one member says what the number is.
 struct strength {
   int value;
 };
 
-constinit lv::state chosen{drink::espresso};
+constexpr strength mildest{1};
+constexpr strength strongest{5};
+
+// The size, a quantity in millilitres, within what the drink can be made in.
+constexpr auto ml = mp_units::si::milli<mp_units::si::litre>;
+using millilitres = decltype(40 * ml);
+
+struct cup_sizes {
+  millilitres least, usual, most;
+};
+constexpr cup_sizes sizes[] = {
+  {20 * ml, 40 * ml, 60 * ml},
+  {80 * ml, 110 * ml, 150 * ml},
+  {140 * ml, 180 * ml, 240 * ml},
+  {180 * ml, 240 * ml, 300 * ml},
+};
+constexpr auto size_step = 10 * ml;
+
+constexpr cup_sizes sizes_of(drink d) { return sizes[std::to_underlying(d)]; }
+
 constinit lv::state bold{strength{3}};
-constinit lv::state cup{40 * ml};
-constinit lv::state<step> current{step::drinks};
-//! [state]
+constinit lv::state cup{sizes_of(drink::espresso).usual};
 
-//! [parts]
-// A page's title, and a button that goes to another step.
-constexpr auto title(const char* text) {
-  return lv::label({.text = text, .style = lv::look<"title">});
-}
-
-template <step To>
-constexpr auto go_to(const char* text) {
-  return lv::button(
-    {.style = lv::look<"action">, .on_clicked = [] { current = To; }}, lv::label({.text = text})
-  );
-}
-//! [parts]
-
-//! [drinks]
-// The price of each drink, in the order of the enum.
-constexpr const char* prices[] = {"2.20 EUR", "2.40 EUR", "3.10 EUR", "3.30 EUR"};
-
-constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
-
-constexpr auto menu = lv::dropdown({
-  .options  = lv::options_of<drink>,
-  .selected = lv::bind(chosen),
-  .width    = 240 * px,
-});
-
-constexpr auto price_tag = lv::label({.text = lv::bind(price), .style = lv::look<"price">});
-
-constexpr auto drinks = lv::group(
-  {.style = lv::look<"screen">}, title("Coffee"), menu, price_tag, go_to<step::cup>("Next")
-);
-//! [drinks]
-
-//! [cup]
+// The beans, a quantity in grams, made from the strength.
 constexpr auto least_dose = 6 * g;  // the beans of the mildest cup
 constexpr auto dose_step  = 2 * g;  // what one step of strength adds
 
 constinit lv::computed beans{[](strength s) { return least_dose + s.value * dose_step; }, bold};
 
-constexpr auto strength_slider = lv::slider(
-  {.range = {1, 5}, .value = lv::bind(bold), .width = 240 * px, .style = lv::look<"slider">}
+// The steppers: what each button does, and when it can go no further.
+void milder() { bold = strength{std::max(mildest.value, bold.get().value - 1)}; }
+void stronger() { bold = strength{std::min(strongest.value, bold.get().value + 1)}; }
+void smaller() { cup = std::max(sizes_of(chosen.get()).least, cup.get() - size_step); }
+void larger() { cup = std::min(sizes_of(chosen.get()).most, cup.get() + size_step); }
+
+constinit lv::computed at_mildest{[](strength s) { return s.value <= mildest.value; }, bold};
+constinit lv::computed at_strongest{[](strength s) { return s.value >= strongest.value; }, bold};
+constinit lv::computed at_smallest{
+  [](drink d, millilitres c) { return c <= sizes_of(d).least; }, chosen, cup
+};
+constinit lv::computed at_largest{
+  [](drink d, millilitres c) { return c >= sizes_of(d).most; }, chosen, cup
+};
+//! [values]
+
+//! [screens]
+// Where the machine is: one page for each screen, and a button that goes to one.
+enum class screen { drinks, your_cup };
+
+constinit lv::state<screen> current{screen::drinks};
+
+template <screen To>
+void go() {
+  current = To;
+}
+//! [screens]
+
+//! [photos]
+// A photo of each drink, cut out, at 1.5 x target: the compiler decodes it.
+constexpr unsigned char espresso_png[] = {
+#embed "../assets/espresso-72.png"
+};
+constexpr unsigned char lungo_png[] = {
+#embed "../assets/lungo-72.png"
+};
+constexpr unsigned char cappuccino_png[] = {
+#embed "../assets/cappuccino-72.png"
+};
+constexpr unsigned char latte_png[] = {
+#embed "../assets/latte-72.png"
+};
+
+// What a tile shows of each drink, in the order of the enum.
+constexpr decltype(lv::image_file<espresso_png>) photos[] = {
+  lv::image_file<espresso_png>,
+  lv::image_file<lungo_png>,
+  lv::image_file<cappuccino_png>,
+  lv::image_file<latte_png>,
+};
+constexpr const char* names[]  = {"ESPRESSO", "LUNGO", "CAPPUCCINO", "LATTE"};
+constexpr const char* prices[] = {"2.20", "2.40", "3.10", "3.40"};
+
+// The chosen drink's photo, name and price, for the summary.
+constinit lv::computed photo{[](drink d) { return photos[std::to_underlying(d)]; }, chosen};
+constinit lv::computed name{[](drink d) { return names[std::to_underlying(d)]; }, chosen};
+constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
+
+// What the fields say of the values.
+constexpr std::array strength_words{
+  "1 of 5, Mild", "2 of 5, Light", "3 of 5, Medium", "4 of 5, Strong", "5 of 5, Intense"
+};
+constexpr const char* size_ranges[] = {
+  "20 to 60 mL", "80 to 150 mL", "140 to 240 mL", "180 to 300 mL"
+};
+
+constinit lv::computed strength_word{
+  [](strength s) { return strength_words[static_cast<std::size_t>(s.value - mildest.value)]; }, bold
+};
+constinit lv::computed size_range{
+  [](drink d) { return size_ranges[std::to_underlying(d)]; }, chosen
+};
+//! [photos]
+
+//! [parts]
+// The header: the title top left, and the step top right as dots and "n / 4".
+constexpr auto dot(bool on) {
+  return lv::group({.style = on ? lv::look<"dot dot-on"> : lv::look<"dot">});
+}
+
+constexpr auto header(const char* title, int step, const char* count) {
+  return lv::group(
+    {.id = "header", .style = lv::look<"header">},
+    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
+      dot(step >= 1),
+      dot(step >= 2),
+      dot(step >= 3),
+      dot(step >= 4),
+      lv::label({.text = count, .style = lv::look<"step"> | caption_text})
+    )
+  );
+}
+
+// The footer: going back bottom left, going on bottom right.
+constexpr auto back(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"ghost">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"primary">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text) {
+  return lv::button({.style = lv::look<"primary">}, lv::label({.text = text, .style = label_text}));
+}
+
+// A screen with nothing to go back to keeps the place empty.
+constexpr auto no_back = lv::group({.size = {lv::size_content, lv::size_content}});
+
+constexpr auto footer(lv::tree_node auto back, lv::tree_node auto next) {
+  return lv::group({.id = "footer", .style = lv::look<"footer">}, back, next);
+}
+//! [parts]
+
+//! [drinks]
+// A tile: the photo, the name and the price. It is checked while its drink is the chosen one.
+template <drink D>
+constexpr auto tile() {
+  return lv::button(
+    {
+      .checked    = lv::bind(picked<D>),
+      .style      = lv::look<"tile">,
+      .on_clicked = [] { chosen = D, cup = sizes_of(D).usual; },
+    },
+    lv::image({.src = photos[std::to_underlying(D)]}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"tile-text">},
+      lv::label({.text = names[std::to_underlying(D)], .style = label_text}),
+      lv::group(
+        {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
+        lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
+        lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
+      )
+    )
+  );
+}
+
+constexpr auto tiles = lv::group(
+  {.style = lv::look<"tiles">},
+  lv::group({.style = lv::look<"tile-row">}, tile<drink::espresso>(), tile<drink::lungo>()),
+  lv::group({.style = lv::look<"tile-row">}, tile<drink::cappuccino>(), tile<drink::latte>())
 );
-constexpr auto size_slider = lv::slider(
-  {.range = {20, 200}, .value = lv::bind(cup), .width = 240 * px, .style = lv::look<"slider">}
+
+constexpr auto drinks = lv::group(
+  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
+  footer(no_back, primary("NEXT", &go<screen::your_cup>))
 );
-constexpr auto size_text =
-  lv::label({.text = lv::bind(cup)});  // a quantity shows its unit: "40 mL"
-constexpr auto beans_text = lv::label({.text = lv::bind(beans, "{} g of beans")});
+//! [drinks]
+
+//! [cup]
+// A stepper: -, what is set, +. A button that can go no further is disabled.
+constexpr auto stepper(
+  const lv::dependency auto& at_least, const lv::dependency auto& at_most,
+  lv::tree_handler auto less, lv::tree_handler auto more, lv::tree_node auto shown
+) {
+  return lv::group(
+    {.style = lv::look<"stepper">},
+    lv::button(
+      {.disabled = lv::bind(at_least), .style = lv::look<"square">, .on_clicked = less},
+      lv::label({.text = "-", .style = sign_text})
+    ),
+    shown,
+    lv::button(
+      {.disabled = lv::bind(at_most), .style = lv::look<"square">, .on_clicked = more},
+      lv::label({.text = "+", .style = sign_text})
+    )
+  );
+}
+
+// A field: its name and what it says of its value, over its control.
+constexpr auto field(
+  const char* text, const lv::dependency auto& note, lv::tree_node auto control
+) {
+  return lv::group(
+    {.size = {100 * pct, lv::size_content}, .style = lv::look<"field">},
+    lv::group(
+      {.size = {100 * pct, lv::size_content}, .style = lv::look<"field-top">},
+      lv::label({.text = text, .style = lv::look<"overline"> | overline_text}),
+      lv::label({.text = lv::bind(note), .style = caption_text})
+    ),
+    control
+  );
+}
+
+// The strength as five segments: a segment is checked up to the strength.
+template <int I>
+constinit lv::computed segment_on{[](strength s) { return s.value >= I; }, bold};
+
+template <int I>
+constexpr auto segment() {
+  return lv::group({.checked = lv::bind(segment_on<I>), .style = lv::look<"segment">});
+}
+
+constexpr auto segments = lv::group(
+  {.style = lv::look<"segments">}, segment<1>(), segment<2>(), segment<3>(), segment<4>(),
+  segment<5>()
+);
+
+constexpr auto size_value = lv::group(
+  {.style = lv::look<"value">}, lv::label({.text = lv::bind(cup, "{}"), .style = numeral_text}),
+  lv::label({.text = "mL", .style = lv::look<"unit"> | body_text})
+);
+
+constexpr auto fields = lv::group(
+  {.style = lv::look<"fields">},
+  field("STRENGTH", strength_word, stepper(at_mildest, at_strongest, &milder, &stronger, segments)),
+  field("SIZE", size_range, stepper(at_smallest, at_largest, &smaller, &larger, size_value))
+);
+
+// The summary of the cup: the chosen drink's photo, name, beans and price.
+constexpr auto summary = lv::group(
+  {.id = "summary", .style = lv::look<"summary">},
+  lv::group(
+    {.size = {100 * pct, lv::size_content}, .style = lv::look<"photo-box">},
+    lv::image({.id = "summary-photo", .src = lv::bind(photo)})
+  ),
+  lv::label({.text = lv::bind(name), .style = lv::look<"summary-name"> | label_text}),
+  lv::label({.text = lv::bind(beans, "{} g of beans"), .style = lv::look<"beans"> | caption_text}),
+  lv::group({.style = lv::look<"spacer">}),
+  lv::group(
+    {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
+    lv::label({.text = lv::bind(price), .style = numeral_text}),
+    lv::label({.text = "EUR", .style = lv::look<"unit"> | body_text})
+  )
+);
 
 constexpr auto your_cup = lv::group(
-  {.style = lv::look<"screen">}, title("Your cup"), strength_slider, size_slider, size_text,
-  beans_text, go_to<step::brewing>("Brew")
+  {.style = lv::look<"page">}, header("YOUR CUP", 2, "2 / 4"),
+  lv::group({.style = lv::look<"cup">}, fields, summary),
+  footer(back("BACK", &go<screen::drinks>), primary("BREW"))
 );
 //! [cup]
 
-//! [brewing]
-constexpr auto brew_time = 25 * s;  // the time the machine brews, a value of the program
-
-constinit lv::state left{brew_time};
-
-constexpr auto ring = lv::arc(
-  {
-    .id    = "ring",
-    .range = {0, 100},
-    .size  = {140 * px, 140 * px},
-    .value = 0,
-    .style = lv::look<"ring">,
-  },
-  lv::label({.align = "center", .text = lv::bind(left)})  // shows "25 s"
-);
-
-constexpr auto brewing =
-  lv::group({.style = lv::look<"screen">}, title("Brewing"), ring, go_to<step::cup>("Cancel"));
-//! [brewing]
-
-//! [enjoy]
-constexpr auto ready = lv::label({.text = lv::bind(price)});
-
-constexpr auto enjoy =
-  lv::group({.style = lv::look<"screen">}, title("Enjoy"), ready, go_to<step::drinks>("Again"));
-//! [enjoy]
-
 //! [pages]
-// A page slides in from the right, and the old one slides out to the left.
-constexpr auto slide_in  = lv::transition({.x = {480 * px, 0 * px}}, 250 * lv::ms, lv::ease::out);
-constexpr auto slide_out = lv::transition({.x = {0 * px, -480 * px}}, 250 * lv::ms, lv::ease::in);
+// The page of the current screen. A new page slides in from the right, and the old one slides out
+// to the left, in the time and the curve of the token file.
+constexpr auto width = tok.size.screen_width->raw();
+constexpr auto slide_in =
+  lv::transition({.x = {width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto slide_out =
+  lv::transition({.x = {0 * px, -width * px}}, *tok.duration.enter, *tok.ease.out);
 
 constexpr auto ui = lv::group(
   lv::shown(
-    current, {.enter = slide_in, .leave = slide_out}, lv::is<step::drinks>(drinks),
-    lv::is<step::cup>(your_cup), lv::is<step::brewing>(brewing), lv::is<step::enjoy>(enjoy)
+    current, {.enter = slide_in, .leave = slide_out}, lv::is<screen::drinks>(drinks),
+    lv::is<screen::your_cup>(your_cup)
   )
 );
 //! [pages]
 
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
+// which main checks.
 constinit lv::frame<480, 320> frame;
 
 }  // namespace coffee
@@ -154,10 +382,20 @@ int main() {
   lv::display display{app, coffee::frame};
   auto root = lv::mount<coffee::ui>(display.screen());
   if (!root) return 1;
+  for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
+  const auto screen = display.screen();
+  if (screen.get<"width">() != coffee::width) return 8;
+  if (screen.get<"height">() != coffee::tok.size.screen_height->raw()) return 8;
 
   // The reader goes on to the cup: the page slides in, on a clock that steps 10 ms at a time.
-  coffee::current = coffee::step::cup;
-  for (int i = 0; i < 50; ++i) app.advance(10 * lv::ms), app.step();
+  // Half way, the picture shows both pages.
+  coffee::go<coffee::screen::your_cup>();
+  for (int i = 0; i < 12; ++i) app.advance(10 * lv::ms), app.step();
+  if (!lv::write_png(display.screen(), "coffee_3.png")) return 3;
 
-  return lv::write_png(display.screen(), "coffee_3.png") ? 0 : 3;
+  // When the slide has ended, BACK goes back the same way.
+  for (int i = 0; i < 30; ++i) app.advance(10 * lv::ms), app.step();
+  coffee::go<coffee::screen::drinks>();
+  for (int i = 0; i < 30; ++i) app.advance(10 * lv::ms), app.step();
+  return coffee::current.get() == coffee::screen::drinks ? 0 : 2;
 }
