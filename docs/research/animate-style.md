@@ -35,7 +35,7 @@ co_await lv::animate(lv::in<"knob", "pressed">(slider), {.opa = {0, 255}}, 200 *
 ## Cost
 
 - The scan of the style struct is behind a template parameter, as `animatable_of<W, D>` is for the setters (`GCC 16.2 runs a call with constant arguments in a function that is no template where the header is read`, CLAUDE.md). A file that does not call `lv::animate` pays nothing.
-- A file that animates pays for one more scan of the 139 style members and for the instantiations of its calls. It is measured with the probes `signal` (uses `lv::animate`? no: a probe is added: `animate_style`), and the other probes must not move. The compile-cost table is in the PR.
+- A file that animates pays for one more scan of the 139 style members and for the instantiations of its calls. It is measured by a new probe, `animate_style` (a file that animates one widget property and one style property), and the other probes must not move. The compile-cost table is in the PR.
 - `lv::include_only` budget: `animate.hpp` is not part of `<lv/lv.hpp>`; the budget does not change.
 
 ## Open (asked of the team lead)
