@@ -51,3 +51,11 @@ I propose Y: it costs a file that does not use it nothing, and the registry is v
 3. A registry that fills as looks are used (one pointer for each mode look, no heap) is acceptable? The alternative (2) needs every mounted tree known to the display.
 4. A screen that is not loaded keeps the mode it was built with (as the themes do): acceptable?
 5. Does the coffee example need it for the Service row only, or must every screen of steps 5-7 use mode looks for roast, bean and track? That decides whether the look in a `lv::group` and the look in a list row both have to work in the first version.
+
+## Decisions (owner, 2026-11-27) and what was built
+
+1. A: two token files of one shape; a shape mismatch is a compile error.
+2. Y: `.look = lv::mode_look<"tile">`, an opt-in header.
+3. The registry that fills as looks are used was replaced by something simpler that needs no mutable object: a mode look is a constant table of its styles in each mode, and a widget that takes it carries one LVGL event (a no-op callback, the table as user data) as a marker. A switch walks the widgets, finds the markers and replaces styles with `lv_obj_replace_style`. No list, no `constinit` object, nothing allocated at a switch, and a style that a program shares by value is never taken for a mode look's.
+4. A screen that is not loaded keeps the mode it was built with.
+5. All looks of the coffee machine follow the mode, also in a group and in a row of a list: both are tested (`tests/mode_look.cpp`).
