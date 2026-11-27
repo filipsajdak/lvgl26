@@ -98,14 +98,16 @@ The device takes them in its constructor: `lv::pointer mouse{display, {.swipe_di
 - `hold_complete`: the finger stays down 1 s: true, progress ends at the full value. `hold_release`: lifted at 400 ms: false, the animation is gone, nothing left on LVGL's heap (`full_heap.hpp` as in the other task tests). `hold_slide_off`: false. `hold_scroll`: false.
 - Compile-fail tests for the messages: a threshold that is no length token, a hold with a state of the wrong type.
 
-## Questions for the owner
+## Decisions of the owner (2026-11-27)
 
-1. Is the swipe one wait that gives a direction (A), with the filter by template arguments? Or one name for each direction (B)?
-2. The gesture is sent while the finger is still down, at 50 px, not on release. Is that right for back, next and Service? (The finger-following page of gap 5 needs the drag itself, not this event; it is a separate `lv::dragged` and is not part of this note.)
-3. Are the thresholds a `gesture` group of tokens, given to `lv::pointer` in its constructor, with LVGL's defaults in Signal? The speed token is awkward: LVGL measures pixels for each read, and a read is 33 ms. Is a plain length for each read acceptable, or do you want pixels for each second converted at the display's read period?
-4. The hold's progress: a state of `lv::percent` (my recommendation), or a new `lv::progress`?
-5. Should the hold also accept a progress `lv::state` of an arc's angle, or is a percent that an arc follows through a `lv::computed` enough?
-6. Brewing "swipes off": is the absence of a waiter on that page enough, or do you want an explicit way to turn the swipe off for a subtree (clearing the bubble flag), which also stops a shell-level waiter?
+1. One wait gives the direction, with the filter by template arguments: `co_await lv::swiped(root)`, `co_await lv::swiped<lv::swipe::left, lv::swipe::right>(root)`, and the handler `.on_swiped = &handler` with `void handler(lv::swipe)`.
+2. The gesture fires at LVGL's 50 px while the finger is down.
+3. The thresholds are a token group `gesture`, given to `lv::pointer` in its constructor. Signal gets a `gesture` group with LVGL's defaults (`tools/signal_sync.py --record`; nothing is written back to Claude Design). The speed is a plain length for each read, documented with the read period.
+4. The hold's progress is an `lv::state<lv::percent>`.
+5. A percent that an arc follows through `lv::computed` is enough: no angle state.
+6. An explicit way to turn the swipe off for a subtree, which clears the bubble flag and so also stops a waiter above it. Its name and form are proposed in the pull request that builds it.
+
+`lv::dragged` and the finger-following page (gap 5) are out of scope (v0.2).
 
 ## Cost
 
