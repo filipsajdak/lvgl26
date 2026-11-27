@@ -56,3 +56,10 @@ A page that follows the finger needs, for a drag, the transition of the directio
 2. Do you want B (the arm's own `.enter`/`.leave`) in this change? The coffee mock-up needs it for the Service page (down from the top). My proposal: yes, with A.
 3. C (a function that says "back") now or later? My proposal: later.
 4. Names: `.enter_back` and `.leave_back`. Fine, or `.back_enter` / `.back_leave`?
+
+## Decisions (owner, 2026-11-27)
+
+1. A: the direction is the order of the state's enumerators.
+2. B in the same change. Chosen shape: `arm_options` gains `.enter`, `.leave`, `.enter_back`, `.leave_back`. For a page that comes in, its own arm's spec beats the one of `lv::shown`; for a page that leaves, likewise. The arm's back specs fall back to the arm's own forward specs, then to the shown-wide back, then forward (so a page "from the top" is from the top both ways). `lv::page_of` takes `page_options` (the two hooks), since a transition is not a structural template argument.
+3. C (a function that gives the direction) later.
+4. Names `.enter_back` and `.leave_back`.

@@ -399,7 +399,8 @@ constexpr auto back_in = lv::transition({.x = {-320 * px, 0 * px}}, 200 * lv::ms
 constexpr auto back_out = lv::transition({.x = {0 * px, -320 * px}}, 200 * lv::ms);
 constexpr auto two_ways_pages =
     lv::group[lv::shown(current_page, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out})[
-        lv::is<screen_page::main>(main_page), lv::is<screen_page::popup_page>(popup_page), lv::otherwise()]];
+        lv::is<screen_page::main>(main_page),
+        lv::is<screen_page::popup_page>(popup_page, {.enter = back_in, .leave = back_out}), lv::otherwise()]];
 constexpr auto sliding_pages = lv::group[lv::shown(current_page, {.alive = 2, .enter = slide_in, .leave = slide_out})[
     lv::is<screen_page::main>(main_page), lv::is<screen_page::popup_page>(popup_page), lv::otherwise()]];
 static_assert(lv::page_of<popup>.size > 0);
