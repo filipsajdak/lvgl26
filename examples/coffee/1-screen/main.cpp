@@ -188,11 +188,16 @@ int main() {
   if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
   //! [geometry]
 
-  // The reader picks a lungo: its tile fills, and the espresso's empties.
+  // The reader picks a lungo: its tile fills, and the espresso's empties. Then the espresso
+  // again, as the mock-up shows it.
   coffee::chosen = coffee::drink::lungo;
   app.step();
-
   if (!coffee::picked<coffee::drink::lungo>.get() || coffee::picked<coffee::drink::espresso>.get())
     return 2;
+  coffee::chosen = coffee::drink::espresso;
+  app.step();
+  if (!coffee::picked<coffee::drink::espresso>.get() || coffee::picked<coffee::drink::lungo>.get())
+    return 2;
+
   return lv::write_png(display.screen(), "coffee_1.png") ? 0 : 3;
 }
