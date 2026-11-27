@@ -39,6 +39,7 @@
 #include <lv/values.hpp>
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
@@ -435,10 +436,17 @@ template <detail::fixed Extra>
 inline constexpr std::string_view latin1_plus = std::define_static_string(detail::ascii_plus_text(Extra.sv(), "lv::latin1_plus", true));
 
 namespace detail {
-// lv::latin1: a set that turns into its text where it is used. A variable of the text itself would be worked out in
-// every file that reads this header: 191 characters sorted for nothing (0.6 G instructions in a file that names no font).
+// lv::latin1: a set that turns into its text where it is used. The conversion is a template, and its text a variable
+// template of the type asked for, so that nothing is worked out where this header is read: a conversion that named
+// latin1_plus<""> plainly instantiated it in every file (2.4 G instructions for 191 characters sorted for nothing).
+template <class V>
+inline constexpr V latin1_text = std::define_static_string(ascii_plus_text("", "lv::latin1_plus", true));
+
 struct latin1_set {
-  consteval operator std::string_view() const { return latin1_plus<"">; }
+  template <std::same_as<std::string_view> V>
+  consteval operator V() const {
+    return latin1_text<V>;
+  }
 };
 }  // namespace detail
 
