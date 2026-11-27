@@ -563,7 +563,7 @@ constexpr auto field(
     lv::group(
       {.size = {100 * pct, lv::size_content}, .style = lv::look<"field-top">},
       lv::label({.text = text, .style = lv::look<"overline"> | overline_text}),
-      lv::label({.text = lv::bind(note), .style = caption_text})
+      lv::label({.text = lv::bind(note), .style = note_text})
     ),
     control
   );
