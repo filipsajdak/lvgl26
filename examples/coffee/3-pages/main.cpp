@@ -375,6 +375,11 @@ constexpr auto ui = lv::group(
 // which main checks.
 constinit lv::frame<480, 320> frame;
 
+// Moves the clock on by 10 ms and draws, `count` times.
+void steps(lv::application& app, int count) {
+  for (int i = 0; i < count; ++i) app.advance(10 * lv::ms), app.step();
+}
+
 }  // namespace coffee
 
 int main() {
@@ -382,7 +387,7 @@ int main() {
   lv::display display{app, coffee::frame};
   auto root = lv::mount<coffee::ui>(display.screen());
   if (!root) return 1;
-  for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
+  coffee::steps(app, 5);  // past the first refresh
   const auto screen = display.screen();
   if (screen.get<"width">() != coffee::width) return 8;
   if (screen.get<"height">() != coffee::tok.size.screen_height->raw()) return 8;
@@ -390,12 +395,12 @@ int main() {
   // The reader goes on to the cup: the page slides in, on a clock that steps 10 ms at a time.
   // Half way, the picture shows both pages.
   coffee::go<coffee::screen::your_cup>();
-  for (int i = 0; i < 12; ++i) app.advance(10 * lv::ms), app.step();
+  coffee::steps(app, 12);
   if (!lv::write_png(display.screen(), "coffee_3.png")) return 3;
 
   // When the slide has ended, BACK goes back the same way.
-  for (int i = 0; i < 30; ++i) app.advance(10 * lv::ms), app.step();
+  coffee::steps(app, 30);
   coffee::go<coffee::screen::drinks>();
-  for (int i = 0; i < 30; ++i) app.advance(10 * lv::ms), app.step();
+  coffee::steps(app, 30);
   return coffee::current.get() == coffee::screen::drinks ? 0 : 2;
 }
