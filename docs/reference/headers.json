@@ -9,7 +9,7 @@
   "lv/encoded_image.hpp": ["encoded_image"],
   "lv/event.hpp": ["event"],
   "lv/events.hpp": ["event_ref"],
-  "lv/font.hpp": ["font", "face_file", "typeface"],
+  "lv/font.hpp": ["font", "ascii_plus", "face_file", "typeface"],
   "lv/image.hpp": ["image_file", "mask_file"],
   "lv/list.hpp": ["list", "each", "list_error", "bind", "row_view"],
   "lv/look.hpp": ["look", "design_of", "design", "drawn_font", "font_object", "look_of", "font_of", "draw"],
