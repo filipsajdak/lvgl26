@@ -83,7 +83,7 @@ constexpr auto tile() {
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
         lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
-        lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
+        lv::label({.text = "EUR", .style = lv::look<"currency"> | currency_text})
       )
     )
   );
@@ -188,11 +188,16 @@ A node names its look, and the token file says how it looks. The project names i
     "display": {"$value": "Barlow Condensed"},
     "text": {"$value": "Barlow"}
   },
+  "opacity": {
+    "$type": "number",
+    "quiet": {"$value": 0.8, "$description": "Text beside a value that names its unit, such as the currency."}
+  },
   "text": {
     "$type": "typography",
-    "title": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 2, "unit": "px"}, "lineHeight": 1.1667}},
-    "label": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 16, "unit": "px"}, "fontWeight": 700, "letterSpacing": {"value": 1, "unit": "px"}, "lineHeight": 1.25}},
+    "title": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 2, "unit": "px"}, "lineHeight": 1.1667}},
+    "label": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 16, "unit": "px"}, "fontWeight": 700, "letterSpacing": {"value": 1, "unit": "px"}, "lineHeight": 1.25}},
     "price": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 700, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.1667}},
+    "currency": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 13, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.3846}},
     "caption": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 13, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.3846}}
   },
   "page": {
@@ -317,7 +322,8 @@ A node names its look, and the token file says how it looks. The project names i
     }
   },
   "currency": {
-    "pad_left": {"$value": "{space.1}"}
+    "pad_left": {"$value": "{space.1}"},
+    "text_opa": {"$value": "{opacity.quiet}"}
   },
   "footer": {
     "height": {"$value": "{layout.footer-height}"},
@@ -357,7 +363,7 @@ A node names its look, and the token file says how it looks. The project names i
 }
 ```
 
-The text is set in the machine's own typeface, Barlow, from the typography tokens. The compiler draws each font from its file; a font is a style to merge with a look.
+The text is set in the machine's own typeface, from the typography tokens: words in Barlow, figures in Barlow Condensed, as in the mock-up. The compiler draws each font from its file; a font is a style to merge with a look.
 
 <!-- snippet: examples/coffee/1-screen/main.cpp fonts -->
 ```cpp
@@ -366,22 +372,27 @@ The text is set in the machine's own typeface, Barlow, from the typography token
 constexpr unsigned char barlow_ttf[] = {
 #embed "fonts/Barlow-Medium.ttf"
 };
-constexpr unsigned char condensed_semibold_ttf[] = {
-#embed "fonts/BarlowCondensed-SemiBold.ttf"
+constexpr unsigned char semibold_ttf[] = {
+#embed "fonts/Barlow-SemiBold.ttf"
+};
+constexpr unsigned char bold_ttf[] = {
+#embed "fonts/Barlow-Bold.ttf"
 };
 constexpr unsigned char condensed_bold_ttf[] = {
 #embed "fonts/BarlowCondensed-Bold.ttf"
 };
 constexpr auto type = lv::typeface({
   {"Barlow", 500, barlow_ttf},
-  {"Barlow Condensed", 600, condensed_semibold_ttf},
+  {"Barlow", 600, semibold_ttf},
+  {"Barlow", 700, bold_ttf},
   {"Barlow Condensed", 700, condensed_bold_ttf},
 });
 
-constexpr auto title_text   = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
-constexpr auto label_text   = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
-constexpr auto price_text   = lv::style({.text_font = type(tok.text.price)});
-constexpr auto caption_text = lv::style({.text_font = type(tok.text.caption)});
+constexpr auto title_text    = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
+constexpr auto label_text    = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
+constexpr auto price_text    = lv::style({.text_font = type(tok.text.price)});
+constexpr auto caption_text  = lv::style({.text_font = type(tok.text.caption)});
+constexpr auto currency_text = lv::style({.text_font = type(tok.text.currency)});
 ```
 
 The program checks the screen it drew against the token file. The header is `target` high, the footer `target + space-4`, and the content between them the rest of the screen. A size that does not follow the design ends the program with a code of its own.
