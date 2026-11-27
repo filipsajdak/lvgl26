@@ -152,6 +152,29 @@ constexpr auto indicator = lv::signal::lamps.dark.green;  // lamps.day.green, la
 - The colours are in `include/lv/signal/lamps.json`, written from the design file by `tools/signal_tokens.py`: every colour named `lamp-...` goes there, and not into the files of the themes.
 - The header costs about 0.3 G instructions of compile time in the file that includes it. `lv/signal.hpp` and `lv/signal_type.hpp` do not include it, so a program without tell-tales pays nothing.
 
+### Motion
+
+Signal's durations and easings are the same in every theme, and they are in a header of their own:
+
+```cpp
+#include <lv/signal_motion.hpp>
+
+co_await lv::animate(view, {.value = {0, 100}}, lv::signal::motion.duration.settle, *lv::signal::motion.ease.out);
+```
+
+| Token | Value | For |
+|---|---|---|
+| `motion.duration.press` | 120 ms | the answer to a press |
+| `motion.duration.enter` | 220 ms | a page, a panel or a value that comes into view |
+| `motion.duration.settle` | 480 ms | a ring, a bar or a page that moves to its new place and comes to rest |
+| `motion.ease.out` | `cubic-bezier(0.2, 0.7, 0.2, 1)` | what arrives: fast at first, then slowly to rest |
+| `motion.ease.in_out` | `cubic-bezier(0.42, 0, 0.58, 1)` | what moves from one place on the screen to another |
+| `motion.ease.back` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | a small overshoot that comes back: a selection, a confirmed press |
+
+- `ease.back` leaves [0, 1] in y, as an overshoot does. LVGL's curves take y from -32 up to 32.
+- The tokens are in `include/lv/signal/motion.json`, written from the motion section of the design file by `tools/signal_tokens.py`: a token named `duration-...` or `ease-...` goes there, and not into the files of the themes.
+- `lv/signal.hpp` and `lv/signal_type.hpp` do not include the header, so a program that animates nothing pays nothing for it.
+
 ## Make your own
 
 A theme is one constant. It has a member for each kind of widget, and each member holds the styles a node of a tree can have: `style`, `style_pressed`, `style_indicator` and the rest.
