@@ -127,8 +127,11 @@ constexpr auto primary(const char* text) {
   return lv::button({.style = lv::look<"primary">}, lv::label({.text = text, .style = label_text}));
 }
 
-constexpr auto footer(lv::tree_node auto... buttons) {
-  return lv::group({.id = "footer", .style = lv::look<"footer">}, buttons...);
+// A screen with nothing to go back to keeps the place empty.
+constexpr auto no_back = lv::group({.size = {lv::size_content, lv::size_content}});
+
+constexpr auto footer(lv::tree_node auto back, lv::tree_node auto next) {
+  return lv::group({.id = "footer", .style = lv::look<"footer">}, back, next);
 }
 //! [parts]
 
@@ -162,7 +165,8 @@ constexpr auto tiles = lv::group(
 );
 
 constexpr auto ui = lv::group(
-  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles, footer(primary("NEXT"))
+  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
+  footer(no_back, primary("NEXT"))
 );
 //! [drinks]
 
