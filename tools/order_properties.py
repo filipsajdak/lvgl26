@@ -43,7 +43,7 @@ def group_of(name: str) -> int:
     """0 for the id, 1 for properties, 2 for styles, 3 for handlers: property_group in include/lv/props.hpp."""
     if name == "id":
         return 0
-    if name == "style" or name.startswith("style_"):
+    if name == "look" or name == "style" or name.startswith("style_"):
         return 2
     return 3 if name.startswith(HANDLER_PREFIX) else 1
 

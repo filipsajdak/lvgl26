@@ -71,6 +71,7 @@
     {"name": "width", "kind": "property", "sets": "lv_obj_set_width", "takes": [{"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)"}]},
     {"name": "x", "kind": "property", "sets": "lv_obj_set_x", "takes": [{"write": "a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length)"}]},
     {"name": "y", "kind": "property", "sets": "lv_obj_set_y", "takes": [{"write": "a height or y (120 * lv::px, 50 * lv::pct or lv::size_content, not a horizontal length)"}]},
+    {"name": "look", "kind": "property", "sets": "join_mode_look", "takes": [{"write": "lv::detail::mode_look_ref"}]},
     {"name": "style", "kind": "style"},
     {"name": "style_alt", "kind": "style"},
     {"name": "style_checked", "kind": "style"},

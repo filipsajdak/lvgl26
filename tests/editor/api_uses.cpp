@@ -16,6 +16,7 @@
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
+#include <lv/mode_look.hpp>
 #include <lv/one_of.hpp>
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
@@ -828,6 +829,10 @@ struct plain_design {};
 template <>
 inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
 
+// The designs of the two modes, in the order of the enumerators of the state a display follows.
+template <>
+inline constexpr lv::mode_designs_of<lv::override, lv::override> lv::mode_designs<lv::override>{};
+
 // A font that a file of its own draws. A file that defines the object does so before it names it.
 template <>
 const lv::drawn_font lv::font_object<"text.label"> = lv::draw<"text.label">(api_uses::type);
@@ -845,6 +850,9 @@ constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per
 template <class Design = lv::override>
 constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
 constexpr auto chips = lv::row[chip<>, chip<plain_design>];
+
+// A look whose styles follow the mode of a display that follows a state.
+constexpr auto follows_the_mode = lv::box({.look = lv::mode_look<"tile">, .style = {.radius = lv::raw(3 * px)}});
 
 // A font that another file draws: named here, defined in the file that draws it.
 constexpr auto split_label = lv::font_of<"text.label">;
