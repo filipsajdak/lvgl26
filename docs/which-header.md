@@ -35,7 +35,7 @@ These are not in `<lv/all.hpp>`, because they are a platform, a design system or
 
 | Header | What it is |
 |---|---|
-| `<lv/signal.hpp>`, `<lv/signal_type.hpp>`, `<lv/signal_fonts.hpp>`, `<lv/signal_lamps.hpp>` | Signal, the design system of the examples: its themes, its fonts (drawn in each file, or linked once from `lvgl26::signal_type`), its lamp colours |
+| `<lv/signal.hpp>`, `<lv/signal_type.hpp>`, `<lv/signal_fonts.hpp>`, `<lv/signal_lamps.hpp>`, `<lv/signal_motion.hpp>` | Signal, the design system of the examples: its themes, its fonts (drawn in each file, or linked once from `lvgl26::signal_type`), its lamp colours, its durations and easings |
 | `<lv/host.hpp>` | The operating system's clock |
 | `<lv/ui_scheduler.hpp>` | Work posted from other threads |
 | `<lv/mcp.hpp>` | The agent kit's server |

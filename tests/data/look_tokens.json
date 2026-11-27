@@ -410,5 +410,9 @@
     "$value": {"value": 40, "unit": "px"}
    }
   }
- }
+ },
+  "pct99": {"$extensions": {"io.github.filipsajdak.lvgl26": {"width": "99%"}}},
+  "alpha-border": {"border_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [0.1686, 0.498, 1], "alpha": 0.502, "hex": "#2b7fff"}}},
+  "alt-layer": {"alt": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}},
+  "lit-first": {"default": {"radius": {"$type": "dimension", "$value": {"value": 9, "unit": "px"}}}, "radius": {"$type": "dimension", "$value": {"value": 4, "unit": "px"}}}
 }

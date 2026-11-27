@@ -149,8 +149,9 @@ foreach(case unmount_empty get_other held_after_remount error_of_mounted)
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
-# unmount() of a tree that is not mounted, and mount() of one that is, end the program.
-foreach(case unmount_not_mounted mount_twice unmount_after_parent)
+# unmount() of a tree that is not mounted, mount() of one that is, a view of a tree that is not mounted, and
+# mount_in() in memory that is too small or not aligned, end the program.
+foreach(case unmount_not_mounted mount_twice unmount_after_parent get_not_mounted mount_in_too_small mount_in_misaligned)
   add_test(NAME mounted_storage_violation_${case}
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:mounted_storage> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
@@ -250,6 +251,8 @@ add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/
                                                   A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
 # Signal's tell-tale lamp colours, a header of its own.
 lvgl26_test(signal_lamps)
+# Signal's durations and easings, a header of its own.
+lvgl26_test(signal_motion)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
@@ -300,6 +303,10 @@ set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_fil
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+# The call form builds the node that the subscript form builds.
+lvgl26_test(call_form)
+# The members of a props struct are in the order a tree is written in.
+lvgl26_test(props_order)
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
@@ -518,7 +525,7 @@ lvgl26_compile_fail(pointer_queue_too_large "Capacity <= .*most_pointer_samples"
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail_message(each_without_row static_assert "lv: lv::each needs a row template: lv::each(tracks, &track::id)[lv::label(...)].")
 lvgl26_compile_fail_message(each_plain_key static_assert "lv: a key names one row, and is compared as a state compares its value. Give it a named type, `struct track_id { int value; };`, or an enum. To allow plain integers, set rules.raw_integer_state in the settings.")
-lvgl26_compile_fail(each_not_a_list "lv::each takes an lv::list and the member of its rows that holds the key")
+lvgl26_compile_fail_message(each_not_a_list deleted "lv: lv::each takes an lv::list and the member of its rows that holds the key: lv::each(tracks, &track::id, track_row).")
 lvgl26_compile_fail(each_key_of_another_row "lv::each takes an lv::list and the member of its rows that holds the key")
 lvgl26_compile_fail_message(each_twice_in_one_widget static_assert "lv: a widget holds at most one lv::each. Put each one in a widget of its own: lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].")
 lvgl26_compile_fail_message(row_field_outside_each static_assert "lv: lv::bind(&T::field) follows a field of a row, and this node is not in a row. Use it in the row template of lv::each: lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].")
@@ -549,6 +556,7 @@ lvgl26_compile_fail(eager_scan "evaluation operation count exceeds limit of ${lv
 target_compile_options(fail_eager_scan PRIVATE -fconstexpr-ops-limit=${lvgl26_include_only_ops})
 lvgl26_compile_fail_message(set_inline_style deleted "lv: a style in set() is made with lv::style({...}): view.set({.style = lv::style({.radius = ...})}).")
 lvgl26_compile_fail_message(set_named_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
+lvgl26_compile_fail_message(set_named_set_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail_message(set_constexpr_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail_message(props_needs_unit static_assert "lv: wrong value for this property. It takes a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length). You gave int.")
@@ -686,7 +694,8 @@ lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this 
 lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
 lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
 lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
-lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail_message(restrict_spawn static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
+lvgl26_compile_fail_message(restrict_spawn_owned static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
 lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
@@ -1325,6 +1334,16 @@ lvgl26_compile_fail_message(look_group_not_layer constexpr "lv: in the look 'lay
 lvgl26_compile_fail_message(look_group_in_layer constexpr "lv: in the look 'layeredin' the group 'extra' is neither a part nor a state. A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-extra' beside 'a', used as lv::look<\"a a-extra\">.")
 lvgl26_compile_fail_message(look_names_a_token constexpr "lv: the look 'tile.radius' names a token, not a group: 'tile.radius' holds one value. A look is a group of tokens, written lv::look<\"tile\">, and the style property is its entry 'radius'.")
 lvgl26_compile_fail_message(look_empty constexpr "lv: lv::look<\"  \"> names no look. Write the path of a group of the token file: lv::look<\"queue.card\">. The groups there: <<names>>.")
+lvgl26_compile_fail_message(look_layer_far_typo constexpr "lv: in the look 'layerfar' the group 'chekd' is neither a part nor a state. Did you mean 'checked'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-chekd' beside 'a', used as lv::look<\"a a-chekd\">.")
+lvgl26_compile_fail_message(look_unknown_group_close constexpr "lv: the look 'queue.cardd' has no group 'cardd' in 'queue'. The groups there: card, details. Did you mean 'card'?")
+lvgl26_compile_fail_message(look_layer_part_typo constexpr "lv: in the look 'layerpart' the group 'scrolbar' is neither a part nor a state. Did you mean 'scrollbar'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-scrolbar' beside 'a', used as lv::look<\"a a-scrolbar\">.")
+lvgl26_compile_fail_message(look_layer_any_typo constexpr "lv: in the look 'layerany' the group 'anyy' is neither a part nor a state. A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-anyy' beside 'a', used as lv::look<\"a a-anyy\">.")
+lvgl26_compile_fail_message(look_layer_state_typo constexpr "lv: in the look 'layeralt' the group 'alte' is neither a part nor a state. Did you mean 'alt'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-alte' beside 'a', used as lv::look<\"a a-alte\">.")
+lvgl26_compile_fail_message(look_layer_keyword_typo constexpr "lv: in the look 'layerkeyword' the group 'defaultx' is neither a part nor a state. Did you mean 'default'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-defaultx' beside 'a', used as lv::look<\"a a-defaultx\">.")
+lvgl26_compile_fail_message(look_several_values_not_size constexpr "lv: the look entry 'enabled' of 'enabledone' sets several properties from several values, and a token holds one. Write each of them: see lv::style.")
+lvgl26_compile_fail_message(look_ext_lone_percent constexpr "lv: the \$extensions entry 'width' of 'lonepercent' is the text '%', and the style property 'width' takes a dimension (such as 8px). \$extensions holds LVGL values by name and sizes in percent: write this one as a token, with its \$type.")
+lvgl26_compile_fail_message(font_of_unknown_root constexpr "lv: the font 'txt.label' has no name 'txt' in the token file. The names there: <<names>>. Did you mean 'text'?")
+lvgl26_compile_fail_message(font_of_through_a_token constexpr "lv: the font 'text.label.big' goes through 'text.label', which is a token and holds no group.")
 lvgl26_compile_fail_message(look_empty_name constexpr "lv: the look 'tile..print' has an empty name between its dots. Write lv::look<\"queue.card\">.")
 # lv::font_of and lv::draw: a font named in a file of its own is checked against the token file.
 lvgl26_compile_fail_message(font_of_unknown_name constexpr "lv: the font 'text.lable' has no name 'lable' in 'text'. The names there: label, small. Did you mean 'label'?")
@@ -1386,6 +1405,7 @@ lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::compu
 lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(children_alone_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(each_row_not_a_tree static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
+lvgl26_compile_fail_message(each_row_then_more static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(each_plain_row_not_a_tree static_assert "lv: lv::each takes the options in braces, then the row template: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(when_second_not_a_tree deleted "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).")
 lvgl26_compile_fail(shown_arms_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")

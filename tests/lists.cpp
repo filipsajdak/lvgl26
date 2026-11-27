@@ -7,10 +7,12 @@
 #include "full_heap.hpp"
 
 #include <array>
+#include <concepts>
 #include <cstring>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -416,6 +418,24 @@ void start(lv::obj row, const track& t) {
 }
 constinit lv::list<track, 4> queue;
 constexpr auto queue_ui = lv::column[lv::each(queue, &track::id, {.on_row = &start})[track_row]];
+
+// The call forms build the node of the subscript forms: with options and a row, with a row alone, with
+// a row written in the call, and with options alone.
+template <class T>
+using node_of = std::remove_const_t<T>;
+static_assert(std::same_as<node_of<decltype(lv::each(queue, &track::id, {.on_row = &start}, track_row))>,
+                           node_of<decltype(lv::each(queue, &track::id, {.on_row = &start})[track_row])>>);
+static_assert(std::same_as<node_of<decltype(lv::each(queue, &track::id, track_row))>,
+                           node_of<decltype(lv::each(queue, &track::id)[track_row])>>);
+static_assert(std::same_as<node_of<decltype(lv::each(queue, &track::id, {}, track_row))>,
+                           node_of<decltype(lv::each(queue, &track::id)[track_row])>>);
+static_assert(std::same_as<node_of<decltype(lv::each(queue, &track::id, lv::label({.text = "x"})))>,
+                           node_of<decltype(lv::each(queue, &track::id)[lv::label({.text = "x"})])>>);
+static_assert(requires { lv::each(queue, &track::id, {.on_row = &start}); });
+// The key is a named value or an enum; a plain integer or a number is not one, without the setting.
+enum class shelf_key { top };
+static_assert(lv::detail::row_key<track_id> && lv::detail::row_key<shelf_key> && !lv::detail::row_key<int> &&
+              !lv::detail::row_key<double>);
 
 void a_row_has_ids_and_tasks(lv::obj screen) {
   started = 0;
