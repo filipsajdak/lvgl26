@@ -752,7 +752,7 @@ lvgl26_compile_fail_message(in_unknown_part constexpr "lv: widgets have no part 
 lvgl26_compile_fail_message(in_unknown_state constexpr "lv: widgets have no state 'presed'. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
 lvgl26_compile_fail_message(in_unknown_name constexpr "lv: 'pressd' is neither a part nor a state. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
 lvgl26_compile_fail(in_widget_setter "no matching function for call to .animate")
-lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct. You gave int")
+lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct.. You gave int")
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail_message(match_missing_case static_assert "lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`.")
 lvgl26_compile_fail_message(match_duplicate_case static_assert "lv::match has two arms for eco. Each value needs exactly one.")
