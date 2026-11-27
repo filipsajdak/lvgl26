@@ -1,13 +1,23 @@
 {
+ "animate": {
+  "commit": "b8c1c5bf33c7636b8a3ebcd7ffa3a1f4e5a3a4e7",
+  "date": "2026-11-27",
+  "value": 129566662774
+ },
+ "animate_style": {
+  "commit": "b8c1c5bf33c7636b8a3ebcd7ffa3a1f4e5a3a4e7",
+  "date": "2026-11-27",
+  "value": 46584717452
+ },
  "fonts_drawn": {
-  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
-  "date": "2026-11-24",
-  "value": 67243759413
+  "commit": "b8c1c5bf33c7636b8a3ebcd7ffa3a1f4e5a3a4e7",
+  "date": "2026-11-27",
+  "value": 67041426596
  },
  "fonts_in_place": {
-  "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
-  "date": "2026-11-24",
-  "value": 153314464860
+  "commit": "b8c1c5bf33c7636b8a3ebcd7ffa3a1f4e5a3a4e7",
+  "date": "2026-11-27",
+  "value": 152534258887
  },
  "fonts_named": {
   "commit": "1e9bec5a515381781f53b74957b6bff3c03c9349",
