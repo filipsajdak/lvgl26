@@ -1,4 +1,4 @@
-// Step 1 of the coffee machine tutorial (docs/research/tutorial-coffee.md): one screen, as one
+// Step 1 of the coffee machine tutorial (docs/tutorial.md): one screen, as one
 // tree. The drinks are a state of an enum, and the price follows it.
 //
 //   coffee_1    writes coffee_1.png

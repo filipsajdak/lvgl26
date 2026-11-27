@@ -1,4 +1,4 @@
-// Step 6 of the coffee machine tutorial (docs/research/tutorial-coffee.md): the program of step 5,
+// Step 6 of the coffee machine tutorial (docs/tutorial.md): the program of step 5,
 // split into files by screen. Nothing else changes, and the picture is the one of step 5.
 //
 //   coffee_6    writes coffee_6.png: the page of your cup

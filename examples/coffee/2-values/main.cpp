@@ -1,4 +1,4 @@
-// Step 2 of the coffee machine tutorial (docs/research/tutorial-coffee.md): values that say what
+// Step 2 of the coffee machine tutorial (docs/tutorial.md): values that say what
 // they are. Strength is a struct of one member, the size a quantity in millilitres, and the beans
 // are made from them.
 //
