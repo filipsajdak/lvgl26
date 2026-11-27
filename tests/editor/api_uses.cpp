@@ -8,6 +8,7 @@
 
 #include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
+#include <lv/gesture.hpp>
 #include <lv/icons.hpp>
 #include <lv/host.hpp>
 #include <lv/image.hpp>
@@ -24,6 +25,7 @@
 #include <lv/shown.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
+#include <lv/signal_gesture.hpp>
 #include <lv/signal_motion.hpp>
 #include <lv/signal_type.hpp>
 #include <lv/theme.hpp>
@@ -436,6 +438,10 @@ int use_application() {
   editor_window window{app};
   lv::display windowed{app, frame, window};
   lv::pointer fed{windowed, window};
+  lv::pointer tuned{plain, lv::gesture_limits{.swipe_distance = 30 * px}};
+  static_cast<void>(tuned.raw());
+  lv::pointer signal_limits{plain, lv::signal::gesture};
+  static_cast<void>(signal_limits.raw());
   static_cast<void>(fed.handle());
   const lv::pointer_feed feed = mouse.handle();
   if (!feed || !(feed == feed) || !feed(lv::point{1, 1}, lv::released)) return 21;
@@ -602,7 +608,17 @@ inline constexpr bool is_view_in<lv::view_in<W, S>> = true;
 static_assert(is_view_in<decltype(lv::in<"knob", "pressed">(std::declval<lv::view<"arc">>()))>);
 static_assert(std::same_as<decltype(lv::animatable_style<>{}.arc_width), lv::from_to<lv::length>>);
 
+static_assert(lv::gesture_settings<lv::gesture_limits>);
+lv::state<lv::percent> hold_progress{lv::percent{0}};
+void on_swipe(lv::swipe) {}
+constexpr auto swipe_page = lv::box({.id = "swipes", .on_swiped = &on_swipe});
+
 lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
+  const lv::swipe direction = co_await lv::swiped(button);
+  static_cast<void>(direction);
+  co_await lv::swiped<lv::swipe::left, lv::swipe::right>(button);
+  const bool held = co_await lv::hold(button, 1 * sec, hold_progress);
+  static_cast<void>(held);
   co_await button.next().clicked;
   co_await button.next().value_changed;
   co_await lv::sleep(100 * ms);

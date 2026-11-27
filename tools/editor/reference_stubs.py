@@ -104,8 +104,14 @@ def property_comment(member: dict, enums: dict) -> str:
     return "\n".join(lines)
 
 
+# A handler member that is no event of its own: `on_swiped` is LV_EVENT_GESTURE, with the direction.
+HANDLERS_OF_AN_EVENT = {"on_swiped": "LV_EVENT_GESTURE"}
+
+
 def event_enumerator(member_name: str) -> str:
     """`on_clicked` -> `LV_EVENT_CLICKED`."""
+    if member_name in HANDLERS_OF_AN_EVENT:
+        return HANDLERS_OF_AN_EVENT[member_name]
     return "LV_EVENT_" + member_name.removeprefix("on_").upper()
 
 
@@ -121,8 +127,9 @@ def props_member(member: dict, enums: dict) -> str:
     if kind == "style":
         return f"  /// The style of the widget {style_part(name)}: design tokens, or a named lv::style.\n  style_t {name}{{}};"
     if kind == "event":
+        takes = "an lv::swipe, the direction" if name in HANDLERS_OF_AN_EVENT else "nothing, or an lv::event"
         return (f"  /// Called on {event_enumerator(name)}: a function, or a lambda without captures.\n"
-                f"  /// It takes nothing, or an lv::event.\n  lv::handler {name}{{}};")
+                f"  /// It takes {takes}.\n  lv::handler {name}{{}};")
     if kind == "id":
         return '  /// A name for this node: root->get<"name">() is its view after lv::mount.\n  id_name id{};'
     return f"{property_comment(member, enums)}\n  {member_type(member)} {name}{{}};"
@@ -244,7 +251,7 @@ def getters(reference: dict) -> list[str]:
 def events_struct(reference: dict) -> str:
     lines = []
     for member in reference["base"]:
-        if member.get("kind") != "event":
+        if member.get("kind") != "event" or member["name"] in HANDLERS_OF_AN_EVENT:
             continue
         code = event_enumerator(member["name"])
         name = "gone" if code == "LV_EVENT_DELETE" else member["name"].removeprefix("on_")

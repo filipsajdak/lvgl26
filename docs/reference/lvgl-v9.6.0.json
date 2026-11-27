@@ -155,6 +155,7 @@
     {"name": "on_size_changed", "kind": "event"},
     {"name": "on_state_changed", "kind": "event"},
     {"name": "on_style_changed", "kind": "event"},
+    {"name": "on_swiped", "kind": "event"},
     {"name": "on_sync_finish", "kind": "event"},
     {"name": "on_sync_start", "kind": "event"},
     {"name": "on_sync_wait_finish", "kind": "event"},

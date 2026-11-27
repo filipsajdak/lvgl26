@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the token files of the built-in Signal theme from the design system.
 
-    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json, lamps.json, type.json and motion.json
+    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json, lamps.json, type.json, motion.json and gesture.json
     python3 tools/signal_tokens.py --check  fails when a written file is stale
 
 design/signal/tokens.design.json is the source. The written files are in the W3C Design
@@ -129,6 +129,22 @@ def motion(design: dict) -> str:
     return render(doc) + "\n"
 
 
+def gesture(design: dict) -> str:
+    """The thresholds of the pointer's gestures: lengths and a time, each a token of its own at the root, so that
+    the file is what lv::pointer takes."""
+    doc = {"$schema": SCHEMA, "$description": f"Signal, gesture limits. {WRITTEN}"}
+    for token in design["gesture"]["tokens"]:
+        value, name = token["value"], token["name"]
+        if value.endswith("px"):
+            doc[name] = {"$type": "dimension", "$value": dtcg_fix.quantity_object(value, dtcg_fix.LENGTH_UNITS)}
+        else:
+            quantity = dtcg_fix.quantity_object(value, dtcg_fix.TIME_UNITS)
+            if quantity is None:
+                sys.exit(f"signal_tokens: {name} in the gesture section is neither a length in px nor a duration in ms or s")
+            doc[name] = {"$type": "duration", "$value": quantity}
+    return render(doc) + "\n"
+
+
 def families(design: dict) -> dict:
     """The font families: the first name of each stack, the one whose file a device holds."""
     out = {"$type": "fontFamily"}
@@ -170,6 +186,7 @@ def documents(design: dict) -> dict:
     out["lamps.json"] = lamps(design)
     out["type.json"] = typography(design)
     out["motion.json"] = motion(design)
+    out["gesture.json"] = gesture(design)
     return out
 
 

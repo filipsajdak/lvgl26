@@ -147,9 +147,32 @@ class Motion(unittest.TestCase):
     def test_motion_is_not_in_the_files_of_the_themes(self):
         design = json.loads(sync.DESIGN.read_text())
         for name, text in sync.signal_tokens.documents(design).items():
-            if name != "motion.json":
+            if name not in ("motion.json", "gesture.json"):
                 self.assertNotIn("cubicBezier", text, name)
                 self.assertNotIn('"duration"', text, name)
+
+
+class Gesture(unittest.TestCase):
+    """The gesture section of the design becomes gesture.json: a token for each limit, at the root."""
+
+    def written(self, tokens):
+        return json.loads(sync.signal_tokens.gesture({"gesture": {"tokens": tokens}}))
+
+    def test_a_length_is_a_dimension_and_a_time_is_a_duration(self):
+        doc = self.written([{"name": "swipe-distance", "value": "50px", "usage": ""},
+                            {"name": "long-press", "value": "0.4s", "usage": ""}])
+        self.assertEqual(doc["swipe-distance"], {"$type": "dimension", "$value": {"value": 50, "unit": "px"}})
+        self.assertEqual(doc["long-press"], {"$type": "duration", "$value": {"value": 0.4, "unit": "s"}})
+
+    def test_a_value_that_is_neither_stops_the_tool(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.written([{"name": "swipe-speed", "value": "fast", "usage": ""}])
+        self.assertIn("swipe-speed", str(stop.exception))
+
+    def test_the_four_limits_of_the_pointer_are_in_the_design(self):
+        doc = json.loads(sync.signal_tokens.gesture(json.loads(sync.DESIGN.read_text())))
+        for name in ("swipe-distance", "swipe-speed", "scroll-limit", "long-press"):
+            self.assertIn(name, doc)
 
 
 class Repository(unittest.TestCase):

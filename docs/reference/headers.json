@@ -18,7 +18,7 @@
   "lv/one_of.hpp": ["one_of", "not_mounted", "held"],
   "lv/options.hpp": ["option_list", "option_text", "options_of"],
   "lv/owned.hpp": ["owned", "weak"],
-  "lv/pointer.hpp": ["most_pointer_samples", "pointer", "contact", "released", "pressed", "pointer_sample", "pointer_feed", "pointer_feeder"],
+  "lv/pointer.hpp": ["most_pointer_samples", "pointer", "contact", "released", "pressed", "pointer_sample", "gesture_limits", "gesture_settings", "pointer_feed", "pointer_feeder"],
   "lv/props.hpp": ["props"],
   "lv/repeat.hpp": ["for_each", "for_each_field", "caption", "field", "repeat_part", "name_of", "like"],
   "lv/runtime.hpp": ["runtime", "load_error", "load_failure"],
@@ -32,6 +32,6 @@
   "lv/tokens.hpp": ["tokens"],
   "lv/tree.hpp": ["node", "tree_node", "widget", "box", "label", "button", "arc", "bar", "slider", "toggle", "checkbox", "image", "textarea", "dropdown", "roller", "spinner", "group", "column", "row", "mount_error", "mounted", "storage_size", "mount", "mount_in", "place"],
   "lv/units.hpp": ["percent", "length", "size_content", "decidegrees", "angle", "duration", "opa", "x_axis", "y_axis", "along", "horizontal", "vertical", "counter", "rgb"],
-  "lv/values.hpp": ["state", "token", "raw_value", "styled", "strict", "nonnegative", "tree_handler", "handler", "binding", "text_format", "font_binding", "formatted_binding", "arg", "raw", "token_value", "token_of", "font_value"],
+  "lv/values.hpp": ["state", "token", "raw_value", "styled", "strict", "nonnegative", "tree_handler", "swipe", "handler", "binding", "text_format", "font_binding", "formatted_binding", "arg", "raw", "token_value", "token_of", "font_value"],
   "lv/view.hpp": ["view", "obj", "view_value", "event_handler"]
 }

@@ -192,6 +192,8 @@ consteval std::vector<member_item> scan_base(std::string_view prefix) {
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())
       items.push_back({std::define_static_string(name), ^^arg<handler>, e, member_group::handler});
+  // A gesture also has a handler that gets its direction: on_swiped, for a swipe of lv/gesture.hpp.
+  items.push_back({"on_swiped"sv, ^^arg<handler>, ^^LV_EVENT_GESTURE, member_group::handler});
   sort_by_group_and_name(items);
   return items;
 }
@@ -318,6 +320,14 @@ template <fixed W, class = void>
 inline constexpr std::span<const std::meta::info> targets =
     std::define_static_array(member_column<W>(1));
 
+// The direction of a swipe: the direction LVGL gives for the gesture that was just detected.
+constexpr swipe swipe_of(lv_dir_t direction) {
+  if (direction == LV_DIR_LEFT) return swipe::left;
+  if (direction == LV_DIR_RIGHT) return swipe::right;
+  if (direction == LV_DIR_TOP) return swipe::up;
+  return swipe::down;
+}
+
 inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
   // A function pointer travels in user_data, so nothing is allocated.
   if (h.plain)
@@ -331,6 +341,15 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
           reinterpret_cast<void (*)(event)>(lv_event_get_user_data(e))(event{e});
         },
         code, reinterpret_cast<void*>(h.with_event));
+  else if (h.with_swipe) {
+    lv_obj_set_gesture_bubble(o, false);  // LVGL sends a swipe to a widget that keeps it
+    lv_obj_add_event_cb(
+        o,
+        [](lv_event_t* e) {
+          reinterpret_cast<void (*)(swipe)>(lv_event_get_user_data(e))(swipe_of(lv_indev_get_gesture_dir(lv_indev_active())));
+        },
+        code, reinterpret_cast<void*>(h.with_swipe));
+  }
 }
 
 // from_number(n, type): a whole number, as the type a setter takes. A state carries one

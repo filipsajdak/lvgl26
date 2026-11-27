@@ -56,6 +56,25 @@ struct pointer_sample {
   friend constexpr bool operator==(pointer_sample, pointer_sample) = default;
 };
 
+// The thresholds of the gestures a pointer makes. The defaults are LVGL's own. A design's token group `gesture`
+// has these members, so a pointer takes `tok.gesture` itself: lv::pointer mouse{display, tok.gesture}.
+struct gesture_limits {
+  length swipe_distance = length::px(50);  // how far the finger goes before a swipe is sent
+  length swipe_speed = length::px(3);      // how far it goes in each read of LVGL, 33 ms: slower is not a swipe
+  length scroll_limit = length::px(10);    // how far it goes before a drag is a scroll
+  duration long_press = duration{400};   // the time of LVGL's own long press, one for the device
+};
+
+// What a pointer takes as its gestures: a struct with these four members, as a `gesture_limits` or a group
+// of design tokens.
+template <class L>
+concept gesture_settings = requires(const L& g) {
+  { static_cast<length>(g.swipe_distance) };
+  { static_cast<length>(g.swipe_speed) };
+  { static_cast<length>(g.scroll_limit) };
+  { static_cast<duration>(g.long_press) };
+};
+
 namespace detail {
 
 // A pointer sample can be merged into the one before when both have the same contact: the
@@ -79,6 +98,15 @@ class pointer_device {
   // The LVGL input device, for code that still calls the C API.
   lv_indev_t* raw() const { return raw_; }
 
+  // The thresholds of swipes, of scrolls and of LVGL's long press, in pixels and milliseconds.
+  template <gesture_settings L>
+  void set_gestures(const L& limits) {
+    lv_indev_set_gesture_min_distance(raw_, whole_pixels(static_cast<length>(limits.swipe_distance)));
+    lv_indev_set_gesture_min_velocity(raw_, whole_pixels(static_cast<length>(limits.swipe_speed)));
+    lv_indev_set_scroll_limit(raw_, whole_pixels(static_cast<length>(limits.scroll_limit)));
+    lv_indev_set_long_press_time(raw_, static_cast<std::uint16_t>(static_cast<duration>(limits.long_press).ms));
+  }
+
  protected:
   pointer_device(display& screen, void* self, lv_indev_read_cb_t read) : raw_(lv_indev_create()) {
     contract_assert(raw_ != nullptr);  // LVGL's heap is too small for an input device
@@ -90,6 +118,12 @@ class pointer_device {
 
   // LVGL reads at its next step, not when the period of the device is over.
   void read_soon() const { lv_timer_ready(lv_indev_get_read_timer(raw_)); }
+
+  // LVGL holds a threshold in 8 bits: more than 255 pixels is 255.
+  static std::uint8_t whole_pixels(length l) {
+    const std::int32_t px_count = l.raw();
+    return static_cast<std::uint8_t>(px_count < 0 ? 0 : (px_count > 255 ? 255 : px_count));
+  }
 
   template <class Self>
   static Self& self_of(lv_indev_t* raw) {
@@ -167,6 +201,12 @@ class pointer<Capacity> : public detail::pointer_device {
 
  public:
   explicit pointer(display& screen) : pointer_device(screen, this, &read) {}
+
+  // A pointer with the thresholds of a design: lv::pointer mouse{display, tok.gesture}.
+  template <gesture_settings L>
+  pointer(display& screen, const L& limits) : pointer(screen) {
+    set_gestures(limits);
+  }
   pointer(display&&) = delete("the pointer keeps a pointer to its display: declare the display first, then the pointer");
 
   // A pointer that `feeder`, a platform object such as a window, feeds.
@@ -175,6 +215,12 @@ class pointer<Capacity> : public detail::pointer_device {
     feeder_ = &feeder;
     detach_ = &detach_from<F>;
     feeder.attach(handle());
+  }
+
+  // A pointer that `feeder` feeds, with the thresholds of a design.
+  template <pointer_feeder F, gesture_settings L>
+  pointer(display& screen, F& feeder, const L& limits) : pointer(screen, feeder) {
+    set_gestures(limits);
   }
 
   pointer(const pointer&) = delete;
@@ -237,10 +283,14 @@ class pointer<0> : public detail::pointer_device {
 };
 
 explicit pointer(display&) -> pointer<>;
+template <gesture_settings L>
+pointer(display&, const L&) -> pointer<>;
 template <pointer_feeder F>
 pointer(display&, F&) -> pointer<>;
+template <pointer_feeder F, gesture_settings L>
+pointer(display&, F&, const L&) -> pointer<>;
 template <class F>
-  requires(!pointer_feeder<std::remove_cvref_t<F>>)
+  requires(!pointer_feeder<std::remove_cvref_t<F>> && !gesture_settings<std::remove_cvref_t<F>>)
 pointer(display&, F&&) -> pointer<0>;
 
 }  // namespace lv
