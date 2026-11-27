@@ -9,7 +9,7 @@ Each step is a whole program in [`examples/coffee/`](https://github.com/filipsaj
 | Step | Folder | What it adds |
 |---|---|---|
 | 1 | `1-screen` | A screen of photo tiles as one tree, a state, and looks and fonts from your own token file |
-| 2 | `2-values` | Values that say what they are |
+| 2 | `2-values` | Values that say what they are, set with steppers |
 | 3 | `3-pages` | A page per step, which slides in |
 | 4 | `4-time` | A task that brews, with a ring that fills |
 | 5 | `5-design` | A design system you can reuse, and fonts of your own |
@@ -421,45 +421,58 @@ See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images
 
 ## 2. Values that say what they are
 
-The cup has a strength and a size. A plain `int` would say neither, so the strength is a struct of one member and the size is an mp-units quantity.
+The second screen sets the cup: its strength and its size. A plain `int` would say neither. So the strength is a struct of one member, and the size is an mp-units quantity in millilitres, within what the drink can be made in. The beans, in grams, are made from the strength.
 
-<!-- snippet: examples/coffee/2-values/main.cpp state -->
+<!-- snippet: examples/coffee/2-values/main.cpp values -->
 ```cpp
-// What the reader chooses.
-enum class drink { espresso, lungo, cappuccino, latte };
-
+// The strength of a cup, from 1 to 5: a struct of one member says what the number is.
 struct strength {
   int value;
 };
 
-constinit lv::state chosen{drink::espresso};
+constexpr strength mildest{1};
+constexpr strength strongest{5};
+
+// The size, a quantity in millilitres, within what the drink can be made in.
+constexpr auto ml = mp_units::si::milli<mp_units::si::litre>;
+using millilitres = decltype(40 * ml);
+
+struct cup_sizes {
+  millilitres least, usual, most;
+};
+constexpr cup_sizes sizes[] = {
+  {20 * ml, 40 * ml, 60 * ml},
+  {80 * ml, 110 * ml, 150 * ml},
+  {140 * ml, 180 * ml, 240 * ml},
+  {180 * ml, 240 * ml, 300 * ml},
+};
+constexpr auto size_step = 10 * ml;
+
+constexpr cup_sizes sizes_of(drink d) { return sizes[std::to_underlying(d)]; }
+
 constinit lv::state bold{strength{3}};
-constinit lv::state cup{40 * ml};
-```
+constinit lv::state cup{sizes_of(drink::espresso).usual};
 
-The beans are made from the strength. A quantity shows its unit when it is bound to a label, so the size reads "40 mL".
-
-<!-- snippet: examples/coffee/2-values/main.cpp cup -->
-```cpp
+// The beans, a quantity in grams, made from the strength.
 constexpr auto least_dose = 6 * g;  // the beans of the mildest cup
 constexpr auto dose_step  = 2 * g;  // what one step of strength adds
 
 constinit lv::computed beans{[](strength s) { return least_dose + s.value * dose_step; }, bold};
 
-constexpr auto strength_slider = lv::slider(
-  {.range = {1, 5}, .value = lv::bind(bold), .width = 240 * px, .style = lv::look<"slider">}
-);
-constexpr auto size_slider = lv::slider(
-  {.range = {20, 200}, .value = lv::bind(cup), .width = 240 * px, .style = lv::look<"slider">}
-);
-constexpr auto size_text =
-  lv::label({.text = lv::bind(cup)});  // a quantity shows its unit: "40 mL"
-constexpr auto beans_text = lv::label({.text = lv::bind(beans, "{} g of beans")});
+// The steppers: what each button does, and when it can go no further.
+void milder() { bold = strength{std::max(mildest.value, bold.get().value - 1)}; }
+void stronger() { bold = strength{std::min(strongest.value, bold.get().value + 1)}; }
+void smaller() { cup = std::max(sizes_of(chosen.get()).least, cup.get() - size_step); }
+void larger() { cup = std::min(sizes_of(chosen.get()).most, cup.get() + size_step); }
 
-constexpr auto ui = lv::group(
-  {.style = lv::look<"screen">}, title("Coffee"), menu, price_tag, strength_slider, size_slider,
-  size_text, beans_text
-);
+constinit lv::computed at_mildest{[](strength s) { return s.value <= mildest.value; }, bold};
+constinit lv::computed at_strongest{[](strength s) { return s.value >= strongest.value; }, bold};
+constinit lv::computed at_smallest{
+  [](drink d, millilitres c) { return c <= sizes_of(d).least; }, chosen, cup
+};
+constinit lv::computed at_largest{
+  [](drink d, millilitres c) { return c >= sizes_of(d).most; }, chosen, cup
+};
 ```
 
 A state of a plain integer does not compile:
@@ -469,9 +482,146 @@ A state of a plain integer does not compile:
 error: static assertion failed: lv: a state of a plain integer does not say what the number is. If it is a measure, give it a unit with mp-units: `lv::state speed{0 * km / h};`. If it counts things, use lv::counter: `lv::state clicks{lv::counter{}};`. For anything else, name it: `struct tab_index { int value; };`. To allow plain integers, set rules.raw_integer_state in the settings.
 ```
 
-![Step 2: the drinks, two sliders for the strength and the size, "60 mL" and "14 g of beans"](media/coffee-2.png)
+The summary shows the chosen drink. Its photo, name and price are values made from the state, read from tables in the order of the enum. A photo is a pointer, which a state may hold, so the summary's image follows the drink.
 
-See [Values and units](values.md).
+<!-- snippet: examples/coffee/2-values/main.cpp photos -->
+```cpp
+// A photo of each drink, cut out, at 1.5 x target: the compiler decodes it.
+constexpr unsigned char espresso_png[] = {
+#embed "../assets/espresso-72.png"
+};
+constexpr unsigned char lungo_png[] = {
+#embed "../assets/lungo-72.png"
+};
+constexpr unsigned char cappuccino_png[] = {
+#embed "../assets/cappuccino-72.png"
+};
+constexpr unsigned char latte_png[] = {
+#embed "../assets/latte-72.png"
+};
+
+// What a tile shows of each drink, in the order of the enum.
+constexpr decltype(lv::image_file<espresso_png>) photos[] = {
+  lv::image_file<espresso_png>,
+  lv::image_file<lungo_png>,
+  lv::image_file<cappuccino_png>,
+  lv::image_file<latte_png>,
+};
+constexpr const char* names[]  = {"ESPRESSO", "LUNGO", "CAPPUCCINO", "LATTE"};
+constexpr const char* prices[] = {"2.20", "2.40", "3.10", "3.40"};
+
+// The chosen drink's photo, name and price, for the summary.
+constinit lv::computed photo{[](drink d) { return photos[std::to_underlying(d)]; }, chosen};
+constinit lv::computed name{[](drink d) { return names[std::to_underlying(d)]; }, chosen};
+constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
+
+// What the fields say of the values.
+constexpr std::array strength_words{
+  "1 of 5, Mild", "2 of 5, Light", "3 of 5, Medium", "4 of 5, Strong", "5 of 5, Intense"
+};
+constexpr const char* size_ranges[] = {
+  "20 to 60 mL", "80 to 150 mL", "140 to 240 mL", "180 to 300 mL"
+};
+
+constinit lv::computed strength_word{
+  [](strength s) { return strength_words[static_cast<std::size_t>(s.value - mildest.value)]; }, bold
+};
+constinit lv::computed size_range{
+  [](drink d) { return size_ranges[std::to_underlying(d)]; }, chosen
+};
+```
+
+A stepper is a part: -, what is set, and +. Each button is disabled while its value can go no further. A field puts its name and what it says over the stepper; the strength shows as five segments, each checked up to the strength.
+
+<!-- snippet: examples/coffee/2-values/main.cpp cup -->
+```cpp
+// A stepper: -, what is set, +. A button that can go no further is disabled.
+constexpr auto stepper(
+  const lv::dependency auto& at_least, const lv::dependency auto& at_most,
+  lv::tree_handler auto less, lv::tree_handler auto more, lv::tree_node auto shown
+) {
+  return lv::group(
+    {.style = lv::look<"stepper">},
+    lv::button(
+      {.disabled = lv::bind(at_least), .style = lv::look<"square">, .on_clicked = less},
+      lv::label({.text = "-", .style = sign_text})
+    ),
+    shown,
+    lv::button(
+      {.disabled = lv::bind(at_most), .style = lv::look<"square">, .on_clicked = more},
+      lv::label({.text = "+", .style = sign_text})
+    )
+  );
+}
+
+// A field: its name and what it says of its value, over its control.
+constexpr auto field(
+  const char* text, const lv::dependency auto& note, lv::tree_node auto control
+) {
+  return lv::group(
+    {.size = {100 * pct, lv::size_content}, .style = lv::look<"field">},
+    lv::group(
+      {.size = {100 * pct, lv::size_content}, .style = lv::look<"field-top">},
+      lv::label({.text = text, .style = lv::look<"overline"> | overline_text}),
+      lv::label({.text = lv::bind(note), .style = note_text})
+    ),
+    control
+  );
+}
+
+// The strength as five segments: a segment is checked up to the strength.
+template <int I>
+constinit lv::computed segment_on{[](strength s) { return s.value >= I; }, bold};
+
+template <int I>
+constexpr auto segment() {
+  return lv::group({.checked = lv::bind(segment_on<I>), .style = lv::look<"segment">});
+}
+
+constexpr auto segments = lv::group(
+  {.style = lv::look<"segments">}, segment<1>(), segment<2>(), segment<3>(), segment<4>(),
+  segment<5>()
+);
+
+constexpr auto size_value = lv::group(
+  {.style = lv::look<"value">}, lv::label({.text = lv::bind(cup, "{}"), .style = numeral_text}),
+  lv::label({.text = "mL", .style = lv::look<"unit"> | body_text})
+);
+
+constexpr auto fields = lv::group(
+  {.style = lv::look<"fields">},
+  field("STRENGTH", strength_word, stepper(at_mildest, at_strongest, &milder, &stronger, segments)),
+  field("SIZE", size_range, stepper(at_smallest, at_largest, &smaller, &larger, size_value))
+);
+
+// The summary of the cup: the chosen drink's photo, name, beans and price.
+constexpr auto summary = lv::group(
+  {.id = "summary", .style = lv::look<"summary">},
+  lv::group(
+    {.size = {100 * pct, lv::size_content}, .style = lv::look<"photo-box">},
+    lv::image({.id = "summary-photo", .src = lv::bind(photo)})
+  ),
+  lv::label({.text = lv::bind(name), .style = lv::look<"summary-name"> | label_text}),
+  lv::label({.text = lv::bind(beans, "{} g of beans"), .style = lv::look<"beans"> | caption_text}),
+  lv::group({.style = lv::look<"spacer">}),
+  lv::group(
+    {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
+    lv::label({.text = lv::bind(price), .style = numeral_text}),
+    lv::label({.text = "EUR", .style = lv::look<"unit"> | body_text})
+  )
+);
+
+constexpr auto your_cup = lv::group(
+  {.style = lv::look<"page">}, header("YOUR CUP", 2, "2 / 4"),
+  lv::group({.style = lv::look<"cup">}, fields, summary), footer(back("BACK"), primary("BREW"))
+);
+```
+
+A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger cup: 14 g of beans, at 40 mL.
+
+![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
+
+See [Values and units](values.md) and [State and bindings](state.md).
 
 ## 3. Pages
 
