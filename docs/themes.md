@@ -300,6 +300,52 @@ int main() {
 }
 ```
 
+## A display that follows a state
+
+A display can follow a state: the theme of its value is the display's theme, and setting the state restyles every widget in place. Signal has the state's enum, `lv::signal::mode`, with `day` and `dark`.
+
+<!-- snippet: examples/theme_follow/main.cpp mode -->
+```cpp
+constinit lv::state mode{lv::signal::mode::day};
+```
+
+The themes are given to the display after it is made, in the order of the enumerators:
+
+<!-- snippet: examples/theme_follow/main.cpp follow -->
+```cpp
+  display.follow(mode, {lv::signal::day, lv::signal::dark});  // day first, as the enum has it
+```
+
+A row of the Service screen flips it: the dropdown lists the enum and follows the state.
+
+<!-- snippet: examples/theme_follow/main.cpp tree -->
+```cpp
+constexpr auto service = lv::column(
+  {.size = {320 * px, 240 * px}}, lv::label({.text = "Service"}),
+  lv::row(
+    lv::label({.text = "Display"}), lv::dropdown({
+                                      .options  = lv::options_of<lv::signal::mode>,
+                                      .selected = lv::bind(mode),
+                                    })
+  ),
+  lv::button({.id = "start"}, lv::label({.text = "Start"})),
+  lv::arc({.id = "ring", .size = {80 * px, 80 * px}, .value = 60})
+);
+```
+
+<!-- snippet: examples/theme_follow/main.cpp flip -->
+```cpp
+  mode = lv::signal::mode::dark;  // every widget of the display changes in place
+```
+
+- It changes what a **theme** gives: the screen, boxes, buttons, arcs, bars and the text they inherit. A node's own `.style`, with a token written in it, is constant and does not follow, and neither does a look from the project's tokens: they stay as they are. Take the colors of a screen from the theme if the screen is to follow.
+- The styles of the new theme take the place of the old ones where they stand in each widget's list, so a look or a node's style that was added after the theme still wins over it. Nothing is allocated or freed by a switch, in either direction, once LVGL has drawn the screen once (its own first change of a drawn screen makes a few things of its own).
+- The themes must have one shape: the same widgets and parts in the same order. Themes made by one description, as Signal's `day` and `dark` are, have. Themes of another shape end the program in `follow` with a contract violation, since adding and removing styles would allocate and move the theme's styles after the others.
+- The display restyles the active screen and LVGL's three layers. A screen that is not loaded keeps the theme it was made with until it is built again.
+- A widget made after the switch gets the new theme. A `lv::group` removes all styles of its widget, the theme's too, and holds none; the widgets in it do.
+- Call `follow` once, before the screens are built, as a theme given to the constructor is. A display that was made with a theme of the same shape follows from that theme.
+- Themes with different fonts change the fonts too, and the layout follows. Signal's `day_with_type` and `dark_with_type` share theirs.
+
 ## What a theme costs
 
 - **No heap.** The compiler works the theme out, and its styles are constants in read-only memory. LVGL keeps a pointer to each.

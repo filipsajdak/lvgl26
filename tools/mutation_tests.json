@@ -173,8 +173,8 @@
       "targets": "task app_loop"
     },
     "include/lv/detail/theme_styles.hpp": {
-      "tests": "^theme$|^signal$",
-      "targets": "theme signal"
+      "tests": "^theme$|^signal$|^theme_restyle$|^theme_follow$",
+      "targets": "theme signal theme_restyle theme_follow"
     },
     "include/lv/detail/ttf.hpp": {
       "tests": "^scaled_font$|^font$|^fail_scaled_font_needs_ttf$|^fail_scaled_font_raw_needs_ttf$",
@@ -185,8 +185,8 @@
       "targets": "watchers app_loop"
     },
     "include/lv/display.hpp": {
-      "tests": "^app_loop$|^application$|^fail_display_band_panel_without_pixels$|^fail_display_frame_temporary_panel$|^fail_pointer_temporary_display$",
-      "targets": "app_loop application"
+      "tests": "^app_loop$|^application$|^theme_follow$|^theme_follow_violation_shape$|^theme_restyle$|^fail_display_band_panel_without_pixels$|^fail_display_frame_temporary_panel$|^fail_pointer_temporary_display$",
+      "targets": "app_loop application theme_follow theme_restyle"
     },
     "include/lv/dump.hpp": {
       "tests": "^runtime_ui$|^fail_dump_loaded_not_a_sink$|^fail_dump_not_a_sink$",
