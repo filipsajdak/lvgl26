@@ -1,5 +1,5 @@
 {
-  "lv/animate.hpp": ["from_to", "animatable", "animate"],
+  "lv/animate.hpp": ["from_to", "animatable", "animate", "view_in", "in"],
   "lv/application.hpp": ["heap_use", "loop_source", "waiting_loop_source", "in_loop", "application"],
   "lv/but.hpp": ["but"],
   "lv/computed.hpp": ["computed", "dependency", "bind", "effect"],
