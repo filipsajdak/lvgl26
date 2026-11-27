@@ -396,7 +396,7 @@ The program checks the screen it drew against the token file. The header is `tar
   if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
 ```
 
-![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the lungo tile filled black with lime text, and the button NEXT](media/coffee-1.png)
+![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](media/coffee-1.png)
 
 See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images](images.md), [Looks](looks.md) and [Fonts](fonts.md).
 
@@ -598,9 +598,9 @@ constexpr auto your_cup = lv::group(
 );
 ```
 
-A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger, smaller cup: 14 g of beans, 30 mL.
+A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger cup: 14 g of beans, at 40 mL.
 
-![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 30 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
+![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
 
 See [Values and units](values.md) and [State and bindings](state.md).
 

@@ -359,12 +359,16 @@ int main() {
   if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;
   //! [geometry]
 
-  // A stronger cup: the beans follow the strength, and the size stays in the drink's range.
+  // A stronger cup: the beans follow the strength. The size goes down a step and up again, within
+  // the drink's range, and ends where the mock-up shows it.
   coffee::stronger();
   coffee::smaller();
   app.advance(10 * lv::ms), app.step();
-
   if (coffee::beans.get() != 14 * mp_units::si::unit_symbols::g) return 2;
   if (coffee::cup.get() != 30 * coffee::ml) return 2;
+  coffee::larger();
+  app.advance(10 * lv::ms), app.step();
+  if (coffee::cup.get() != 40 * coffee::ml) return 2;
+
   return lv::write_png(display.screen(), "coffee_2.png") ? 0 : 3;
 }
