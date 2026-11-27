@@ -413,7 +413,6 @@ const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type
 ```
 
 - The shell cannot see the size of a page of another file. So the pages take one block of LVGL's heap when the shell is mounted, where step 5 keeps them in the tree.
-- The includes are written relative to the file that names them, `#include "../state.hpp"`. The build's checks follow an include beside its file.
 
 See [Mounting and slots](mounting.md) and [Fonts](fonts.md).
 
