@@ -303,6 +303,10 @@
     "include/lv/detail/setter_order.hpp": {
       "tests": "^setter_order$",
       "targets": "setter_order"
+    },
+    "include/lv/icons.hpp": {
+      "tests": "^icons$|^icons_font$|fail_icon_",
+      "targets": "icons icons_font"
     }
   }
 }
