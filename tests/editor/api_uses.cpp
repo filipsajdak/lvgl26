@@ -585,6 +585,15 @@ int use_lists(lv::obj screen) {
 
 // ---- tasks ------------------------------------------------------------------------
 
+
+// What lv::in gives, and the struct that it animates.
+template <class T>
+inline constexpr bool is_view_in = false;
+template <lv::detail::fixed W, lv_style_selector_t S>  // C API
+inline constexpr bool is_view_in<lv::view_in<W, S>> = true;
+static_assert(is_view_in<decltype(lv::in<"knob", "pressed">(std::declval<lv::view<"arc">>()))>);
+static_assert(std::same_as<decltype(lv::animatable_style<>{}.arc_width), lv::from_to<lv::length>>);
+
 lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
   co_await button.next().clicked;
   co_await button.next().value_changed;

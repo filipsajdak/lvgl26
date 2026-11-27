@@ -25,6 +25,7 @@ template <detail::fixed W>
 using animatable = typename stub::animatable_for<W>::type;
 
 /// The style properties alone, as lv::in takes them.
+template <class D = void>
 using animatable_style = typename stub::animatable_for<"">::type;
 
 /// Runs one property of a widget from one value to another:

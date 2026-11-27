@@ -41,8 +41,8 @@ static_assert(std::same_as<decltype(lv::animatable<"arc">{}.width), lv::from_to<
 static_assert(std::same_as<decltype(lv::animatable<"arc">{}.value), lv::from_to<lv::strict<std::int32_t>>>);
 static_assert(std::same_as<decltype(lv::animatable<"arc">{}.opa), lv::from_to<lv::opa>>);
 static_assert(std::same_as<decltype(lv::animatable<"label">{}.translate_y), lv::from_to<lv::length>>);
-static_assert(std::same_as<decltype(lv::animatable_style{}.width), lv::from_to<lv::length>>);
-static_assert(std::same_as<decltype(lv::animatable_style{}.arc_width), lv::from_to<lv::length>>);
+static_assert(std::same_as<decltype(lv::animatable_style<>{}.width), lv::from_to<lv::length>>);
+static_assert(std::same_as<decltype(lv::animatable_style<>{}.arc_width), lv::from_to<lv::length>>);
 template <class T>
 concept has_value = requires(T t) { t.value; };
 template <class T>
@@ -51,9 +51,9 @@ template <class T>
 concept has_text = requires(T t) { t.text; };
 template <class T>
 concept has_layers = requires(T t) { t.layers; };
-static_assert(!has_value<lv::animatable_style>);       // a setter of a widget, not a style property
+static_assert(!has_value<lv::animatable_style<>>);       // a setter of a widget, not a style property
 static_assert(!has_bg_color<lv::animatable<"arc">>); // a color is not a number
-static_assert(!has_text<lv::animatable_style> && !has_layers<lv::animatable_style>);
+static_assert(!has_text<lv::animatable_style<>> && !has_layers<lv::animatable_style<>>);
 
 // ---- the main part -----------------------------------------------------------------------------------------
 

@@ -50,7 +50,7 @@ lv::task<> appear(lv::view<"label"> label) {
 }
 ```
 
-`lv::in<"part", "state">(view)` names the part and the state whose local style value the animation moves, as `lv::on` names them for a style. One name is a part or a state (`lv::in<"indicator">`, `lv::in<"pressed">`); two are the part and then the state. Behind `lv::in` the struct is `lv::animatable_style`: every style property that takes one number is a member, `width` and `height` included.
+`lv::in<"part", "state">(view)` names the part and the state whose local style value the animation moves, as `lv::on` names them for a style. One name is a part or a state (`lv::in<"indicator">`, `lv::in<"pressed">`); two are the part and then the state. Behind `lv::in` the struct is `lv::animatable_style<>`: every style property that takes one number is a member, `width` and `height` included.
 
 ```cpp
 lv::task<> press(lv::view<"arc"> arc) {

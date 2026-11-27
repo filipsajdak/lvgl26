@@ -737,7 +737,7 @@ lvgl26_compile_fail_message(effect_wrong_arguments static_assert "lv: the functi
 lvgl26_compile_fail_message(effect_not_a_state static_assert "lv: a dependency of an lv::effect must be an lv::state or an lv::computed that outlives it. Pass the object itself, as in `lv::effect{f, speed}`: not its value (`speed.get()`) and not a temporary.")
 lvgl26_compile_fail_message(bind_computed_wrong_type static_assert "lv: this property takes a whole number (not bool, not floating point), and the state holds bool. A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.")
 lvgl26_compile_fail(first_mixed_handlers "in lv::first, give a handler to every item")
-lvgl26_compile_fail(animate_not_a_number "invalid initialization of reference of type .lv::detail::lazy_animatable<lv::detail::fixed<6>.\"label\"")
+lvgl26_compile_fail(animate_not_a_number "no matching function for call to .animate.lv::view<lv::detail::fixed<6>.\"label\"}>&, <brace-enclosed initializer list>")
 lvgl26_compile_fail(animate_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(animate_one_end "an animation needs both ends: .property = {from, to}")
 lvgl26_compile_fail(animate_mixed_units "contract predicate is false in constant expression")

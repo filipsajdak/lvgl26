@@ -255,8 +255,11 @@ template <detail::fixed W>
 using animatable = typename detail::animatable_of<W>::type;
 
 // The style properties that take one number, as lv::in takes them: the struct of lv::animate
-// for a part and a state. A name that is also a setter of a widget is a member here.
-using animatable_style = typename detail::animatable_of<"">::type;
+// for a part and a state. A name that is also a setter of a widget is a member here. An alias
+// template, written lv::animatable_style<>: a plain alias would generate the struct where this
+// header is read, in every file (tests/include_only.cpp).
+template <class D = void>
+using animatable_style = detail::lazy_animatable<"", D>;
 
 namespace detail {
 
