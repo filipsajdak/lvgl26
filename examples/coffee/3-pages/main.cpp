@@ -196,7 +196,7 @@ constexpr auto dot(bool on) {
 constexpr auto header(const char* title, int step, const char* count) {
   return lv::group(
     {.id = "header", .style = lv::look<"header">},
-    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
       dot(step >= 1),
@@ -395,7 +395,7 @@ int main() {
   // The reader goes on to the cup: the page slides in, on a clock that steps 10 ms at a time.
   // Half way, the picture shows both pages.
   coffee::go<coffee::screen::your_cup>();
-  coffee::steps(app, 12);
+  coffee::steps(app, 7);
   if (!lv::write_png(display.screen(), "coffee_3.png")) return 3;
 
   // When the slide has ended, BACK goes back the same way.

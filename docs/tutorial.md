@@ -641,7 +641,7 @@ constexpr auto dot(bool on) {
 constexpr auto header(const char* title, int step, const char* count) {
   return lv::group(
     {.id = "header", .style = lv::look<"header">},
-    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
       dot(step >= 1),
