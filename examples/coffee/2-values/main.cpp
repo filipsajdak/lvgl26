@@ -335,6 +335,23 @@ constexpr auto your_cup = lv::group(
 // which main checks.
 constinit lv::frame<480, 320> frame;
 
+//! [geometry]
+// The screen keeps the sizes of the design: each is a token, or a formula of tokens. The
+// summary is 3 x target wide, with pad inside it on each side and a photo of 1.5 x target.
+int geometry(lv::obj screen, lv::mounted<your_cup>& root) {
+  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
+  const auto target = tok.size.target->raw(), pad = tok.layout.pad->raw();
+  const auto box = root->get<"summary">();
+  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
+  if (root->get<"header">().get<"height">() != target) return 4;
+  if (root->get<"footer">().get<"height">() != target + tok.space._4->raw()) return 5;
+  if (box.get<"width">() != target * 3) return 6;
+  if (box.get<"width">() - box.get<"content_width">() != 2 * pad) return 6;
+  if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;
+  return 0;
+}
+//! [geometry]
+
 }  // namespace coffee
 
 int main() {
@@ -344,20 +361,7 @@ int main() {
   if (!root) return 1;
   for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
 
-  //! [geometry]
-  // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The
-  // summary is 3 x target wide, with pad inside it on each side and a photo of 1.5 x target.
-  using coffee::tok;
-  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
-  const auto target = tok.size.target->raw(), pad = tok.layout.pad->raw();
-  const auto screen = display.screen(), summary = root->get<"summary">();
-  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
-  if (root->get<"header">().get<"height">() != target) return 4;
-  if (root->get<"footer">().get<"height">() != target + tok.space._4->raw()) return 5;
-  if (summary.get<"width">() != target * 3) return 6;
-  if (summary.get<"width">() - summary.get<"content_width">() != 2 * pad) return 6;
-  if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;
-  //! [geometry]
+  if (const int wrong = coffee::geometry(display.screen(), root)) return wrong;
 
   // A stronger cup: the beans follow the strength. The size goes down a step and up again, within
   // the drink's range, and ends where the mock-up shows it.
