@@ -67,6 +67,9 @@ endfunction()
 # Step 4 shows the finished cup at 3 x target: its settings let the compiler decode that picture.
 lvgl26_settings(coffee_4 4-time/lvgl26.json)
 coffee_picture(4 coffee_4_enjoy coffee-4-enjoy.png)
+# Under the sanitizers, decoding that picture takes 34 to 40 million operations, over GCC's default
+# of 33,554,432: the step gets about twice its need. A source file's options come last.
+set_source_files_properties(4-time/main.cpp PROPERTIES COMPILE_OPTIONS "-fconstexpr-ops-limit=67108864")
 
 # Step 6 is the program of step 5 split into files by screen: its picture is step 5's.
 coffee_files(6 6-files shell.cpp screens/drinks.cpp screens/cup.cpp screens/brewing.cpp screens/enjoy.cpp
