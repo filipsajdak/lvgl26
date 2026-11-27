@@ -377,9 +377,8 @@ constexpr auto ui = lv::group(
 );
 //! [pages]
 
-// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
-// which main checks.
-constinit lv::frame<480, 320> frame;
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height.
+constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
 
 // Moves the clock on by 10 ms and draws, `count` times.
 void steps(lv::application& app, int count) {
