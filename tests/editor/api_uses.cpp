@@ -8,6 +8,7 @@
 
 #include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
+#include <lv/icons.hpp>
 #include <lv/host.hpp>
 #include <lv/image.hpp>
 #include <lv/list.hpp>
@@ -202,6 +203,11 @@ static_assert(face.weight == 500 && face.family == "Barlow" && face.characters.e
 
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};
 constinit lv::scaled_font other_reading{barlow_ttf, lv::raw(20 * px)};
+
+constexpr auto gear_text = lv::glyph<"gear">;
+constexpr auto icon_list = lv::glyphs<"gear", "plus">;
+constexpr auto gear_icon = lv::icon<"gear">({.id = "gear"});
+static_assert(std::same_as<decltype(gear_text), const char* const>);
 
 constexpr auto dot = lv::image_file<picture_png>;
 constexpr auto kept_dot = lv::encoded_image<picture_png>;

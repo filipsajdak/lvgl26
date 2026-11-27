@@ -44,6 +44,8 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(icons)
+lvgl26_test(icons_font)
 lvgl26_test(api_helpers)
 lvgl26_test(nearest)
 lvgl26_test(all_header)
@@ -962,6 +964,21 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_images_picture PROPERTIES FIXTURES_REQUIRED example_images_picture)
 endif()
 
+# The example of docs/icons.md. Its picture is the one on the page.
+add_executable(example_icons ${PROJECT_SOURCE_DIR}/examples/icons/main.cpp)
+target_compile_options(example_icons PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/icons
+                                             --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_icons PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+add_test(NAME example_icons COMMAND example_icons WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+set_tests_properties(example_icons PROPERTIES FIXTURES_SETUP example_icons_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_icons_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out/icons.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/icons.png)
+  set_tests_properties(example_icons_picture PROPERTIES FIXTURES_REQUIRED example_icons_picture)
+endif()
+
 # The second example of docs/fonts.md: a font drawn on the device.
 add_executable(example_scaled_font ${PROJECT_SOURCE_DIR}/examples/scaled_font/main.cpp)
 target_compile_options(example_scaled_font PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/fonts
@@ -1165,6 +1182,7 @@ if(Python3_FOUND)
   add_test(NAME image_symbols COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_symbols.py
                                       --budget ${LVGL26_SYMBOL_BUDGET} $<TARGET_OBJECTS:image_symbols>)
   add_test(NAME symbols_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_symbols.py)
+  add_test(NAME icons_names_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_icons_names.py)
   # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
   add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
@@ -1444,3 +1462,7 @@ lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their par
 lvgl26_compile_fail(missing_header_shown "lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+
+# Icons (lv/icons.hpp): a name that is no icon lists the nearest.
+lvgl26_compile_fail_message(icon_unknown_name constexpr "lv: there is no icon 'arow-left' in Phosphor. Did you mean 'arrow-left'? The nearest names: arrow-left, caret-left, align-left, copyleft, arrow-down.")
+lvgl26_compile_fail_message(icon_far_name constexpr "lv: there is no icon 'steam-engine' in Phosphor. The nearest names: steam-logo, gear-fine, bell-ringing, champagne, dots-nine.")
