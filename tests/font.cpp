@@ -1,4 +1,5 @@
 // lv::font and lv::typeface: the compiler makes a constant font from a TrueType file.
+// editor-check: skip, the test reads the file of a typeface and the glyphs of a font, which the stubs do not declare
 //
 //   font <reference.png>
 
@@ -80,6 +81,21 @@ constexpr auto ui = lv::column({.size = {320 * px, 240 * px}})[
     lv::label({.id = "odd", .text = "Reset {}[]@#", .style = {.text_font = lv::raw(odd)}}),
     lv::label({.id = "digits", .text = "12:45", .style = {.text_font = lv::raw(digits)}})];
 
+// The default characters and two more: the euro sign and the middle dot, as a price and a separator.
+constexpr const lv_font_t* priced = lv::font<barlow_ttf>(16 * px, lv::ascii_plus<"\u20AC\u00B7">);
+constexpr const lv_font_t* plain = lv::font<barlow_ttf>(16 * px);
+constexpr const lv_font_t* reversed = lv::font<barlow_ttf>(16 * px, lv::ascii_plus<"\u00B7\u20AC\u20AC">);
+//! [extra]
+constexpr auto price_type = lv::typeface({{"Montserrat", 400, barlow_ttf, lv::ascii_plus<"€·">}});
+constexpr auto price = price_type(tok.text.body);  // the default characters, and the euro sign and the middle dot
+//! [extra]
+static_assert(lv::ascii_plus<""> == lv::detail::ascii);
+static_assert(lv::ascii_plus<"\u20AC\u00B7">.size() == lv::detail::ascii.size() + 3 + 2);
+static_assert(lv::ascii_plus<"\u20AC\u00B7">.starts_with(lv::detail::ascii));
+static_assert(lv::detail::invalid_utf8_at("abc") == 3 && lv::detail::invalid_utf8_at("\u20AC") == 3);
+static_assert(lv::detail::invalid_utf8_at("a\x80") == 1 && lv::detail::invalid_utf8_at("a\xE2\x82") == 1);
+static_assert(lv::detail::invalid_utf8_at("a\xE2\x20\x20") == 2 && lv::detail::invalid_utf8_at("\xF8") == 0);
+
 struct glyph {
   bool found;
   lv_font_glyph_dsc_t dsc;
@@ -89,6 +105,22 @@ glyph glyph_of(const lv_font_t* font, std::uint32_t character, std::uint32_t nex
   glyph g{};
   g.found = lv_font_get_glyph_dsc(font, &g.dsc, character, next);
   return g;
+}
+
+// The extra characters are in the font beside the default ones; without them the font has none of them.
+void holds_extra_characters() {
+  check(glyph_of(*price, 0x20ac).found && !glyph_of(*price, 0x20ac).dsc.is_placeholder);
+  check(glyph_of(priced, 0x20ac).found && !glyph_of(priced, 0x20ac).dsc.is_placeholder && glyph_of(priced, 0x20ac).dsc.box_w > 0);
+  check(glyph_of(priced, 0xb7).found && !glyph_of(priced, 0xb7).dsc.is_placeholder);
+  for (std::uint32_t c = ' '; c <= '~'; ++c) check(glyph_of(priced, c).found && !glyph_of(priced, c).dsc.is_placeholder);
+  check(glyph_of(plain, 0x20ac).dsc.is_placeholder && glyph_of(plain, 0xb7).dsc.is_placeholder);
+  // The order and the repeats of the extras change nothing.
+  check(glyph_of(reversed, 0x20ac).dsc.adv_w == glyph_of(priced, 0x20ac).dsc.adv_w);
+  check(glyph_of(reversed, 'A').dsc.adv_w == glyph_of(priced, 'A').dsc.adv_w);
+  // The characters are one range, until one lies outside it: then the map is a list.
+  const auto* plain_map = static_cast<const lv_font_fmt_txt_dsc_t*>(plain->dsc)->cmaps;
+  const auto* priced_map = static_cast<const lv_font_fmt_txt_dsc_t*>(priced->dsc)->cmaps;
+  check(plain_map->type == LV_FONT_FMT_TXT_CMAP_FORMAT0_TINY && priced_map->type == LV_FONT_FMT_TXT_CMAP_SPARSE_TINY);
 }
 
 void holds_its_characters() {
@@ -149,6 +181,7 @@ int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   holds_its_characters();
+  holds_extra_characters();
   holds_blank_glyphs_only();
   measures_as_the_file_says();
   kerns();

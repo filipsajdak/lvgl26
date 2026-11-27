@@ -48,6 +48,17 @@ constexpr auto numeral = type(tok.text.numeral);
 
 The tokens of this example are [examples/fonts/tokens.json](../examples/fonts/tokens.json).
 
+## More than the default characters
+
+A font holds the characters from the space to the tilde, and only what you name when you name any. A price with a euro sign, or a line with a middle dot, needs more than that, and naming them alone would leave out the letters. `lv::ascii_plus<"...">` is the default characters and the ones you add:
+
+<!-- snippet: tests/font.cpp extra -->
+
+- It goes where the characters go: the fourth value of a typeface entry, or `lv::font<ttf>(size, lv::ascii_plus<"€·">)`. The split form takes the same typeface.
+- Each extra character costs what one of the 95 costs: about 0.75 G instructions of the compiler and about 120 bytes of flash at 16 px. Two extra characters make a font 2.4 percent slower to build and 240 bytes larger.
+- The first character outside the range turns the character map into a list: 2 bytes for each character of the font, about 200 bytes once, and LVGL finds a glyph by a search in the list and not by its place. Characters up to U+FFFF, 255 in all.
+- A character the file lacks stops the build and names it. Text that is not UTF-8 stops it, and so do more than 255 characters.
+
 ## Use them
 
 <!-- snippet: examples/fonts/main.cpp tree -->
