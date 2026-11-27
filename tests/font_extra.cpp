@@ -23,14 +23,15 @@ constexpr unsigned char barlow_ttf[] = {
 };
 
 // The sets as text: the default 95 first, then what is added, each character once.
-static_assert(lv::latin1.size() == lv::detail::ascii.size() + 2 * 96);
-static_assert(lv::latin1.starts_with(lv::detail::ascii));
-static_assert(lv::latin1.substr(lv::detail::ascii.size(), 2) == " "sv);
-static_assert(lv::latin1.ends_with("ÿ"sv));
-static_assert(lv::latin1_plus<"">  == lv::latin1);
-static_assert(lv::latin1_plus<"€">.size() == lv::latin1.size() + 3);
+constexpr std::string_view latin1_text = lv::latin1;
+static_assert(latin1_text.size() == lv::detail::ascii.size() + 2 * 96);
+static_assert(latin1_text.starts_with(lv::detail::ascii));
+static_assert(latin1_text.substr(lv::detail::ascii.size(), 2) == " "sv);
+static_assert(latin1_text.ends_with("ÿ"sv));
+static_assert(lv::latin1_plus<""> == latin1_text);
+static_assert(lv::latin1_plus<"€">.size() == latin1_text.size() + 3);
 static_assert(lv::latin1_plus<"€">.starts_with(lv::latin1));
-static_assert(lv::detail::characters_of(lv::latin1).size() == 95 + 96);
+static_assert(lv::detail::characters_of(latin1_text).size() == 95 + 96);
 static_assert(lv::detail::characters_of(lv::latin1_plus<"€·">).size() == 95 + 96 + 1);  // the dot is in Latin-1
 
 // The font of the price and of the strength: the default set, the euro sign, the middle dot and three letters.

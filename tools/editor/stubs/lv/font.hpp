@@ -43,7 +43,10 @@ template <detail::fixed Extra>
 inline constexpr std::string_view latin1_plus{};
 
 /// The default characters and the accents of Latin-1: the cost of lv::latin1_plus<"">.
-inline constexpr std::string_view latin1{};
+struct latin1_set {
+  constexpr operator std::string_view() const { return {}; }
+};
+inline constexpr latin1_set latin1{};
 
 /// One file of a typeface: {"Barlow", 500, barlow_ttf}, with the characters to keep
 /// as an optional fourth value.

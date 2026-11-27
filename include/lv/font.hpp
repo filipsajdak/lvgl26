@@ -433,8 +433,16 @@ inline constexpr std::string_view ascii_plus = std::define_static_string(detail:
 template <detail::fixed Extra>
 inline constexpr std::string_view latin1_plus = std::define_static_string(detail::ascii_plus_text(Extra.sv(), "lv::latin1_plus", true));
 
-// The default characters and the accents of Latin-1: the same cost as lv::latin1_plus<"">.
-inline constexpr std::string_view latin1 = latin1_plus<"">;
+namespace detail {
+// lv::latin1: a set that turns into its text where it is used. A variable of the text itself would be worked out in
+// every file that reads this header: 191 characters sorted for nothing (0.6 G instructions in a file that names no font).
+struct latin1_set {
+  consteval operator std::string_view() const { return latin1_plus<"">; }
+};
+}  // namespace detail
+
+// The default characters and the accents of Latin-1, for the characters of a font: the cost of lv::latin1_plus<"">.
+inline constexpr detail::latin1_set latin1{};
 
 // One file of a typeface: the family and weight it is, as the design tokens name them.
 struct face_file {
