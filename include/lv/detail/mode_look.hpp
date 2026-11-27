@@ -49,6 +49,7 @@ inline void mode_marker(lv_event_t*) {}
 // Gives `o` the styles of the look in the mode of the moment, and the marker that a switch finds. False
 // when LVGL's heap had no room for one of them.
 inline bool join_mode_look(lv_obj_t* o, mode_look_ref look) {
+  if (look.object == nullptr) return true;  // an unset .look is not called; the analyzer cannot know that
   const mode_object& m = *look.object;
   bool all = true;
   for (std::size_t k = 0; k < m.per; ++k) all = add_style(o, m.at(mode_now, k).style, m.at(mode_now, k).selector) && all;
@@ -61,7 +62,9 @@ inline void switch_mode_in(lv_obj_t* o, std::size_t from, std::size_t to) {
   for (std::uint32_t i = 0, n = lv_obj_get_event_count(o); i < n; ++i) {
     lv_event_dsc_t* dsc = lv_obj_get_event_dsc(o, i);
     if (lv_event_dsc_get_cb(dsc) != &mode_marker) continue;
-    const auto& m = *static_cast<const mode_object*>(lv_event_dsc_get_user_data(dsc));
+    const auto* table = static_cast<const mode_object*>(lv_event_dsc_get_user_data(dsc));
+    if (table == nullptr) continue;
+    const mode_object& m = *table;
     for (std::size_t k = 0; k < m.per; ++k)
       if (m.at(from, k).style != m.at(to, k).style)
         static_cast<void>(lv_obj_replace_style(o, m.at(from, k).style, m.at(to, k).style, m.at(from, k).selector));
