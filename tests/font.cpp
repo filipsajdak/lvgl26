@@ -1,4 +1,5 @@
 // lv::font and lv::typeface: the compiler makes a constant font from a TrueType file.
+// editor-check: skip, the test reads the file of a typeface and the glyphs of a font, which the stubs do not declare
 //
 //   font <reference.png>
 
