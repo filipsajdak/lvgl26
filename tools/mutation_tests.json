@@ -307,6 +307,10 @@
     "include/lv/icons.hpp": {
       "tests": "^icons$|^icons_font$|fail_icon_",
       "targets": "icons icons_font"
+    },
+    "include/lv/icons_font.hpp": {
+      "tests": "^icons_font$",
+      "targets": "icons_font"
     }
   }
 }

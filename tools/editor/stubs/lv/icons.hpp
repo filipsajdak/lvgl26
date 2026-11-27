@@ -24,11 +24,4 @@ constexpr node<"label"> icon(const props<"label">& p = {}) {
   return {p.id};
 }
 
-namespace icons {
-
-/// The file of Phosphor Bold (MIT), for a typeface: {"Phosphor", 700, lv::icons::phosphor_bold_ttf, lv::glyphs<...>}.
-constexpr unsigned char phosphor_bold_ttf[] = {0};
-
-}  // namespace icons
-
 }  // namespace lv
