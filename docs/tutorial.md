@@ -598,9 +598,9 @@ constexpr auto your_cup = lv::group(
 );
 ```
 
-A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger, smaller cup: 14 g of beans, 30 mL.
+A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger cup: 14 g of beans, at 40 mL.
 
-![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 30 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
+![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
 
 See [Values and units](values.md) and [State and bindings](state.md).
 
