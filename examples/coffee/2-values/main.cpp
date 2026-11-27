@@ -144,40 +144,20 @@ constexpr unsigned char latte_png[] = {
 #embed "../assets/latte-72.png"
 };
 
-// What a tile shows of each drink, named as the drink is.
-struct photos {
-  static constexpr auto espresso   = lv::image_file<espresso_png>;
-  static constexpr auto lungo      = lv::image_file<lungo_png>;
-  static constexpr auto cappuccino = lv::image_file<cappuccino_png>;
-  static constexpr auto latte      = lv::image_file<latte_png>;
+// What a tile shows of each drink, in the order of the enum.
+constexpr decltype(lv::image_file<espresso_png>) photos[] = {
+  lv::image_file<espresso_png>,
+  lv::image_file<lungo_png>,
+  lv::image_file<cappuccino_png>,
+  lv::image_file<latte_png>,
 };
-struct names {
-  static constexpr char espresso[]   = "ESPRESSO";
-  static constexpr char lungo[]      = "LUNGO";
-  static constexpr char cappuccino[] = "CAPPUCCINO";
-  static constexpr char latte[]      = "LATTE";
-};
-struct prices {
-  static constexpr char espresso[]   = "2.20";
-  static constexpr char lungo[]      = "2.40";
-  static constexpr char cappuccino[] = "3.10";
-  static constexpr char latte[]      = "3.40";
-};
+constexpr const char* names[]  = {"ESPRESSO", "LUNGO", "CAPPUCCINO", "LATTE"};
+constexpr const char* prices[] = {"2.20", "2.40", "3.10", "3.40"};
 
-// The chosen drink's photo, name and price, for the summary: tables in the order of the enum.
-constexpr decltype(photos::espresso) photo_list[] = {
-  photos::espresso, photos::lungo, photos::cappuccino, photos::latte
-};
-constexpr const char* name_list[] = {
-  names::espresso, names::lungo, names::cappuccino, names::latte
-};
-constexpr const char* price_list[] = {
-  prices::espresso, prices::lungo, prices::cappuccino, prices::latte
-};
-
-constinit lv::computed photo{[](drink d) { return photo_list[std::to_underlying(d)]; }, chosen};
-constinit lv::computed name{[](drink d) { return name_list[std::to_underlying(d)]; }, chosen};
-constinit lv::computed price{[](drink d) { return price_list[std::to_underlying(d)]; }, chosen};
+// The chosen drink's photo, name and price, for the summary.
+constinit lv::computed photo{[](drink d) { return photos[std::to_underlying(d)]; }, chosen};
+constinit lv::computed name{[](drink d) { return names[std::to_underlying(d)]; }, chosen};
+constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
 
 // What the fields say of the values.
 constexpr std::array strength_words{
@@ -243,13 +223,13 @@ constexpr auto tile() {
       .style      = lv::look<"tile">,
       .on_clicked = [] { chosen = D, cup = sizes_of(D).usual; },
     },
-    lv::image({.id = lv::name_of<D>, .src = lv::like<D, photos>}),
+    lv::image({.src = photos[std::to_underlying(D)]}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"tile-text">},
-      lv::label({.text = lv::like<D, names>, .style = label_text}),
+      lv::label({.text = names[std::to_underlying(D)], .style = label_text}),
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
-        lv::label({.text = lv::like<D, prices>, .style = price_text}),
+        lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
         lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
       )
     )
@@ -351,8 +331,9 @@ constexpr auto your_cup = lv::group(
 );
 //! [cup]
 
-// The display's memory, as large as the screen of the token file.
-constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
+// which main checks.
+constinit lv::frame<480, 320> frame;
 
 }  // namespace coffee
 
@@ -364,13 +345,18 @@ int main() {
   for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
 
   //! [geometry]
-  // The screen keeps the sizes of the design: each is a token, or a formula of tokens.
+  // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The
+  // summary is 3 x target wide, with pad inside it on each side and a photo of 1.5 x target.
   using coffee::tok;
-  const auto target = tok.size.target->raw(), space_4 = tok.space._4->raw();
+  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
+  const auto target = tok.size.target->raw(), pad = tok.layout.pad->raw();
+  const auto screen = display.screen(), summary = root->get<"summary">();
+  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
   if (root->get<"header">().get<"height">() != target) return 4;
-  if (root->get<"footer">().get<"height">() != target + space_4) return 5;
-  if (root->get<"summary">().get<"width">() != target * 3) return 6;
-  if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;  // 1.5 x target
+  if (root->get<"footer">().get<"height">() != target + tok.space._4->raw()) return 5;
+  if (summary.get<"width">() != target * 3) return 6;
+  if (summary.get<"width">() - summary.get<"content_width">() != 2 * pad) return 6;
+  if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;
   //! [geometry]
 
   // A stronger cup: the beans follow the strength, and the size stays in the drink's range.

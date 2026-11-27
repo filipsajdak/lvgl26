@@ -481,40 +481,20 @@ constexpr unsigned char latte_png[] = {
 #embed "../assets/latte-72.png"
 };
 
-// What a tile shows of each drink, named as the drink is.
-struct photos {
-  static constexpr auto espresso   = lv::image_file<espresso_png>;
-  static constexpr auto lungo      = lv::image_file<lungo_png>;
-  static constexpr auto cappuccino = lv::image_file<cappuccino_png>;
-  static constexpr auto latte      = lv::image_file<latte_png>;
+// What a tile shows of each drink, in the order of the enum.
+constexpr decltype(lv::image_file<espresso_png>) photos[] = {
+  lv::image_file<espresso_png>,
+  lv::image_file<lungo_png>,
+  lv::image_file<cappuccino_png>,
+  lv::image_file<latte_png>,
 };
-struct names {
-  static constexpr char espresso[]   = "ESPRESSO";
-  static constexpr char lungo[]      = "LUNGO";
-  static constexpr char cappuccino[] = "CAPPUCCINO";
-  static constexpr char latte[]      = "LATTE";
-};
-struct prices {
-  static constexpr char espresso[]   = "2.20";
-  static constexpr char lungo[]      = "2.40";
-  static constexpr char cappuccino[] = "3.10";
-  static constexpr char latte[]      = "3.40";
-};
+constexpr const char* names[]  = {"ESPRESSO", "LUNGO", "CAPPUCCINO", "LATTE"};
+constexpr const char* prices[] = {"2.20", "2.40", "3.10", "3.40"};
 
-// The chosen drink's photo, name and price, for the summary: tables in the order of the enum.
-constexpr decltype(photos::espresso) photo_list[] = {
-  photos::espresso, photos::lungo, photos::cappuccino, photos::latte
-};
-constexpr const char* name_list[] = {
-  names::espresso, names::lungo, names::cappuccino, names::latte
-};
-constexpr const char* price_list[] = {
-  prices::espresso, prices::lungo, prices::cappuccino, prices::latte
-};
-
-constinit lv::computed photo{[](drink d) { return photo_list[std::to_underlying(d)]; }, chosen};
-constinit lv::computed name{[](drink d) { return name_list[std::to_underlying(d)]; }, chosen};
-constinit lv::computed price{[](drink d) { return price_list[std::to_underlying(d)]; }, chosen};
+// The chosen drink's photo, name and price, for the summary.
+constinit lv::computed photo{[](drink d) { return photos[std::to_underlying(d)]; }, chosen};
+constinit lv::computed name{[](drink d) { return names[std::to_underlying(d)]; }, chosen};
+constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
 
 // What the fields say of the values.
 constexpr std::array strength_words{
