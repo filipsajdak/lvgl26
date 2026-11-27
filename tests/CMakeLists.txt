@@ -685,7 +685,7 @@ lvgl26_compile_fail(restrict_encode_png "lv: lv::encode_png needs allocation, an
 lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this project does not allow them \\(allow\\.files\\)\\.")
 lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
 lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
-lvgl26_compile_fail(restrict_runtime "lv: lv::runtime needs floating point, and this project does not allow it \\(allow\\.floating_point\\)\\. It reads the numbers of a document as double\\.")
+lvgl26_compile_fail_message(restrict_runtime static_assert "lv: lv::runtime needs floating point, and this project does not allow it (allow.floating_point). It reads the numbers of a document as double.")
 lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
 lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json

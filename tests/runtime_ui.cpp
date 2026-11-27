@@ -120,6 +120,55 @@ void styles_and_units(lv::obj screen) {
   }
 }
 
+// What a document may set as text, and which kinds of value a property can be read as.
+using lv::detail::readable;
+static_assert(readable<lv::length> && readable<lv::horizontal> && readable<lv::vertical> && readable<lv::angle>);
+static_assert(readable<lv::decidegrees> && readable<lv::duration> && readable<lv::opa> && readable<lv_color_t>);
+static_assert(readable<const char*> && readable<lv::option_list> && readable<lv_align_t>);
+static_assert(readable<lv::strict<int>> && readable<lv::styled<lv::length>> && readable<lv::nonnegative<lv::length>>);
+static_assert(!readable<int> && !readable<double> && !readable<bool> && !readable<std::string_view>);
+static_assert(!readable<lv_obj_t*> && !readable<lv::styled<int>>);
+
+using list_ui = lv::runtime<"obj", "dropdown", "roller", "slider", "arc", "button", "switch">;
+
+// A list of options is copied into the buffer next to it, up to one less than its size.
+void option_lists_are_copied(lv::obj screen) {
+  const auto dropdown_with = [](std::size_t n) {
+    return R"({"type": "dropdown", "id": "d", "props": {"options": ")" + std::string(n, 'o') + R"("}})";
+  };
+  auto fits = list_ui::load(dropdown_with(lv::detail::text_capacity - 1), screen);
+  check(fits.has_value());
+  if (fits) check(std::strlen(lv_dropdown_get_options(fits->find("d").raw())) == lv::detail::text_capacity - 1);
+  check(!list_ui::load(dropdown_with(lv::detail::text_capacity), screen).has_value());
+  check(!list_ui::load(dropdown_with(lv::detail::text_capacity + 1), screen).has_value());
+  check(!list_ui::load(R"({"type": "dropdown", "props": {"options": 3}})", screen).has_value());
+  check(!list_ui::load(R"({"type": "dropdown", "props": {"options": ["a", "b"]}})", screen).has_value());
+
+  // The whole text, a short one too, and a roller's as well.
+  auto both = list_ui::load(R"({"type": "column", "children": [
+      {"type": "dropdown", "id": "d", "props": {"options": "ab cd"}},
+      {"type": "roller", "id": "r", "props": {"options": ["xy", "normal"]}},
+      {"type": "dropdown", "id": "one", "props": {"options": "z"}}]})", screen);
+  check(both.has_value());
+  if (both) {
+    check(std::strcmp(lv_dropdown_get_options(both->find("d").raw()), "ab cd") == 0);
+    check(std::strcmp(lv_roller_get_options(both->find("r").raw()), "xy") == 0);
+    check(std::strcmp(lv_dropdown_get_options(both->find("one").raw()), "z") == 0);
+  }
+}
+
+// Only a column and a row are flex containers; every other kind of widget is not, whatever its name sorts as.
+void only_a_column_and_a_row_lay_out(lv::obj screen) {
+  auto widgets = list_ui::load(R"({"type": "obj", "children": [
+      {"type": "arc", "id": "arc"}, {"type": "button", "id": "button"}, {"type": "dropdown", "id": "dropdown"},
+      {"type": "obj", "id": "obj"}, {"type": "roller", "id": "roller"}, {"type": "slider", "id": "slider"},
+      {"type": "switch", "id": "switch"}]})", screen);
+  check(widgets.has_value());
+  if (!widgets) return;
+  for (const char* id : {"arc", "button", "dropdown", "obj", "roller", "slider", "switch"})
+    check(widgets->find(id).get<"style_layout">(LV_PART_MAIN) != LV_LAYOUT_FLEX);
+}
+
 // What a document must not be able to do.
 void rejects(lv::obj screen, bool holds_heap) {
   const auto before = lv_obj_get_child_count(screen.raw());
@@ -512,6 +561,8 @@ int main() {
   // The first run allocates a few bytes once, so only the second is held to the heap it began with.
   rejects(screen, false);
   rejects(screen, true);
+  option_lists_are_copied(screen);
+  only_a_column_and_a_row_lay_out(screen);
   limit_table_rows_and_columns(screen);
   limit_chart_points(screen);
   capability_other_counts_take_their_whole_type(screen);

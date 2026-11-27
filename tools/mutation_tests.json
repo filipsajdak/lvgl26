@@ -46,7 +46,7 @@
       "parts": 3
     },
     "include/lv/runtime.hpp": {
-      "tests": "^runtime_ui$|^json$",
+      "tests": "^runtime_ui$|^json$|^fail_restrict_runtime$",
       "targets": "runtime_ui json"
     },
     "include/lv/tokens.hpp": {
