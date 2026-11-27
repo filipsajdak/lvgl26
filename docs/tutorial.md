@@ -396,7 +396,7 @@ The program checks the screen it drew against the token file. The header is `tar
   if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
 ```
 
-![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the lungo tile filled black with lime text, and the button NEXT](media/coffee-1.png)
+![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](media/coffee-1.png)
 
 See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images](images.md), [Looks](looks.md) and [Fonts](fonts.md).
 
