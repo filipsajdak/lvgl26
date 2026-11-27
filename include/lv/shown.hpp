@@ -102,6 +102,23 @@ struct shown_hook {
                          "where tree is the tree of the arm.");
 };
 
+// How a page enters or leaves: one property of its root, from one value to another.
+struct transition_spec {
+  lv_anim_exec_xcb_t step = nullptr;  // null: none
+  std::int32_t from = 0;
+  std::int32_t to = 0;
+  std::uint32_t ms = 0;
+  easing how{};
+};
+
+// The hooks of a page of another file: lv::page_of<ui, {.on_shown = &start, .on_front = &look}>.
+// A template argument must be structural, which a transition is not, so an arm's options hold the
+// same two members and its transitions.
+struct page_options {
+  shown_hook on_shown;
+  shown_hook on_front;
+};
+
 // What an arm takes beside its tree: lv::is<page::home>(home_ui, {.on_shown = &start, .on_front = &look}).
 struct arm_options {
   // Called after the tree is built, with a handle to it: its ids, a task tied to its root.
@@ -109,6 +126,13 @@ struct arm_options {
   // Called each time the page comes to the front: when it was just built, after .on_shown, and
   // when a page that was still built comes back.
   shown_hook on_front;
+  // How this page comes in and goes, in place of the ones of lv::shown: a page that comes from
+  // the top while the others slide sideways. Left out, the page takes the transitions of
+  // lv::shown. The ones for a change back are .enter and .leave when left out here.
+  transition_spec enter{};
+  transition_spec leave{};
+  transition_spec enter_back{};
+  transition_spec leave_back{};
 };
 
 // An arm: the pattern of lv::match, and the tree it shows (none for T = void).
@@ -340,14 +364,14 @@ mounted<Tree>* page_find(void* slot) {
 }
 
 // Calls the hook H (.on_shown or .on_front) of Hooks with a handle to the page in `slot`.
-template <const auto& Tree, arm_options Hooks, std::meta::info H>
+template <const auto& Tree, page_options Hooks, std::meta::info H>
 void page_call(shown_slot& slot) {
   const auto handle = held_access::make<Tree>(&slot, &page_find<Tree>);
   Hooks.[:H:].call(&handle);
 }
 
 // The function of a page that calls hook H of Hooks, or null.
-template <const auto& Tree, arm_options Hooks, std::meta::info H>
+template <const auto& Tree, page_options Hooks, std::meta::info H>
 consteval void (*page_hook_of())(shown_slot&) {
   if constexpr (is_null(Hooks.[:H:].tree)) {
     return nullptr;
@@ -360,7 +384,7 @@ consteval void (*page_hook_of())(shown_slot&) {
   }
 }
 
-template <const auto& Tree, arm_options Hooks>
+template <const auto& Tree, page_options Hooks>
 consteval page page_for() {
   return {sizeof(mounted<Tree>),
           alignof(mounted<Tree>),
@@ -369,30 +393,21 @@ consteval page page_for() {
           &page_end<Tree>,
           &page_abandon<Tree>,
           &page_root<Tree>,
-          page_hook_of<Tree, Hooks, ^^arm_options::on_shown>(),
-          page_hook_of<Tree, Hooks, ^^arm_options::on_front>()};
+          page_hook_of<Tree, Hooks, ^^page_options::on_shown>(),
+          page_hook_of<Tree, Hooks, ^^page_options::on_front>()};
 }
 
 }  // namespace detail
 
 // The page of the tree `Tree`, for lv::page: constinit const lv::page home_page = lv::page_of<ui>;
 // Its hooks are named as those of an arm: lv::page_of<ui, {.on_shown = &start, .on_front = &look}>.
-template <const auto& Tree, detail::arm_options Hooks = {}>
+template <const auto& Tree, detail::page_options Hooks = {}>
   requires tree_node<decltype(Tree)>
 inline constexpr page page_of = detail::page_for<Tree, Hooks>();
 
 namespace detail {
 
 // ---- transitions ---------------------------------------------------------------------
-
-// How a page enters or leaves: one property of its root, from one value to another.
-struct transition_spec {
-  lv_anim_exec_xcb_t step = nullptr;  // null: none
-  std::int32_t from = 0;
-  std::int32_t to = 0;
-  std::uint32_t ms = 0;
-  easing how{};
-};
 
 // What lv::shown takes beside its state: lv::shown(current, {.enter = slide_in, .leave = slide_out}).
 struct shown_options {
@@ -465,10 +480,8 @@ struct shown_plan {
   std::size_t arms;
   std::size_t slot_size;   // 0: the pages are in other files, and the size is found at mount
   std::size_t slot_align;
-  transition_spec enter;
-  transition_spec leave;
-  transition_spec enter_back;  // as .enter when the program gives none
-  transition_spec leave_back;
+  const transition_spec* moves;  // four for each arm: enter, leave, enter back, leave back, the arm's own or the shown-wide
+  bool moving;                   // some page enters or leaves with a transition
   std::size_t (*arm_now)(const void* source);  // the arm of the state's value
   std::size_t (*rank_now)(const void* source);  // where the value stands among the enumerators; null for a bool
   const void* source;
@@ -492,13 +505,11 @@ struct shown_core : watch_node, deferred_node {
 // do not need.
 inline std::size_t keep_room(const shown_core& c) { return c.slots.size() > 2 ? c.slots.size() - 2 : 0; }
 
-inline bool has_transitions(const shown_plan& p) {
-  return p.enter.step != nullptr || p.leave.step != nullptr || p.enter_back.step != nullptr || p.leave_back.step != nullptr;
-}
+inline bool has_transitions(const shown_plan& p) { return p.moving; }
 
 // The transitions of the change that runs: the way back, or forward.
-inline const transition_spec& enter_of(const shown_core& c) { return c.back ? c.plan->enter_back : c.plan->enter; }
-inline const transition_spec& leave_of(const shown_core& c) { return c.back ? c.plan->leave_back : c.plan->leave; }
+inline const transition_spec& enter_of(const shown_core& c, std::size_t arm) { return c.plan->moves[arm * 4 + (c.back ? 2 : 0)]; }
+inline const transition_spec& leave_of(const shown_core& c, std::size_t arm) { return c.plan->moves[arm * 4 + (c.back ? 3 : 1)]; }
 
 // The slot of the page that is shown or comes in, or null.
 inline shown_slot* front_slot(shown_core& c) {
@@ -640,7 +651,7 @@ inline std::int32_t turning_from(const shown_slot& s, const transition_spec& nex
 }
 
 inline void start_leave(shown_slot& s) {
-  const transition_spec& leave = leave_of(*s.owner);
+  const transition_spec& leave = leave_of(*s.owner, s.arm);
   const std::int32_t from = s.phase == slot_phase::entering ? turning_from(s, leave) : leave.from;
   s.phase = slot_phase::leaving;
   if (leave.step != nullptr)
@@ -650,7 +661,7 @@ inline void start_leave(shown_slot& s) {
 }
 
 inline void start_enter(shown_slot& s, bool backwards) {
-  const transition_spec& enter = enter_of(*s.owner);
+  const transition_spec& enter = enter_of(*s.owner, s.arm);
   const std::int32_t from = backwards ? turning_from(s, enter) : enter.from;
   s.phase = slot_phase::entering;
   if (enter.step != nullptr)
@@ -816,7 +827,7 @@ inline bool give_slots(shown_core& c, std::span<shown_slot> slots, std::byte* ro
 
 // A transparent widget that catches the clicks over a leaving page.
 inline bool make_glass(shown_core& c) {
-  if (c.plan->leave.step == nullptr && c.plan->leave_back.step == nullptr) return true;
+  if (!c.plan->moving) return true;
   c.glass = lv_obj_create(c.holder);
   if (c.glass == nullptr) return false;
   lv_obj_remove_style_all(c.glass);
@@ -946,6 +957,8 @@ struct shown_node {
     if (o.alive == 0) return "lv::shown needs a slot for the page it shows: .alive = 1 or more.";
     if (o.alive == 1 && (!is_null(o.enter.step) || !is_null(o.leave.step) || !is_null(o.enter_back.step) || !is_null(o.leave_back.step)))
       return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2.";
+    if (o.alive == 1 && any_arm_moves<Tree, Path...>(std::make_index_sequence<arm_count>{}))
+      return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave of an arm need .alive = 2.";
     return {};
   }
 
@@ -1015,10 +1028,38 @@ struct shown_node {
     return found;
   }
 
-  // The transition of the way back: the one given, else the one of the way forward.
-  template <const transition_spec& Back, const transition_spec& Forward>
-  static consteval transition_spec back_or() {
-    return !is_null(Back.step) ? Back : Forward;
+  // The first of the specs that is given: the arm's own, else the shown-wide one.
+  static consteval transition_spec first_given(const transition_spec& a, const transition_spec& b, const transition_spec& c) {
+    return !is_null(a.step) ? a : (!is_null(b.step) ? b : c);
+  }
+
+  // The four transitions of arm K, in the order of shown_plan::moves. A page that comes in
+  // takes its own .enter (back: .enter_back, else .enter), else the ones of lv::shown, whose
+  // way back is .enter_back, else .enter.
+  template <std::size_t K, const auto& Tree, std::size_t... Path>
+  static consteval void arm_moves(transition_spec* out) {
+    constexpr const auto& o = descend<Path...>(Tree).options;
+    constexpr const auto& a = arm<K, Tree, Path...>().options;
+    out[0] = first_given(a.enter, o.enter, o.enter);
+    out[1] = first_given(a.leave, o.leave, o.leave);
+    out[2] = first_given(a.enter_back, a.enter, first_given(o.enter_back, o.enter, o.enter));
+    out[3] = first_given(a.leave_back, a.leave, first_given(o.leave_back, o.leave, o.leave));
+  }
+
+  template <const auto& Tree, std::size_t... Path, std::size_t... K>
+  static consteval bool any_arm_moves(std::index_sequence<K...>) {
+    bool any = false;
+    ((any = any || !is_null(arm<K, Tree, Path...>().options.enter.step) || !is_null(arm<K, Tree, Path...>().options.leave.step) ||
+            !is_null(arm<K, Tree, Path...>().options.enter_back.step) || !is_null(arm<K, Tree, Path...>().options.leave_back.step)),
+     ...);
+    return any;
+  }
+
+  template <const auto& Tree, std::size_t... Path>
+  static consteval bool any_moves() {
+    constexpr const auto& o = descend<Path...>(Tree).options;
+    return !is_null(o.enter.step) || !is_null(o.leave.step) || !is_null(o.enter_back.step) || !is_null(o.leave_back.step) ||
+           any_arm_moves<Tree, Path...>(std::make_index_sequence<arm_count>{});
   }
 
   // Where the state's value stands among the enumerators: the direction of a change. None for a bool.
@@ -1041,6 +1082,11 @@ struct shown_node {
     static constexpr std::array<void (*)(shown_slot&), arm_count> front_hooks = []<std::size_t... K>(std::index_sequence<K...>) {
       return std::array<void (*)(shown_slot&), arm_count>{hook_at<K, ^^arm_options::on_front, Tree, Path...>()...};
     }(std::make_index_sequence<arm_count>{});
+    static constexpr std::array<transition_spec, arm_count * 4> moves = []<std::size_t... K>(std::index_sequence<K...>) {
+      std::array<transition_spec, arm_count * 4> all{};
+      ((arm_moves<K, Tree, Path...>(all.data() + K * 4)), ...);
+      return all;
+    }(std::make_index_sequence<arm_count>{});
     static constexpr auto slot = slot_of<Tree, Path...>();
     static constexpr shown_plan plan{pages.data(),
                                      shown_hooks.data(),
@@ -1048,10 +1094,8 @@ struct shown_node {
                                      arm_count,
                                      slot[0],
                                      slot[1],
-                                     descend<Path...>(Tree).options.enter,
-                                     descend<Path...>(Tree).options.leave,
-                                     back_or<descend<Path...>(Tree).options.enter_back, descend<Path...>(Tree).options.enter>(),
-                                     back_or<descend<Path...>(Tree).options.leave_back, descend<Path...>(Tree).options.leave>(),
+                                     moves.data(),
+                                     any_moves<Tree, Path...>(),
                                      &arm_now<Tree, Path...>,
                                      rank_function(),
                                      descend<Path...>(Tree).source};
