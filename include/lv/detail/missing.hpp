@@ -65,7 +65,8 @@ inline constexpr fallback fallbacks[] = {
     {"list"sv, "lv/list.hpp"sv},           {"each"sv, "lv/list.hpp"sv},
     {"for_each"sv, "lv/repeat.hpp"sv},     {"for_each_field"sv, "lv/repeat.hpp"sv},
     {"theme"sv, "lv/theme.hpp"sv},         {"look"sv, "lv/look.hpp"sv},
-    {"image_file"sv, "lv/image.hpp"sv},    {"encoded_image"sv, "lv/encoded_image.hpp"sv},
+    {"image_file"sv, "lv/image.hpp"sv},    {"mask_file"sv, "lv/image.hpp"sv},
+    {"encoded_image"sv, "lv/encoded_image.hpp"sv},
     {"runtime"sv, "lv/runtime.hpp"sv},     {"one_of"sv, "lv/one_of.hpp"sv},
     {"pointer"sv, "lv/pointer.hpp"sv},     {"most_pointer_samples"sv, "lv/pointer.hpp"sv},
     {"shown"sv, "lv/shown.hpp"sv},         {"when"sv, "lv/shown.hpp"sv},
@@ -116,6 +117,13 @@ template <const auto& File>
   requires detail::embedded_bytes<decltype(File)>
 inline constexpr const lv_image_dsc_t* image_file = [] {
   static_assert(detail::header_missing<decltype(File)>, "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>");
+  return static_cast<const lv_image_dsc_t*>(nullptr);
+}();
+
+template <const auto& File>
+  requires detail::embedded_bytes<decltype(File)>
+inline constexpr const lv_image_dsc_t* mask_file = [] {
+  static_assert(detail::header_missing<decltype(File)>, "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>");
   return static_cast<const lv_image_dsc_t*>(nullptr);
 }();
 

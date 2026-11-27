@@ -71,6 +71,13 @@ constexpr auto keyed_grey = lv::image_file<keyed_grey_png>;
 constexpr auto row3 = lv::image_file<row3_png>;
 constexpr auto chunked = lv::image_file<chunked_png>;
 
+// Masks: one byte for each pixel.
+constexpr auto row3_mask = lv::mask_file<row3_png>;
+constexpr auto keyed_mask = lv::mask_file<keyed_grey_png>;
+constexpr auto corner_mask = lv::mask_file<corner_png>;
+constexpr auto palette_mask = lv::mask_file<palette_png>;
+constexpr auto ring_mask = lv::mask_file<ring_png>;
+
 // The same 3-pixel rows for an LVGL that wants rows of a multiple of four or eight bytes.
 constexpr auto grey_by_4 = lv::detail::make_image(keyed_rgb_png, 16, most, 4);    // see-through: no padding
 constexpr auto flag_by_4 = lv::detail::make_image(row3_png, 16, most, 4);         // 6 bytes become 8
@@ -186,6 +193,56 @@ void stores_for_32_bits() {
   check(is(palette32, LV_COLOR_FORMAT_ARGB8888, 8, 8, 32, 256) && sum(palette32) == 29846);
 }
 
+// A mask takes the alpha of the file when some pixel is see-through, and the grey value otherwise.
+void stores_a_mask() {
+  // row3.png is opaque: red, green, blue; then blue, green, red. Grey is (77 R + 150 G + 29 B) >> 8: 76, 149 and 28 for a full red, green or blue.
+  check(is(row3_mask, LV_COLOR_FORMAT_A8, 3, 2, 3, 6));
+  const std::uint8_t grey_of_row3[] = {76, 149, 28, 28, 149, 76};
+  for (std::size_t i = 0; i < 6; ++i) check(row3_mask->data[i] == grey_of_row3[i]);
+  // keyed_grey.png names one grey as see-through: the alpha is the mask.
+  check(is(keyed_mask, LV_COLOR_FORMAT_A8, 3, 1, 3, 3));
+  check(keyed_mask->data[0] == 255 && keyed_mask->data[1] == 0 && keyed_mask->data[2] == 255);
+  // Opaque but for the last pixel: 255 everywhere, 0 there.
+  check(is(corner_mask, LV_COLOR_FORMAT_A8, 8, 8, 8, 64));
+  check(corner_mask->data[62] == 255 && corner_mask->data[63] == 0 && sum(corner_mask) == 63 * 255);
+  // The alpha of a palette file, not its colours.
+  check(is(palette_mask, LV_COLOR_FORMAT_A8, 8, 8, 8, 64));
+  check(palette_mask->data[0] == 255 && palette_mask->data[1] == 128 && palette_mask->data[2] == 255);
+  check(is(ring_mask, LV_COLOR_FORMAT_A8, 32, 32, 32, 32 * 32));
+  check(ring_mask->data[0] == 0 && ring_mask->data[16 * 32 + 5] == 255);
+  // Pixels start where LVGL wants a draw buffer.
+  for (const lv_image_dsc_t* mask : {row3_mask, keyed_mask, corner_mask, palette_mask, ring_mask})
+    check(reinterpret_cast<std::uintptr_t>(mask->data) % LV_DRAW_BUF_ALIGN == 0);
+}
+
+// A mask is tinted by the recolor of its style, and see-through where its bytes are 0.
+void draws_a_mask_tinted() {
+  lv_obj_t* box = lv_obj_create(lv_screen_active());
+  lv_obj_remove_style_all(box);
+  lv_obj_set_size(box, 16, 16);
+  lv_obj_set_pos(box, 0, 0);
+  lv_obj_set_style_bg_color(box, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(box, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_t* picture = lv_image_create(box);
+  lv_image_set_src(picture, corner_mask);
+  lv_obj_set_pos(picture, 0, 0);
+  lv_obj_set_style_image_recolor(picture, lv_color_make(255, 0, 0), LV_PART_MAIN);
+  lv_obj_set_style_image_recolor_opa(picture, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_update_layout(box);
+  lv_draw_buf_t* shot = lv_snapshot_take(box, LV_COLOR_FORMAT_ARGB8888);
+  check(shot != nullptr);
+  if (shot) {
+    const auto at = [&](unsigned x, unsigned y) {
+      const std::uint8_t* p = shot->data + static_cast<std::size_t>(y) * shot->header.stride + 4 * x;
+      return static_cast<unsigned>(p[2] << 16 | p[1] << 8 | p[0]);
+    };
+    check(at(0, 0) == 0xff0000 && at(3, 3) == 0xff0000);  // the mask is opaque there: red
+    check(at(7, 7) == 0xffffff);                          // 0 in the mask: the white of the screen
+    lv_draw_buf_destroy(shot);
+  }
+  lv_obj_delete(box);
+}
+
 void draws(const char* reference) {
   auto root = lv::mount<ui>(lv::screen_active());
   check(root.has_value());
@@ -225,6 +282,8 @@ int main(int argc, char** argv) {
   stores_for_16_bits();
   reads_a_file_cut_into_chunks();
   stores_for_32_bits();
+  stores_a_mask();
+  draws_a_mask_tinted();
   honours_a_see_through_colour();
   starts_pixels_where_lvgl_wants();
   pads_rows_to_what_lvgl_wants();

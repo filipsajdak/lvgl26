@@ -21,4 +21,10 @@ template <const auto& File>
   requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/image.hpp">
 inline constexpr const lv_image_dsc_t* image_file<File> = nullptr;
 
+/// The alpha-only picture of an embedded PNG file, for a style to tint with image_recolor:
+/// the alpha of the file when some pixel is see-through, otherwise the grey value of each pixel.
+template <const auto& File>
+  requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/image.hpp">
+inline constexpr const lv_image_dsc_t* mask_file<File> = nullptr;
+
 }  // namespace lv

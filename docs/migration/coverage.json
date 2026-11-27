@@ -111,7 +111,7 @@
       "rows": [
         {"concept": "A screen made in Designer", "status": "partial", "answer": "A constexpr tree written as code. A live preview is planned", "gap": "live-preview"},
         {"concept": "Box, Container", "status": "works", "answer": "lv::box, lv::group, lv::column, lv::row"},
-        {"concept": "Image", "status": "works", "answer": "lv::image with lv::image_file"},
+        {"concept": "Image", "status": "works", "answer": "lv::image with lv::image_file, or lv::mask_file for a shape that a style tints"},
         {"concept": "TextArea, Button, ToggleButton", "status": "works", "answer": "lv::label, lv::button, lv::toggle"},
         {"concept": "Slider, Gauge, CircularProgress", "status": "works", "answer": "lv::slider, lv::arc, lv::bar"},
         {"concept": "ScrollWheel", "status": "works", "answer": "lv::roller, with an enumerator name beside the options"},
