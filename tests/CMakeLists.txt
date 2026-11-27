@@ -1093,6 +1093,7 @@ add_library(cost_probes OBJECT EXCLUDE_FROM_ALL
   ${PROJECT_SOURCE_DIR}/tools/probes/include_lv.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/one_label.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/ten_kinds.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/look_percent.cpp
   ${PROJECT_SOURCE_DIR}/examples/quick_start/main.cpp)
 target_link_libraries(cost_probes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 # The run-time probe of docs/research/visibility.md, run under Valgrind by the same job.

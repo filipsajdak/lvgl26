@@ -130,6 +130,12 @@
       "block_percent": 2,
       "drift_percent": 2,
       "clear_percent": 1.0
+    },
+    {
+      "id": "look_percent",
+      "kind": "compile",
+      "file": "tools/probes/look_percent.cpp",
+      "stands_for": "a look with a size in percent beside a drawn font and a picture: a percentage must not scan the global namespace"
     }
   ]
 }
