@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks that a file includes the header of each name of lvgl26 it uses.
 
-    python3 tools/check_includes.py main.cpp parts.hpp ...
+    python3 tools/check_includes.py [-I dir ...] main.cpp parts.hpp ...
     python3 tools/check_includes.py --exact examples/lists/main.cpp
 
 <lv/lv.hpp> is the core. A name of an opt-in header (lv::list, lv::look, lv::theme, ...) needs
@@ -28,6 +28,9 @@ import json
 import pathlib
 import re
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import include_graph  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TABLE = ROOT / "docs" / "reference" / "headers.json"
@@ -88,18 +91,24 @@ def load_table() -> tuple[dict[str, list[str]], set[str]]:
     return opt_in, core_names
 
 
-def provided(path: pathlib.Path, seen: set[pathlib.Path] | None = None) -> set[str]:
-    """Every header of lvgl26 that `path` makes available, through any include."""
+def provided(path: pathlib.Path, seen: set[pathlib.Path] | None = None, include_dirs: list[pathlib.Path] = ()) -> set[str]:
+    """Every header of lvgl26 that `path` makes available, through any include.
+
+    A header of the program is followed beside the file that includes it and through the include
+    directories of the target (tools/include_graph.py).
+    """
     seen = set() if seen is None else seen
     if path in seen or not path.exists():
         return set()
     seen.add(path)
     found: set[str] = set()
-    for kind, name in INCLUDE.findall(without_comments(path.read_text())):
+    for _, kind, name in include_graph.includes_of(path.read_text()):
         if kind == "<" and name.startswith("lv/"):
             found |= {name} | our_includes(name)
-        elif kind == '"':
-            found |= provided(path.parent / name, seen)
+            continue
+        own = include_graph.resolve(name, kind, path, list(include_dirs))
+        if own is not None:
+            found |= provided(own, seen, include_dirs)
     if EVERYTHING in found:
         found |= our_includes(EVERYTHING)
     return found
@@ -114,10 +123,11 @@ def direct_includes(text: str) -> list[tuple[int, str]]:
     return lines
 
 
-def problems(path: pathlib.Path, table: dict[str, list[str]], exact: bool = False) -> list[str]:
+def problems(path: pathlib.Path, table: dict[str, list[str]], exact: bool = False,
+             include_dirs: list[pathlib.Path] = ()) -> list[str]:
     text = path.read_text()
     code = code_of(text)
-    have = provided(path)
+    have = provided(path, include_dirs=include_dirs)
     needed: dict[str, int] = {}
     found = []
 
@@ -178,19 +188,11 @@ def page(argv: list[str]) -> int:
     return 0
 
 
-def followed(path: pathlib.Path) -> list[pathlib.Path]:
-    """`path` and every file of the program it includes with quotes, each once."""
-    seen: list[pathlib.Path] = []
-    todo = [path.resolve()]
-    while todo:
-        current = todo.pop()
-        if current in seen or not current.exists():
-            continue
-        seen.append(current)
-        for kind, name in INCLUDE.findall(without_comments(current.read_text())):
-            if kind == '"':
-                todo.append((current.parent / name).resolve())
-    return seen
+def followed(path: pathlib.Path, include_dirs: list[pathlib.Path] = ()) -> list[pathlib.Path]:
+    """`path` and every file of the program it includes, each once: beside it or through an include directory."""
+    files, unresolved = include_graph.files_of([path], list(include_dirs))
+    include_graph.warn(unresolved, "check_includes.py")
+    return files
 
 
 def escaped(path: pathlib.Path) -> str:
@@ -199,10 +201,11 @@ def escaped(path: pathlib.Path) -> str:
 
 
 def build(argv: list[str]) -> int:
+    include_dirs, argv = include_graph.split_include_dirs(argv)
     stamp, depfile, source = (pathlib.Path(a) for a in argv[:3])
     table, _ = load_table()
-    files = followed(source)
-    found = [problem for path in files for problem in problems(path, table)]
+    files = followed(source, include_dirs)
+    found = [problem for path in files for problem in problems(path, table, include_dirs=include_dirs)]
     inputs = files + [TABLE, pathlib.Path(__file__).resolve()]
     depfile.parent.mkdir(parents=True, exist_ok=True)
     depfile.write_text(f"{escaped(stamp)}: " + " ".join(escaped(f) for f in inputs) + "\n")
@@ -221,9 +224,10 @@ def main(argv: list[str]) -> int:
     if argv and argv[0] == "--build":
         return build(argv[1:])
     exact = "--exact" in argv
+    include_dirs, argv = include_graph.split_include_dirs(argv)
     files = [pathlib.Path(a) for a in argv if a != "--exact"]
     table, _ = load_table()
-    found = [problem for path in files for problem in problems(path, table, exact)]
+    found = [problem for path in files for problem in problems(path, table, exact, include_dirs)]
     for problem in found:
         print(problem)
     return 1 if found else 0

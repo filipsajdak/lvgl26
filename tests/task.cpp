@@ -105,6 +105,13 @@ lv::task<> deletes_its_own_widget(lv::view<"button"> button, int* steps, bool* e
   *steps = 3;
 }
 
+// A child that says it started: a task that is cancelled does not start the child it awaits next.
+inline bool child_started = false;
+lv::task<> marks_its_start() {
+  child_started = true;
+  co_return;
+}
+
 // The same, with the next wait being a sleep, a child task and lv::first.
 lv::task<> deletes_then_waits(lv::view<"button"> button, int kind, int* steps, bool* ended) {
   at_exit cleanup{ended};
@@ -114,6 +121,7 @@ lv::task<> deletes_then_waits(lv::view<"button"> button, int kind, int* steps, b
   if (kind == 0) co_await lv::sleep(10 * ms);
   if (kind == 1) (void)co_await twice(1);
   if (kind == 2) (void)co_await lv::first(button.next().pressed, lv::sleep(10 * ms));
+  if (kind == 3) co_await marks_its_start();
   *steps = 3;
 }
 
@@ -127,15 +135,17 @@ void a_task_may_delete_its_own_widget(lv::obj screen) {
     click(button);
     check(steps == 2 && ended);
   }
-  for (int kind = 0; kind < 3; ++kind) {
+  for (int kind = 0; kind < 4; ++kind) {
     auto button = screen.add<"button">();
     int steps = 0;
     bool ended = false;
+    child_started = false;
     check(lv::spawn(deletes_then_waits(button, kind, &steps, &ended)));
     click(button);
     check(steps == 2 && ended);
     lv_test_wait(50);
     check(steps == 2);  // nothing of the ended task ran later
+    check(!child_started);  // and the child it awaited after the deletion never started
   }
   check(free_bytes() == before);
 }

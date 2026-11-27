@@ -37,6 +37,15 @@ constexpr auto tok = lv::tokens<tokens_json>;
 // The test tokens call their family Montserrat; here Barlow stands in for it.
 constexpr auto type = lv::typeface({{"Montserrat", 400, barlow_ttf}, {"Montserrat", 700, condensed_ttf}});
 
+// The file of a token is the one of its family and its weight, wherever it is in the list.
+constexpr lv::typeface no_files{};
+constexpr auto before = lv::typeface({{"Abc", 400, barlow_ttf}, {"Montserrat", 400, condensed_ttf}});
+constexpr auto after = lv::typeface({{"Zzz", 400, barlow_ttf}, {"Montserrat", 400, condensed_ttf}});
+constexpr auto heavy_first = lv::typeface({{"Montserrat", 700, barlow_ttf}, {"Montserrat", 400, condensed_ttf}});
+static_assert(type.file_of(tok.text.body) == 0 && type.file_of(tok.text.title) == 1);
+static_assert(before.file_of(tok.text.body) == 1 && after.file_of(tok.text.body) == 1);
+static_assert(heavy_first.file_of(tok.text.body) == 1 && heavy_first.file_of(tok.text.title) == 0);
+
 constexpr auto body = type(tok.text.body);    // 14 px, weight 400
 constexpr auto title = type(tok.text.title);  // 20 px, weight 700
 constexpr const lv_font_t* odd = lv::font<barlow_ttf>(32 * px);

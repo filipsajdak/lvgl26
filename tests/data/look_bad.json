@@ -137,5 +137,12 @@
     "$value": {"value": 2, "unit": "px"}
    }
   }
- }
+ },
+  "layerpart": {"scrolbar": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}},
+  "layerany": {"anyy": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}},
+  "layeralt": {"alte": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}},
+  "layerkeyword": {"defaultx": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}},
+  "enabledone": {"enabled": {"$type": "number", "$value": 1}},
+  "lonepercent": {"$extensions": {"io.github.filipsajdak.lvgl26": {"width": "%"}}},
+  "layerfar": {"chekd": {"bg_color": {"$type": "color", "$value": {"colorSpace": "srgb", "components": [1, 0, 0], "hex": "#ff0000"}}}}
 }
