@@ -80,7 +80,7 @@ constexpr auto menu = lv::column(
 
 // The page that follows `current`, and a banner above it while the device is offline.
 constexpr auto pages = lv::shown(
-  current, {.enter = slide_in, .leave = slide_out},
+  current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
   lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
   lv::is<page::settings>(settings), lv::is<page::about>(about)
 );
@@ -98,6 +98,7 @@ constexpr auto ui = lv::row({.size = {320 * px, 240 * px}}, menu, content);
 - `lv::when(offline, offline_banner)` shows a tree while a flag is true, and nothing while it is false.
 - Every value has one arm, and the compiler checks it. The arms are the patterns of [lv::match](match.md), and `lv::otherwise()` takes the values left.
 - With `{.enter = slide_in, .leave = slide_out}` the pages slide, through `lv::transition`. The new page is built before the old one leaves.
+- A change to a value that comes before the one shown, in the order the enum declares them, goes back: `.enter_back` and `.leave_back` slide the new page in from the left and the old one out to the right. Left out, they are `.enter` and `.leave`. The direction is the order of the enumerators, whatever the distance, so `current = page::home;` from any later page slides back.
 - `.on_shown` runs each time a page is built. `.on_front` runs each time it comes to the front.
 - A switch waits for the start of the display's next refresh, and lvgl26 allocates nothing for it. `lv::settle()` switches at once.
 

@@ -58,6 +58,9 @@ struct shown_options {
   std::size_t alive = 2;
   transition_spec enter{};
   transition_spec leave{};
+  /// The same for a change to a value that comes before the one shown, in the order of the enum.
+  transition_spec enter_back{};
+  transition_spec leave_back{};
 };
 
 /// What .on_shown and .on_front take: a function void f(lv::held<T>) of the arm's tree T.
