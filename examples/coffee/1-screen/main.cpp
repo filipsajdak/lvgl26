@@ -10,6 +10,7 @@
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 
+#include <cstdlib>
 #include <utility>
 
 namespace coffee {
@@ -102,7 +103,7 @@ constexpr auto dot(bool on) {
 constexpr auto header(const char* title, int step, const char* count) {
   return lv::group(
     {.id = "header", .style = lv::look<"header">},
-    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
       dot(step >= 1),
@@ -168,13 +169,15 @@ constinit lv::frame<480, 320> frame;
 
 //! [geometry]
 // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
-// is target high, the footer target + space-4, and the content between them the rest. A size
-// that does not follow the design is an exit code of its own.
+// is target high with the title in its middle, the footer target + space-4, and the content
+// between them the rest. A size that does not follow the design is an exit code of its own.
 int geometry(lv::obj screen, lv::mounted<ui>& root) {
   const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
   const auto header = tok.size.target->raw(), footer = header + tok.space._4->raw();
+  const auto title = root->get<"title">();
   if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
   if (root->get<"header">().get<"height">() != header) return 4;
+  if (std::abs(2 * title.get<"y">() + title.get<"height">() - header) > 1) return 4;
   if (root->get<"footer">().get<"height">() != footer) return 5;
   if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
   return 0;
