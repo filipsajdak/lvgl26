@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <utility>
 
 namespace coffee {
@@ -184,7 +185,7 @@ constexpr auto dot(bool on) {
 constexpr auto header(const char* title, int step, const char* count) {
   return lv::group(
     {.id = "header", .style = lv::look<"header">},
-    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
       dot(step >= 1),
@@ -336,19 +337,32 @@ constexpr auto your_cup = lv::group(
 constinit lv::frame<480, 320> frame;
 
 //! [geometry]
-// The screen keeps the sizes of the design: each is a token, or a formula of tokens. The
-// summary is 3 x target wide, with pad inside it on each side and a photo of 1.5 x target.
-int geometry(lv::obj screen, lv::mounted<your_cup>& root) {
+// The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
+// is target high with the title in its middle, and the footer target + space-4.
+int page_geometry(lv::obj screen, lv::mounted<your_cup>& root) {
   const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
-  const auto target = tok.size.target->raw(), pad = tok.layout.pad->raw();
-  const auto box = root->get<"summary">();
+  const auto target = tok.size.target->raw();
+  const auto title  = root->get<"title">();
   if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
   if (root->get<"header">().get<"height">() != target) return 4;
+  if (std::abs(2 * title.get<"y">() + title.get<"height">() - target) > 1) return 4;
   if (root->get<"footer">().get<"height">() != target + tok.space._4->raw()) return 5;
+  return 0;
+}
+
+// The summary is 3 x target wide, with pad inside it on each side and a photo of 1.5 x target.
+int summary_geometry(lv::mounted<your_cup>& root) {
+  const auto target = tok.size.target->raw(), pad = tok.layout.pad->raw();
+  const auto box = root->get<"summary">();
   if (box.get<"width">() != target * 3) return 6;
   if (box.get<"width">() - box.get<"content_width">() != 2 * pad) return 6;
   if (root->get<"summary-photo">().get<"width">() * 2 != target * 3) return 7;
   return 0;
+}
+
+int geometry(lv::obj screen, lv::mounted<your_cup>& root) {
+  if (const int wrong = page_geometry(screen, root)) return wrong;
+  return summary_geometry(root);
 }
 //! [geometry]
 
