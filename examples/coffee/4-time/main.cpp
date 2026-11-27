@@ -472,8 +472,9 @@ constexpr auto ring = lv::group(
     .style     = lv::look<"ring"> | lv::style({.arc_rounded = false}) |
              lv::on("indicator", {.arc_rounded = false}),
   }),
+  // The middle passes a press on to the ring's box, which the hold waits on.
   lv::group(
-    {.style = lv::look<"ring-centre">},
+    {.clickable = false, .style = lv::look<"ring-centre">},
     lv::label({.text = lv::bind(left, "{}"), .style = seconds_text}),
     lv::label({.text = "SECONDS LEFT", .style = lv::look<"seconds-label"> | overline_text})
   )
