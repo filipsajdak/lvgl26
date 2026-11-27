@@ -1,8 +1,10 @@
 # Build a coffee machine in seven steps
 
+> **Draft, not published.** The site and the README carry no coffee tutorial until steps 1 to 7 follow the new design (`design/coffee/`). This text is the tutorial as it stood, for the rewrite. Its code blocks are not checked against the examples here, and steps 1 to 3 have moved on since.
+
 This tutorial builds the screen of a coffee machine, 480 x 320, in seven programs. Each step adds one idea, and the page shows only what changed.
 
-![The finished machine: a title in Barlow, a list of drinks set to espresso, its price, and the buttons Next and Service](media/coffee-7.png)
+![The finished machine: a title in Barlow, a list of drinks set to espresso, its price, and the buttons Next and Service](../media/coffee-7.png)
 
 Each step is a whole program in [`examples/coffee/`](https://github.com/filipsajdak/lvgl26/tree/main/examples/coffee). A test builds it, runs it without a window, and compares the picture it draws with the one on this page.
 
@@ -415,9 +417,9 @@ int geometry(lv::obj screen, lv::mounted<ui>& root) {
 }
 ```
 
-![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](media/coffee-1.png)
+![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](../media/coffee-1.png)
 
-See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images](images.md), [Looks](looks.md) and [Fonts](fonts.md).
+See [The tree and its widgets](../tree.md), [State and bindings](../state.md), [Images](../images.md), [Looks](../looks.md) and [Fonts](../fonts.md).
 
 ## 2. Values that say what they are
 
@@ -619,48 +621,101 @@ constexpr auto your_cup = lv::group(
 
 A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger cup: 14 g of beans, at 40 mL.
 
-![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
+![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](../media/coffee-2.png)
 
-See [Values and units](values.md) and [State and bindings](state.md).
+See [Values and units](../values.md) and [State and bindings](../state.md).
 
 ## 3. Pages
 
-Each step of the machine gets a page of its own. The pages follow one state, `current`, and a button sets it.
+The two screens become pages of one state, `current`. NEXT and BACK set it, and a button names the screen it goes to.
 
-<!-- snippet: examples/coffee/3-pages/main.cpp parts -->
+<!-- snippet: examples/coffee/3-pages/main.cpp screens -->
 ```cpp
-// A page's title, and a button that goes to another step.
-constexpr auto title(const char* text) {
-  return lv::label({.text = text, .style = lv::look<"title">});
-}
+// Where the machine is: one page for each screen, and a button that goes to one.
+enum class screen { drinks, your_cup };
 
-template <step To>
-constexpr auto go_to(const char* text) {
-  return lv::button(
-    {.style = lv::look<"action">, .on_clicked = [] { current = To; }}, lv::label({.text = text})
-  );
+constinit lv::state<screen> current{screen::drinks};
+
+template <screen To>
+void go() {
+  current = To;
 }
 ```
 
-`lv::shown` builds the page of the current step and deletes the old one. With a transition, the new page slides in while the old one slides out.
+The footer's buttons take what they do as a handler: a function, or a lambda that captures nothing.
+
+<!-- snippet: examples/coffee/3-pages/main.cpp parts -->
+```cpp
+// The header: the title top left, and the step top right as dots and "n / 4".
+constexpr auto dot(bool on) {
+  return lv::group({.style = on ? lv::look<"dot dot-on"> : lv::look<"dot">});
+}
+
+constexpr auto header(const char* title, int step, const char* count) {
+  return lv::group(
+    {.id = "header", .style = lv::look<"header">},
+    lv::label({.id = "title", .text = title, .style = lv::look<"title"> | title_text}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
+      dot(step >= 1),
+      dot(step >= 2),
+      dot(step >= 3),
+      dot(step >= 4),
+      lv::label({.text = count, .style = lv::look<"step"> | caption_text})
+    )
+  );
+}
+
+// The footer: going back bottom left, going on bottom right.
+constexpr auto back(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"ghost">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text, lv::tree_handler auto go_to) {
+  return lv::button(
+    {.style = lv::look<"primary">, .on_clicked = go_to},
+    lv::label({.text = text, .style = label_text})
+  );
+}
+
+constexpr auto primary(const char* text) {
+  return lv::button({.style = lv::look<"primary">}, lv::label({.text = text, .style = label_text}));
+}
+
+// A screen with nothing to go back to keeps the place empty.
+constexpr auto no_back = lv::group({.size = {lv::size_content, lv::size_content}});
+
+constexpr auto footer(lv::tree_node auto back, lv::tree_node auto next) {
+  return lv::group({.id = "footer", .style = lv::look<"footer">}, back, next);
+}
+```
+
+`lv::shown` builds the page of the current screen. The new page slides in from the right while the old one slides out to the left, in the time and the curve of the token file. Only then is the old page deleted. Swipes come later, with the gesture feature.
 
 <!-- snippet: examples/coffee/3-pages/main.cpp pages -->
 ```cpp
-// A page slides in from the right, and the old one slides out to the left.
-constexpr auto slide_in  = lv::transition({.x = {480 * px, 0 * px}}, 250 * lv::ms, lv::ease::out);
-constexpr auto slide_out = lv::transition({.x = {0 * px, -480 * px}}, 250 * lv::ms, lv::ease::in);
+// The page of the current screen. A new page slides in from the right, and the old one slides out
+// to the left, in the time and the curve of the token file.
+constexpr auto width = tok.size.screen_width->raw();
+constexpr auto slide_in =
+  lv::transition({.x = {width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto slide_out =
+  lv::transition({.x = {0 * px, -width * px}}, *tok.duration.enter, *tok.ease.out);
 
 constexpr auto ui = lv::group(
   lv::shown(
-    current, {.enter = slide_in, .leave = slide_out}, lv::is<step::drinks>(drinks),
-    lv::is<step::cup>(your_cup), lv::is<step::brewing>(brewing), lv::is<step::enjoy>(enjoy)
+    current, {.enter = slide_in, .leave = slide_out}, lv::is<screen::drinks>(drinks),
+    lv::is<screen::your_cup>(your_cup)
   )
 );
 ```
 
-![Step 3: the page of your cup, with the sliders, the size, the beans and the button Brew](media/coffee-3.png)
+![Step 3: half way through the slide, the drinks page leaving to the left and the cup page coming in from the right](../media/coffee-3.png)
 
-See [Mounting and slots](mounting.md).
+See [Mounting and slots](../mounting.md).
 
 ## 4. Time
 
@@ -707,9 +762,9 @@ void start_brewing(lv::held<brewing> page) {
 
 The arm of the brewing page names the hook: `lv::is<step::brewing>(brewing, {.on_shown = &start_brewing})`. The ring eases in and out with a token of the token file, `motion.brew`, a cubic Bézier curve.
 
-![Step 4: the brewing page ten seconds in, the ring partly filled around "15 s", and the button Cancel](media/coffee-4.png)
+![Step 4: the brewing page ten seconds in, the ring partly filled around "15 s", and the button Cancel](../media/coffee-4.png)
 
-See [Tasks](tasks.md) and [Animation](animation.md).
+See [Tasks](../tasks.md) and [Animation](../animation.md).
 
 ## 5. A design system you can reuse
 
@@ -816,9 +871,9 @@ constexpr auto go_to(const char* text) {
 
 The drop-down list keeps LVGL's font. A drawn font has no glyph for LVGL's symbols, so the arrow of the list would show as a box.
 
-![Step 5: the page of your cup in Signal's day theme: a white ground, the title and the text in Barlow, the brown sliders and a black button Brew](media/coffee-5.png)
+![Step 5: the page of your cup in Signal's day theme: a white ground, the title and the text in Barlow, the brown sliders and a black button Brew](../media/coffee-5.png)
 
-See [Themes](themes.md) and [Fonts](fonts.md).
+See [Themes](../themes.md) and [Fonts](../fonts.md).
 
 ## 6. Split into files
 
@@ -890,7 +945,7 @@ const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type
 
 - The shell cannot see the size of a page of another file. So the pages take one block of LVGL's heap when the shell is mounted, where step 5 keeps them in the tree.
 
-See [Mounting and slots](mounting.md) and [Fonts](fonts.md).
+See [Mounting and slots](../mounting.md) and [Fonts](../fonts.md).
 
 ## 7. A service page
 
@@ -935,9 +990,9 @@ A program's settings are one file, `lvgl26.json`. The coffee machine's controlle
 }
 ```
 
-![Step 7: the service page twelve cups later: the hardness medium, "12 cups since descaling", "Descale in 88 cups", and the buttons Descaled and Done](media/coffee-7-service.png)
+![Step 7: the service page twelve cups later: the hardness medium, "12 cups since descaling", "Descale in 88 cups", and the buttons Descaled and Done](../media/coffee-7-service.png)
 
-See [Settings](settings.md) and [State and bindings](state.md).
+See [Settings](../settings.md) and [State and bindings](../state.md).
 
 ## What comes next
 

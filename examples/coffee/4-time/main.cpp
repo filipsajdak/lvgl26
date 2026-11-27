@@ -1,5 +1,5 @@
-// Step 4 of the coffee machine tutorial (docs/tutorial.md): brewing takes time.
-// A task fills a ring and counts the seconds down, and goes to the last page when it is done.
+// Step 4 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): brewing takes
+// time. A task fills a ring and counts the seconds down, and goes to the last page when it is done.
 //
 //   coffee_4    writes coffee_4.png: the brewing page, ten seconds in
 

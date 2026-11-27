@@ -1,6 +1,6 @@
-// Step 1 of the coffee machine tutorial (docs/tutorial.md): the screen where the reader chooses
-// a drink, in the layout of the mock-up (design/coffee). The drinks are a state of an enum, and
-// each tile follows it: the chosen one fills with the loud colour.
+// Step 1 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): the screen where
+// the reader chooses a drink, in the layout of the mock-up (design/coffee). The drinks are a state
+// of an enum, and each tile follows it: the chosen one fills with the loud colour.
 //
 //   coffee_1    checks the layout against the token file, then writes coffee_1.png
 
@@ -168,9 +168,8 @@ constexpr auto ui = lv::group(
 );
 //! [drinks]
 
-// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
-// which main checks.
-constinit lv::frame<480, 320> frame;
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height.
+constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
 
 //! [geometry]
 // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header

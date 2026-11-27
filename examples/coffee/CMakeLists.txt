@@ -1,5 +1,5 @@
-# The coffee machine of the tutorial (docs/tutorial.md): one whole program for
-# each step, each of which writes the picture of its step.
+# The coffee machine of the tutorial (docs/research/tutorial-coffee-draft.md): one whole
+# program for each step, each of which writes the picture of its step.
 foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   string(REGEX MATCH "^[0-9]+" number ${step})
   set(target coffee_${number})
@@ -18,9 +18,14 @@ foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   endif()
 endforeach()
 
+# Steps 1 to 3 draw up to ten fonts each in the compiler. Two of them side by side, with the rest of
+# a build, need more memory than a CI runner has: they compile one at a time.
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS coffee_fonts=1)
+set_target_properties(coffee_1 coffee_2 coffee_3 PROPERTIES JOB_POOL_COMPILE coffee_fonts)
+
 # The machine's typeface is a copy of the site's Barlow, beside each design that embeds it:
 # every file of such a folder must equal the site's file of the same name.
-foreach(copy 1-screen/fonts 2-values/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
+foreach(copy 1-screen/fonts 2-values/fonts 3-pages/fonts 5-design/fonts 6-files/design/fonts 7-service/design/fonts)
   string(REGEX MATCH "^[0-9]+" number ${copy})
   file(GLOB copied RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${copy} ${CMAKE_CURRENT_SOURCE_DIR}/${copy}/*)
   foreach(file IN LISTS copied)
