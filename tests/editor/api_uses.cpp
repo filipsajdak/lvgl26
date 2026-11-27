@@ -204,6 +204,23 @@ constexpr auto odd_font = lv::font<barlow_ttf>(12 * px, "0123456789");
 constexpr lv::face_file face{"Barlow", 500, barlow_ttf};
 static_assert(std::same_as<decltype(label_font), const lv::token<const lv_font_t*>>);  // C API
 static_assert(std::same_as<decltype(odd_font), const lv_font_t* const>);  // C API
+
+// lv::like and lv::name_of in a property: the editor reads each as a value of the property's type.
+enum class roast { light, dark };
+struct roast_names {
+  static constexpr char light[] = "Light";
+  static constexpr char dark[]  = "Dark";
+};
+struct roast_pictures {
+  static constexpr auto light = lv::image_file<picture_png>;
+  static constexpr auto dark  = lv::image_file<picture_png>;
+};
+template <roast R>
+constexpr auto roast_tile() {
+  return lv::button(lv::image({.src = lv::like<R, roast_pictures>}),
+                    lv::label({.text = lv::like<R, roast_names>}), lv::label({.text = lv::name_of<R>}));
+}
+constexpr auto roast_tiles = lv::row(roast_tile<roast::light>(), roast_tile<roast::dark>());
 static_assert(face.weight == 500 && face.family == "Barlow" && face.characters.empty());
 
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};
