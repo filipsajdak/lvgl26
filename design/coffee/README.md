@@ -36,7 +36,7 @@ The layout, as the page writes it:
 
 - One pattern on every screen: the title top left, the step (dots and "2 / 4") top right, going back bottom left, going on bottom right.
 - Every control is at least `target` (48 px) in both directions.
-- The header and footer heights are named tokens of the coffee machine's token file (`header-height`, `footer-height`), as is the crema colour; Signal's tokens stay Signal's.
+- The header and footer heights are named tokens of the coffee machine's own `tokens.json` (`header-height`, `footer-height`), and so is the crema tone, when the screens are built. Signal's tokens stay Signal's, and this folder holds no token file: the page is the one description of the design.
 
 **Gestures.**
 
@@ -51,16 +51,16 @@ The layout, as the page writes it:
 | Any control | A pressed tile or button shrinks a little and darkens | press 120 ms |
 | Choose a drink | The tick pops on the chosen tile | enter, ease-back |
 | Brewing | The ring fills, the numeral counts down, the stage changes | the brew time of the drink |
-| Enjoy | The cup settles with a small overshoot; three steam wisps rise and fade in a loop; the mark pops; the name slides up | settle 480 ms, ease-back; the steam's loop 5.2 s |
+| Enjoy | The cup settles with a small overshoot; three steam wisps rise and fade in a loop; the mark pops; the name slides up | settle 480 ms, ease-back; the steam's loop, 5.2 s |
 
 - The steam is one mask, `steam.png`, used three times and tinted from a token, so it works on both themes. A frame player was compared and left out (the table on the page says why).
+- The steam's loop is a duration token of the coffee machine's own `tokens.json`, not of Signal: Signal's motion does not loop, except an alarm.
 
 ## Files
 
 | File | What it is |
 |---|---|
 | `mockup.html` | The specification: every screen, live and at 1 : 1 |
-| `panel.css` | The panel's stylesheet from before the review, with drink glyphs instead of photos and the crema tone for both themes. `mockup.html` does not read it: it carries its own panel styles |
 | `../../examples/coffee/assets/<drink>-72.png`, `<drink>-144.png` | The four drinks as thumbnail and hero, cut out, with soft edges on any ground |
 | `../../examples/coffee/assets/steam.png` | The steam mask: white smoke on black, 200 × 200, its brightness the mask |
 
