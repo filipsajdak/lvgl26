@@ -3,6 +3,7 @@
 // Editor stub of lv/font.hpp: fonts that the compiler makes from TrueType files.
 
 #include <lv/detail/embedded.hpp>
+#include <lv/detail/fixed_string.hpp>
 #include <lv/token_types.hpp>
 #include <lv/units.hpp>
 #include <lv/values.hpp>
@@ -29,6 +30,11 @@ struct font_file {
 template <const auto& File>
   requires detail::embedded_bytes<decltype(File)>
 inline constexpr detail::font_file<File> font{};
+
+/// The characters from the space to the tilde and `Extra` on top of them, for the characters of a font:
+/// lv::ascii_plus<"€·"> for a price and a separator.
+template <detail::fixed Extra>
+inline constexpr std::string_view ascii_plus{};
 
 /// One file of a typeface: {"Barlow", 500, barlow_ttf}, with the characters to keep
 /// as an optional fourth value.

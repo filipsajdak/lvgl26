@@ -204,9 +204,11 @@ constexpr unsigned char picture_png[] = {
 constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf, "0123456789"}});
 constexpr auto label_font = type(tok.text.label);
 constexpr auto odd_font = lv::font<barlow_ttf>(12 * px, "0123456789");
+constexpr auto priced_font = lv::font<barlow_ttf>(12 * px, lv::ascii_plus<"€·">);
 constexpr lv::face_file face{"Barlow", 500, barlow_ttf};
 static_assert(std::same_as<decltype(label_font), const lv::token<const lv_font_t*>>);  // C API
 static_assert(std::same_as<decltype(odd_font), const lv_font_t* const>);  // C API
+static_assert(std::same_as<decltype(priced_font), const lv_font_t* const>);  // C API
 
 // lv::like and lv::name_of in a property: the editor reads each as a value of the property's type.
 enum class roast { light, dark };
