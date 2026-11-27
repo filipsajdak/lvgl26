@@ -48,6 +48,16 @@ inline void restyle(lv_obj_t* o, const theme_entry* from, const theme_entry* to)
   for (std::uint32_t i = 0, n = lv_obj_get_child_count(o); i < n; ++i) restyle(lv_obj_get_child(o, static_cast<int32_t>(i)), from, to);
 }
 
+// How many themes a display follows at most.
+inline constexpr std::size_t most_followed_themes = 8;
+
+// Whether two lists of entries have the same shape: the same class and selector in each position.
+inline bool same_shape(const theme_entry* a, const theme_entry* b) {
+  for (; a->style != nullptr && b->style != nullptr; ++a, ++b)
+    if (a->widget != b->widget || a->selector != b->selector) return false;
+  return a->style == nullptr && b->style == nullptr;
+}
+
 struct theme_access;
 
 }  // namespace detail
@@ -78,6 +88,9 @@ struct theme_access {
   // `count` styles, then the entry that ends the list.
   static constexpr theme_styles make(const theme_entry* first, std::size_t count) { return {first, count}; }
   static constexpr const theme_entry* first(theme_styles t) { return t.first_; }
+  // The entries of a theme, ending with the entry that has no style: a theme that sets nothing has one entry, the end.
+  static constexpr const theme_entry* entries(theme_styles t) { return t.first_ != nullptr ? t.first_ : &none; }
+  static constexpr theme_entry none{nullptr, 0, nullptr};
 };
 
 }  // namespace detail

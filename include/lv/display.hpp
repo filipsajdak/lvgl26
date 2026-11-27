@@ -34,12 +34,15 @@
 #include <lv/detail/deferred.hpp>
 #include <lv/detail/theme_styles.hpp>
 #include <lv/detail/watch.hpp>
+#include <lv/state.hpp>
 #include <lv/view.hpp>
 
 #include <lvgl/lvgl.h>
 
+#include <array>
 #include <concepts>
 #include <cstddef>
+#include <meta>
 #include <cstdint>
 #include <span>
 #include <type_traits>
@@ -130,7 +133,21 @@ concept hideable_panel = requires(P& p) {
 
 namespace detail {
 struct display_access;
+
+// The number of enumerators of E, and the position of a value among them: the index of its theme.
+template <class E>
+inline constexpr std::size_t enumerator_count = std::meta::enumerators_of(^^E).size();
+
+template <class E>
+std::size_t enumerator_index(E value) {
+  std::size_t at = 0;
+  template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^E))) {
+    if (value == [:e:]) return at;
+    ++at;
+  }
+  return 0;
 }
+}  // namespace detail
 
 class display {
  public:
@@ -189,6 +206,7 @@ class display {
 
   ~display() {
     if (detach_ != nullptr) detach_(object_, *this);
+    if (follower_.linked()) detail::watch_list::remove(follower_);
     visible_watchers_.detach_all();
     lv_display_delete(raw_);
     if (theme_ != nullptr) lv_theme_delete(theme_);
@@ -218,6 +236,39 @@ class display {
   // Asks the panel to hide or show itself. A panel that cannot only changes visible().
   void hide() { hide_ != nullptr ? hide_(object_) : set_visible(false); }
   void show() { show_ != nullptr ? show_(object_) : set_visible(true); }
+
+  // The display follows `state`: the theme of its value is the display's theme, and when the value
+  // changes every widget of the display is restyled in place, with no allocation. The themes are
+  // indexed by the enumerators of the state's enum in order:
+  //
+  //   constinit lv::state<lv::signal::mode> mode{lv::signal::mode::day};
+  //   display.follow(mode, {lv::signal::day_with_type, lv::signal::dark_with_type});
+  //   mode = lv::signal::mode::dark;
+  //
+  // The themes have one shape: the same widgets and parts in the same order (themes made by one
+  // description, as Signal's are), since a style takes the place of another where it stands in a
+  // widget's list. A violation of that ends the program here. The active screen and LVGL's three
+  // layers are restyled; a screen that is not loaded keeps its theme until it is built again. Call
+  // it once, before the screens are built, as a theme given to the constructor is.
+  template <class S, std::size_t N>
+    requires std::is_enum_v<typename S::value_type>
+  void follow(const S& state, const theme_styles (&themes)[N])
+    pre(N >= 2 && N <= detail::most_followed_themes)
+    pre(N == detail::enumerator_count<typename S::value_type>)
+    pre(!follower_.linked())
+  {
+    for (std::size_t i = 0; i < N; ++i) {
+      followed_[i] = detail::theme_access::entries(themes[i]);
+      contract_assert(detail::same_shape(followed_[0], followed_[i]));
+    }
+    contract_assert(current_ == nullptr || detail::same_shape(current_, followed_[0]));
+    follower_.owner = this;
+    follower_.source = &state;
+    follower_.index_of = &index_of<S>;
+    follower_.changed = &follow_changed;
+    detail::graph_access::watchers(state).append(follower_);
+    switch_to(index_of<S>(&state));
+  }
 
  private:
   friend struct detail::display_access;
@@ -290,14 +341,48 @@ class display {
   // screen is still empty: a display is given its theme when it is made.
   void use(theme_styles look) {
     if (look.empty()) return;
-    theme_ = lv_theme_create();
-    contract_assert(theme_ != nullptr);  // LVGL's heap is too small for a theme
-    lv_theme_set_parent(theme_, lv_display_get_theme(raw_));
-    lv_theme_set_apply_cb(theme_, &detail::apply_theme);
-    lv_theme_set_user_data(theme_, const_cast<detail::theme_entry*>(detail::theme_access::first(look)));
-    lv_display_set_theme(raw_, theme_);
-    // LVGL styles the bottom layer there, not the screen that is shown.
-    lv_theme_apply(lv_display_get_screen_active(raw_));
+    install(detail::theme_access::first(look));
+  }
+
+  // Makes the entries `next` the theme of the display: the first time as a theme of LVGL's, then by
+  // swapping the styles of the widgets that exist and the entries that new widgets get.
+  void install(const detail::theme_entry* next) {
+    if (theme_ == nullptr) {
+      theme_ = lv_theme_create();
+      contract_assert(theme_ != nullptr);  // LVGL's heap is too small for a theme
+      lv_theme_set_parent(theme_, lv_display_get_theme(raw_));
+      lv_theme_set_apply_cb(theme_, &detail::apply_theme);
+      lv_theme_set_user_data(theme_, const_cast<detail::theme_entry*>(next));
+      lv_display_set_theme(raw_, theme_);
+      // LVGL styles the bottom layer there, not the screen that is shown.
+      lv_theme_apply(lv_display_get_screen_active(raw_));
+    } else if (current_ != nullptr) {
+      for (lv_obj_t* root : {lv_display_get_screen_active(raw_), lv_display_get_layer_bottom(raw_),
+                             lv_display_get_layer_top(raw_), lv_display_get_layer_sys(raw_)})
+        detail::restyle(root, current_, next);
+      lv_theme_set_user_data(theme_, const_cast<detail::theme_entry*>(next));
+    }
+    current_ = next;
+  }
+
+  void switch_to(std::size_t index) {
+    if (followed_[index] != current_) install(followed_[index]);
+  }
+
+  template <class S>
+  static std::size_t index_of(const void* state) {
+    return detail::enumerator_index(static_cast<const S*>(state)->get());
+  }
+
+  struct follower : detail::watch_node {
+    display* owner = nullptr;
+    const void* source = nullptr;
+    std::size_t (*index_of)(const void*) = nullptr;
+  };
+
+  static void follow_changed(detail::watch_node& node) {
+    auto& self = static_cast<follower&>(node);
+    self.owner->switch_to(self.index_of(self.source));
   }
 
   // LVGL has drawn `where`. In a frame `pixels` is the frame; in a band it is the piece.
@@ -321,6 +406,9 @@ class display {
 
   lv_display_t* raw_;
   lv_theme_t* theme_ = nullptr;
+  const detail::theme_entry* current_ = nullptr;  // the entries that the widgets hold now
+  follower follower_;
+  std::array<const detail::theme_entry*, detail::most_followed_themes> followed_{};
   void* object_ = nullptr;
   void (*function_)() = nullptr;
   void (*call_)(const display&, area, std::span<const std::byte>) = nullptr;
