@@ -34,9 +34,12 @@ void count_visit(lv::held<home>) { ++visits; }
 //! [on-shown]
 
 //! [transitions]
-// A page slides in from the right, and the old one slides out to the left.
+// Forward, to a page that comes later in the enum: the page slides in from the right, and the old
+// one slides out to the left. Back, to a page that comes before it: the other way round.
 constexpr auto slide_in  = lv::transition({.x = {240 * px, 0 * px}}, 250 * ms, lv::ease::out);
 constexpr auto slide_out = lv::transition({.x = {0 * px, -240 * px}}, 250 * ms, lv::ease::in);
+constexpr auto back_in   = lv::transition({.x = {-240 * px, 0 * px}}, 250 * ms, lv::ease::out);
+constexpr auto back_out  = lv::transition({.x = {0 * px, 240 * px}}, 250 * ms, lv::ease::in);
 //! [transitions]
 
 //! [tree]
@@ -50,7 +53,7 @@ constexpr auto menu = lv::column(
 
 // The page that follows `current`, and a banner above it while the device is offline.
 constexpr auto pages = lv::shown(
-  current, {.enter = slide_in, .leave = slide_out},
+  current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
   lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
   lv::is<page::settings>(settings), lv::is<page::about>(about)
 );

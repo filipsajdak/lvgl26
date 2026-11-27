@@ -32,6 +32,7 @@
 
 #include <lv/application.hpp>
 #include <lv/detail/deferred.hpp>
+#include <lv/detail/enumerators.hpp>
 #include <lv/detail/theme_styles.hpp>
 #include <lv/detail/watch.hpp>
 #include <lv/state.hpp>
@@ -134,19 +135,6 @@ concept hideable_panel = requires(P& p) {
 namespace detail {
 struct display_access;
 
-// The number of enumerators of E, and the position of a value among them: the index of its theme.
-template <class E>
-inline constexpr std::size_t enumerator_count = std::meta::enumerators_of(^^E).size();
-
-template <class E>
-std::size_t enumerator_index(E value) {
-  std::size_t at = 0;
-  template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^E))) {
-    if (value == [:e:]) return at;
-    ++at;
-  }
-  return 0;
-}
 }  // namespace detail
 
 class display {

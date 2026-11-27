@@ -334,7 +334,7 @@ constexpr auto menu = lv::column(
 
 // The page that follows `current`, and a banner above it while the device is offline.
 constexpr auto pages = lv::shown(
-  current, {.enter = slide_in, .leave = slide_out},
+  current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
   lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
   lv::is<page::settings>(settings), lv::is<page::about>(about)
 );
@@ -1151,7 +1151,7 @@ constexpr auto menu = lv::column(
 
 // The page that follows `current`, and a banner above it while the device is offline.
 constexpr auto pages = lv::shown(
-  current, {.enter = slide_in, .leave = slide_out},
+  current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
   lv::is<page::home>(home, {.on_shown = &greet, .on_front = &count_visit}),
   lv::is<page::settings>(settings), lv::is<page::about>(about)
 );

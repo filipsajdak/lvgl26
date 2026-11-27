@@ -58,6 +58,9 @@ struct shown_options {
   std::size_t alive = 2;
   transition_spec enter{};
   transition_spec leave{};
+  /// The same for a change to a value that comes before the one shown, in the order of the enum.
+  transition_spec enter_back{};
+  transition_spec leave_back{};
 };
 
 /// What .on_shown and .on_front take: a function void f(lv::held<T>) of the arm's tree T.
@@ -73,13 +76,24 @@ struct arm_options {
   shown_hook on_shown;
   /// Called each time the page comes to the front: after .on_shown when it was just built.
   shown_hook on_front;
+  /// How this page comes in and goes, in place of the ones of lv::shown: lv::is<page::service>(ui, {.enter = from_top}).
+  transition_spec enter{};
+  transition_spec leave{};
+  transition_spec enter_back{};
+  transition_spec leave_back{};
+};
+
+/// The hooks of a page of another file.
+struct page_options {
+  shown_hook on_shown;
+  shown_hook on_front;
 };
 
 }  // namespace detail
 
 /// The page of the tree `Tree`, for lv::page. Its hooks are named as those of an arm:
 /// lv::page_of<ui, {.on_shown = &start, .on_front = &look}>.
-template <const auto& Tree, detail::arm_options Hooks = {}>
+template <const auto& Tree, detail::page_options Hooks = {}>
   requires tree_node<decltype(Tree)>
 inline constexpr page page_of{sizeof(mounted<Tree>), alignof(mounted<Tree>), &Tree, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
