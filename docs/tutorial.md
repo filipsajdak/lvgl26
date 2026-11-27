@@ -8,7 +8,7 @@ Each step is a whole program in [`examples/coffee/`](https://github.com/filipsaj
 
 | Step | Folder | What it adds |
 |---|---|---|
-| 1 | `1-screen` | A screen as one tree, a state, and looks from your own token file |
+| 1 | `1-screen` | A screen of photo tiles as one tree, a state, and looks and fonts from your own token file |
 | 2 | `2-values` | Values that say what they are |
 | 3 | `3-pages` | A page per step, which slides in |
 | 4 | `4-time` | A task that brews, with a ring that fills |
@@ -18,7 +18,9 @@ Each step is a whole program in [`examples/coffee/`](https://github.com/filipsaj
 
 ## 1. A screen
 
-The reader picks a drink and sees its price. The drink is a state of an enum, and the price follows it.
+The reader chooses a drink from four tiles. From this first step the screen has the layout of the mock-up in [`design/coffee`](https://github.com/filipsajdak/lvgl26/tree/main/design/coffee). The title is top left and the step top right; below come the content, and a footer with the button that goes on.
+
+The drink is a state of an enum. For each drink, `lv::computed` makes a value from the state, whether it is the chosen one, and stores nothing.
 
 <!-- snippet: examples/coffee/1-screen/main.cpp state -->
 ```cpp
@@ -26,53 +28,183 @@ The reader picks a drink and sees its price. The drink is a state of an enum, an
 enum class drink { espresso, lungo, cappuccino, latte };
 
 constinit lv::state chosen{drink::espresso};
+
+// For each drink, whether it is the chosen one: a value made from the state.
+template <drink D>
+constinit lv::computed picked{[](drink d) { return d == D; }, chosen};
 ```
 
-A screen is a tree, written as one constant. The drop-down list takes its options from the enum, and `lv::bind` ties both the list and the price to the state. `lv::computed` makes the price from the drink, and stores nothing.
+The photos are PNG files, cut out, that the compiler decodes into the pixels the display draws. A struct names what a tile shows of each drink, and `lv::like<D, photos>` picks the member named as the drink.
+
+<!-- snippet: examples/coffee/1-screen/main.cpp photos -->
+```cpp
+// A photo of each drink, cut out, at 1.5 x target: the compiler decodes it.
+constexpr unsigned char espresso_png[] = {
+#embed "../assets/espresso-72.png"
+};
+constexpr unsigned char lungo_png[] = {
+#embed "../assets/lungo-72.png"
+};
+constexpr unsigned char cappuccino_png[] = {
+#embed "../assets/cappuccino-72.png"
+};
+constexpr unsigned char latte_png[] = {
+#embed "../assets/latte-72.png"
+};
+
+// What a tile shows of each drink, named as the drink is.
+struct photos {
+  static constexpr auto espresso   = lv::image_file<espresso_png>;
+  static constexpr auto lungo      = lv::image_file<lungo_png>;
+  static constexpr auto cappuccino = lv::image_file<cappuccino_png>;
+  static constexpr auto latte      = lv::image_file<latte_png>;
+};
+struct names {
+  static constexpr char espresso[]   = "ESPRESSO";
+  static constexpr char lungo[]      = "LUNGO";
+  static constexpr char cappuccino[] = "CAPPUCCINO";
+  static constexpr char latte[]      = "LATTE";
+};
+struct prices {
+  static constexpr char espresso[]   = "2.20";
+  static constexpr char lungo[]      = "2.40";
+  static constexpr char cappuccino[] = "3.10";
+  static constexpr char latte[]      = "3.40";
+};
+```
+
+A tile is a part: a function that returns a piece of tree, one for each drink. It is checked while its drink is the chosen one, and a click chooses it. The screen is the header, the tiles and the footer.
 
 <!-- snippet: examples/coffee/1-screen/main.cpp drinks -->
 ```cpp
-// The price of each drink, in the order of the enum.
-constexpr const char* prices[] = {"2.20 EUR", "2.40 EUR", "3.10 EUR", "3.30 EUR"};
+// A tile: the photo, the name and the price. It is checked while its drink is the chosen one.
+template <drink D>
+constexpr auto tile() {
+  return lv::button(
+    {
+      .checked    = lv::bind(picked<D>),
+      .style      = lv::look<"tile">,
+      .on_clicked = [] { chosen = D; },
+    },
+    lv::image({.id = lv::name_of<D>, .src = lv::like<D, photos>}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"tile-text">},
+      lv::label({.text = lv::like<D, names>, .style = label_text}),
+      lv::group(
+        {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
+        lv::label({.text = lv::like<D, prices>, .style = price_text}),
+        lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
+      )
+    )
+  );
+}
 
-constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)]; }, chosen};
+constexpr auto tiles = lv::group(
+  {.style = lv::look<"tiles">},
+  lv::group({.style = lv::look<"tile-row">}, tile<drink::espresso>(), tile<drink::lungo>()),
+  lv::group({.style = lv::look<"tile-row">}, tile<drink::cappuccino>(), tile<drink::latte>())
+);
 
-constexpr auto menu = lv::dropdown({
-  .options  = lv::options_of<drink>,
-  .selected = lv::bind(chosen),
-  .width    = 240 * px,
-});
-
-constexpr auto price_tag = lv::label({.text = lv::bind(price), .style = lv::look<"price">});
-
-constexpr auto ui = lv::group({.style = lv::look<"screen">}, title("Coffee"), menu, price_tag);
+constexpr auto ui = lv::group(
+  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles, footer(primary("NEXT"))
+);
 ```
 
-A node names its look, and the token file says how it looks. The project names its token file once, as `lv::design<lv::override>`. Each group is a look; its entries are named for the style properties they set.
+The header and the footer are parts too, and every screen of the machine uses them.
+
+<!-- snippet: examples/coffee/1-screen/main.cpp parts -->
+```cpp
+// The header: the title top left, and the step top right as dots and "n / 4".
+constexpr auto dot(bool on) {
+  return lv::group({.style = on ? lv::look<"dot dot-on"> : lv::look<"dot">});
+}
+
+constexpr auto header(const char* title, int step, const char* count) {
+  return lv::group(
+    {.id = "header", .style = lv::look<"header">},
+    lv::label({.text = title, .style = lv::look<"title"> | title_text}),
+    lv::group(
+      {.size = {lv::size_content, lv::size_content}, .style = lv::look<"dots">},
+      dot(step >= 1),
+      dot(step >= 2),
+      dot(step >= 3),
+      dot(step >= 4),
+      lv::label({.text = count, .style = lv::look<"step"> | caption_text})
+    )
+  );
+}
+
+// The footer: going back bottom left, going on bottom right.
+constexpr auto primary(const char* text) {
+  return lv::button({.style = lv::look<"primary">}, lv::label({.text = text, .style = label_text}));
+}
+
+constexpr auto footer(lv::tree_node auto... buttons) {
+  return lv::group({.id = "footer", .style = lv::look<"footer">}, buttons...);
+}
+```
+
+A node names its look, and the token file says how it looks. The project names its token file once, as `lv::design<lv::override>`. The values come first: colours, spaces, sizes, and the layout as named tokens, so that the footer's height is a token whose description says `target + space-4`. Then each group is a look, its entries named for the style properties they set. A look's layer (`pressed`, `checked`) is a state of the widget.
 
 <!-- snippet: examples/coffee/1-screen/tokens.json -->
 ```json
 {
   "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
-  "$description": "The design of step 1 of the coffee machine tutorial (docs/tutorial.md): values first, then one group for each look. A look's entries are named for the style properties they set.",
+  "$description": "The design of step 1 of the coffee machine tutorial (docs/tutorial.md), after the mock-up in design/coffee: values first, then one group for each look. A look's entries are named for the style properties they set.",
   "color": {
     "$type": "color",
-    "crema": {"$value": {"hex": "#f6efe7", "colorSpace": "srgb", "components": [0.9647, 0.9373, 0.9059]}},
-    "roast": {"$value": {"hex": "#3b2418", "colorSpace": "srgb", "components": [0.2314, 0.1412, 0.0941]}},
-    "bean": {"$value": {"hex": "#6f4e37", "colorSpace": "srgb", "components": [0.4353, 0.3059, 0.2157]}},
-    "muted": {"$value": {"hex": "#8a7363", "colorSpace": "srgb", "components": [0.5412, 0.451, 0.3882]}}
+    "ground": {"$value": {"hex": "#ffffff", "colorSpace": "srgb", "components": [1, 1, 1]}},
+    "surface": {"$value": {"hex": "#ecedf0", "colorSpace": "srgb", "components": [0.9255, 0.9294, 0.9412]}},
+    "surface-raised": {"$value": {"hex": "#dcdee3", "colorSpace": "srgb", "components": [0.8627, 0.8706, 0.8902]}},
+    "line": {"$value": {"hex": "#c4c7cf", "colorSpace": "srgb", "components": [0.7686, 0.7804, 0.8118]}},
+    "line-strong": {"$value": {"hex": "#5f626c", "colorSpace": "srgb", "components": [0.3725, 0.3843, 0.4235]}},
+    "reading": {"$value": {"hex": "#0a0a0c", "colorSpace": "srgb", "components": [0.0392, 0.0392, 0.0471]}},
+    "muted": {"$value": {"hex": "#4a4d57", "colorSpace": "srgb", "components": [0.2902, 0.302, 0.3412]}},
+    "active": {"$value": {"hex": "#0a0a0c", "colorSpace": "srgb", "components": [0.0392, 0.0392, 0.0471]}},
+    "on-active": {"$value": {"hex": "#d4ff3a", "colorSpace": "srgb", "components": [0.8314, 1, 0.2275]}}
   },
   "space": {
     "$type": "dimension",
-    "page": {"$value": {"value": 16, "unit": "px"}},
-    "gap": {"$value": {"value": 12, "unit": "px"}}
+    "none": {"$value": {"value": 0, "unit": "px"}},
+    "1": {"$value": {"value": 4, "unit": "px"}},
+    "2": {"$value": {"value": 8, "unit": "px"}},
+    "3": {"$value": {"value": 12, "unit": "px"}},
+    "4": {"$value": {"value": 16, "unit": "px"}},
+    "6": {"$value": {"value": 24, "unit": "px"}}
   },
-  "screen": {
-    "bg_color": {"$value": "{color.crema}"},
+  "size": {
+    "$type": "dimension",
+    "target": {"$value": {"value": 48, "unit": "px"}, "$description": "The smallest touch target: every control is at least this in both directions."},
+    "photo": {"$value": {"value": 72, "unit": "px"}, "$description": "The photo of a drink on its tile: 1.5 x target."},
+    "button": {"$value": {"value": 144, "unit": "px"}, "$description": "The narrowest button with a word: 3 x target."}
+  },
+  "layout": {
+    "$type": "dimension",
+    "margin": {"$value": "{space.6}", "$description": "Left and right of every screen."},
+    "gap": {"$value": "{space.3}", "$description": "Between blocks, and between the content and the footer."},
+    "pad": {"$value": "{space.4}", "$description": "Inside a tile."},
+    "dot": {"$value": "{space.3}", "$description": "A dot of the step: a square."},
+    "header-height": {"$value": "{size.target}", "$description": "The header: target."},
+    "footer-height": {"$value": {"value": 64, "unit": "px"}, "$description": "The footer: target + space-4."}
+  },
+  "font": {
+    "$type": "fontFamily",
+    "display": {"$value": "Barlow Condensed"},
+    "text": {"$value": "Barlow"}
+  },
+  "text": {
+    "$type": "typography",
+    "title": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 2, "unit": "px"}, "lineHeight": 1.1667}},
+    "label": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 16, "unit": "px"}, "fontWeight": 700, "letterSpacing": {"value": 1, "unit": "px"}, "lineHeight": 1.25}},
+    "price": {"$value": {"fontFamily": "{font.display}", "fontSize": {"value": 24, "unit": "px"}, "fontWeight": 700, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.1667}},
+    "caption": {"$value": {"fontFamily": "{font.text}", "fontSize": {"value": 13, "unit": "px"}, "fontWeight": 500, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 1.3846}}
+  },
+  "page": {
+    "bg_color": {"$value": "{color.ground}"},
     "bg_opa": {"$type": "number", "$value": 1},
-    "pad_all": {"$value": "{space.page}"},
-    "pad_row": {"$value": "{space.gap}"},
-    "text_color": {"$value": "{color.roast}"},
+    "pad_left": {"$value": "{layout.margin}"},
+    "pad_right": {"$value": "{layout.margin}"},
+    "text_color": {"$value": "{color.reading}"},
     "$extensions": {
       "io.github.filipsajdak.lvgl26": {
         "layout": "flex",
@@ -80,18 +212,195 @@ A node names its look, and the token file says how it looks. The project names i
       }
     }
   },
-  "title": {
-    "text_color": {"$value": "{color.bean}"}
+  "header": {
+    "height": {"$value": "{layout.header-height}"},
+    "pad_column": {"$value": "{layout.gap}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row",
+        "flex_cross_place": "center"
+      }
+    }
   },
-  "price": {
+  "title": {
+    "flex_grow": {"$type": "number", "$value": 1}
+  },
+  "dots": {
+    "pad_column": {"$value": "{space.2}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row",
+        "flex_cross_place": "center"
+      }
+    }
+  },
+  "dot": {
+    "width": {"$value": "{layout.dot}"},
+    "height": {"$value": "{layout.dot}"},
+    "bg_color": {"$value": "{color.line}"},
+    "bg_opa": {"$type": "number", "$value": 1}
+  },
+  "dot-on": {
+    "bg_color": {"$value": "{color.active}"}
+  },
+  "step": {
+    "pad_left": {"$value": "{space.1}"},
     "text_color": {"$value": "{color.muted}"}
+  },
+  "tiles": {
+    "flex_grow": {"$type": "number", "$value": 1},
+    "pad_row": {"$value": "{layout.gap}"},
+    "pad_bottom": {"$value": "{layout.gap}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "column"
+      }
+    }
+  },
+  "tile-row": {
+    "flex_grow": {"$type": "number", "$value": 1},
+    "pad_column": {"$value": "{layout.gap}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row"
+      }
+    }
+  },
+  "tile": {
+    "flex_grow": {"$type": "number", "$value": 1},
+    "bg_color": {"$value": "{color.surface}"},
+    "bg_opa": {"$type": "number", "$value": 1},
+    "radius": {"$value": "{space.none}"},
+    "shadow_width": {"$value": "{space.none}"},
+    "pad_left": {"$value": "{layout.pad}"},
+    "pad_right": {"$value": "{layout.pad}"},
+    "pad_top": {"$value": "{space.none}"},
+    "pad_bottom": {"$value": "{space.none}"},
+    "pad_column": {"$value": "{layout.pad}"},
+    "text_color": {"$value": "{color.reading}"},
+    "pressed": {
+      "bg_color": {"$value": "{color.surface-raised}"},
+      "color_filter_opa": {"$type": "number", "$value": 0}
+    },
+    "checked": {
+      "bg_color": {"$value": "{color.active}"},
+      "text_color": {"$value": "{color.on-active}"}
+    },
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row",
+        "flex_cross_place": "center",
+        "height": "100%"
+      }
+    }
+  },
+  "tile-text": {
+    "pad_row": {"$value": "{space.1}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "column"
+      }
+    }
+  },
+  "price-row": {
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row",
+        "flex_cross_place": "end"
+      }
+    }
+  },
+  "currency": {
+    "pad_left": {"$value": "{space.1}"}
+  },
+  "footer": {
+    "height": {"$value": "{layout.footer-height}"},
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_flow": "row",
+        "flex_main_place": "end",
+        "flex_cross_place": "start"
+      }
+    }
+  },
+  "primary": {
+    "height": {"$value": "{size.target}"},
+    "min_width": {"$value": "{size.button}"},
+    "pad_left": {"$value": "{space.6}"},
+    "pad_right": {"$value": "{space.6}"},
+    "bg_color": {"$value": "{color.active}"},
+    "bg_opa": {"$type": "number", "$value": 1},
+    "radius": {"$value": "{space.none}"},
+    "shadow_width": {"$value": "{space.none}"},
+    "text_color": {"$value": "{color.on-active}"},
+    "pressed": {
+      "bg_color": {"$value": "{color.surface-raised}"},
+      "text_color": {"$value": "{color.reading}"},
+      "color_filter_opa": {"$type": "number", "$value": 0}
+    },
+    "$extensions": {
+      "io.github.filipsajdak.lvgl26": {
+        "layout": "flex",
+        "flex_main_place": "center",
+        "flex_cross_place": "center"
+      }
+    }
   }
 }
 ```
 
-![Step 1: the title Coffee, a list set to lungo and the price 2.40 EUR, on a cream ground](media/coffee-1.png)
+The text is set in the machine's own typeface, Barlow, from the typography tokens. The compiler draws each font from its file; a font is a style to merge with a look.
 
-See [The tree and its widgets](tree.md), [State and bindings](state.md) and [Looks](looks.md).
+<!-- snippet: examples/coffee/1-screen/main.cpp fonts -->
+```cpp
+// The machine's own typeface, drawn from its files by the compiler, and the fonts of the
+// typography tokens as styles to merge.
+constexpr unsigned char barlow_ttf[] = {
+#embed "fonts/Barlow-Medium.ttf"
+};
+constexpr unsigned char condensed_semibold_ttf[] = {
+#embed "fonts/BarlowCondensed-SemiBold.ttf"
+};
+constexpr unsigned char condensed_bold_ttf[] = {
+#embed "fonts/BarlowCondensed-Bold.ttf"
+};
+constexpr auto type = lv::typeface({
+  {"Barlow", 500, barlow_ttf},
+  {"Barlow Condensed", 600, condensed_semibold_ttf},
+  {"Barlow Condensed", 700, condensed_bold_ttf},
+});
+
+constexpr auto title_text   = lv::style({.text_font = type(tok.text.title)}) | tok.text.title;
+constexpr auto label_text   = lv::style({.text_font = type(tok.text.label)}) | tok.text.label;
+constexpr auto price_text   = lv::style({.text_font = type(tok.text.price)});
+constexpr auto caption_text = lv::style({.text_font = type(tok.text.caption)});
+```
+
+The program checks the screen it drew against the token file. The header is `target` high and the footer `target + space-4`; a photo sits `pad` inside its tile and is 1.5 x `target` wide. A size that does not follow the design ends the program with a code of its own.
+
+<!-- snippet: examples/coffee/1-screen/main.cpp geometry -->
+```cpp
+  // The screen keeps the sizes of the design: each is a token, or a formula of tokens.
+  using coffee::tok;
+  const auto target = tok.size.target->raw(), space_4 = tok.space._4->raw();
+  const auto photo = root->get<"espresso">();
+  if (root->get<"header">().get<"height">() != target) return 4;
+  if (root->get<"footer">().get<"height">() != target + space_4) return 5;
+  if (photo.get<"x">() != tok.layout.pad->raw()) return 6;  // the padding of a tile
+  if (photo.get<"width">() * 2 != target * 3) return 7;     // 1.5 x target
+```
+
+![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the lungo tile filled black with lime text, and the button NEXT](media/coffee-1.png)
+
+See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images](images.md), [Looks](looks.md) and [Fonts](fonts.md).
 
 ## 2. Values that say what they are
 
