@@ -265,7 +265,7 @@
     </ul>
 
     <h3 id="migration-qt">Qt Quick</h3>
-    <p class="note">17 of 31 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
+    <p class="note">18 of 32 concepts work. <a href="docs/from-qt.html">The concept map</a> explains each one.</p>
     <div class="table wide">
       <table>
         <thead><tr><th>Concept</th><th>Status</th><th>In lvgl26</th><th>Gap</th></tr></thead>
@@ -278,6 +278,7 @@
           <tr><th scope="row">Property binding and expressions</th><td><span class="pill ok">Works</span></td><td><code>lv::bind</code> and <code>lv::computed</code></td><td></td></tr>
           <tr><th scope="row">A model object with properties</th><td><span class="pill ok">Works</span></td><td><code>lv::state</code>, typed, with units for a measure</td><td></td></tr>
           <tr><th scope="row">Timer, Connections</th><td><span class="pill ok">Works</span></td><td>A coroutine: <code>co_await lv::sleep(...)</code> and <code>co_await button.next().clicked</code></td><td></td></tr>
+          <tr><th scope="row">SwipeView gestures, a long press with progress</th><td><span class="pill ok">Works</span></td><td><code>lv::swiped</code> gives the direction of a swipe, <code>lv::hold</code> gives a progress; the limits are tokens given to <code>lv::pointer</code></td><td></td></tr>
           <tr><th scope="row">NumberAnimation, Behavior, easing</th><td><span class="pill part">Partial</span></td><td><code>lv::animate</code> with easing, one number for each property, and style properties such as opacity. A Behavior that animates on every change is not built</td><td></td></tr>
           <tr><th scope="row">State and Transition</th><td><span class="pill part">Partial</span></td><td><code>lv::match</code> on a state and animations in a task. There is no declarative state list</td><td></td></tr>
           <tr><th scope="row">Image with a PNG or JPEG</th><td><span class="pill ok">Works</span></td><td><code>lv::image_file</code> and <code>lv::encoded_image</code></td><td></td></tr>
