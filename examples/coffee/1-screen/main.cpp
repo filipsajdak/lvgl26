@@ -166,6 +166,29 @@ constexpr auto ui = lv::group(
 // which main checks.
 constinit lv::frame<480, 320> frame;
 
+//! [geometry]
+// The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
+// is target high, the footer target + space-4, and the content between them the rest. A size
+// that does not follow the design is an exit code of its own.
+int geometry(lv::obj screen, lv::mounted<ui>& root) {
+  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
+  const auto header = tok.size.target->raw(), footer = header + tok.space._4->raw();
+  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
+  if (root->get<"header">().get<"height">() != header) return 4;
+  if (root->get<"footer">().get<"height">() != footer) return 5;
+  if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
+  return 0;
+}
+//! [geometry]
+
+// Whether the tile of D is the one tile filled.
+template <drink D>
+bool filled_alone() {
+  const int filled = picked<drink::espresso>.get() + picked<drink::lungo>.get() +
+                     picked<drink::cappuccino>.get() + picked<drink::latte>.get();
+  return picked<D>.get() && filled == 1;
+}
+
 }  // namespace coffee
 
 int main() {
@@ -175,29 +198,16 @@ int main() {
   if (!root) return 1;
   for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
 
-  //! [geometry]
-  // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
-  // is target high, the footer target + space-4, and the content between them the rest.
-  using coffee::tok;
-  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
-  const auto header = tok.size.target->raw(), footer = header + tok.space._4->raw();
-  const auto screen = display.screen();
-  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
-  if (root->get<"header">().get<"height">() != header) return 4;
-  if (root->get<"footer">().get<"height">() != footer) return 5;
-  if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
-  //! [geometry]
+  if (const int wrong = coffee::geometry(display.screen(), root)) return wrong;
 
   // The reader picks a lungo: its tile fills, and the espresso's empties. Then the espresso
   // again, as the mock-up shows it.
   coffee::chosen = coffee::drink::lungo;
   app.step();
-  if (!coffee::picked<coffee::drink::lungo>.get() || coffee::picked<coffee::drink::espresso>.get())
-    return 2;
+  if (!coffee::filled_alone<coffee::drink::lungo>()) return 2;
   coffee::chosen = coffee::drink::espresso;
   app.step();
-  if (!coffee::picked<coffee::drink::espresso>.get() || coffee::picked<coffee::drink::lungo>.get())
-    return 2;
+  if (!coffee::filled_alone<coffee::drink::espresso>()) return 2;
 
   return lv::write_png(display.screen(), "coffee_1.png") ? 0 : 3;
 }

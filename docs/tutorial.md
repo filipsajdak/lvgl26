@@ -384,16 +384,18 @@ The program checks the screen it drew against the token file. The header is `tar
 
 <!-- snippet: examples/coffee/1-screen/main.cpp geometry -->
 ```cpp
-  // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
-  // is target high, the footer target + space-4, and the content between them the rest.
-  using coffee::tok;
+// The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
+// is target high, the footer target + space-4, and the content between them the rest. A size
+// that does not follow the design is an exit code of its own.
+int geometry(lv::obj screen, lv::mounted<ui>& root) {
   const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
   const auto header = tok.size.target->raw(), footer = header + tok.space._4->raw();
-  const auto screen = display.screen();
   if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
   if (root->get<"header">().get<"height">() != header) return 4;
   if (root->get<"footer">().get<"height">() != footer) return 5;
   if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
+  return 0;
+}
 ```
 
 ![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](media/coffee-1.png)
