@@ -359,8 +359,10 @@ consteval void put_vendor(look_style_of<D>& s, std::string_view where) {
     fail("lv: the $extensions entry '" + str(entry) + "' of '" + str(where) + "' fits no style property. Nearest style properties: " +
          nearest_names(entry, style_property_names<D>()) + ".");
   } else {
-    const std::string_view text = *T;
-    if (is_percent_text(text))
+    // A constant, so that the branch not taken is never instantiated: put_name reads number_enum, a scan of the
+    // global namespace that asks the name of every declaration, and a percentage needs none of it.
+    constexpr std::string_view text = *T;
+    if constexpr (is_percent_text(text))
       put_percent<D, target>(s, text, entry, where);
     else
       put_name<D, target>(s, text, entry, where);
