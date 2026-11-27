@@ -440,7 +440,12 @@ namespace detail {
 // template of the type asked for, so that nothing is worked out where this header is read: a conversion that named
 // latin1_plus<""> plainly instantiated it in every file (2.4 G instructions for 191 characters sorted for nothing).
 template <class V>
-inline constexpr V latin1_text = std::define_static_string(ascii_plus_text("", "lv::latin1_plus", true));
+consteval V latin1_view() {
+  return std::define_static_string(ascii_plus_text("", "lv::latin1_plus", true));
+}
+
+template <class V>
+inline constexpr V latin1_text = latin1_view<V>();
 
 struct latin1_set {
   template <std::same_as<std::string_view> V>
