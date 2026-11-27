@@ -664,11 +664,11 @@ constexpr auto ready = lv::group(
   lv::group(
     {.size = {lv::size_content, lv::size_content}, .style = lv::look<"line">},
     lv::label({.text = lv::bind(cup), .style = caption_text}),
-    lv::label({.text = " · ", .style = caption_text}),
+    lv::label({.text = "·", .style = lv::look<"separator"> | caption_text}),
     lv::label({.text = lv::bind(strength_name), .style = caption_text}),
-    lv::label({.text = " · ", .style = caption_text}),
+    lv::label({.text = "·", .style = lv::look<"separator"> | caption_text}),
     lv::label({.text = lv::bind(price), .style = caption_text}),
-    lv::label({.text = " €", .style = caption_text})
+    lv::label({.text = "€", .style = lv::look<"unit-after"> | caption_text})
   ),
   lv::label({.text = "Back to the drinks in 10 s", .style = lv::look<"line"> | caption_text})
 );
