@@ -36,6 +36,7 @@
 #include <lv/detail/checked.hpp>
 #include <lv/easing.hpp>
 #include <lv/props.hpp>
+#include <lv/style.hpp>
 #include <lv/task.hpp>
 #include <lv/units.hpp>
 #include <lv/values.hpp>
@@ -160,31 +161,79 @@ consteval bool is_animatable(const member_item& it) {
   return is_animatable_type(std::meta::template_arguments_of(it.type)[0]);
 }
 
-// The members of props<widget> that can be animated, in the same order.
+// One property that can be animated: the type of its two ends, the function that sets it, and whether
+// that is a style setter (it takes the selector as a third argument) or a setter of the widget.
+struct animatable_item {
+  std::string_view name;
+  std::meta::info value;
+  std::meta::info setter;
+  bool style = false;
+};
+
+// The setters of the widget that take one number, in the order of lv::props<widget>.
 // D only delays the scan until an animation is really written: see props_of.
 template <class D = void>
-consteval std::vector<member_item> animatable_members(std::string_view widget) {
-  std::vector<member_item> out;
+consteval std::vector<animatable_item> widget_animatables(std::string_view widget) {
+  std::vector<animatable_item> out;
   for (const auto& it : members<D>(widget))
-    if (is_animatable(it)) out.push_back(it);
+    if (is_animatable(it)) out.push_back({it.name, std::meta::template_arguments_of(it.type)[0], it.target, false});
+  return out;
+}
+
+// The style properties that take one number: `lv_obj_set_style_<name>(obj, value, selector)` with a
+// value of a unit that an animation can count through, in the order of lv::style.
+template <class D = void>
+consteval std::vector<animatable_item> style_animatables() {
+  std::vector<animatable_item> out;
+  for (std::size_t i = 0; i < style_table<D>.size(); i += 3) {
+    const auto type = style_table<D>[i];
+    const auto setter = style_table<D>[i + 1];
+    if (std::meta::parameters_of(setter).size() != 3 || !is_made_from(type, ^^arg)) continue;
+    const auto args = std::meta::template_arguments_of(type);
+    if (args.size() != 1 || !is_made_from(args[0], ^^styled)) continue;
+    const auto value = std::meta::template_arguments_of(args[0])[0];
+    if (is_animatable_type(value))
+      out.push_back({std::meta::identifier_of(setter).substr(style_prefix.size()), value, setter, true});
+  }
+  return out;
+}
+
+// What animatable<W> holds: the setters of the widget, then the style properties that no setter of
+// the widget has the name of (`.width` is the widget's, whichever way it is written). The width
+// "" is the struct of lv::in: the style properties alone, a name that is both included.
+template <class D = void>
+consteval std::vector<animatable_item> animatable_items(std::string_view widget) {
+  std::vector<animatable_item> out;
+  if (!widget.empty()) out = widget_animatables<D>(widget);
+  const std::size_t widget_items = out.size();
+  for (const auto& item : style_animatables<D>()) {
+    bool taken = false;
+    for (std::size_t i = 0; i < widget_items && !taken; ++i) taken = out[i].name == item.name;
+    if (!taken) out.push_back(item);
+  }
   return out;
 }
 
 template <class D = void>
 consteval std::vector<std::meta::info> animatable_specs(std::string_view widget) {
   std::vector<std::meta::info> specs;
-  for (const auto& it : animatable_members<D>(widget)) {
-    const auto type =
-        std::meta::substitute(^^from_to, {std::meta::template_arguments_of(it.type)[0]});
-    specs.push_back(std::meta::data_member_spec(type, {.name = str(it.name)}));
-  }
+  for (const auto& it : animatable_items<D>(widget))
+    specs.push_back(std::meta::data_member_spec(std::meta::substitute(^^from_to, {it.value}), {.name = str(it.name)}));
   return specs;
 }
 
 template <class D = void>
 consteval std::vector<std::meta::info> animatable_setters(std::string_view widget) {
   std::vector<std::meta::info> out;
-  for (const auto& it : animatable_members<D>(widget)) out.push_back(it.target);
+  for (const auto& it : animatable_items<D>(widget)) out.push_back(it.setter);
+  return out;
+}
+
+// For each member, in order: 1 when its setter is a style setter.
+template <class D = void>
+consteval std::vector<int> animatable_styles(std::string_view widget) {
+  std::vector<int> out;
+  for (const auto& it : animatable_items<D>(widget)) out.push_back(it.style ? 1 : 0);
   return out;
 }
 
@@ -205,12 +254,20 @@ using lazy_animatable = typename animatable_of<W, D>::type;
 template <detail::fixed W>
 using animatable = typename detail::animatable_of<W>::type;
 
+// The style properties that take one number, as lv::in takes them: the struct of lv::animate
+// for a part and a state. A name that is also a setter of a widget is a member here.
+using animatable_style = typename detail::animatable_of<"">::type;
+
 namespace detail {
 
 // The setter behind each member of animatable<W>, in member order.
 template <fixed W>
 inline constexpr std::span<const std::meta::info> setters_of_animatable =
     std::define_static_array(animatable_setters<>(W.sv()));
+
+// For each member of animatable<W>: 1 when it is a style property.
+template <fixed W>
+inline constexpr std::span<const int> styles_of_animatable = std::define_static_array(animatable_styles<>(W.sv()));
 
 template <fixed W>
 inline constexpr auto members_of_animatable = std::define_static_array(
@@ -231,6 +288,14 @@ template <std::meta::info Setter>
 void animation_step(void* widget, std::int32_t value) {
   using parameter = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[1]):];
   [:Setter:](static_cast<lv_obj_t*>(widget), number_as<parameter>(value));
+}
+
+// The same for a style property of one part and state: the selector is part of what LVGL
+// calls the animation, so it is an argument of the template, and two selectors are two animations.
+template <std::meta::info Setter, lv_style_selector_t Selector>
+void style_step(void* widget, std::int32_t value) {
+  using parameter = typename[:std::meta::type_of(std::meta::parameters_of(Setter)[1]):];
+  [:Setter:](static_cast<lv_obj_t*>(widget), number_as<parameter>(value), Selector);
 }
 
 // One running LVGL animation of one property, as something to wait for.
@@ -355,8 +420,9 @@ constexpr std::size_t count_set(const animatable<W>& what) {
   return n;
 }
 
-// The animation of the property that is set in `what`.
-template <fixed W>
+// The animation of the property that is set in `what`. A style property is animated in `Selector`
+// (the main part in the default state, unless lv::in says another).
+template <fixed W, lv_style_selector_t Selector = 0>
 animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, duration time,
                               const easing& how) {
   animation_source source{widget, time.ms};
@@ -364,7 +430,10 @@ animation_source animation_of(lv_obj_t* widget, const animatable<W>& what, durat
   template for (constexpr auto i : indices<members_of_animatable<W>.size()>) {
     const auto& ends = what.[:members_of_animatable<W>[i]:];
     if (ends.is_set()) {
-      source.step = &animation_step<setters_of_animatable<W>[i]>;
+      if constexpr (styles_of_animatable<W>[i] != 0)
+        source.step = &style_step<setters_of_animatable<W>[i], Selector>;
+      else
+        source.step = &animation_step<setters_of_animatable<W>[i]>;
       source.from = number_as<std::int32_t>(lower(ends.from()));
       source.to = number_as<std::int32_t>(lower(ends.to()));
     }
@@ -386,6 +455,61 @@ detail::animation_source animate(view<W> widget, const detail::lazy_animatable<W
   pre(detail::usable(how.curve()))                 // a curve LVGL can follow: see lv/easing.hpp
 {
   return detail::animation_of<W>(widget.raw(), what, time, how);
+}
+
+// A widget and the part and state whose local style values an animation moves: lv::in<"knob">(view).
+template <detail::fixed W, lv_style_selector_t Selector>
+struct view_in {
+  view<W> widget;
+};
+
+namespace detail {
+
+// The selector of lv::in<Names...>: one name is a part or a state, two are the part and then the state.
+// The messages are those of lv::on, for lv::in.
+template <fixed First, fixed... Rest>
+consteval lv_style_selector_t selector_of_names() {
+  static_assert(sizeof...(Rest) <= 1,
+                "lv: lv::in takes a part and a state at most: lv::in<\"knob\", \"pressed\">(view).");
+  if constexpr (sizeof...(Rest) == 0) {
+    return part_or_state_named<>(First.sv());
+  } else {
+    constexpr std::string_view second = (Rest.sv(), ...);
+    if (!selector_named<lv_part_t>(First.sv()) && selector_named<lv_state_t>(First.sv()))
+      fail("lv: '" + str(First.sv()) + "' is a state. lv::in takes the part first, then the state: lv::in<\"knob\", \"" +
+           str(First.sv()) + "\">(view).");
+    if (!selector_named<lv_state_t>(second) && selector_named<lv_part_t>(second))
+      fail("lv: '" + str(second) + "' is a part. lv::in takes the part first, then the state: lv::in<\"" + str(second) +
+           "\", \"pressed\">(view).");
+    if (!selector_named<lv_part_t>(First.sv()))
+      fail("lv: widgets have no part '" + str(First.sv()) + "'. The parts: " + selector_names<lv_part_t>() + ".");
+    if (!selector_named<lv_state_t>(second))
+      fail("lv: widgets have no state '" + str(second) + "'. The states: " + selector_names<lv_state_t>() + ".");
+    return *selector_named<lv_part_t>(First.sv()) | *selector_named<lv_state_t>(second);
+  }
+}
+
+}  // namespace detail
+
+// The local style values of a part and a state, as what lv::animate moves: the properties of lv::style
+// that take one number, whatever the widget (`.width` is the style value here, not the widget's).
+//
+//   co_await lv::animate(lv::in<"indicator">(arc), {.arc_width = {2 * lv::px, 8 * lv::px}}, 120 * lv::ms);
+//   co_await lv::animate(lv::in<"knob", "pressed">(slider), {.opa = {0, 255}}, 200 * lv::ms);
+template <detail::fixed First, detail::fixed... Rest, detail::fixed W>
+constexpr view_in<W, detail::selector_of_names<First, Rest...>()> in(view<W> widget) {
+  return {widget};
+}
+
+template <detail::fixed W, lv_style_selector_t Selector, class D = void>
+detail::animation_source animate(view_in<W, Selector> target, const detail::lazy_animatable<"", D>& what,
+                                 duration time, const easing& how = {})
+  pre(target.widget.raw() != nullptr)
+  pre(detail::count_set<"">(what) == 1)
+  pre(std::in_range<std::int32_t>(time.ms))
+  pre(detail::usable(how.curve()))
+{
+  return detail::animation_of<"", Selector>(target.widget.raw(), what, time, how);
 }
 
 }  // namespace lv

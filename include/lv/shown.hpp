@@ -416,6 +416,10 @@ inline constexpr auto transition_members = std::define_static_array(
 template <class D>
 inline constexpr std::span<const std::meta::info> transition_setters =
     std::define_static_array(animatable_setters<D>("obj"));
+// For each member: 1 when it is a style property of the main part (`.opa`, `.translate_x`), moved
+// by its style setter, and 0 when it is a setter of the widget.
+template <class D>
+inline constexpr std::span<const int> transition_styles = std::define_static_array(animatable_styles<D>("obj"));
 
 }  // namespace detail
 
@@ -430,7 +434,10 @@ constexpr detail::transition_spec transition(const detail::lazy_animatable<"obj"
     const auto& ends = what.[:detail::transition_members<D>[i]:];
     if (ends.is_set()) {
       ++properties;
-      t.step = &detail::animation_step<detail::transition_setters<D>[i]>;
+      if constexpr (detail::transition_styles<D>[i] != 0)
+        t.step = &detail::style_step<detail::transition_setters<D>[i], 0>;
+      else
+        t.step = &detail::animation_step<detail::transition_setters<D>[i]>;
       t.from = detail::number_as<std::int32_t>(detail::lower(ends.from()));
       t.to = detail::number_as<std::int32_t>(detail::lower(ends.to()));
     }

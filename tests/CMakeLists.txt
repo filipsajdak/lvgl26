@@ -218,6 +218,8 @@ add_test(NAME options_violation_enum_state_in_set
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(animate)
+# Local style values: of the main part with the plain call, of a part and a state with lv::in.
+lvgl26_test(animate_style)
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
 add_test(NAME unsigned_values_violation_negative
@@ -740,6 +742,15 @@ lvgl26_compile_fail(animate_mixed_units "contract predicate is false in constant
 lvgl26_compile_fail(animate_mixed_units_folded "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_size_content "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_then_bad_handler "no matching function for call to .*then")
+# lv::in names the part and the state of a style animation (include/lv/animate.hpp).
+lvgl26_compile_fail_message(in_three_names static_assert "lv: lv::in takes a part and a state at most: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_state_first constexpr "lv: 'pressed' is a state. lv::in takes the part first, then the state: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_part_second constexpr "lv: 'indicator' is a part. lv::in takes the part first, then the state: lv::in<\"indicator\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_unknown_part constexpr "lv: widgets have no part 'knop'. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first.")
+lvgl26_compile_fail_message(in_unknown_state constexpr "lv: widgets have no state 'presed'. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail_message(in_unknown_name constexpr "lv: 'pressd' is neither a part nor a state. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail(in_widget_setter "no matching function for call to .animate")
+lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct. You gave int")
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail_message(match_missing_case static_assert "lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`.")
 lvgl26_compile_fail_message(match_duplicate_case static_assert "lv::match has two arms for eco. Each value needs exactly one.")
