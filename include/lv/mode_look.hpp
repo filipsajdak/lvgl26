@@ -66,21 +66,34 @@ struct designs_listed<mode_designs_of<Designs...>> {
 template <class Modes>
 concept modes_named = designs_listed<std::remove_cvref_t<Modes>>::named;
 
-// The first difference between the look of the first design and the look of another, as text; empty
-// when they have one shape: the same properties set, the same layers with the same selectors.
+// The first property that is set in one of two looks and not in the other, as text; empty when they agree.
 template <class S>
-consteval std::string shape_difference(const S& first, const S& other) {
+consteval std::string property_difference(const S& first, const S& other) {
   std::string out;
   template for (constexpr auto m : style_members<void>) {
     if (out.empty() && first.[:m:].set != other.[:m:].set)
       out = "the property '" + str(std::meta::identifier_of(m)) + "' is set in " + (first.[:m:].set ? "the first design only" : "this design only");
   }
-  if (out.empty() && first.layers.count != other.layers.count)
-    out = "it has " + decimal(other.layers.count) + " layer(s) (a part or a state), the first design has " + decimal(first.layers.count);
-  for (std::size_t i = 0; out.empty() && i < first.layers.count; ++i)
-    if (first.layers.first[i].selector != other.layers.first[i].selector)
-      out = "its layer number " + decimal(i + 1) + " is another part or state than in the first design";
   return out;
+}
+
+// The first difference between the layers of two looks, as text; empty when they agree.
+template <class S>
+consteval std::string layer_difference(const S& first, const S& other) {
+  if (first.layers.count != other.layers.count)
+    return "it has " + decimal(other.layers.count) + " layer(s) (a part or a state), the first design has " + decimal(first.layers.count);
+  for (std::size_t i = 0; i < first.layers.count; ++i)
+    if (first.layers.first[i].selector != other.layers.first[i].selector)
+      return "its layer number " + decimal(i + 1) + " is another part or state than in the first design";
+  return {};
+}
+
+// The first difference between the look of the first design and the look of another, as text; empty
+// when they have one shape: the same properties set, the same layers with the same selectors.
+template <class S>
+consteval std::string shape_difference(const S& first, const S& other) {
+  std::string out = property_difference(first, other);
+  return out.empty() ? layer_difference(first, other) : out;
 }
 
 // The entries of one look in one design: its own style, then its layers.
