@@ -1,5 +1,5 @@
-# The coffee machine of the tutorial (docs/tutorial.md): one whole program for
-# each step, each of which writes the picture of its step.
+# The coffee machine of the tutorial (docs/research/tutorial-coffee-draft.md): one whole
+# program for each step, each of which writes the picture of its step.
 foreach(step 1-screen 2-values 3-pages 4-time 5-design)
   string(REGEX MATCH "^[0-9]+" number ${step})
   set(target coffee_${number})
