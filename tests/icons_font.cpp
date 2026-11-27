@@ -1,6 +1,7 @@
 // The Phosphor Bold file that lv/icons.hpp gives, drawn into a font of the icons a program names.
 #include <lv/font.hpp>
 #include <lv/icons.hpp>
+#include <lv/icons_font.hpp>
 #include <lv/lv.hpp>
 
 #include "check.hpp"

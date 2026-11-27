@@ -5,6 +5,7 @@
 
 #include <lv/font.hpp>
 #include <lv/icons.hpp>
+#include <lv/icons_font.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 
