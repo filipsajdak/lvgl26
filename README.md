@@ -153,7 +153,7 @@ inline lv::task<> bounce(lv::view<"obj"> box_view) {
 
 A ball falls, bounces lower each time, rests and is picked up again. `lv::spawn(task, owner)` ties a task to a widget, and the task ends when the widget is deleted.
 
-[Tasks](docs/tasks.md) and [Animation](docs/animation.md) have the rest.
+`lv::animate` moves a widget's properties and its local style values, such as `.opa` and `.translate_y`; `lv::in<"knob", "pressed">(view)` names the part and the state of a style value. [Tasks](docs/tasks.md) and [Animation](docs/animation.md) have the rest.
 
 ## A design system: Signal
 

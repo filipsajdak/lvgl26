@@ -44,6 +44,8 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(icons)
+lvgl26_test(icons_font)
 lvgl26_test(api_helpers)
 lvgl26_test(nearest)
 lvgl26_test(all_header)
@@ -218,6 +220,8 @@ add_test(NAME options_violation_enum_state_in_set
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(animate)
+# Local style values: of the main part with the plain call, of a part and a state with lv::in.
+lvgl26_test(animate_style)
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
 add_test(NAME unsigned_values_violation_negative
@@ -598,6 +602,7 @@ target_compile_options(fail_encoded_image_needs_png PRIVATE -ULV_USE_LODEPNG)  #
 lvgl26_compile_fail(encoded_image_needs_jpeg "LVGL is built without its JPEG decoder. Turn it on in CMake, before lvgl26 is added: set\\(LVGL26_JPEG ON\\)")
 target_compile_options(fail_encoded_image_needs_jpeg PRIVATE -ULV_USE_TJPGD)
 lvgl26_compile_fail(image_not_a_png "this is not a PNG file. Embed one")
+lvgl26_compile_fail(mask_not_a_png "this is not a PNG file. Embed one")
 lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise limits.compile_time_image in the settings")
 lvgl26_compile_fail(image_row_too_long "this picture is 16384 x 1 pixels, with rows of 65536 bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_too_wide "this picture is 70000 x 1 pixels, with rows of [0-9]+ bytes. LVGL holds a picture of at most 65535")
@@ -735,13 +740,22 @@ lvgl26_compile_fail_message(effect_wrong_arguments static_assert "lv: the functi
 lvgl26_compile_fail_message(effect_not_a_state static_assert "lv: a dependency of an lv::effect must be an lv::state or an lv::computed that outlives it. Pass the object itself, as in `lv::effect{f, speed}`: not its value (`speed.get()`) and not a temporary.")
 lvgl26_compile_fail_message(bind_computed_wrong_type static_assert "lv: this property takes a whole number (not bool, not floating point), and the state holds bool. A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.")
 lvgl26_compile_fail(first_mixed_handlers "in lv::first, give a handler to every item")
-lvgl26_compile_fail(animate_not_a_number "invalid initialization of reference of type .lv::detail::lazy_animatable<lv::detail::fixed<6>.\"label\"")
+lvgl26_compile_fail(animate_not_a_number "no matching function for call to .animate.lv::view<lv::detail::fixed<6>.\"label\"}>&, <brace-enclosed initializer list>")
 lvgl26_compile_fail(animate_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(animate_one_end "an animation needs both ends: .property = {from, to}")
 lvgl26_compile_fail(animate_mixed_units "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_mixed_units_folded "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_size_content "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_then_bad_handler "no matching function for call to .*then")
+# lv::in names the part and the state of a style animation (include/lv/animate.hpp).
+lvgl26_compile_fail_message(in_three_names static_assert "lv: lv::in takes a part and a state at most: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_state_first constexpr "lv: 'pressed' is a state. lv::in takes the part first, then the state: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_part_second constexpr "lv: 'indicator' is a part. lv::in takes the part first, then the state: lv::in<\"indicator\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_unknown_part constexpr "lv: widgets have no part 'knop'. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first.")
+lvgl26_compile_fail_message(in_unknown_state constexpr "lv: widgets have no state 'presed'. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail_message(in_unknown_name constexpr "lv: 'pressd' is neither a part nor a state. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail(in_widget_setter "no matching function for call to .animate")
+lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct.. You gave int")
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail_message(match_missing_case static_assert "lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`.")
 lvgl26_compile_fail_message(match_duplicate_case static_assert "lv::match has two arms for eco. Each value needs exactly one.")
@@ -936,6 +950,21 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
            COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_images_out/images.png
                    ${PROJECT_SOURCE_DIR}/docs/media/images.png)
   set_tests_properties(example_images_picture PROPERTIES FIXTURES_REQUIRED example_images_picture)
+endif()
+
+# The example of docs/icons.md. Its picture is the one on the page.
+add_executable(example_icons ${PROJECT_SOURCE_DIR}/examples/icons/main.cpp)
+target_compile_options(example_icons PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/icons
+                                             --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_icons PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+add_test(NAME example_icons COMMAND example_icons WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+set_tests_properties(example_icons PROPERTIES FIXTURES_SETUP example_icons_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_icons_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out/icons.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/icons.png)
+  set_tests_properties(example_icons_picture PROPERTIES FIXTURES_REQUIRED example_icons_picture)
 endif()
 
 # The second example of docs/fonts.md: a font drawn on the device.
@@ -1135,6 +1164,7 @@ if(Python3_FOUND)
   add_test(NAME image_symbols COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_symbols.py
                                       --budget ${LVGL26_SYMBOL_BUDGET} $<TARGET_OBJECTS:image_symbols>)
   add_test(NAME symbols_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_symbols.py)
+  add_test(NAME icons_names_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_icons_names.py)
   # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
   add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
@@ -1373,6 +1403,7 @@ lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/
 lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
 lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
 lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
+lvgl26_compile_fail(missing_header_mask_file "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")
 lvgl26_compile_fail(missing_header_runtime "lv::runtime is in <lv/runtime.hpp>: add #include <lv/runtime.hpp>")
 lvgl26_compile_fail(missing_header_one_of "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>")
@@ -1413,3 +1444,7 @@ lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their par
 lvgl26_compile_fail(missing_header_shown "lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+
+# Icons (lv/icons.hpp): a name that is no icon lists the nearest.
+lvgl26_compile_fail_message(icon_unknown_name constexpr "lv: there is no icon 'arow-left' in Phosphor. Did you mean 'arrow-left'? The nearest names: arrow-left, caret-left, align-left, copyleft, arrow-down.")
+lvgl26_compile_fail_message(icon_far_name constexpr "lv: there is no icon 'steam-engine' in Phosphor. The nearest names: steam-logo, gear-fine, bell-ringing, champagne, dots-nine.")
