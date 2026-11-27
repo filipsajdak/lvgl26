@@ -33,6 +33,7 @@
 #include <lv/computed.hpp>
 #include <lv/easing.hpp>
 #include <lv/detail/deferred.hpp>
+#include <lv/detail/enumerators.hpp>
 #include <lv/detail/watch.hpp>
 #include <lv/match.hpp>
 #include <lv/one_of.hpp>
@@ -402,6 +403,10 @@ struct shown_options {
   // before the new one is built.
   transition_spec enter{};
   transition_spec leave{};
+  // The same when the change goes back: to a value that comes before the one shown, in the order
+  // the enum declares them. Left out, they are .enter and .leave.
+  transition_spec enter_back{};
+  transition_spec leave_back{};
 };
 
 }  // namespace detail
@@ -462,7 +467,10 @@ struct shown_plan {
   std::size_t slot_align;
   transition_spec enter;
   transition_spec leave;
+  transition_spec enter_back;  // as .enter when the program gives none
+  transition_spec leave_back;
   std::size_t (*arm_now)(const void* source);  // the arm of the state's value
+  std::size_t (*rank_now)(const void* source);  // where the value stands among the enumerators; null for a bool
   const void* source;
 };
 
@@ -476,13 +484,21 @@ struct shown_core : watch_node, deferred_node {
   std::size_t slot_size = 0;
   std::size_t current = no_arm;  // the arm asked for last, also one that shows nothing
   std::uint32_t clock = 0;       // counts the pages that come to the front
+  std::size_t rank = 0;          // where the value shown last stood among the enumerators
+  bool back = false;             // the change that runs goes to a value before the one shown
 };
 
 // How many pages may stay built and hidden: the slots that the page in front and a leaving page
 // do not need.
 inline std::size_t keep_room(const shown_core& c) { return c.slots.size() > 2 ? c.slots.size() - 2 : 0; }
 
-inline bool has_transitions(const shown_plan& p) { return p.enter.step != nullptr || p.leave.step != nullptr; }
+inline bool has_transitions(const shown_plan& p) {
+  return p.enter.step != nullptr || p.leave.step != nullptr || p.enter_back.step != nullptr || p.leave_back.step != nullptr;
+}
+
+// The transitions of the change that runs: the way back, or forward.
+inline const transition_spec& enter_of(const shown_core& c) { return c.back ? c.plan->enter_back : c.plan->enter; }
+inline const transition_spec& leave_of(const shown_core& c) { return c.back ? c.plan->leave_back : c.plan->leave; }
 
 // The slot of the page that is shown or comes in, or null.
 inline shown_slot* front_slot(shown_core& c) {
@@ -624,21 +640,21 @@ inline std::int32_t turning_from(const shown_slot& s, const transition_spec& nex
 }
 
 inline void start_leave(shown_slot& s) {
-  const shown_plan& p = *s.owner->plan;
-  const std::int32_t from = s.phase == slot_phase::entering ? turning_from(s, p.leave) : p.leave.from;
+  const transition_spec& leave = leave_of(*s.owner);
+  const std::int32_t from = s.phase == slot_phase::entering ? turning_from(s, leave) : leave.from;
   s.phase = slot_phase::leaving;
-  if (p.leave.step != nullptr)
-    run_transition(s, p.leave, from);
+  if (leave.step != nullptr)
+    run_transition(s, leave, from);
   else
     retire(s);
 }
 
 inline void start_enter(shown_slot& s, bool backwards) {
-  const shown_plan& p = *s.owner->plan;
-  const std::int32_t from = backwards ? turning_from(s, p.enter) : p.enter.from;
+  const transition_spec& enter = enter_of(*s.owner);
+  const std::int32_t from = backwards ? turning_from(s, enter) : enter.from;
   s.phase = slot_phase::entering;
-  if (p.enter.step != nullptr)
-    run_transition(s, p.enter, from);
+  if (enter.step != nullptr)
+    run_transition(s, enter, from);
   else
     s.phase = slot_phase::shown;
 }
@@ -753,6 +769,11 @@ inline bool switch_with_transition(shown_core& c, std::size_t k, lv_group_t* foc
 inline bool show_arm(shown_core& c, std::size_t k) {
   if (c.current == k) return true;
   c.current = k;
+  if (c.plan->rank_now != nullptr) {
+    const std::size_t rank = c.plan->rank_now(c.plan->source);
+    c.back = rank < c.rank;
+    c.rank = rank;
+  }
   lv_group_t* focus = focus_below(c.holder);
   return has_transitions(*c.plan) ? switch_with_transition(c, k, focus) : switch_at_once(c, k, focus);
 }
@@ -795,7 +816,7 @@ inline bool give_slots(shown_core& c, std::span<shown_slot> slots, std::byte* ro
 
 // A transparent widget that catches the clicks over a leaving page.
 inline bool make_glass(shown_core& c) {
-  if (c.plan->leave.step == nullptr) return true;
+  if (c.plan->leave.step == nullptr && c.plan->leave_back.step == nullptr) return true;
   c.glass = lv_obj_create(c.holder);
   if (c.glass == nullptr) return false;
   lv_obj_remove_style_all(c.glass);
@@ -812,6 +833,7 @@ inline bool start_shown(shown_core& c, std::span<shown_slot> slots, std::byte* r
   watchers.append(c);
   const std::size_t k = c.plan->arm_now(c.plan->source);
   c.current = k;
+  if (c.plan->rank_now != nullptr) c.rank = c.plan->rank_now(c.plan->source);
   if (c.plan->pages[k] == nullptr) return true;
   shown_slot& s = c.slots[0];
   if (!build_page(c, s, k)) return false;
@@ -922,7 +944,7 @@ struct shown_node {
   static consteval std::string_view options_problem() {
     constexpr const auto& o = descend<Path...>(Tree).options;
     if (o.alive == 0) return "lv::shown needs a slot for the page it shows: .alive = 1 or more.";
-    if (o.alive == 1 && (!is_null(o.enter.step) || !is_null(o.leave.step)))
+    if (o.alive == 1 && (!is_null(o.enter.step) || !is_null(o.leave.step) || !is_null(o.enter_back.step) || !is_null(o.leave_back.step)))
       return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2.";
     return {};
   }
@@ -993,6 +1015,21 @@ struct shown_node {
     return found;
   }
 
+  // The transition of the way back: the one given, else the one of the way forward.
+  template <const transition_spec& Back, const transition_spec& Forward>
+  static consteval transition_spec back_or() {
+    return Back.step != nullptr ? Back : Forward;
+  }
+
+  // Where the state's value stands among the enumerators: the direction of a change. None for a bool.
+  static std::size_t rank_of(const void* source) {
+    return enumerator_index(static_cast<const S*>(source)->get());
+  }
+  static consteval std::size_t (*rank_function())(const void*) {
+    if constexpr (std::is_enum_v<value_type>) return &rank_of;
+    return nullptr;
+  }
+
   template <const auto& Tree, std::size_t... Path>
   struct parts {
     static constexpr std::array<const page*, arm_count> pages = []<std::size_t... K>(std::index_sequence<K...>) {
@@ -1013,7 +1050,10 @@ struct shown_node {
                                      slot[1],
                                      descend<Path...>(Tree).options.enter,
                                      descend<Path...>(Tree).options.leave,
+                                     back_or<descend<Path...>(Tree).options.enter_back, descend<Path...>(Tree).options.enter>(),
+                                     back_or<descend<Path...>(Tree).options.leave_back, descend<Path...>(Tree).options.leave>(),
                                      &arm_now<Tree, Path...>,
+                                     rank_function(),
                                      descend<Path...>(Tree).source};
   };
 
