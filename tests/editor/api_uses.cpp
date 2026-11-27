@@ -202,8 +202,10 @@ constinit lv::scaled_font other_reading{barlow_ttf, lv::raw(20 * px)};
 
 constexpr auto dot = lv::image_file<picture_png>;
 constexpr auto kept_dot = lv::encoded_image<picture_png>;
+constexpr auto dot_mask = lv::mask_file<picture_png>;
 static_assert(std::same_as<decltype(dot), const lv_image_dsc_t* const>);  // C API
 static_assert(std::same_as<decltype(kept_dot), const lv_image_dsc_t* const>);  // C API
+static_assert(std::same_as<decltype(dot_mask), const lv_image_dsc_t* const>);  // C API
 
 // ---- state ------------------------------------------------------------------------
 
