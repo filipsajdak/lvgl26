@@ -2,7 +2,7 @@
 
 An icon is a character of an icon font. lvgl26 knows the names of Phosphor's icons, checks each one where it is written, and draws a font of only the icons you name.
 
-An icon is in `#include <lv/icons.hpp>` (see [Which header](which-header.md)). Its font is made by `#include <lv/font.hpp>`.
+An icon is in `#include <lv/icons.hpp>`, and the file of its font in `#include <lv/icons_font.hpp>`, which only the file that draws the font includes. The font is made by `#include <lv/font.hpp>` (see [Which header](which-header.md)).
 
 ![A Back button with an arrow, a number with a minus and a plus, and a gear](media/icons.png)
 
@@ -59,7 +59,7 @@ constexpr auto label_font = type(tok.text.label);
 constexpr auto icon_font  = type(tok.icon.md);
 ```
 
-- `lv::icons::phosphor_bold_ttf` is the file of Phosphor Bold, which the library carries. It is under the MIT licence (`include/lv/icons/LICENSE-Phosphor.txt`).
+- `lv::icons::phosphor_bold_ttf`, from `<lv/icons_font.hpp>`, is the file of Phosphor Bold, which the library carries. It is under the MIT licence (`include/lv/icons/LICENSE-Phosphor.txt`).
 - `lv::glyphs<"arrow-left", "gear">` is the list of characters for the typeface's fourth value. Four icons make a font of four glyphs.
 - The size, the family and the weight of the icons are a typography token, `icon.md`: the token file decides how large the icons are, as it does for text.
 
@@ -80,7 +80,7 @@ error: constexpr message: lv: there is no icon 'arow-left' in Phosphor. Did you 
 
 ## What it costs
 
-- A name is looked up by halving a sorted table of 1,530 names: about 0.1 G instructions for each icon named in a file. A wrong name scans the table once, for the message.
+- A file that names icons pays for the table once, about 0.3 G instructions, and about 0.02 G for each icon: eight icons add 0.5 G to a file that costs 9 G with nothing in it. The font file is a header of its own, because embedding it costs 1 G in each file that reads it.
 - A font of a few icons draws in well under a second (24 px, four glyphs).
 - On the device, nothing but the glyph pictures: the font file does not reach the program.
 

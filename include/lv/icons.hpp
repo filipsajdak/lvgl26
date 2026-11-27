@@ -6,7 +6,8 @@
 //   lv::glyph<"arrow-left">                     the text of one icon: what a label shows
 //   lv::glyphs<"arrow-left", "check", "gear">   the characters a font of those icons holds
 //
-// The font draws only the glyphs it is asked for: name them once, in the font's typeface.
+// The font draws only the glyphs it is asked for: name them once, in the font's typeface. The file of
+// the font is in lv/icons_font.hpp, so that a file that only names icons does not embed it.
 
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
@@ -28,6 +29,9 @@ constexpr char phosphor_names_text[] = {
 #embed "icons/phosphor.names"
     , 0};
 
+// The names text as a view: its length is known, so no loop counts it (a view made from a const char* alone does).
+consteval std::string_view phosphor_names() { return {phosphor_names_text, sizeof phosphor_names_text - 1}; }
+
 // One line of the names text: the name, then the code point in hexadecimal.
 struct icon_entry {
   std::string_view name;
@@ -48,7 +52,7 @@ consteval icon_entry icon_line(std::string_view text, std::size_t& at) {
 // The code point of the icon `name`, or 0. The lines are sorted by name, so the search halves the text and
 // steps back to the start of a line: 11 lines are read, not 1530.
 consteval std::uint32_t code_of_icon(std::string_view name) {
-  const std::string_view text{phosphor_names_text};
+  const std::string_view text = phosphor_names();
   std::size_t low = 0, high = text.size();
   while (low < high) {
     const std::size_t middle = low + (high - low) / 2;
@@ -70,7 +74,7 @@ consteval std::uint32_t code_of_icon(std::string_view name) {
 // the distance only of names about as long as the wanted one (a typo keeps the length), so that the
 // message of a wrong name stays far under the limit of a constant evaluation.
 consteval std::vector<std::string_view> nearest_icons(std::string_view wanted) {
-  const std::string_view text{phosphor_names_text};
+  const std::string_view text = phosphor_names();
   std::vector<std::string_view> best;
   std::vector<std::size_t> far;
   for (std::size_t at = 0; at < text.size();) {
@@ -144,16 +148,5 @@ constexpr auto icon(const detail::lazy_props<"label", D>& p = {}) {
   return label(own);
 }
 
-namespace icons {
-
-// The file of Phosphor Bold (MIT, include/lv/icons/LICENSE-Phosphor.txt), for a typeface of your own:
-//   lv::typeface({{"Phosphor", 700, lv::icons::phosphor_bold_ttf, lv::glyphs<"arrow-left", "gear">}})
-// It does not reach the program: only the glyphs of the fonts you make do. Not `inline`, like the token
-// files: under a sanitizer GCC 16.2 does not take the address of an inline variable for a constant.
-constexpr unsigned char phosphor_bold_ttf[] = {
-#embed "icons/Phosphor-Bold.ttf"
-};
-
-}  // namespace icons
 
 }  // namespace lv
