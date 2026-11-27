@@ -1455,7 +1455,7 @@ lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that
 lvgl26_compile_fail(shown_alive_zero "lv::shown needs a slot for the page it shows: .alive = 1 or more.")
 lvgl26_compile_fail(shown_alive_one_with_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
 lvgl26_compile_fail(shown_alive_one_with_back_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
-lvgl26_compile_fail(shown_alive_one_with_arm_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave of an arm need .alive = 2")
+lvgl26_compile_fail(shown_alive_one_with_arm_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
 lvgl26_compile_fail(shown_page_on_shown_in_arm "a page of another file takes its .on_shown in its own file: constinit const lv::page home_page = lv::page_of<ui, \\{.on_shown = &f\\}>")
 lvgl26_compile_fail(shown_transition_two_properties "contract predicate is false in constant expression")
 lvgl26_compile_fail(page_of_wrong_hook "lv::page_of<ui, \\{.on_shown = ..., .on_front = ...\\}>: the function of .on_shown takes the lv::held of another tree than the page.s. Write void f\\(lv::held<.*a>\\)")

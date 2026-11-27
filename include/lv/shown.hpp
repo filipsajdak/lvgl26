@@ -955,10 +955,8 @@ struct shown_node {
   static consteval std::string_view options_problem() {
     constexpr const auto& o = descend<Path...>(Tree).options;
     if (o.alive == 0) return "lv::shown needs a slot for the page it shows: .alive = 1 or more.";
-    if (o.alive == 1 && (!is_null(o.enter.step) || !is_null(o.leave.step) || !is_null(o.enter_back.step) || !is_null(o.leave_back.step)))
+    if (o.alive == 1 && any_moves<Tree, Path...>())
       return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2.";
-    if (o.alive == 1 && any_arm_moves<Tree, Path...>(std::make_index_sequence<arm_count>{}))
-      return "lv::shown: a page that enters or leaves is alive beside the other one, so .enter and .leave of an arm need .alive = 2.";
     return {};
   }
 
