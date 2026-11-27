@@ -1,5 +1,6 @@
-// Step 3 of the coffee machine tutorial (docs/tutorial.md): pages. The screen of the drinks and
-// the screen of the cup are pages of one state; NEXT and BACK change it, and the new page slides in.
+// Step 3 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): pages. The screen
+// of the drinks and the screen of the cup are pages of one state; NEXT and BACK change it, and the
+// new page slides in.
 //
 //   coffee_3    writes coffee_3.png: the page of the cup half way in
 

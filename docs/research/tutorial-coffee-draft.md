@@ -1,8 +1,10 @@
 # Build a coffee machine in seven steps
 
+> **Draft, not published.** The site and the README carry no coffee tutorial until steps 1 to 7 follow the new design (`design/coffee/`). This text is the tutorial as it stood, for the rewrite. Its code blocks are not checked against the examples here, and steps 1 to 3 have moved on since.
+
 This tutorial builds the screen of a coffee machine, 480 x 320, in seven programs. Each step adds one idea, and the page shows only what changed.
 
-![The finished machine: a title in Barlow, a list of drinks set to espresso, its price, and the buttons Next and Service](media/coffee-7.png)
+![The finished machine: a title in Barlow, a list of drinks set to espresso, its price, and the buttons Next and Service](../media/coffee-7.png)
 
 Each step is a whole program in [`examples/coffee/`](https://github.com/filipsajdak/lvgl26/tree/main/examples/coffee). A test builds it, runs it without a window, and compares the picture it draws with the one on this page.
 
@@ -415,9 +417,9 @@ int geometry(lv::obj screen, lv::mounted<ui>& root) {
 }
 ```
 
-![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](media/coffee-1.png)
+![Step 1: the title CHOOSE A DRINK and the step dots 1 / 4, four tiles with a photo, a name and a price, the espresso tile filled black with lime text, and the button NEXT](../media/coffee-1.png)
 
-See [The tree and its widgets](tree.md), [State and bindings](state.md), [Images](images.md), [Looks](looks.md) and [Fonts](fonts.md).
+See [The tree and its widgets](../tree.md), [State and bindings](../state.md), [Images](../images.md), [Looks](../looks.md) and [Fonts](../fonts.md).
 
 ## 2. Values that say what they are
 
@@ -619,9 +621,9 @@ constexpr auto your_cup = lv::group(
 
 A quantity bound with a format shows its number, and the label beside it says "mL". The program checks this screen against the token file too, and then a stronger cup: 14 g of beans, at 40 mL.
 
-![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](media/coffee-2.png)
+![Step 2: the title YOUR CUP and the step dots 2 / 4; the strength 4 of 5, Strong, with four of five segments filled; the size 40 mL between - and +; the summary of the espresso with 14 g of beans and its price; BACK and BREW](../media/coffee-2.png)
 
-See [Values and units](values.md) and [State and bindings](state.md).
+See [Values and units](../values.md) and [State and bindings](../state.md).
 
 ## 3. Pages
 
@@ -711,9 +713,9 @@ constexpr auto ui = lv::group(
 );
 ```
 
-![Step 3: half way through the slide, the drinks page leaving to the left and the cup page coming in from the right](media/coffee-3.png)
+![Step 3: half way through the slide, the drinks page leaving to the left and the cup page coming in from the right](../media/coffee-3.png)
 
-See [Mounting and slots](mounting.md).
+See [Mounting and slots](../mounting.md).
 
 ## 4. Time
 
@@ -760,9 +762,9 @@ void start_brewing(lv::held<brewing> page) {
 
 The arm of the brewing page names the hook: `lv::is<step::brewing>(brewing, {.on_shown = &start_brewing})`. The ring eases in and out with a token of the token file, `motion.brew`, a cubic Bézier curve.
 
-![Step 4: the brewing page ten seconds in, the ring partly filled around "15 s", and the button Cancel](media/coffee-4.png)
+![Step 4: the brewing page ten seconds in, the ring partly filled around "15 s", and the button Cancel](../media/coffee-4.png)
 
-See [Tasks](tasks.md) and [Animation](animation.md).
+See [Tasks](../tasks.md) and [Animation](../animation.md).
 
 ## 5. A design system you can reuse
 
@@ -869,9 +871,9 @@ constexpr auto go_to(const char* text) {
 
 The drop-down list keeps LVGL's font. A drawn font has no glyph for LVGL's symbols, so the arrow of the list would show as a box.
 
-![Step 5: the page of your cup in Signal's day theme: a white ground, the title and the text in Barlow, the brown sliders and a black button Brew](media/coffee-5.png)
+![Step 5: the page of your cup in Signal's day theme: a white ground, the title and the text in Barlow, the brown sliders and a black button Brew](../media/coffee-5.png)
 
-See [Themes](themes.md) and [Fonts](fonts.md).
+See [Themes](../themes.md) and [Fonts](../fonts.md).
 
 ## 6. Split into files
 
@@ -943,7 +945,7 @@ const lv::drawn_font lv::font_object<"text.title"> = lv::draw<"text.title">(type
 
 - The shell cannot see the size of a page of another file. So the pages take one block of LVGL's heap when the shell is mounted, where step 5 keeps them in the tree.
 
-See [Mounting and slots](mounting.md) and [Fonts](fonts.md).
+See [Mounting and slots](../mounting.md) and [Fonts](../fonts.md).
 
 ## 7. A service page
 
@@ -988,9 +990,9 @@ A program's settings are one file, `lvgl26.json`. The coffee machine's controlle
 }
 ```
 
-![Step 7: the service page twelve cups later: the hardness medium, "12 cups since descaling", "Descale in 88 cups", and the buttons Descaled and Done](media/coffee-7-service.png)
+![Step 7: the service page twelve cups later: the hardness medium, "12 cups since descaling", "Descale in 88 cups", and the buttons Descaled and Done](../media/coffee-7-service.png)
 
-See [Settings](settings.md) and [State and bindings](state.md).
+See [Settings](../settings.md) and [State and bindings](../state.md).
 
 ## What comes next
 
