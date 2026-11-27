@@ -22,12 +22,6 @@
       ]
     },
     {
-      "title": "Tutorial",
-      "pages": [
-        "tutorial.md"
-      ]
-    },
-    {
       "title": "Core ideas",
       "pages": [
         "tree.md",

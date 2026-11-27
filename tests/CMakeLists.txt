@@ -144,6 +144,12 @@ lvgl26_test(one_of_region)
 lvgl26_test(deferred)
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
+# The way back plays .enter_back and .leave_back; the pictures are half way through a slide each way.
+add_executable(shown_direction shown_direction.cpp)
+target_link_libraries(shown_direction PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME shown_direction COMMAND shown_direction A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_forward.png
+                                                      A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_back.png
+                                                      A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_top.png)
 lvgl26_test(shown_kept)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
@@ -1087,6 +1093,7 @@ add_library(cost_probes OBJECT EXCLUDE_FROM_ALL
   ${PROJECT_SOURCE_DIR}/tools/probes/include_lv.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/one_label.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/ten_kinds.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/look_percent.cpp
   ${PROJECT_SOURCE_DIR}/examples/quick_start/main.cpp)
 target_link_libraries(cost_probes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 # The run-time probe of docs/research/visibility.md, run under Valgrind by the same job.
@@ -1448,6 +1455,8 @@ lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a cons
 lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
 lvgl26_compile_fail(shown_alive_zero "lv::shown needs a slot for the page it shows: .alive = 1 or more.")
 lvgl26_compile_fail(shown_alive_one_with_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
+lvgl26_compile_fail(shown_alive_one_with_back_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
+lvgl26_compile_fail(shown_alive_one_with_arm_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
 lvgl26_compile_fail(shown_page_on_shown_in_arm "a page of another file takes its .on_shown in its own file: constinit const lv::page home_page = lv::page_of<ui, \\{.on_shown = &f\\}>")
 lvgl26_compile_fail(shown_transition_two_properties "contract predicate is false in constant expression")
 lvgl26_compile_fail(page_of_wrong_hook "lv::page_of<ui, \\{.on_shown = ..., .on_front = ...\\}>: the function of .on_shown takes the lv::held of another tree than the page.s. Write void f\\(lv::held<.*a>\\)")

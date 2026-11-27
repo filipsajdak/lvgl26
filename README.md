@@ -40,12 +40,6 @@ The dial and its label follow `speed`, and the button's handler `reset` sets it.
 
 Compile time is measured per feature, every night: [the compile cost](docs/research/compile-time.md).
 
-## Build a coffee machine in seven steps
-
-![The finished coffee machine: the title Coffee, a list of drinks set to espresso, the price 2.20 EUR, and the buttons Next and Service](docs/media/coffee-7.png)
-
-[Build a coffee machine in seven steps](docs/tutorial.md). The tutorial grows one screen into a whole program: typed values, pages, a brewing task, fonts of your own, files by screen and settings. Each step is a program in [examples/coffee](examples/coffee) that a test builds. The test compares its picture with the one on the page, byte for byte, as it does for the picture above.
-
 ## State and bindings
 
 A state holds a typed value of the application. Widgets follow it, and so do values computed from it.

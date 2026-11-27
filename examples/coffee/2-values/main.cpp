@@ -1,6 +1,7 @@
-// Step 2 of the coffee machine tutorial (docs/tutorial.md): values that say what they are. The
-// page of the cup sets the strength, a struct of one member, and the size, a quantity in
-// millilitres, with steppers that stop at the ends; the summary follows the chosen drink.
+// Step 2 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): values that say
+// what they are. The page of the cup sets the strength, a struct of one member, and the size, a
+// quantity in millilitres, with steppers that stop at the ends; the summary follows the chosen
+// drink.
 //
 //   coffee_2    checks the layout against the token file, then writes coffee_2.png
 

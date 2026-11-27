@@ -1,6 +1,6 @@
-// Step 1 of the coffee machine tutorial (docs/tutorial.md): the screen where the reader chooses
-// a drink, in the layout of the mock-up (design/coffee). The drinks are a state of an enum, and
-// each tile follows it: the chosen one fills with the loud colour.
+// Step 1 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): the screen where
+// the reader chooses a drink, in the layout of the mock-up (design/coffee). The drinks are a state
+// of an enum, and each tile follows it: the chosen one fills with the loud colour.
 //
 //   coffee_1    checks the layout against the token file, then writes coffee_1.png
 
