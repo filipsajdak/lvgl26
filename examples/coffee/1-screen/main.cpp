@@ -10,6 +10,8 @@
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
 
+#include <utility>
+
 namespace coffee {
 
 constexpr char tokens_json[] = {
@@ -80,25 +82,15 @@ constexpr unsigned char latte_png[] = {
 #embed "../assets/latte-72.png"
 };
 
-// What a tile shows of each drink, named as the drink is.
-struct photos {
-  static constexpr auto espresso   = lv::image_file<espresso_png>;
-  static constexpr auto lungo      = lv::image_file<lungo_png>;
-  static constexpr auto cappuccino = lv::image_file<cappuccino_png>;
-  static constexpr auto latte      = lv::image_file<latte_png>;
+// What a tile shows of each drink, in the order of the enum.
+constexpr decltype(lv::image_file<espresso_png>) photos[] = {
+  lv::image_file<espresso_png>,
+  lv::image_file<lungo_png>,
+  lv::image_file<cappuccino_png>,
+  lv::image_file<latte_png>,
 };
-struct names {
-  static constexpr char espresso[]   = "ESPRESSO";
-  static constexpr char lungo[]      = "LUNGO";
-  static constexpr char cappuccino[] = "CAPPUCCINO";
-  static constexpr char latte[]      = "LATTE";
-};
-struct prices {
-  static constexpr char espresso[]   = "2.20";
-  static constexpr char lungo[]      = "2.40";
-  static constexpr char cappuccino[] = "3.10";
-  static constexpr char latte[]      = "3.40";
-};
+constexpr const char* names[]  = {"ESPRESSO", "LUNGO", "CAPPUCCINO", "LATTE"};
+constexpr const char* prices[] = {"2.20", "2.40", "3.10", "3.40"};
 //! [photos]
 
 //! [parts]
@@ -145,13 +137,13 @@ constexpr auto tile() {
       .style      = lv::look<"tile">,
       .on_clicked = [] { chosen = D; },
     },
-    lv::image({.id = lv::name_of<D>, .src = lv::like<D, photos>}),
+    lv::image({.src = photos[std::to_underlying(D)]}),
     lv::group(
       {.size = {lv::size_content, lv::size_content}, .style = lv::look<"tile-text">},
-      lv::label({.text = lv::like<D, names>, .style = label_text}),
+      lv::label({.text = names[std::to_underlying(D)], .style = label_text}),
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
-        lv::label({.text = lv::like<D, prices>, .style = price_text}),
+        lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
         lv::label({.text = "EUR", .style = lv::look<"currency"> | caption_text})
       )
     )
@@ -159,7 +151,7 @@ constexpr auto tile() {
 }
 
 constexpr auto tiles = lv::group(
-  {.style = lv::look<"tiles">},
+  {.id = "tiles", .style = lv::look<"tiles">},
   lv::group({.style = lv::look<"tile-row">}, tile<drink::espresso>(), tile<drink::lungo>()),
   lv::group({.style = lv::look<"tile-row">}, tile<drink::cappuccino>(), tile<drink::latte>())
 );
@@ -170,8 +162,9 @@ constexpr auto ui = lv::group(
 );
 //! [drinks]
 
-// The display's memory, as large as the screen of the token file.
-constinit lv::frame<tok.size.screen_width->raw(), tok.size.screen_height->raw()> frame;
+// The display's memory: the screen of the token file, size.screen-width x size.screen-height,
+// which main checks.
+constinit lv::frame<480, 320> frame;
 
 }  // namespace coffee
 
@@ -183,14 +176,16 @@ int main() {
   for (int i = 0; i < 5; ++i) app.advance(10 * lv::ms), app.step();  // past the first refresh
 
   //! [geometry]
-  // The screen keeps the sizes of the design: each is a token, or a formula of tokens.
+  // The screen keeps the sizes of the design: each is a token, or a formula of tokens. The header
+  // is target high, the footer target + space-4, and the content between them the rest.
   using coffee::tok;
-  const auto target = tok.size.target->raw(), space_4 = tok.space._4->raw();
-  const auto photo = root->get<"espresso">();
-  if (root->get<"header">().get<"height">() != target) return 4;
-  if (root->get<"footer">().get<"height">() != target + space_4) return 5;
-  if (photo.get<"x">() != tok.layout.pad->raw()) return 6;  // the padding of a tile
-  if (photo.get<"width">() * 2 != target * 3) return 7;     // 1.5 x target
+  const auto width = tok.size.screen_width->raw(), height = tok.size.screen_height->raw();
+  const auto header = tok.size.target->raw(), footer = header + tok.space._4->raw();
+  const auto screen = display.screen();
+  if (screen.get<"width">() != width || screen.get<"height">() != height) return 8;
+  if (root->get<"header">().get<"height">() != header) return 4;
+  if (root->get<"footer">().get<"height">() != footer) return 5;
+  if (root->get<"tiles">().get<"height">() != height - header - footer) return 6;
   //! [geometry]
 
   // The reader picks a lungo: its tile fills, and the espresso's empties.
