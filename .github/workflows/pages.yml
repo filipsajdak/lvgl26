@@ -7,8 +7,10 @@ on:
     branches: [main]
     paths: ['site/**', 'docs/**', 'examples/quick_start/**', 'tools/check_site.py', 'tools/docs.py',
             'tools/rules.py', 'tools/docs_page.html', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
+            'tools/wasm/page/**', 'tools/wasm/site-demos.py',
             '.github/workflows/pages.yml']
-  # The trend of the compile cost is written from the branch `metrics`, which the nightly run adds to.
+  # The trend of the compile cost is written from the branch `metrics`, which the nightly run adds to,
+  # and the WebAssembly demos come from the release `wasm-demos`, which the nightly run updates.
   schedule:
     - cron: '47 6 * * *'
   workflow_dispatch:
@@ -40,6 +42,22 @@ jobs:
           git fetch --depth 1 origin metrics:refs/remotes/origin/metrics || true
           git show origin/metrics:history.jsonl > /tmp/history.jsonl 2>/dev/null || : > /tmp/history.jsonl
           python3 tools/cost_page.py /tmp/history.jsonl site/metrics.html
+      # The modules of examples/wasm, as the nightly job web-browser published them after their
+      # frames equalled the host build's and they ran in Chrome. They are not built here: the
+      # compiler is GCC trunk with an unmerged back end, and the site must not wait for it. Without
+      # the release (before the first nightly run on main) the pages say the module is not there yet.
+      - name: Add the WebAssembly demos
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/wasm-demos
+          if gh release download wasm-demos --repo "$GITHUB_REPOSITORY" --dir /tmp/wasm-demos \
+               --pattern counter.wasm --pattern bounce.wasm; then
+            ls -l /tmp/wasm-demos
+          else
+            echo "::warning::No release wasm-demos yet: the demo pages go out without their modules."
+          fi
+          python3 tools/wasm/site-demos.py /tmp/wasm-demos
       - name: Check links and assets
         run: python3 tools/check_site.py
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

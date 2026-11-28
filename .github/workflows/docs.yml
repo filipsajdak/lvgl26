@@ -8,7 +8,7 @@ on:
             'docs/**', 'site/**', 'examples/quick_start/**', 'tools/docs.py', 'tools/docs_page.html',
             'tools/rules.py', 'tools/check_includes.py', 'tools/test_docs.py', 'tools/test_rules.py',
             'tools/check_site.py', 'tools/cost_page.py', 'tools/cost_history.py', 'tools/metrics/probes.json',
-            '.github/workflows/docs.yml']
+            'tools/wasm/site-demos.py', 'tools/wasm/page/**', '.github/workflows/docs.yml']
 
 jobs:
   docs:
@@ -36,5 +36,7 @@ jobs:
           python3 tools/docs.py build
       - name: Write the compile-cost page, empty here (pages.yml fills it from the history)
         run: python3 tools/cost_page.py /dev/null site/metrics.html
+      - name: Write the WebAssembly demo pages, without modules here (pages.yml adds them)
+        run: python3 tools/wasm/site-demos.py
       - name: Check the site
         run: python3 tools/check_site.py
