@@ -220,7 +220,7 @@ consteval void check_size(std::uint32_t w, std::uint32_t h, std::uint32_t stride
 consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, std::size_t most,
                                            std::uint32_t align = LV_DRAW_BUF_STRIDE_ALIGN) {
   const std::uint32_t w = png_reader::width_of(file), h = png_reader::height_of(file);
-  check_size(w, h, depth == mask_depth ? w : aligned(w * (depth == 16 ? 2 : 4), align), most);
+  check_size(w, h, layout_for(w, h, false, depth, align).stride, most);  // a stride with alpha is never wider
   const png_source source{file.data(), file.size()};
   const image_layout form = stored_layout(source, depth, align);
   lv_image_dsc_t dsc{};
