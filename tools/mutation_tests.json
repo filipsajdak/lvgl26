@@ -321,7 +321,7 @@
       "targets": "icons icons_font"
     },
     "include/lv/gesture.hpp": {
-      "tests": "^gesture$|fail_hold_|fail_swiped",
+      "tests": "^gesture$|^gesture_violation_|fail_hold_|fail_swiped",
       "targets": "gesture"
     },
     "include/lv/signal_gesture.hpp": {
