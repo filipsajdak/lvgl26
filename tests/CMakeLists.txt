@@ -234,6 +234,12 @@ add_test(NAME options_violation_enum_state_in_set
 lvgl26_test(animate)
 # Local style values: of the main part with the plain call, of a part and a state with lv::in.
 lvgl26_test(animate_style)
+# lv::animate on a part or a state with no widget, no property or two, too long a time, a curve LVGL cannot follow.
+foreach(case in_no_widget in_no_property in_two_properties in_too_long in_unusable_curve)
+  add_test(NAME animate_style_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:animate_style> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
 add_test(NAME unsigned_values_violation_negative

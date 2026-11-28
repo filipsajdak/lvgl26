@@ -9,6 +9,8 @@
 
 #include <concepts>
 #include <cstdint>
+#include <cstring>
+#include <string_view>
 
 namespace {
 
@@ -179,12 +181,31 @@ void an_animation_that_loses_in_first_is_deleted(lv::obj screen) {
   lv_obj_delete(label.raw());
 }
 
+// Each breaks a precondition of lv::animate on a part or a state. The values come from the command line,
+// so that the compiler cannot fold the call.
+int broken(std::string_view which, int argc) {
+  lv::view<"arc"> arc{lv_arc_create(lv_screen_active())};
+  const double far = argc * 2.0;  // 4: past the end of a curve's x
+  if (which == "in_no_widget")
+    static_cast<void>(lv::animate(lv::in<"knob">(lv::view<"arc">{nullptr}), {.opa = {0 * pct, 100 * pct}}, 100 * ms));
+  if (which == "in_no_property") static_cast<void>(lv::animate(lv::in<"knob">(arc), {}, 100 * ms));
+  if (which == "in_two_properties")
+    static_cast<void>(lv::animate(lv::in<"knob">(arc), {.opa = {0 * pct, 100 * pct}, .translate_x = {0 * px, 5 * px}}, 100 * ms));
+  if (which == "in_too_long")
+    static_cast<void>(lv::animate(lv::in<"knob">(arc), {.opa = {0 * pct, 100 * pct}}, lv::duration{std::uint32_t{1} << (argc * 15 + 1)}));
+  if (which == "in_unusable_curve")
+    static_cast<void>(lv::animate(lv::in<"knob">(arc), {.opa = {0 * pct, 100 * pct}}, 100 * ms, lv::bezier{far, 0, 0.5, 1}));
+  std::printf("no contract violation\n");
+  return 0;
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
   lv_init();
   lv_test_display_create(320, 240);
   auto screen = lv::screen_active();
+  if (argc == 2) return broken(argv[1], argc);
 
   the_main_part_is_animated_by_the_plain_call(screen);
   a_part_and_a_state_are_named_with_lv_in(screen);
