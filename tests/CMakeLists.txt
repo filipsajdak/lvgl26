@@ -102,10 +102,11 @@ lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
 lvgl26_test(gesture)
+lvgl26_test(gesture_internals)
 # A wait on a widget that is none, and a wait armed by no task, end the program.
 foreach(case swipe_of_nothing hold_of_nothing swipe_without_task hold_without_task)
   add_test(NAME gesture_violation_${case}
-           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:gesture> -DCASE=${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:gesture_internals> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
 lvgl26_test(input_queue)
