@@ -121,7 +121,7 @@
       "targets": "all_header smoke l1_views"
     },
     "include/lv/animate.hpp": {
-      "tests": "^animate$|^animate_style$|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_animate_needs_unit$|^fail_animate_not_a_number$|^fail_animate_one_end$|^fail_animate_size_content$|^fail_animate_style_plain_number$|^fail_in_",
+      "tests": "^animate$|^animate_style$|^animate_style_violation_|^fail_animate_mixed_units$|^fail_animate_mixed_units_folded$|^fail_animate_needs_unit$|^fail_animate_not_a_number$|^fail_animate_one_end$|^fail_animate_size_content$|^fail_animate_style_plain_number$|^fail_in_",
       "targets": "animate animate_style"
     },
     "include/lv/application.hpp": {
