@@ -70,8 +70,11 @@ class nonnegative {
   constexpr U get() const { return v_; }
 };
 
+/// The way a finger moved in a swipe.
+enum class swipe { left, right, up, down };
+
 /// An event handler in a props struct: a function, or a lambda without captures.
-/// It takes nothing, or an lv::event.
+/// It takes nothing, or an lv::event; `on_swiped` takes an lv::swipe.
 struct handler {
   constexpr handler() = default;
 
@@ -81,6 +84,11 @@ struct handler {
 
   template <class F>
     requires(!std::convertible_to<F, void (*)()>) && std::convertible_to<F, void (*)(event)>
+  constexpr handler(F) {}
+
+  template <class F>
+    requires(!std::convertible_to<F, void (*)()>) && (!std::convertible_to<F, void (*)(event)>) &&
+            std::convertible_to<F, void (*)(swipe)>
   constexpr handler(F) {}
 };
 

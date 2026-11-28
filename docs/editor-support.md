@@ -66,6 +66,8 @@ A token file outside the source directory needs its name:
 lvgl26_editor_support(TOKENS ${CMAKE_SOURCE_DIR}/../design/tokens.json)
 ```
 
+A token of a length in pixels, a time, a number or a font weight holds its value in the stub too, so code that needs it while it compiles, such as `lv::frame<tok.size.width->raw(), tok.size.height->raw()>`, reads in the editor. A colour, a curve and the composite tokens hold no value there.
+
 A look names a group of a token file: `lv::look<"tile-print">`. The stub of each token file lists its groups, so the editor marks a look that names none, where it is written. It does not check the entries of a group against the style properties, nor the path of `lv::look_of<"tile", Page>`, whose last name comes from an enumerator that Clang cannot read: GCC checks both when the program is built.
 
 When you change a token file, the next build runs CMake again, and the editor sees the new tokens. A new token file needs one run of CMake by hand.

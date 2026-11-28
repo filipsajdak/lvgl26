@@ -48,6 +48,19 @@ constexpr auto numeral = type(tok.text.numeral);
 
 The tokens of this example are [examples/fonts/tokens.json](../examples/fonts/tokens.json).
 
+## More than the default characters
+
+A font holds the characters from the space to the tilde, and only what you name when you name any. A price with a euro sign, or a line with a middle dot, needs more than that, and naming them alone would leave out the letters. `lv::ascii_plus<"...">` is the default characters and the ones you add:
+
+<!-- snippet: tests/font.cpp extra -->
+
+- It goes where the characters go: the fourth value of a typeface entry, or `lv::font<ttf>(size, lv::ascii_plus<"€·">)`. The split form takes the same typeface.
+- Each extra character costs what one of the 95 costs: about 0.75 G instructions of the compiler and about 120 bytes of flash at 16 px (measured with Barlow Medium). Two extra characters make a font 2.4 percent slower to build and 240 bytes larger.
+- The first character outside the range turns the character map into a list: 2 bytes for each character of the font, about 200 bytes once, and LVGL finds a glyph by a search in the list and not by its place. Characters up to U+FFFF, 255 in all.
+- `lv::latin1` is the default set and the accents of Latin-1 (U+00A0 to U+00FF), 191 characters, and `lv::latin1_plus<"€">` adds more: a text in French, German, Spanish, Italian or Portuguese. **It is the dear one**: 96 more glyphs than the default set cost about 86 G instructions of the compiler (a build of 11 seconds and 0.9 GB for one font at 16 px, against 64 G) and about 12 KB of flash for each font and size. Name the few accents that a text needs with `lv::ascii_plus<"éè">` when it needs a few.
+- Latin-1 stops at U+00FF. Polish (ą ć ę ł ń ś ź ż), Czech, Turkish and the euro sign are outside it: name them with `lv::ascii_plus` or `lv::latin1_plus<"ąćęłńśźż€">`.
+- A character the file lacks stops the build and names it. Text that is not UTF-8 stops it, and so do more than 255 characters.
+
 ## Use them
 
 <!-- snippet: examples/fonts/main.cpp tree -->

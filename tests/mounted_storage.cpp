@@ -312,6 +312,16 @@ void in_caller_memory(lv::obj screen) {
   check(alive == 0 && lv_obj_get_child_count(screen.raw()) == children);
 }
 
+// Memory that is larger than the tree needs is fine: the tree is built at its start.
+void in_larger_caller_memory(lv::obj screen) {
+  alignas(lv::mounted<ui>) std::array<std::byte, lv::storage_size<ui> + 16> memory;
+  built_at.clear();
+  auto& root = lv::mount_in<ui>(memory, screen);
+  check(static_cast<void*>(&root) == memory.data() && static_cast<bool>(root) && alive == 3);
+  std::destroy_at(&root);
+  check(alive == 0);
+}
+
 // Code that keeps an lv::mounted keeps the prvalue: a returned call, a member, an
 // optional. Each is built in its final place.
 lv::mounted<ui> make(lv::obj parent) { return lv::mount<ui>(parent); }
@@ -447,6 +457,17 @@ constexpr violation violations[] = {
        static_cast<void>(misused.mount(screen));
        return misused.mount(screen).has_value() ? 1 : 0;
      }},
+    {"get_not_mounted", [](lv::obj) { return misused.get<"title">().raw() == nullptr ? 0 : 1; }},
+    {"mount_in_too_small",
+     [](lv::obj screen) {
+       alignas(lv::mounted<ui>) static std::array<std::byte, lv::storage_size<ui>> memory;
+       return &lv::mount_in<ui>(std::span<std::byte>(memory).first(memory.size() - 1), screen) == nullptr ? 0 : 1;
+     }},
+    {"mount_in_misaligned",
+     [](lv::obj screen) {
+       alignas(lv::mounted<ui>) static std::array<std::byte, lv::storage_size<ui> + alignof(lv::mounted<ui>)> memory;
+       return &lv::mount_in<ui>(std::span<std::byte>(memory).subspan(1), screen) == nullptr ? 0 : 1;
+     }},
     {"unmount_after_parent",
      [](lv::obj screen) {
        auto box = screen.add<"obj">();
@@ -479,6 +500,7 @@ int main(int argc, char** argv) {
   opens_a_scope(screen);
   ends_with_the_root(screen);
   in_caller_memory(screen);
+  in_larger_caller_memory(screen);
   kept_where_built(screen);
   a_tree_without_storage(screen);
   unmount_and_mount_again(screen);

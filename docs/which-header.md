@@ -17,12 +17,13 @@ The table is written from what each header declares, read by reflection (`docs/r
 | Header | Names |
 |---|---|
 | `<lv/encoded_image.hpp>` | `lv::encoded_image` |
-| `<lv/font.hpp>` | `lv::face_file`, `lv::font`, `lv::typeface` |
-| `<lv/image.hpp>` | `lv::image_file` |
+| `<lv/font.hpp>` | `lv::ascii_plus`, `lv::face_file`, `lv::font`, `lv::latin1`, `lv::latin1_plus`, `lv::typeface` |
+| `<lv/image.hpp>` | `lv::image_file`, `lv::mask_file` |
 | `<lv/list.hpp>` | `lv::each`, `lv::list`, `lv::list_error`, `lv::row_view` |
 | `<lv/look.hpp>` | `lv::design`, `lv::design_of`, `lv::draw`, `lv::drawn_font`, `lv::font_object`, `lv::font_of`, `lv::look`, `lv::look_of` |
+| `<lv/mode_look.hpp>` | `lv::mode_designs`, `lv::mode_designs_of`, `lv::mode_look` |
 | `<lv/one_of.hpp>` | `lv::held`, `lv::not_mounted`, `lv::one_of` |
-| `<lv/pointer.hpp>` | `lv::contact`, `lv::most_pointer_samples`, `lv::pointer`, `lv::pointer_feed`, `lv::pointer_feeder`, `lv::pointer_sample`, `lv::pressed`, `lv::released` |
+| `<lv/pointer.hpp>` | `lv::contact`, `lv::gesture_limits`, `lv::gesture_settings`, `lv::most_pointer_samples`, `lv::pointer`, `lv::pointer_feed`, `lv::pointer_feeder`, `lv::pointer_sample`, `lv::pressed`, `lv::released` |
 | `<lv/repeat.hpp>` | `lv::caption`, `lv::field`, `lv::for_each`, `lv::for_each_field`, `lv::like`, `lv::name_of`, `lv::repeat_part` |
 | `<lv/runtime.hpp>` | `lv::load_error`, `lv::load_failure`, `lv::runtime` |
 | `<lv/scaled_font.hpp>` | `lv::scaled_font` |
@@ -35,7 +36,7 @@ These are not in `<lv/all.hpp>`, because they are a platform, a design system or
 
 | Header | What it is |
 |---|---|
-| `<lv/signal.hpp>`, `<lv/signal_type.hpp>`, `<lv/signal_fonts.hpp>`, `<lv/signal_lamps.hpp>` | Signal, the design system of the examples: its themes, its fonts (drawn in each file, or linked once from `lvgl26::signal_type`), its lamp colours |
+| `<lv/signal.hpp>`, `<lv/signal_type.hpp>`, `<lv/signal_fonts.hpp>`, `<lv/signal_lamps.hpp>`, `<lv/signal_motion.hpp>` | Signal, the design system of the examples: its themes, its fonts (drawn in each file, or linked once from `lvgl26::signal_type`), its lamp colours, its durations and easings |
 | `<lv/host.hpp>` | The operating system's clock |
 | `<lv/ui_scheduler.hpp>` | Work posted from other threads |
 | `<lv/mcp.hpp>` | The agent kit's server |

@@ -30,6 +30,7 @@ UNITS = [
     ("a time", "lv::duration"),
     ("an opacity", "lv::opa"),
     ("a color", "lv_color_t"),
+    ("lv::detail::mode_look_ref", "lv::stub::mode_look_ref"),
 ]
 FONT = "a font from a typography token"
 TOKEN = "a design token"
@@ -104,8 +105,14 @@ def property_comment(member: dict, enums: dict) -> str:
     return "\n".join(lines)
 
 
+# A handler member that is no event of its own: `on_swiped` is LV_EVENT_GESTURE, with the direction.
+HANDLERS_OF_AN_EVENT = {"on_swiped": "LV_EVENT_GESTURE"}
+
+
 def event_enumerator(member_name: str) -> str:
     """`on_clicked` -> `LV_EVENT_CLICKED`."""
+    if member_name in HANDLERS_OF_AN_EVENT:
+        return HANDLERS_OF_AN_EVENT[member_name]
     return "LV_EVENT_" + member_name.removeprefix("on_").upper()
 
 
@@ -121,8 +128,9 @@ def props_member(member: dict, enums: dict) -> str:
     if kind == "style":
         return f"  /// The style of the widget {style_part(name)}: design tokens, or a named lv::style.\n  style_t {name}{{}};"
     if kind == "event":
+        takes = "an lv::swipe, the direction" if name in HANDLERS_OF_AN_EVENT else "nothing, or an lv::event"
         return (f"  /// Called on {event_enumerator(name)}: a function, or a lambda without captures.\n"
-                f"  /// It takes nothing, or an lv::event.\n  lv::handler {name}{{}};")
+                f"  /// It takes {takes}.\n  lv::handler {name}{{}};")
     if kind == "id":
         return '  /// A name for this node: root->get<"name">() is its view after lv::mount.\n  id_name id{};'
     return f"{property_comment(member, enums)}\n  {member_type(member)} {name}{{}};"
@@ -142,7 +150,7 @@ def property_group(name: str) -> int:
     """0 for the id, 1 for properties, 2 for styles, 3 for handlers: include/lv/props.hpp, property_group."""
     if name == "id":
         return 0
-    if name == "style" or name.startswith("style_"):
+    if name == "look" or name == "style" or name.startswith("style_"):
         return 2
     return 3 if name.startswith("on_") else 1
 
@@ -184,16 +192,38 @@ def animatable_type(member: dict) -> str | None:
     return unit if unit in ANIMATABLE else None
 
 
+def style_animatable_type(member: dict) -> str | None:
+    """The type of a style property that lv::animate can run: a design value of one number, or nothing."""
+    takes = member.get("takes", [])
+    if len(takes) != 1 or "enum" in takes[0]:
+        return None
+    value = value_type(takes[0]["write"])
+    if not value.startswith("lv::styled<"):
+        return None
+    unit = value.removeprefix("lv::styled<").removesuffix(">")
+    return unit if unit in ANIMATABLE else None
+
+
 def animatable_struct(reference: dict, widget: str) -> str:
+    """The properties of `widget` that lv::animate runs: its setters of one number, then the style properties
+    that no setter of it names. The widget "" is the struct of lv::in: the style properties alone."""
     lines = []
-    for member in members_of(reference, widget):
+    names = set()
+    for member in members_of(reference, widget) if widget else []:
         unit = animatable_type(member)
         if unit is not None:
+            names.add(member["name"])
             lines.append(f"  /// From and to: {member['takes'][0]['write']}. Animates {member['sets']}.\n"
                          f"  lv::from_to<{unit}> {member['name']}{{}};")
-    name = identifier(widget)
+    for member in reference["style"]:
+        unit = style_animatable_type(member)
+        if unit is not None and member["name"] not in names:
+            lines.append(f"  /// From and to: a {unit.removeprefix('lv::')}. Animates the style property {member['name']}.\n"
+                         f"  lv::from_to<{unit}> {member['name']}{{}};")
+    name = identifier(widget) if widget else "style"
     members = "\n".join(lines)
-    return (f'/// The properties of "{widget}" that lv::animate can run, each with its two ends.\n'
+    what = f'"{widget}"' if widget else "a part and a state (lv::in)"
+    return (f'/// The properties of {what} that lv::animate can run, each with its two ends.\n'
             f"struct animatable_{name} {{\n{members}\n}};\n"
             f'template <>\nstruct animatable_for<"{widget}"> {{\n  using type = animatable_{name};\n}};')
 
@@ -222,7 +252,7 @@ def getters(reference: dict) -> list[str]:
 def events_struct(reference: dict) -> str:
     lines = []
     for member in reference["base"]:
-        if member.get("kind") != "event":
+        if member.get("kind") != "event" or member["name"] in HANDLERS_OF_AN_EVENT:
             continue
         code = event_enumerator(member["name"])
         name = "gone" if code == "LV_EVENT_DELETE" else member["name"].removeprefix("on_")
@@ -263,7 +293,7 @@ def header(reference: dict, source: str) -> str:
         *enums,
         style_struct(reference),
         *[props_struct(reference, widget) for widget in widgets],
-        *[animatable_struct(reference, widget) for widget in widgets],
+        *[animatable_struct(reference, widget) for widget in [*widgets, ""]],
         *getters(reference),
         events_struct(reference),
         theme_structs(reference),

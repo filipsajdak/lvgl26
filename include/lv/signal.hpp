@@ -21,6 +21,10 @@
 
 namespace lv::signal {
 
+// The two looks of Signal, as a state a display can follow: `display.follow(mode, {day, dark})`
+// with the themes in this order (lv/display.hpp).
+enum class mode { day, dark };
+
 namespace detail {
 
 // The settings of Signal's own token files, which are in the standard's forms whatever the project sets.

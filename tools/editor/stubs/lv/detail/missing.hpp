@@ -76,10 +76,23 @@ inline constexpr auto look = [] {
   return 0;
 }();
 
+template <detail::fixed Paths, class D = override>
+inline constexpr auto mode_look = [] {
+  static_assert(detail::header_missing<D>, "lv::mode_look is in <lv/mode_look.hpp>: add #include <lv/mode_look.hpp>");
+  return 0;
+}();
+
 template <const auto& File>
   requires detail::embedded_bytes<decltype(File)>
 inline constexpr const lv_image_dsc_t* image_file = [] {
   static_assert(detail::header_missing<decltype(File)>, "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>");
+  return static_cast<const lv_image_dsc_t*>(nullptr);
+}();
+
+template <const auto& File>
+  requires detail::embedded_bytes<decltype(File)>
+inline constexpr const lv_image_dsc_t* mask_file = [] {
+  static_assert(detail::header_missing<decltype(File)>, "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>");
   return static_cast<const lv_image_dsc_t*>(nullptr);
 }();
 

@@ -46,6 +46,25 @@ The compiler looks at the picture and at the display's colour depth, and chooses
 - An opaque picture in the display's own format is drawn by copying rows.
 - Nothing is compressed. LVGL's compressed forms need the whole picture on the heap to draw it.
 
+## A mask that a style tints
+
+A shape that is drawn in one colour, such as steam or a shadow, needs no colour in its pixels. `lv::mask_file` stores one byte for each pixel, and the style `image_recolor` paints it:
+
+```cpp
+constexpr unsigned char steam_png[] = {
+#embed "steam.png"
+};
+
+constexpr auto steam = lv::mask_file<steam_png>;
+```
+
+- A mask is in `#include <lv/image.hpp>` and is the `.src` of an `lv::image`, like `lv::image_file`.
+- The byte of a pixel is its alpha when the file has a see-through pixel. Otherwise it is the grey value of the pixel, so a white shape on black works as it is.
+- The grey value is `(77 red + 150 green + 29 blue) / 256`, the weights of Rec. 601.
+- The form is A8 at 8 bits for each pixel, on a display of any colour depth. A picture of 200 x 200 pixels is 40 KB in flash.
+- A mask is always decoded by the compiler. `lv::encoded_image` has none, because LVGL's decoders make coloured pixels.
+- The colour comes from a token: `.image_recolor` with `.image_recolor_opa` of 255.
+
 ## What a picture costs
 
 Measured once on one machine, as the work of the compiler:

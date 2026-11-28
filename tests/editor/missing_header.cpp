@@ -40,6 +40,9 @@ auto card = lv::look<"queue.card">;
 // expected-error@*:* {{lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>}}
 auto picture = lv::image_file<png>;
 
+// expected-error@*:* {{lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>}}
+auto mask = lv::mask_file<png>;
+
 // expected-error@*:* {{lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>}}
 auto encoded = lv::encoded_image<png>;
 

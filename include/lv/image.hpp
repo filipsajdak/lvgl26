@@ -10,7 +10,15 @@
 //
 //   lv::image({.src = logo})
 //
-// The stored form follows the picture and the display (LVGL's colour depth):
+// A mask, which a style tints with image_recolor, is an alpha-only picture, one byte for each pixel:
+//
+//   constexpr auto steam = lv::mask_file<steam_png>;
+//
+// Its bytes are the PNG's alpha when some pixel is see-through, and otherwise the grey value of the pixel
+// (0.299 red + 0.587 green + 0.114 blue), so a white shape on black works as it is. The form does not
+// depend on the display's colour depth.
+//
+// The stored form of a picture follows the picture and the display (LVGL's colour depth):
 //
 //   every pixel opaque     the display's own pixels: RGB565, or XRGB8888 at 32 bits
 //   some pixels see-through   RGB565 with an alpha plane, or ARGB8888 at 32 bits
@@ -63,9 +71,13 @@ struct image_layout {
 // The bytes of a row of `row` bytes, when rows start at a multiple of `align`.
 consteval std::uint32_t aligned(std::uint32_t row, std::uint32_t align) { return (row + align - 1) / align * align; }
 
+// The depth that stands for a mask in the functions below: one byte for each pixel, whatever the display.
+inline constexpr int mask_depth = 8;
+
 // How a picture is stored: sixteen bits for each pixel, or thirty-two, with an alpha plane
 // (RGB565A8) or an alpha byte (ARGB8888) when some pixel is see-through.
 consteval image_layout layout_for(std::uint32_t w, std::uint32_t h, bool alpha, int depth, std::uint32_t align) {
+  if (depth == mask_depth) return {LV_COLOR_FORMAT_A8, w, static_cast<std::size_t>(w) * h};
   if (depth != 16) {
     const std::uint32_t stride = aligned(w * 4, align);
     return {alpha ? LV_COLOR_FORMAT_ARGB8888 : LV_COLOR_FORMAT_XRGB8888, stride, static_cast<std::size_t>(stride) * h};
@@ -88,6 +100,20 @@ consteval void write_rgb565(const png_reader::picture& p, bool alpha, std::uint3
       const unsigned v = (c.r >> 3) << 11 | (c.g >> 2) << 5 | c.b >> 3;
       *colour++ = static_cast<std::uint8_t>(v), *colour++ = static_cast<std::uint8_t>(v >> 8);
       if (alpha) *mask++ = c.a;
+    }
+  }
+}
+
+// One byte for each pixel: its alpha when the picture has a see-through pixel, otherwise its grey value
+// (Rec. 601 luma in integers: 77, 150 and 29 are 0.299, 0.587 and 0.114 of 256).
+consteval void write_a8(const png_reader::picture& p, std::uint8_t* out) {
+  const bool from_alpha = has_alpha(p);
+  const std::size_t from = p.w * p.step;
+  for (std::size_t y = 0; y < p.h; ++y) {
+    const unsigned char* at = p.bits() + y * (from + 1) + 1;
+    for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
+      const auto c = png_reader::pixel(p, at);
+      *out++ = from_alpha ? c.a : static_cast<std::uint8_t>((77u * c.r + 150u * c.g + 29u * c.b) >> 8);
     }
   }
 }
@@ -147,7 +173,9 @@ consteval std::array<std::uint8_t, Size> pixels_of(png_source file, const unsign
                                                    int depth) {
   const auto p = png_reader::picture_from(bytes_of(file), rows);
   std::array<std::uint8_t, Size> out{};
-  if (depth == 16)
+  if (depth == mask_depth)
+    write_a8(p, out.data());
+  else if (depth == 16)
     write_rgb565(p, form.format == LV_COLOR_FORMAT_RGB565A8, form.stride, out.data());
   else
     write_argb8888(p, form.stride, out.data());
@@ -192,7 +220,7 @@ consteval void check_size(std::uint32_t w, std::uint32_t h, std::uint32_t stride
 consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, std::size_t most,
                                            std::uint32_t align = LV_DRAW_BUF_STRIDE_ALIGN) {
   const std::uint32_t w = png_reader::width_of(file), h = png_reader::height_of(file);
-  check_size(w, h, aligned(w * (depth == 16 ? 2 : 4), align), most);
+  check_size(w, h, depth == mask_depth ? w : aligned(w * (depth == 16 ? 2 : 4), align), most);
   const png_source source{file.data(), file.size()};
   const image_layout form = stored_layout(source, depth, align);
   lv_image_dsc_t dsc{};
@@ -209,6 +237,10 @@ consteval const lv_image_dsc_t* make_image(png_reader::bytes file, int depth, st
 template <const auto& File, class O = override>
 inline constexpr const lv_image_dsc_t* image_of = make_image(File, LV_COLOR_DEPTH, detail::project<O>.limits.compile_time_image.value);
 
+// The mask of the PNG file: the same limit, and the same decoding, with one byte for each pixel.
+template <const auto& File, class O = override>
+inline constexpr const lv_image_dsc_t* mask_of = make_image(File, mask_depth, detail::project<O>.limits.compile_time_image.value);
+
 }  // namespace detail
 
 // The picture of the embedded PNG file `File`, decoded by the compiler: what an
@@ -216,5 +248,12 @@ inline constexpr const lv_image_dsc_t* image_of = make_image(File, LV_COLOR_DEPT
 template <const auto& File>
   requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/image.hpp">
 inline constexpr const lv_image_dsc_t* image_file<File> = detail::image_of<File>;
+
+
+// The alpha-only picture of the embedded PNG file `File`, for a style to tint with image_recolor:
+// the alpha of the file when some pixel is see-through, otherwise the grey value of each pixel.
+template <const auto& File>
+  requires detail::embedded_bytes<decltype(File)> && detail::included<"lv/image.hpp">
+inline constexpr const lv_image_dsc_t* mask_file<File> = detail::mask_of<File>;
 
 }  // namespace lv

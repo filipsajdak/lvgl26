@@ -1,0 +1,8 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "Signal, gesture limits. Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit.",
+  "swipe-distance": {"$type": "dimension", "$value": {"value":50,"unit":"px"}},
+  "swipe-speed": {"$type": "dimension", "$value": {"value":3,"unit":"px"}},
+  "scroll-limit": {"$type": "dimension", "$value": {"value":10,"unit":"px"}},
+  "long-press": {"$type": "duration", "$value": {"value":400,"unit":"ms"}}
+}

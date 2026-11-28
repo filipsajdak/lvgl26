@@ -34,8 +34,8 @@ from token_stubs import member_name  # noqa: E402  (the one copy of the compiler
 
 REFERENCE = ROOT / "docs" / "reference" / "lvgl-v9.6.0.json"
 SOURCE_SUFFIXES = (".cpp", ".hpp", ".h", ".cc", ".cxx", ".ipp")
-# The code just before a look's string: lv::look< or lv::look_of<, with any space.
-LOOK_HEAD = re.compile(r"\blv\s*::\s*(look|look_of)\s*<\s*$")
+# The code just before a look's string: lv::look<, lv::look_of< or lv::mode_look<, with any space.
+LOOK_HEAD = re.compile(r"\blv\s*::\s*(look|look_of|mode_look)\s*<\s*$")
 RAW_PREFIX = re.compile(r"(?:\b|^)(?:u8|u|U|L)?R$")
 # How much code before a string is enough to see lv::look_of< in it, with some space.
 CODE_KEPT = 64
@@ -185,7 +185,7 @@ def uses_in(text: str) -> tuple[set[str], set[str]]:
     """The group paths named in `text`, and the prefixes named by lv::look_of, both canonical."""
     used, prefixes = set(), set()
     for kind, contents in look_strings(text):
-        if kind == "look":
+        if kind in ("look", "mode_look"):
             used |= {canonical(path) for path in contents.split()}
         else:
             prefixes.add(contents)

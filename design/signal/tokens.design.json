@@ -334,5 +334,63 @@
         "usage": "The height of a mode chip such as ECO or AUTO. It is not a touch target."
       }
     ]
+  },
+  "motion": {
+    "tokens": [
+      {
+        "name": "duration-press",
+        "value": "120ms",
+        "usage": "The answer to a press: a button or a tile under the finger changes in this time."
+      },
+      {
+        "name": "duration-enter",
+        "value": "220ms",
+        "usage": "A page, a panel or a value that comes into view."
+      },
+      {
+        "name": "duration-settle",
+        "value": "480ms",
+        "usage": "A ring, a bar or a page that moves to its new place and comes to rest."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.2, 0.7, 0.2, 1)",
+        "usage": "Whatever arrives: fast at first, then it slows to rest. The easing of enter and settle."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.42, 0, 0.58, 1)",
+        "usage": "Whatever moves from one place on the screen to another and stays in view."
+      },
+      {
+        "name": "ease-back",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "usage": "A small overshoot that comes back: a selection or a confirmed press. Once per gesture, never on a reading."
+      }
+    ]
+  },
+  "gesture": {
+    "tokens": [
+      {
+        "name": "swipe-distance",
+        "value": "50px",
+        "usage": "How far the finger goes before a swipe is sent. LVGL's own default."
+      },
+      {
+        "name": "swipe-speed",
+        "value": "3px",
+        "usage": "How far the finger goes in each read of the pointer, 33 ms: a slower drag starts the count of a swipe again. LVGL's own default."
+      },
+      {
+        "name": "scroll-limit",
+        "value": "10px",
+        "usage": "How far the finger goes before a drag is a scroll and no longer a press. LVGL's own default."
+      },
+      {
+        "name": "long-press",
+        "value": "400ms",
+        "usage": "The time of LVGL's own long press, one for the whole pointer. A hold has its own time in each call. LVGL's own default."
+      }
+    ]
   }
 }

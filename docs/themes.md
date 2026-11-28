@@ -152,6 +152,41 @@ constexpr auto indicator = lv::signal::lamps.dark.green;  // lamps.day.green, la
 - The colours are in `include/lv/signal/lamps.json`, written from the design file by `tools/signal_tokens.py`: every colour named `lamp-...` goes there, and not into the files of the themes.
 - The header costs about 0.3 G instructions of compile time in the file that includes it. `lv/signal.hpp` and `lv/signal_type.hpp` do not include it, so a program without tell-tales pays nothing.
 
+### Motion
+
+Signal's durations and easings are the same in every theme, and they are in a header of their own:
+
+```cpp
+#include <lv/signal_motion.hpp>
+
+co_await lv::animate(view, {.value = {0, 100}}, lv::signal::motion.duration.settle, *lv::signal::motion.ease.out);
+```
+
+| Token | Value | For |
+|---|---|---|
+| `motion.duration.press` | 120 ms | the answer to a press |
+| `motion.duration.enter` | 220 ms | a page, a panel or a value that comes into view |
+| `motion.duration.settle` | 480 ms | a ring, a bar or a page that moves to its new place and comes to rest |
+| `motion.ease.out` | `cubic-bezier(0.2, 0.7, 0.2, 1)` | what arrives: fast at first, then slowly to rest |
+| `motion.ease.in_out` | `cubic-bezier(0.42, 0, 0.58, 1)` | what moves from one place on the screen to another |
+| `motion.ease.back` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | a small overshoot that comes back: a selection, a confirmed press |
+
+- `ease.back` leaves [0, 1] in y, as an overshoot does. LVGL's curves take y from -32 up to 32.
+- The tokens are in `include/lv/signal/motion.json`, written from the motion section of the design file by `tools/signal_tokens.py`: a token named `duration-...` or `ease-...` goes there, and not into the files of the themes.
+- `lv/signal.hpp` and `lv/signal_type.hpp` do not include the header, so a program that animates nothing pays nothing for it.
+
+### Gestures
+
+Signal's gesture limits are LVGL's own defaults, in a header of their own, and a pointer takes them:
+
+```cpp
+#include <lv/signal_gesture.hpp>
+
+lv::pointer mouse{display, lv::signal::gesture};
+```
+
+`gesture.swipe_distance` is 50 px, `gesture.swipe_speed` 3 px in each read of 33 ms, `gesture.scroll_limit` 10 px and `gesture.long_press` 400 ms. They are written from the gesture section of the design file into `include/lv/signal/gesture.json` by `tools/signal_tokens.py`. The design file is the repository's copy: nothing is written back to Claude Design, so a change of these values there needs the owner's yes. See [Swipes and holds](gestures.md).
+
 ## Make your own
 
 A theme is one constant. It has a member for each kind of widget, and each member holds the styles a node of a tree can have: `style`, `style_pressed`, `style_indicator` and the rest.
@@ -264,6 +299,52 @@ int main() {
   return 0;
 }
 ```
+
+## A display that follows a state
+
+A display can follow a state: the theme of its value is the display's theme, and setting the state restyles every widget in place. Signal has the state's enum, `lv::signal::mode`, with `day` and `dark`.
+
+<!-- snippet: examples/theme_follow/main.cpp mode -->
+```cpp
+constinit lv::state mode{lv::signal::mode::day};
+```
+
+The themes are given to the display after it is made, in the order of the enumerators:
+
+<!-- snippet: examples/theme_follow/main.cpp follow -->
+```cpp
+  display.follow(mode, {lv::signal::day, lv::signal::dark});  // day first, as the enum has it
+```
+
+A row of the Service screen flips it: the dropdown lists the enum and follows the state.
+
+<!-- snippet: examples/theme_follow/main.cpp tree -->
+```cpp
+constexpr auto service = lv::column(
+  {.size = {320 * px, 240 * px}}, lv::label({.text = "Service"}),
+  lv::row(
+    lv::label({.text = "Display"}), lv::dropdown({
+                                      .options  = lv::options_of<lv::signal::mode>,
+                                      .selected = lv::bind(mode),
+                                    })
+  ),
+  lv::button({.id = "start"}, lv::label({.text = "Start"})),
+  lv::arc({.id = "ring", .size = {80 * px, 80 * px}, .value = 60})
+);
+```
+
+<!-- snippet: examples/theme_follow/main.cpp flip -->
+```cpp
+  mode = lv::signal::mode::dark;  // every widget of the display changes in place
+```
+
+- It changes what a **theme** gives: the screen, boxes, buttons, arcs, bars and the text they inherit. A node's own `.style`, with a token written in it, is constant and does not follow, and neither does a look from the project's tokens: they stay as they are. Take the colors of a screen from the theme if the screen is to follow.
+- The styles of the new theme take the place of the old ones where they stand in each widget's list, so a look or a node's style that was added after the theme still wins over it. Nothing is allocated or freed by a switch, in either direction, once LVGL has drawn the screen once (its own first change of a drawn screen makes a few things of its own).
+- The themes must have one shape: the same widgets and parts in the same order. Themes made by one description, as Signal's `day` and `dark` are, have. Themes of another shape end the program in `follow` with a contract violation, since adding and removing styles would allocate and move the theme's styles after the others.
+- The display restyles the active screen and LVGL's three layers. A screen that is not loaded keeps the theme it was made with until it is built again.
+- A widget made after the switch gets the new theme. A `lv::group` removes all styles of its widget, the theme's too, and holds none; the widgets in it do.
+- Call `follow` once, before the screens are built, as a theme given to the constructor is. A display that was made with a theme of the same shape follows from that theme.
+- Themes with different fonts change the fonts too, and the layout follows. Signal's `day_with_type` and `dark_with_type` share theirs.
 
 ## What a theme costs
 

@@ -17,7 +17,10 @@ constexpr unsigned char large_png[] = {
 };
 
 constexpr auto picture = lv::detail::make_image(large_png, 32, 256 * 128);
+// Its mask: one byte for each pixel, named by the file as well.
+constexpr auto mask = lv::detail::make_image(large_png, lv::detail::mask_depth, 256 * 128);
 
 }  // namespace
 
 const lv_image_dsc_t* large_picture() { return picture; }
+const lv_image_dsc_t* large_mask() { return mask; }

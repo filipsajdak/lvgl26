@@ -49,6 +49,7 @@
         "themes.md",
         "looks.md",
         "fonts.md",
+        "icons.md",
         "images.md"
       ]
     },
@@ -57,6 +58,7 @@
       "pages": [
         "application.md",
         "input.md",
+        "gestures.md",
         "settings.md",
         "targets.md"
       ]

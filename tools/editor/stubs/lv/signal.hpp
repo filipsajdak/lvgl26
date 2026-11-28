@@ -8,6 +8,9 @@
 
 namespace lv::signal {
 
+/// The two looks of Signal as a state a display can follow: display.follow(mode, {day, dark}).
+enum class mode { day, dark };
+
 /// The design tokens of Signal's dark theme, for your own styles:
 /// lv::signal::dark_tokens.color.muted.
 inline constexpr lv::stub::signal_dark_tokens dark_tokens{};

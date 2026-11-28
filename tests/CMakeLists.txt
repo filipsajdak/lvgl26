@@ -44,6 +44,8 @@ function(lvgl26_compile_fail_message name form text)
 endfunction()
 
 lvgl26_test(smoke)
+lvgl26_test(icons)
+lvgl26_test(icons_font)
 lvgl26_test(api_helpers)
 lvgl26_test(nearest)
 lvgl26_test(all_header)
@@ -99,6 +101,7 @@ lvgl26_test(match)
 lvgl26_test(for_each)
 lvgl26_test(mounted_storage)
 lvgl26_test(pointer)
+lvgl26_test(gesture)
 lvgl26_test(input_queue)
 # back() of an empty queue ends the program.
 add_test(NAME input_queue_violation_back_of_empty
@@ -141,6 +144,12 @@ lvgl26_test(one_of_region)
 lvgl26_test(deferred)
 lvgl26_test(shown)
 lvgl26_test(shown_transitions)
+# The way back plays .enter_back and .leave_back; the pictures are half way through a slide each way.
+add_executable(shown_direction shown_direction.cpp)
+target_link_libraries(shown_direction PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME shown_direction COMMAND shown_direction A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_forward.png
+                                                      A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_back.png
+                                                      A:${CMAKE_CURRENT_SOURCE_DIR}/ref/shown_direction_top.png)
 lvgl26_test(shown_kept)
 # A wrong call on a slot ends the program: unmount() of an empty slot, the handle of a tree
 # that is not mounted (also after an arm switched the slot), error() of a slot that holds one.
@@ -149,8 +158,9 @@ foreach(case unmount_empty get_other held_after_remount error_of_mounted)
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:one_of> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 endforeach()
-# unmount() of a tree that is not mounted, and mount() of one that is, end the program.
-foreach(case unmount_not_mounted mount_twice unmount_after_parent)
+# unmount() of a tree that is not mounted, mount() of one that is, a view of a tree that is not mounted, and
+# mount_in() in memory that is too small or not aligned, end the program.
+foreach(case unmount_not_mounted mount_twice unmount_after_parent get_not_mounted mount_in_too_small mount_in_misaligned)
   add_test(NAME mounted_storage_violation_${case}
            COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:mounted_storage> -DCASE=${case}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
@@ -159,6 +169,11 @@ lvgl26_test(look)
 lvgl26_test(start_style)
 lvgl26_test(style_add)
 target_link_libraries(look PRIVATE lvgl26_test_data)
+# A look whose styles follow the mode of a display; the pictures are both modes.
+add_executable(mode_look mode_look.cpp)
+target_link_libraries(mode_look PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME mode_look COMMAND mode_look A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_day.png
+                                          A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_dark.png)
 # Two files of one program name looks, with the registration in a header they share.
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)
 target_link_libraries(look_link PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
@@ -217,6 +232,8 @@ add_test(NAME options_violation_enum_state_in_set
          COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:options> -DCASE=set
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(animate)
+# Local style values: of the main part with the plain call, of a part and a state with lv::in.
+lvgl26_test(animate_style)
 lvgl26_test(enum_names)
 lvgl26_test(unsigned_values)
 add_test(NAME unsigned_values_violation_negative
@@ -224,6 +241,16 @@ add_test(NAME unsigned_values_violation_negative
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 lvgl26_test(application)
 lvgl26_test(theme)
+# One theme's styles take the place of another's in the widgets that exist.
+lvgl26_test(theme_restyle)
+# A display that follows a state: Signal's day and dark, with the pictures of both, and two themes of different shapes.
+add_executable(theme_follow theme_follow.cpp)
+target_link_libraries(theme_follow PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+add_test(NAME theme_follow COMMAND theme_follow A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_day.png
+                                                A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_dark.png)
+add_test(NAME theme_follow_violation_shape
+         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:theme_follow> -DCASE=shape
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
 if(LVGL26_NO_DEFAULT_THEME)
   lvgl26_test(no_default_theme)
@@ -250,6 +277,9 @@ add_test(NAME signal_linked COMMAND signal_linked A:${CMAKE_CURRENT_SOURCE_DIR}/
                                                   A:${CMAKE_CURRENT_SOURCE_DIR}/ref/signal_type_day.png)
 # Signal's tell-tale lamp colours, a header of its own.
 lvgl26_test(signal_lamps)
+# Signal's durations and easings, a header of its own.
+lvgl26_test(signal_motion)
+lvgl26_test(signal_gesture)
 # A header embeds only what lies next to it, so lv/signal_type.hpp has its own copies of
 # the font files of the site. They must stay the same files.
 foreach(file Barlow-Medium.ttf BarlowCondensed-SemiBold.ttf BarlowCondensed-Bold.ttf OFL.txt)
@@ -300,6 +330,10 @@ set_tests_properties(examples_mcp_host PROPERTIES FIXTURES_REQUIRED mcp_host_fil
 add_executable(l2_tree l2_tree.cpp)
 target_link_libraries(l2_tree PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME l2_tree COMMAND l2_tree A:${CMAKE_CURRENT_SOURCE_DIR}/ref/slice.png)
+# The call form builds the node that the subscript form builds.
+lvgl26_test(call_form)
+# The members of a props struct are in the order a tree is written in.
+lvgl26_test(props_order)
 
 # A tree of 112 widgets, and the guard of its compile time. The limit is the number of
 # steps the compiler may take in one constant evaluation; GCC's default is 33554432.
@@ -413,6 +447,10 @@ add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
+# Characters beyond the default set, and a picture of the euro sign and the middle dot.
+add_executable(font_extra font_extra.cpp)
+target_link_libraries(font_extra PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME font_extra COMMAND font_extra A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font_extra.png)
 # The fonts are the bytes that one evaluation of the whole font made.
 add_executable(font_bytes font_bytes.cpp)
 target_compile_options(font_bytes PRIVATE --embed-dir=${lvgl_SOURCE_DIR})
@@ -476,7 +514,7 @@ lvgl26_compile_fail(big_capture "an event handler may capture nothing, or one po
 # A part that constrains its parameters with the public concepts (docs/concepts.md).
 # The whole message of a handler that holds state, sentence by sentence: each says what to do.
 string(CONCAT handler_state_message "It takes a function or a lambda that captures nothing: `&function`, `\\[\\] \\{ \\.\\.\\. \\}` or "
-    "`\\[\\]\\(lv::event e\\) \\{ \\.\\.\\. \\}`\\. A handler in a constexpr tree is a plain function pointer, "
+    "`\\[\\]\\(lv::event e\\) \\{ \\.\\.\\. \\}`, or for on_swiped `\\[\\]\\(lv::swipe d\\) \\{ \\.\\.\\. \\}`\\. A handler in a constexpr tree is a plain function pointer, "
     "so it cannot hold state: name the state as a template argument "
     "\\(`template <lv::dependency auto& Count>`\\) and use it in the lambda, or add the handler to "
     "the view with on<LV_EVENT_\\.\\.\\.>\\(\\)\\.")
@@ -518,7 +556,7 @@ lvgl26_compile_fail(pointer_queue_too_large "Capacity <= .*most_pointer_samples"
 lvgl26_compile_fail(storage_kind_shape "a node kind with a member `storage` declares it as")
 lvgl26_compile_fail_message(each_without_row static_assert "lv: lv::each needs a row template: lv::each(tracks, &track::id)[lv::label(...)].")
 lvgl26_compile_fail_message(each_plain_key static_assert "lv: a key names one row, and is compared as a state compares its value. Give it a named type, `struct track_id { int value; };`, or an enum. To allow plain integers, set rules.raw_integer_state in the settings.")
-lvgl26_compile_fail(each_not_a_list "lv::each takes an lv::list and the member of its rows that holds the key")
+lvgl26_compile_fail_message(each_not_a_list deleted "lv: lv::each takes an lv::list and the member of its rows that holds the key: lv::each(tracks, &track::id, track_row).")
 lvgl26_compile_fail(each_key_of_another_row "lv::each takes an lv::list and the member of its rows that holds the key")
 lvgl26_compile_fail_message(each_twice_in_one_widget static_assert "lv: a widget holds at most one lv::each. Put each one in a widget of its own: lv::column[lv::each(a, &row::id)[...]], lv::column[lv::each(b, &row::id)[...]].")
 lvgl26_compile_fail_message(row_field_outside_each static_assert "lv: lv::bind(&T::field) follows a field of a row, and this node is not in a row. Use it in the row template of lv::each: lv::each(tracks, &track::id)[lv::label({.text = lv::bind(&track::title)})].")
@@ -549,6 +587,7 @@ lvgl26_compile_fail(eager_scan "evaluation operation count exceeds limit of ${lv
 target_compile_options(fail_eager_scan PRIVATE -fconstexpr-ops-limit=${lvgl26_include_only_ops})
 lvgl26_compile_fail_message(set_inline_style deleted "lv: a style in set() is made with lv::style({...}): view.set({.style = lv::style({.radius = ...})}).")
 lvgl26_compile_fail_message(set_named_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
+lvgl26_compile_fail_message(set_named_set_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail_message(set_constexpr_props deleted "lv: pass the properties in place: view.set({...}). A prepared set of properties is a function that calls set().")
 lvgl26_compile_fail(props_unknown_name "no match for call to .*factory<lv::detail::fixed<4>.\"arc\"")
 lvgl26_compile_fail_message(props_needs_unit static_assert "lv: wrong value for this property. It takes a width or x (120 * lv::px, 50 * lv::pct or lv::size_content, not a vertical length). You gave int.")
@@ -590,6 +629,7 @@ target_compile_options(fail_encoded_image_needs_png PRIVATE -ULV_USE_LODEPNG)  #
 lvgl26_compile_fail(encoded_image_needs_jpeg "LVGL is built without its JPEG decoder. Turn it on in CMake, before lvgl26 is added: set\\(LVGL26_JPEG ON\\)")
 target_compile_options(fail_encoded_image_needs_jpeg PRIVATE -ULV_USE_TJPGD)
 lvgl26_compile_fail(image_not_a_png "this is not a PNG file. Embed one")
+lvgl26_compile_fail(mask_not_a_png "this is not a PNG file. Embed one")
 lvgl26_compile_fail(image_too_large "this picture is 200 x 100 pixels, and the compiler decodes at most 16384 .*raise limits.compile_time_image in the settings")
 lvgl26_compile_fail(image_row_too_long "this picture is 16384 x 1 pixels, with rows of 65536 bytes. LVGL holds a picture of at most 65535")
 lvgl26_compile_fail(image_too_wide "this picture is 70000 x 1 pixels, with rows of [0-9]+ bytes. LVGL holds a picture of at most 65535")
@@ -621,6 +661,11 @@ lvgl26_compile_fail(font_no_outlines "this font has no TrueType outlines")
 lvgl26_compile_fail(font_lacks_table "this font file lacks a table that lvgl26 reads")
 lvgl26_compile_fail(font_size_out_of_range "a font size is from 4 px to 255 px")
 lvgl26_compile_fail(font_no_glyph "the font file has no glyph for the character U\\+0416")
+lvgl26_compile_fail(font_ascii_plus_no_glyph "the font file has no glyph for the character U\\+0416")
+lvgl26_compile_fail_message(font_ascii_plus_not_utf8 constexpr "lv: lv::ascii_plus takes UTF-8 text, and byte 1 of it is not part of a UTF-8 character.")
+lvgl26_compile_fail_message(font_ascii_plus_too_many constexpr "lv: a font holds at most 255 characters, and the 95 of the default set and the 161 you add are 256. Make a second font for the others.")
+lvgl26_compile_fail_message(font_latin1_plus_not_utf8 constexpr "lv: lv::latin1_plus takes UTF-8 text, and byte 1 of it is not part of a UTF-8 character.")
+lvgl26_compile_fail_message(font_latin1_plus_too_many constexpr "lv: a font holds at most 255 characters, and the 191 of lv::latin1 and the 65 you add are 256. Make a second font for the others.")
 lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
@@ -686,7 +731,8 @@ lvgl26_compile_fail(restrict_write_png "lv: lv::write_png needs files, and this 
 lvgl26_compile_fail(restrict_mcp_server "lv: lv::mcp::server needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. Its answers are std::string\\.")
 lvgl26_compile_fail(restrict_mcp_serve "lv: lv::mcp::server::serve needs files, and this project does not allow them \\(allow\\.files\\)\\. It reads and writes standard streams\\.")
 lvgl26_compile_fail_message(restrict_runtime static_assert "lv: lv::runtime needs floating point, and this project does not allow it (allow.floating_point). It reads the numbers of a document as double.")
-lvgl26_compile_fail(restrict_spawn "lv: lv::spawn needs allocation, and this project does not allow it \\(allow\\.allocation\\)\\. A task's frame is taken while the program runs")
+lvgl26_compile_fail_message(restrict_spawn static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
+lvgl26_compile_fail_message(restrict_spawn_owned static_assert "lv: lv::spawn needs allocation, and this project does not allow it (allow.allocation). A task's frame is taken while the program runs, in a number the compiler does not know; until tasks get a fixed region of memory of their own, a program without allocation runs no task.")
 lvgl26_compile_fail(restrict_from_file "lv: lv::ui_scheduler needs threads, and this project does not allow them \\(allow.threads in settings/restricted.json\\).")
 lvgl26_settings_header(${CMAKE_CURRENT_SOURCE_DIR}/settings/restricted.json settings/restricted.json
                        ${CMAKE_CURRENT_BINARY_DIR}/lvgl26-settings/restricted restricted_hash)
@@ -726,13 +772,24 @@ lvgl26_compile_fail_message(effect_wrong_arguments static_assert "lv: the functi
 lvgl26_compile_fail_message(effect_not_a_state static_assert "lv: a dependency of an lv::effect must be an lv::state or an lv::computed that outlives it. Pass the object itself, as in `lv::effect{f, speed}`: not its value (`speed.get()`) and not a temporary.")
 lvgl26_compile_fail_message(bind_computed_wrong_type static_assert "lv: this property takes a whole number (not bool, not floating point), and the state holds bool. A state follows a property when its type, or the number inside its quantity or named type, is what the property takes.")
 lvgl26_compile_fail(first_mixed_handlers "in lv::first, give a handler to every item")
-lvgl26_compile_fail(animate_not_a_number "invalid initialization of reference of type .lv::detail::lazy_animatable<lv::detail::fixed<6>.\"label\"")
+lvgl26_compile_fail(animate_not_a_number "no matching function for call to .animate.lv::view<lv::detail::fixed<6>.\"label\"}>&, <brace-enclosed initializer list>")
 lvgl26_compile_fail(animate_needs_unit "It takes a width or x .*You gave int")
 lvgl26_compile_fail(animate_one_end "an animation needs both ends: .property = {from, to}")
 lvgl26_compile_fail(animate_mixed_units "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_mixed_units_folded "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_size_content "contract predicate is false in constant expression")
 lvgl26_compile_fail(animate_then_bad_handler "no matching function for call to .*then")
+# lv::in names the part and the state of a style animation (include/lv/animate.hpp).
+lvgl26_compile_fail_message(in_three_names static_assert "lv: lv::in takes a part and a state at most: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_state_first constexpr "lv: 'pressed' is a state. lv::in takes the part first, then the state: lv::in<\"knob\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_part_second constexpr "lv: 'indicator' is a part. lv::in takes the part first, then the state: lv::in<\"indicator\", \"pressed\">(view).")
+lvgl26_compile_fail_message(in_unknown_part constexpr "lv: widgets have no part 'knop'. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first.")
+lvgl26_compile_fail_message(in_unknown_state constexpr "lv: widgets have no state 'presed'. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail_message(in_unknown_name constexpr "lv: 'pressd' is neither a part nor a state. The parts: main, scrollbar, indicator, knob, selected, items, cursor, custom_first. The states: default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4.")
+lvgl26_compile_fail(in_widget_setter "no matching function for call to .animate")
+# display.follow takes the state of an enum.
+lvgl26_compile_fail(follow_not_an_enum "no matching function for call to .*follow|constraints not satisfied")
+lvgl26_compile_fail(animate_style_plain_number "It takes an opacity .50 \\* lv::pct.. You gave int")
 lvgl26_compile_fail(post_not_callable "no matching function for call to .lv::ui_scheduler::post")
 lvgl26_compile_fail_message(match_missing_case static_assert "lv::match does not cover: sport. Add an arm for each, or a last arm `lv::otherwise.then(...)`.")
 lvgl26_compile_fail_message(match_duplicate_case static_assert "lv::match has two arms for eco. Each value needs exactly one.")
@@ -929,12 +986,33 @@ if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
   set_tests_properties(example_images_picture PROPERTIES FIXTURES_REQUIRED example_images_picture)
 endif()
 
+# The example of docs/icons.md. Its picture is the one on the page.
+add_executable(example_icons ${PROJECT_SOURCE_DIR}/examples/icons/main.cpp)
+target_compile_options(example_icons PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/icons
+                                             --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
+target_link_libraries(example_icons PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+add_test(NAME example_icons COMMAND example_icons WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out)
+set_tests_properties(example_icons PROPERTIES FIXTURES_SETUP example_icons_picture)
+if(LVGL26_LVGL_REF STREQUAL "v9.6.0")  # LVGL v10 may draw other pixels
+  add_test(NAME example_icons_picture
+           COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_CURRENT_BINARY_DIR}/example_icons_out/icons.png
+                   ${PROJECT_SOURCE_DIR}/docs/media/icons.png)
+  set_tests_properties(example_icons_picture PROPERTIES FIXTURES_REQUIRED example_icons_picture)
+endif()
+
 # The second example of docs/fonts.md: a font drawn on the device.
 add_executable(example_scaled_font ${PROJECT_SOURCE_DIR}/examples/scaled_font/main.cpp)
 target_compile_options(example_scaled_font PRIVATE --embed-dir=${PROJECT_SOURCE_DIR}/examples/fonts
                                                    --embed-dir=${PROJECT_SOURCE_DIR}/site/media)
 target_link_libraries(example_scaled_font PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME example_scaled_font COMMAND example_scaled_font)
+
+# The example of docs/themes.md: a display that follows a state.
+add_executable(example_theme_follow ${PROJECT_SOURCE_DIR}/examples/theme_follow/main.cpp)
+target_link_libraries(example_theme_follow PRIVATE lvgl26::lvgl26 lvgl26_warnings)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_follow_out)
+add_test(NAME example_theme_follow COMMAND example_theme_follow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/example_theme_follow_out)
 
 # The example of docs/fonts.md. Its picture is the one on the page.
 add_executable(example_fonts ${PROJECT_SOURCE_DIR}/examples/fonts/main.cpp)
@@ -1026,6 +1104,7 @@ add_library(cost_probes OBJECT EXCLUDE_FROM_ALL
   ${PROJECT_SOURCE_DIR}/tools/probes/include_lv.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/one_label.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/ten_kinds.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/look_percent.cpp
   ${PROJECT_SOURCE_DIR}/examples/quick_start/main.cpp)
 target_link_libraries(cost_probes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 # The run-time probe of docs/research/visibility.md, run under Valgrind by the same job.
@@ -1126,6 +1205,7 @@ if(Python3_FOUND)
   add_test(NAME image_symbols COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_symbols.py
                                       --budget ${LVGL26_SYMBOL_BUDGET} $<TARGET_OBJECTS:image_symbols>)
   add_test(NAME symbols_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_check_symbols.py)
+  add_test(NAME icons_names_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_icons_names.py)
   # The rewrite of token files from the forms before the Design Tokens Format 2025.10.
   add_test(NAME tokens_fix_tools COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/test_dtcg_fix.py)
   # Every token file against the official Design Tokens Format schemas (needs the jsonschema package, which the CI image has).
@@ -1325,6 +1405,16 @@ lvgl26_compile_fail_message(look_group_not_layer constexpr "lv: in the look 'lay
 lvgl26_compile_fail_message(look_group_in_layer constexpr "lv: in the look 'layeredin' the group 'extra' is neither a part nor a state. A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-extra' beside 'a', used as lv::look<\"a a-extra\">.")
 lvgl26_compile_fail_message(look_names_a_token constexpr "lv: the look 'tile.radius' names a token, not a group: 'tile.radius' holds one value. A look is a group of tokens, written lv::look<\"tile\">, and the style property is its entry 'radius'.")
 lvgl26_compile_fail_message(look_empty constexpr "lv: lv::look<\"  \"> names no look. Write the path of a group of the token file: lv::look<\"queue.card\">. The groups there: <<names>>.")
+lvgl26_compile_fail_message(look_layer_far_typo constexpr "lv: in the look 'layerfar' the group 'chekd' is neither a part nor a state. Did you mean 'checked'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-chekd' beside 'a', used as lv::look<\"a a-chekd\">.")
+lvgl26_compile_fail_message(look_unknown_group_close constexpr "lv: the look 'queue.cardd' has no group 'cardd' in 'queue'. The groups there: card, details. Did you mean 'card'?")
+lvgl26_compile_fail_message(look_layer_part_typo constexpr "lv: in the look 'layerpart' the group 'scrolbar' is neither a part nor a state. Did you mean 'scrollbar'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-scrolbar' beside 'a', used as lv::look<\"a a-scrolbar\">.")
+lvgl26_compile_fail_message(look_layer_any_typo constexpr "lv: in the look 'layerany' the group 'anyy' is neither a part nor a state. A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-anyy' beside 'a', used as lv::look<\"a a-anyy\">.")
+lvgl26_compile_fail_message(look_layer_state_typo constexpr "lv: in the look 'layeralt' the group 'alte' is neither a part nor a state. Did you mean 'alt'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-alte' beside 'a', used as lv::look<\"a a-alte\">.")
+lvgl26_compile_fail_message(look_layer_keyword_typo constexpr "lv: in the look 'layerkeyword' the group 'defaultx' is neither a part nor a state. Did you mean 'default'? A group nested in a look is a layer: a part (main, scrollbar, indicator, knob, selected, items, cursor, custom_first) or a state (default, alt, checked, focused, focus_key, edited, hovered, pressed, scrolled, disabled, user_1, user_2, user_3, user_4). A variant of a look is a sibling group, 'a-defaultx' beside 'a', used as lv::look<\"a a-defaultx\">.")
+lvgl26_compile_fail_message(look_several_values_not_size constexpr "lv: the look entry 'enabled' of 'enabledone' sets several properties from several values, and a token holds one. Write each of them: see lv::style.")
+lvgl26_compile_fail_message(look_ext_lone_percent constexpr "lv: the \$extensions entry 'width' of 'lonepercent' is the text '%', and the style property 'width' takes a dimension (such as 8px). \$extensions holds LVGL values by name and sizes in percent: write this one as a token, with its \$type.")
+lvgl26_compile_fail_message(font_of_unknown_root constexpr "lv: the font 'txt.label' has no name 'txt' in the token file. The names there: <<names>>. Did you mean 'text'?")
+lvgl26_compile_fail_message(font_of_through_a_token constexpr "lv: the font 'text.label.big' goes through 'text.label', which is a token and holds no group.")
 lvgl26_compile_fail_message(look_empty_name constexpr "lv: the look 'tile..print' has an empty name between its dots. Write lv::look<\"queue.card\">.")
 # lv::font_of and lv::draw: a font named in a file of its own is checked against the token file.
 lvgl26_compile_fail_message(font_of_unknown_name constexpr "lv: the font 'text.lable' has no name 'lable' in 'text'. The names there: label, small. Did you mean 'label'?")
@@ -1353,7 +1443,13 @@ lvgl26_compile_fail(missing_header_for_each_items "lv::for_each is in <lv/repeat
 lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
 lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
 lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
+lvgl26_compile_fail(missing_header_mode_look "lv::mode_look is in <lv/mode_look.hpp>: add #include <lv/mode_look.hpp>")
+lvgl26_compile_fail_message(mode_look_shape_property constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': the property 'border_width' is set in the first design only. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_shape_layer constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': it has 0 layer(s) (a part or a state), the first design has 1. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_unknown_group constexpr "lv: the look 'page' has no group 'page' in the token file. The groups there: <<names>>. Did you mean 'panel'?")
+lvgl26_compile_fail_message(mode_look_no_designs static_assert "lv: no designs are named for lv::mode_look. Name the token file of each mode once, in a header that every file includes: template <> inline constexpr lv::mode_designs_of<day, dark> lv::mode_designs<lv::override>{}; with lv::design<day> and lv::design<dark> specialized as lv::design<lv::override> is for lv::look.")
 lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
+lvgl26_compile_fail(missing_header_mask_file "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")
 lvgl26_compile_fail(missing_header_runtime "lv::runtime is in <lv/runtime.hpp>: add #include <lv/runtime.hpp>")
 lvgl26_compile_fail(missing_header_one_of "lv::one_of is in <lv/one_of.hpp>: add #include <lv/one_of.hpp>")
@@ -1375,6 +1471,8 @@ lvgl26_compile_fail(shown_inline_tree "the tree of an arm of lv::shown is a cons
 lvgl26_compile_fail(shown_in_each_row "a row of lv::each cannot hold a node that keeps run-time storage yet")
 lvgl26_compile_fail(shown_alive_zero "lv::shown needs a slot for the page it shows: .alive = 1 or more.")
 lvgl26_compile_fail(shown_alive_one_with_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
+lvgl26_compile_fail(shown_alive_one_with_back_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
+lvgl26_compile_fail(shown_alive_one_with_arm_transition "a page that enters or leaves is alive beside the other one, so .enter and .leave need .alive = 2")
 lvgl26_compile_fail(shown_page_on_shown_in_arm "a page of another file takes its .on_shown in its own file: constinit const lv::page home_page = lv::page_of<ui, \\{.on_shown = &f\\}>")
 lvgl26_compile_fail(shown_transition_two_properties "contract predicate is false in constant expression")
 lvgl26_compile_fail(page_of_wrong_hook "lv::page_of<ui, \\{.on_shown = ..., .on_front = ...\\}>: the function of .on_shown takes the lv::held of another tree than the page.s. Write void f\\(lv::held<.*a>\\)")
@@ -1386,6 +1484,7 @@ lvgl26_compile_fail(when_not_bool "lv::when follows an lv::state or an lv::compu
 lvgl26_compile_fail_message(children_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(children_alone_not_a_child static_assert "lv: after the properties come the children, each a widget or an lv::each, lv::shown, lv::when or lv::for_each: lv::group({...}, lv::label({...}), lv::button({...})).")
 lvgl26_compile_fail_message(each_row_not_a_tree static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
+lvgl26_compile_fail_message(each_row_then_more static_assert "lv: the last argument of lv::each is its row template, one widget: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(each_plain_row_not_a_tree static_assert "lv: lv::each takes the options in braces, then the row template: lv::each(tracks, &track::id, {...}, track_row).")
 lvgl26_compile_fail_message(when_second_not_a_tree deleted "lv::when follows an lv::state or an lv::computed of a bool, and shows one tree: lv::when(online, online_ui).")
 lvgl26_compile_fail(shown_arms_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")
@@ -1393,3 +1492,11 @@ lvgl26_compile_fail(shown_under_place "lv::place leaves the widgets to their par
 lvgl26_compile_fail(missing_header_shown "lv::shown is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_when "lv::when is in <lv/shown.hpp>: add #include <lv/shown.hpp>")
 lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of lv::shown, in <lv/shown.hpp>: add #include <lv/shown.hpp>")
+
+# Icons (lv/icons.hpp): a name that is no icon lists the nearest.
+lvgl26_compile_fail_message(icon_unknown_name constexpr "lv: there is no icon 'arow-left' in Phosphor. Did you mean 'arrow-left'? The nearest names: arrow-left, caret-left, align-left, copyleft, arrow-down.")
+lvgl26_compile_fail_message(icon_far_name constexpr "lv: there is no icon 'steam-engine' in Phosphor. The nearest names: steam-logo, gear-fine, bell-ringing, champagne, dots-nine.")
+
+# Gestures (lv/gesture.hpp).
+lvgl26_compile_fail_message(hold_progress_not_percent deleted "lv: the progress of lv::hold is an lv::state<lv::percent>: lv::state<lv::percent> progress{lv::percent{0}}. It goes from 0 to 100 while the finger stays.")
+lvgl26_compile_fail(swiped_not_a_view "no matching function for call to 'swiped\\(int\\)'")

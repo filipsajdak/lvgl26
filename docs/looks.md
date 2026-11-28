@@ -365,6 +365,58 @@ constexpr auto chip = lv::box({.style = lv::look<"chip", Design>});
 
 `chip<>` uses the design the project registered. `chip<dark>` uses a design registered for the tag `dark`: `lv::design<dark>`, specialized in the same way as `lv::design<lv::override>`.
 
+## A look that follows the mode
+
+A look is one constant style, so it keeps its colors when a display that follows a state turns from day to dark ([Themes](themes.md)). A mode look is the same group in the token file of each mode, and its styles follow the state. It is in its own header, `#include <lv/mode_look.hpp>`.
+
+The project keeps one token file for each mode, of one shape, and names them in the order of the enumerators of the state:
+
+<!-- snippet: tests/mode_look.cpp designs -->
+```cpp
+// One token file for each mode, of one shape, named in the order of the enumerators of the mode.
+template <>
+inline constexpr lv::design_of<decltype(day_tokens)> lv::design<day_design>{.tokens = day_tokens};
+template <>
+inline constexpr lv::design_of<decltype(dark_tokens)> lv::design<dark_design>{.tokens = dark_tokens};
+template <>
+inline constexpr lv::mode_designs_of<day_design, dark_design> lv::mode_designs<lv::override>{};
+```
+
+A node takes the look in `.look`, in a group, in a row of a list, at any depth. A node's own `.style` still wins over it, as it wins over a plain look:
+
+<!-- snippet: tests/mode_look.cpp tree -->
+```cpp
+constexpr auto row = lv::box({.size = {120 * px, 24 * px}, .look = lv::mode_look<"tile">});
+
+// A group (which starts without the theme's styles), a node with a mode look and an own style that wins, a plain
+// node with no mode look, and a list of rows.
+constexpr auto ui = lv::column(
+    {.size = {240 * px, 200 * px}, .look = lv::mode_look<"page">},
+    lv::group({.id = "group", .size = {240 * px, 40 * px}, .look = lv::mode_look<"tile">}),
+    lv::box({.id = "tile", .size = {120 * px, 40 * px}, .look = lv::mode_look<"tile">}),
+    lv::box({.id = "own", .size = {120 * px, 40 * px}, .look = lv::mode_look<"tile">, .style = {.bg_color = lv::raw(rgb(0x00ff00))}}),
+    lv::box({.id = "plain", .size = {120 * px, 40 * px}, .style = lv::look<"tile", day_design>}),
+    lv::each(items, &item::id, row));
+```
+
+The display follows the state, and a change puts the styles of the new mode where those of the old one stand, in place and with no allocation:
+
+<!-- snippet: tests/mode_look.cpp follow -->
+```cpp
+  // The display follows the state; a theme per value (here none: only the mode looks follow).
+  display.follow(current, {lv::theme_styles{}, lv::theme_styles{}});
+```
+
+<!-- snippet: tests/mode_look.cpp switch -->
+```cpp
+  current = mode::dark;  // every mode look is restyled in place
+```
+
+- Both token files hold the group with the same entries, the same layers and the same properties set. A difference is a compile error that names the property or the layer.
+- A widget made after a change takes the mode of the moment. A screen that is not loaded keeps the mode it was built with, as it keeps its theme.
+- Each widget that takes a mode look carries one LVGL event (a marker, as a handler is), and nothing else is allocated. A plain `lv::look` is unchanged and constant.
+- A mode look holds what a theme holds: values LVGL keeps in a constant style.
+
 ## What a look costs
 
 Nothing, where none is named. A file that includes `<lv/lv.hpp>` compiles in the same number of instructions with and without `lv/look.hpp`, and `tests/large_tree.cpp` is not dearer. A look is worked out when it is first used, once for each path and design.

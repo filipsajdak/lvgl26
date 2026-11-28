@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the token files of the built-in Signal theme from the design system.
 
-    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json, lamps.json and type.json
+    python3 tools/signal_tokens.py          writes include/lv/signal/dark.json, day.json, lamps.json, type.json, motion.json and gesture.json
     python3 tools/signal_tokens.py --check  fails when a written file is stale
 
 design/signal/tokens.design.json is the source. The written files are in the W3C Design
@@ -23,10 +23,18 @@ one group for each theme, and a token loses its prefix, so `lamp-green` of the d
 `dark.green`. A cluster program that shows tell-tales pays for the file, and every other program
 that uses Signal does not. One file for both themes reads cheaper than one for each: every file
 costs a fixed amount of compile time before its first token.
+
+The motion section holds the durations and the easings, the same in every theme. They are in
+motion.json, which include/lv/signal_motion.hpp embeds, for the same reason as the lamps: a program
+that animates nothing does not pay for them. A token named `duration-...` (DURATION_PREFIX) is a
+duration, `duration-press` is `duration.press`; one named `ease-...` (EASE_PREFIX) is a cubicBezier
+written in CSS, `cubic-bezier(0.2, 0.7, 0.2, 1)`, and `ease-out` is `ease.out`. A curve may overshoot:
+y may leave [0, 1], x may not.
 """
 
 import json
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -39,6 +47,9 @@ OUT = ROOT / "include" / "lv" / "signal"
 LENGTHS = {"spacing": "space", "radius": "radius", "stroke": "stroke", "size": "size"}
 SCHEMA = "https://www.designtokens.org/schemas/2025.10/format.json"
 LAMP_PREFIX = "lamp-"
+DURATION_PREFIX = "duration-"
+EASE_PREFIX = "ease-"
+CUBIC_BEZIER = re.compile(r"^cubic-bezier\(([^)]*)\)$")
 WRITTEN = "Written by tools/signal_tokens.py from design/signal/tokens.design.json: do not edit."
 
 
@@ -91,6 +102,49 @@ def lamps(design: dict) -> str:
     return render(doc) + "\n"
 
 
+def curve(token: dict) -> list:
+    """The four numbers of a `cubic-bezier(x1, y1, x2, y2)` value; x1 and x2 lie in [0, 1]."""
+    found = CUBIC_BEZIER.match(token["value"])
+    numbers = [float(part) for part in found.group(1).split(",")] if found else []
+    if len(numbers) != 4 or not (0 <= numbers[0] <= 1 and 0 <= numbers[2] <= 1):
+        sys.exit(f"signal_tokens: {token['name']} is not cubic-bezier(x1, y1, x2, y2) with x1 and x2 in [0, 1]")
+    return [int(n) if n == int(n) else n for n in numbers]
+
+
+def motion(design: dict) -> str:
+    """The durations and the easings of every theme: a group for each kind."""
+    durations, easings = {"$type": "duration"}, {"$type": "cubicBezier"}
+    for token in design["motion"]["tokens"]:
+        name = token["name"]
+        if name.startswith(DURATION_PREFIX):
+            value = dtcg_fix.quantity_object(token["value"], dtcg_fix.TIME_UNITS)
+            if value is None:
+                sys.exit(f"signal_tokens: {name} is not a duration in ms or s")
+            durations[name.removeprefix(DURATION_PREFIX)] = {"$value": value}
+        elif name.startswith(EASE_PREFIX):
+            easings[name.removeprefix(EASE_PREFIX)] = {"$value": curve(token)}
+        else:
+            sys.exit(f"signal_tokens: {name} in the motion section starts with neither {DURATION_PREFIX} nor {EASE_PREFIX}")
+    doc = {"$schema": SCHEMA, "$description": f"Signal, motion. {WRITTEN}", "duration": durations, "ease": easings}
+    return render(doc) + "\n"
+
+
+def gesture(design: dict) -> str:
+    """The thresholds of the pointer's gestures: lengths and a time, each a token of its own at the root, so that
+    the file is what lv::pointer takes."""
+    doc = {"$schema": SCHEMA, "$description": f"Signal, gesture limits. {WRITTEN}"}
+    for token in design["gesture"]["tokens"]:
+        value, name = token["value"], token["name"]
+        if value.endswith("px"):
+            doc[name] = {"$type": "dimension", "$value": dtcg_fix.quantity_object(value, dtcg_fix.LENGTH_UNITS)}
+        else:
+            quantity = dtcg_fix.quantity_object(value, dtcg_fix.TIME_UNITS)
+            if quantity is None:
+                sys.exit(f"signal_tokens: {name} in the gesture section is neither a length in px nor a duration in ms or s")
+            doc[name] = {"$type": "duration", "$value": quantity}
+    return render(doc) + "\n"
+
+
 def families(design: dict) -> dict:
     """The font families: the first name of each stack, the one whose file a device holds."""
     out = {"$type": "fontFamily"}
@@ -131,6 +185,8 @@ def documents(design: dict) -> dict:
     out = {t["id"] + ".json": document(design, t["id"]) for t in design["color"]["themes"]}
     out["lamps.json"] = lamps(design)
     out["type.json"] = typography(design)
+    out["motion.json"] = motion(design)
+    out["gesture.json"] = gesture(design)
     return out
 
 

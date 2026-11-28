@@ -32,12 +32,14 @@
 // million operations of GCC's 33.5 million.
 
 #include <lv/detail/embedded.hpp>
+#include <lv/detail/fixed_string.hpp>
 #include <lv/detail/ttf.hpp>
 #include <lv/token_types.hpp>
 #include <lv/units.hpp>
 #include <lv/values.hpp>
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
@@ -83,6 +85,44 @@ consteval std::vector<std::uint32_t> characters_of(std::string_view text) {
     while (at < out.size() && out[at] < c) ++at;
     if (at == out.size() || out[at] != c) out.insert(out.begin() + static_cast<std::ptrdiff_t>(at), c);
   }
+  return out;
+}
+
+// The place of the first byte of `text` that is not part of a UTF-8 character, or its size when there is none.
+consteval std::size_t invalid_utf8_at(std::string_view text) {
+  for (std::size_t i = 0; i < text.size();) {
+    const auto lead = static_cast<unsigned char>(text[i]);
+    if ((lead >= 0x80 && lead < 0xc0) || lead >= 0xf8) return i;  // a continuation byte alone, or no lead byte
+    const std::size_t tail = utf8_tail(lead);
+    if (i + tail >= text.size()) return i;  // the character is cut
+    for (std::size_t k = 1; k <= tail; ++k)
+      if ((static_cast<unsigned char>(text[i + k]) & 0xc0) != 0x80) return i + k;
+    i += tail + 1;
+  }
+  return text.size();
+}
+
+// The characters of Latin-1 after the default ones: U+00A0 to U+00FF, as UTF-8 (two bytes each).
+consteval std::string latin1_accents() {
+  std::string out;
+  for (std::uint32_t c = 0xa0; c <= 0xff; ++c) {
+    out.push_back(static_cast<char>(0xc0 | c >> 6));
+    out.push_back(static_cast<char>(0x80 | (c & 0x3f)));
+  }
+  return out;
+}
+
+// The default characters and `extra`, as the text of a typeface file's `characters`.
+consteval std::string ascii_plus_text(std::string_view extra, std::string_view set = "lv::ascii_plus", bool accents = false) {
+  if (const std::size_t at = invalid_utf8_at(extra); at != extra.size())
+    fail("lv: " + str(set) + " takes UTF-8 text, and byte " + decimal(at) + " of it is not part of a UTF-8 character.");
+  std::string out = str(ascii);
+  if (accents) out += latin1_accents();
+  out += str(extra);
+  const std::size_t base = characters_of(accents ? str(ascii) + latin1_accents() : str(ascii)).size();
+  if (const std::size_t count = characters_of(out).size(); count > 255)
+    fail("lv: a font holds at most 255 characters, and the " + decimal(base) + " of " + (accents ? "lv::latin1" : "the default set") +
+         " and the " + decimal(count - base) + " you add are " + decimal(count) + ". Make a second font for the others.");
   return out;
 }
 
@@ -381,6 +421,42 @@ struct font_file {
 template <const auto& File>
   requires detail::embedded_bytes<decltype(File)>
 inline constexpr detail::font_file<File> font{};
+
+// The characters from the space to the tilde and `Extra` on top of them, as the text for the characters of a
+// font: lv::ascii_plus<"€·"> for a price and a separator.
+template <detail::fixed Extra>
+inline constexpr std::string_view ascii_plus = std::define_static_string(detail::ascii_plus_text(Extra.sv()));
+
+// The default characters and the accents of Latin-1 (U+00A0 to U+00FF), 191 characters, and `Extra` on top:
+// lv::latin1_plus<"€"> for a price in a language with accents. It is the dear one: 96 more glyphs than the default
+// set, about 86 G instructions of compile time (a build of 11 seconds and 0.9 GB) and 12 KB of flash for each font at 16 px (docs/fonts.md). Name the
+// accents that a text needs with lv::ascii_plus when it needs a few. Latin-1 stops at U+00FF: Polish letters (ł ą ę),
+// Czech, Turkish and the euro sign are outside it, and go in `Extra`.
+template <detail::fixed Extra>
+inline constexpr std::string_view latin1_plus = std::define_static_string(detail::ascii_plus_text(Extra.sv(), "lv::latin1_plus", true));
+
+namespace detail {
+// lv::latin1: a set that turns into its text where it is used. The conversion is a template, and its text a variable
+// template of the type asked for, so that nothing is worked out where this header is read: a conversion that named
+// latin1_plus<""> plainly instantiated it in every file (2.4 G instructions for 191 characters sorted for nothing).
+template <class V>
+consteval V latin1_view() {
+  return std::define_static_string(ascii_plus_text("", "lv::latin1_plus", true));
+}
+
+template <class V>
+inline constexpr V latin1_text = latin1_view<V>();
+
+struct latin1_set {
+  template <std::same_as<std::string_view> V>
+  consteval operator V() const {
+    return latin1_text<V>;
+  }
+};
+}  // namespace detail
+
+// The default characters and the accents of Latin-1, for the characters of a font: the cost of lv::latin1_plus<"">.
+inline constexpr detail::latin1_set latin1{};
 
 // One file of a typeface: the family and weight it is, as the design tokens name them.
 struct face_file {

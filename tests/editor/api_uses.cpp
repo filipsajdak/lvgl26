@@ -8,12 +8,15 @@
 
 #include <lv/encoded_image.hpp>
 #include <lv/font.hpp>
+#include <lv/gesture.hpp>
+#include <lv/icons.hpp>
 #include <lv/host.hpp>
 #include <lv/image.hpp>
 #include <lv/list.hpp>
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
+#include <lv/mode_look.hpp>
 #include <lv/one_of.hpp>
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
@@ -23,6 +26,8 @@
 #include <lv/shown.hpp>
 #include <lv/signal.hpp>
 #include <lv/signal_lamps.hpp>
+#include <lv/signal_gesture.hpp>
+#include <lv/signal_motion.hpp>
 #include <lv/signal_type.hpp>
 #include <lv/theme.hpp>
 #include <lv/ui_scheduler.hpp>
@@ -144,6 +149,12 @@ constexpr lv::length gap = tok.space.gap;
 constexpr auto raw_gap = lv::raw(3 * px);
 static_assert(std::same_as<decltype(raw_gap), const lv::raw_value<lv::length>>);
 static_assert(gap == *tok.space.gap && raw_gap.value == 3 * px);
+
+// A stub token holds the value of a length, a time and a number, so code that needs a token's
+// value while it compiles, such as the size of a frame, reads in the editor as it builds.
+static_assert(tok.space.gap->raw() == 8 && tok.space._2xl->raw() == 32);
+static_assert(tok.time.quick->raw() == 150 && *tok.opacity.half == 0.5);
+static_assert(lv::frame<tok.space._2xl->raw(), tok.space.gap->raw()>::width == 32);
 static_assert(std::same_as<decltype(lv::signal::dark_tokens.color.muted), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::day_tokens.color.ground), lv::token<lv_color_t>>);  // C API
 
@@ -158,6 +169,8 @@ constexpr auto signal_fonts = std::pair{lv::signal::body_font, lv::signal::label
 constexpr lv::length signal_spacing = lv::signal::label_spacing;
 static_assert(std::same_as<decltype(lv::signal::lamps.dark.green), lv::token<lv_color_t>>);  // C API
 static_assert(std::same_as<decltype(lv::signal::lamps.day.blue), lv::token<lv_color_t>>);  // C API
+static_assert(std::same_as<decltype(lv::signal::motion.duration.settle), lv::token<lv::duration>>);
+static_assert(std::same_as<decltype(lv::signal::motion.ease.back), lv::token<lv::bezier>>);
 
 // ---- styles and themes ------------------------------------------------------------
 
@@ -192,18 +205,47 @@ constexpr unsigned char picture_png[] = {
 constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf, "0123456789"}});
 constexpr auto label_font = type(tok.text.label);
 constexpr auto odd_font = lv::font<barlow_ttf>(12 * px, "0123456789");
+constexpr auto priced_font = lv::font<barlow_ttf>(12 * px, lv::ascii_plus<"€·">);
+constexpr std::string_view latin_text = lv::latin1_plus<"€">;
+constexpr std::string_view all_latin1 = lv::latin1;  // the set turns into its text
+static_assert(std::same_as<decltype(latin_text), const std::string_view>);  // C API
 constexpr lv::face_file face{"Barlow", 500, barlow_ttf};
 static_assert(std::same_as<decltype(label_font), const lv::token<const lv_font_t*>>);  // C API
 static_assert(std::same_as<decltype(odd_font), const lv_font_t* const>);  // C API
+static_assert(std::same_as<decltype(priced_font), const lv_font_t* const>);  // C API
+
+// lv::like and lv::name_of in a property: the editor reads each as a value of the property's type.
+enum class roast { light, dark };
+struct roast_names {
+  static constexpr char light[] = "Light";
+  static constexpr char dark[]  = "Dark";
+};
+struct roast_pictures {
+  static constexpr auto light = lv::image_file<picture_png>;
+  static constexpr auto dark  = lv::image_file<picture_png>;
+};
+template <roast R>
+constexpr auto roast_tile() {
+  return lv::button(lv::image({.src = lv::like<R, roast_pictures>}),
+                    lv::label({.text = lv::like<R, roast_names>}), lv::label({.text = lv::name_of<R>}));
+}
+constexpr auto roast_tiles = lv::row(roast_tile<roast::light>(), roast_tile<roast::dark>());
 static_assert(face.weight == 500 && face.family == "Barlow" && face.characters.empty());
 
 constinit lv::scaled_font reading{barlow_ttf, tok.text.label};
 constinit lv::scaled_font other_reading{barlow_ttf, lv::raw(20 * px)};
 
+constexpr auto gear_text = lv::glyph<"gear">;
+constexpr auto icon_list = lv::glyphs<"gear", "plus">;
+constexpr auto gear_icon = lv::icon<"gear">({.id = "gear"});
+static_assert(std::same_as<decltype(gear_text), const char* const>);
+
 constexpr auto dot = lv::image_file<picture_png>;
 constexpr auto kept_dot = lv::encoded_image<picture_png>;
+constexpr auto dot_mask = lv::mask_file<picture_png>;
 static_assert(std::same_as<decltype(dot), const lv_image_dsc_t* const>);  // C API
 static_assert(std::same_as<decltype(kept_dot), const lv_image_dsc_t* const>);  // C API
+static_assert(std::same_as<decltype(dot_mask), const lv_image_dsc_t* const>);  // C API
 
 // ---- state ------------------------------------------------------------------------
 
@@ -357,6 +399,12 @@ constinit const lv::page popup_page = lv::page_of<popup, {.on_shown = &on_popup,
 constinit const lv::page main_page = lv::page_of<ui>;
 constexpr auto slide_in = lv::transition({.x = {320 * px, 0 * px}}, 200 * lv::ms);
 constexpr auto slide_out = lv::transition({.x = {0 * px, 320 * px}}, 200 * lv::ms);
+constexpr auto back_in = lv::transition({.x = {-320 * px, 0 * px}}, 200 * lv::ms);
+constexpr auto back_out = lv::transition({.x = {0 * px, -320 * px}}, 200 * lv::ms);
+constexpr auto two_ways_pages =
+    lv::group[lv::shown(current_page, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out})[
+        lv::is<screen_page::main>(main_page),
+        lv::is<screen_page::popup_page>(popup_page, {.enter = back_in, .leave = back_out}), lv::otherwise()]];
 constexpr auto sliding_pages = lv::group[lv::shown(current_page, {.alive = 2, .enter = slide_in, .leave = slide_out})[
     lv::is<screen_page::main>(main_page), lv::is<screen_page::popup_page>(popup_page), lv::otherwise()]];
 static_assert(lv::page_of<popup>.size > 0);
@@ -425,6 +473,10 @@ int use_application() {
   editor_window window{app};
   lv::display windowed{app, frame, window};
   lv::pointer fed{windowed, window};
+  lv::pointer tuned{plain, lv::gesture_limits{.swipe_distance = 30 * px}};
+  static_cast<void>(tuned.raw());
+  lv::pointer signal_limits{plain, lv::signal::gesture};
+  static_cast<void>(signal_limits.raw());
   static_cast<void>(fed.handle());
   const lv::pointer_feed feed = mouse.handle();
   if (!feed || !(feed == feed) || !feed(lv::point{1, 1}, lv::released)) return 21;
@@ -582,7 +634,26 @@ int use_lists(lv::obj screen) {
 
 // ---- tasks ------------------------------------------------------------------------
 
+
+// What lv::in gives, and the struct that it animates.
+template <class T>
+inline constexpr bool is_view_in = false;
+template <lv::detail::fixed W, lv_style_selector_t S>  // C API
+inline constexpr bool is_view_in<lv::view_in<W, S>> = true;
+static_assert(is_view_in<decltype(lv::in<"knob", "pressed">(std::declval<lv::view<"arc">>()))>);
+static_assert(std::same_as<decltype(lv::animatable_style<>{}.arc_width), lv::from_to<lv::length>>);
+
+static_assert(lv::gesture_settings<lv::gesture_limits>);
+lv::state<lv::percent> hold_progress{lv::percent{0}};
+void on_swipe(lv::swipe) {}
+constexpr auto swipe_page = lv::box({.id = "swipes", .on_swiped = &on_swipe});
+
 lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
+  const lv::swipe direction = co_await lv::swiped(button);
+  static_cast<void>(direction);
+  co_await lv::swiped<lv::swipe::left, lv::swipe::right>(button);
+  const bool held = co_await lv::hold(button, 1 * sec, hold_progress);
+  static_cast<void>(held);
   co_await button.next().clicked;
   co_await button.next().value_changed;
   co_await lv::sleep(100 * ms);
@@ -593,6 +664,12 @@ lv::task<> count_clicks(lv::view<"button"> button, lv::view<"arc"> arc) {
   co_await lv::animate(arc, {.width = {80 * px, 120 * px}}, 200 * ms, lv::ease::in_quad);
   co_await lv::animate(arc, {.rotation = {0 * deg, 90 * deg}}, 200 * ms, tok.motion.fall);
   co_await lv::animate(arc, {.value = {0, 1}}, 200 * ms, lv::bezier{0.33, 0, 0.67, 0.33});
+  // Local style values: of the main part, and of a part and a state behind lv::in.
+  co_await lv::animate(arc, {.opa = {0 * pct, 100 * pct}}, 220 * ms);
+  co_await lv::animate(arc, {.translate_y = {0 * px, -24 * px}}, 220 * ms, lv::ease::out_quad);
+  co_await lv::animate(lv::in<"indicator">(arc), {.arc_width = {2 * px, 8 * px}}, 120 * ms);
+  co_await lv::animate(lv::in<"pressed">(arc), {.transform_scale = {256, 280}}, 120 * ms);
+  co_await lv::animate(lv::in<"knob", "pressed">(arc), {.opa = {20 * pct, 100 * pct}}, 120 * ms);
   co_await button.next().gone;
 }
 
@@ -743,6 +820,13 @@ static_assert(owner_caption.sv() == "owner");
 
 }  // namespace api_uses
 
+// ---- a display that follows a state --------------------------------------------------
+
+void follows_a_mode(lv::display& display, lv::state<lv::signal::mode>& mode) {
+  display.follow(mode, {lv::signal::day, lv::signal::dark});
+  mode = lv::signal::mode::dark;
+}
+
 // ---- looks --------------------------------------------------------------------------
 
 // The project names its tokens and typeface once, before the first look.
@@ -753,6 +837,10 @@ inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<lv::override>
 struct plain_design {};
 template <>
 inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
+
+// The designs of the two modes, in the order of the enumerators of the state a display follows.
+template <>
+inline constexpr lv::mode_designs_of<lv::override, lv::override> lv::mode_designs<lv::override>{};
 
 // A font that a file of its own draws. A file that defines the object does so before it names it.
 template <>
@@ -771,6 +859,9 @@ constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per
 template <class Design = lv::override>
 constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
 constexpr auto chips = lv::row[chip<>, chip<plain_design>];
+
+// A look whose styles follow the mode of a display that follows a state.
+constexpr auto follows_the_mode = lv::box({.look = lv::mode_look<"tile">, .style = {.radius = lv::raw(3 * px)}});
 
 // A font that another file draws: named here, defined in the file that draws it.
 constexpr auto split_label = lv::font_of<"text.label">;
