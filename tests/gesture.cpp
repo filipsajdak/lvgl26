@@ -92,7 +92,11 @@ static_assert(lv::gesture_settings<own_limits> && lv::gesture_settings<lv::gestu
 static_assert(!lv::gesture_settings<int> && !lv::gesture_settings<lv::point>);
 static_assert(std::is_same_v<decltype(lv::pointer{std::declval<lv::display&>(), own_limits{}}), lv::pointer<16>>);
 
+int ring_clicks = 0;
+void count_click(lv_event_t*) { ++ring_clicks; }
+
 void reset() {
+  ring_clicks = 0;
   swipes = 0;
   waited = 0;
   hold_result = -1;
@@ -126,6 +130,32 @@ void a_swipe_has_its_direction(lv::application& app, lv::pointer<>& mouse, lv::o
   drag(app, mouse, {160, 225}, 0, -10, 6);
   check(swipes == 4 && last_swipe == lv::swipe::up);
   (void)page;
+}
+
+// A swipe that starts on a button and is taken clicks nothing: LVGL would click the button on release, as for
+// a tap. Taken by the page's .on_swiped, and by a wait; a tap still clicks.
+void a_taken_swipe_clicks_nothing(lv::application& app, lv::pointer<>& mouse, lv::obj page, lv::obj ring) {
+  lv_obj_add_event_cb(ring.raw(), &count_click, LV_EVENT_CLICKED, nullptr);  // C API
+  reset();
+  drag(app, mouse, middle(ring), 0, 0, 0);
+  check(ring_clicks == 1 && swipes == 0);
+  drag(app, mouse, middle(ring), 10, 0, 6);
+  check(ring_clicks == 1 && swipes == 1);
+  drag(app, mouse, middle(ring), -10, 0, 6);
+  check(ring_clicks == 1 && swipes == 2);
+
+  auto holder = page.add<"obj">();
+  lv_obj_set_size(holder.raw(), 320, 240);  // C API
+  auto button = holder.add<"button">();
+  lv_obj_set_size(button.raw(), 100, 40);  // C API
+  lv_obj_add_event_cb(button.raw(), &count_click, LV_EVENT_CLICKED, nullptr);  // C API
+  read(app);
+  reset();
+  check(lv::spawn(wait_for_a_swipe(holder), holder));
+  drag(app, mouse, middle(button), 10, 0, 6);
+  check(waited == 1 && ring_clicks == 0 && swipes == 0);
+  lv_obj_delete(holder.raw());
+  read(app);
 }
 
 // A short drag, and a drag that is slow, are no swipe.
@@ -262,6 +292,7 @@ int main() {
   a_short_or_slow_drag_is_no_swipe(app, mouse);
   the_limits_are_the_pointers(app, display);
   a_task_waits_for_a_swipe(app, mouse, page);
+  a_taken_swipe_clicks_nothing(app, mouse, page, root->get<"ring">());
   a_scroll_is_no_swipe(app, mouse, root->get<"scroller">());
   a_hold_that_lasts(app, mouse, page, root->get<"ring">());
   a_hold_that_is_cut_short(app, mouse, page, root->get<"ring">());

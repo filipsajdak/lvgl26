@@ -18,6 +18,7 @@ A page that takes a swipe with a handler, and a task that waits for one:
 - LVGL sends a swipe while the finger is still down, when it has moved the distance of the gesture limits, in the direction of the larger movement. A swipe that starts anywhere on the page counts, also on a button.
 - It goes to the widget that was pressed if that keeps gestures, and otherwise to its first ancestor that does. Every widget passes gestures on, and a swipe that reaches no widget that keeps them is lost. A wait for a swipe, and `.on_swiped`, make their widget one that keeps them, so the nearest page that waits gets the swipe and a wait above it sees nothing.
 - A drag that LVGL takes as a scroll is no swipe.
+- A swipe that a wait or `.on_swiped` takes ends the press: the button it started on is not clicked when the finger is lifted. A wait for other directions leaves the press alone.
 
 ## Hold
 

@@ -17,6 +17,7 @@
 // their widget one that keeps them, so a wait on a page sees a swipe that starts anywhere on it, and the
 // nearest page that waits gets it. `.gesture_bubble = false` on a widget with no wait turns the swipes off
 // for its subtree: nothing above it sees them. A drag that LVGL takes as a scroll is no swipe.
+// A swipe that a wait or `.on_swiped` takes ends its press: the button it started on is not clicked.
 
 #include <lv/detail/missing.hpp>
 #include <lv/task.hpp>
@@ -92,6 +93,7 @@ struct swipe_source {
     const swipe direction = swipe_of(lv_indev_get_gesture_dir(lv_indev_active()));
     if (!swipe_wanted<Wanted...>(direction)) return;  // another direction: go on waiting
     self->seen = direction;
+    take_swipe();
     self->disarm();
     self->done(self->context);  // may destroy this source: nothing after this line
   }
