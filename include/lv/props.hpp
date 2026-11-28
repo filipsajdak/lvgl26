@@ -331,6 +331,11 @@ constexpr swipe swipe_of(lv_dir_t direction) {
   return swipe::down;
 }
 
+// The swipe that LVGL is sending is taken: its press ends here, so the widget the finger started on
+// gets no click when the finger is lifted (LVGL clicks it otherwise, and its gesture docs say to call
+// lv_indev_wait_release in the handler that acts on a gesture).
+inline void take_swipe() { lv_indev_wait_release(lv_indev_active()); }
+
 inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
   // A function pointer travels in user_data, so nothing is allocated.
   if (h.plain)
@@ -349,6 +354,7 @@ inline void add_handler(lv_obj_t* o, lv_event_code_t code, const handler& h) {
     lv_obj_add_event_cb(
         o,
         [](lv_event_t* e) {
+          take_swipe();
           reinterpret_cast<void (*)(swipe)>(lv_event_get_user_data(e))(swipe_of(lv_indev_get_gesture_dir(lv_indev_active())));
         },
         code, reinterpret_cast<void*>(h.with_swipe));
