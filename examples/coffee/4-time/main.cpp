@@ -62,7 +62,7 @@ constexpr unsigned char condensed_bold_ttf[] = {
 #embed "fonts/BarlowCondensed-Bold.ttf"
 };
 constexpr auto type = lv::typeface({
-  {"Barlow", 500, barlow_ttf, lv::ascii_plus<"€·">},
+  {"Barlow", 500, barlow_ttf, lv::ascii_plus<"€·\u00A0">},
   {"Barlow", 600, semibold_ttf, lv::ascii_plus<"€">},
   {"Barlow", 700, bold_ttf, lv::ascii_plus<"·">},
   {"Barlow Condensed", 700, condensed_bold_ttf, "0123456789. ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
@@ -664,11 +664,11 @@ constexpr auto ready = lv::group(
   lv::group(
     {.size = {lv::size_content, lv::size_content}, .style = lv::look<"line">},
     lv::label({.text = lv::bind(cup), .style = caption_text}),
-    lv::label({.text = "·", .style = lv::look<"separator"> | caption_text}),
+    lv::label({.text = " ·\u00A0", .style = caption_text}),
     lv::label({.text = lv::bind(strength_name), .style = caption_text}),
-    lv::label({.text = "·", .style = lv::look<"separator"> | caption_text}),
+    lv::label({.text = " ·\u00A0", .style = caption_text}),
     lv::label({.text = lv::bind(price), .style = caption_text}),
-    lv::label({.text = "€", .style = lv::look<"unit-after"> | caption_text})
+    lv::label({.text = " €", .style = caption_text})
   ),
   lv::label({.text = "Back to the drinks in 10 s", .style = lv::look<"line"> | caption_text})
 );
