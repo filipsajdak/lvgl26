@@ -470,6 +470,10 @@ add_executable(encoded_image encoded_image.cpp)
 target_link_libraries(encoded_image PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME encoded_image COMMAND encoded_image A:${CMAKE_CURRENT_SOURCE_DIR}/ref/encoded_image.png)
 target_link_libraries(image_alone PRIVATE lvgl26_test_data)
+# A photo of 144 x 144 pixels decodes within GCC's default operation limit, also under the sanitizers.
+lvgl26_test(image_144)
+target_link_libraries(image_144 PRIVATE lvgl26_test_data)
+lvgl26_settings(image_144 settings/image_144.json)
 
 add_executable(styles styles.cpp)
 target_link_libraries(styles PRIVATE lvgl26::lvgl26 lvgl26_warnings)
