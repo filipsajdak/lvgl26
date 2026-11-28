@@ -197,7 +197,7 @@
       "targets": "watchers app_loop"
     },
     "include/lv/display.hpp": {
-      "tests": "^app_loop$|^application$|^theme_follow$|^theme_follow_violation_shape$|^theme_restyle$|^fail_display_band_panel_without_pixels$|^fail_display_frame_temporary_panel$|^fail_pointer_temporary_display$",
+      "tests": "^app_loop$|^app_loop_violation_|^application$|^theme_follow$|^theme_follow_violation_|^theme_restyle$|^fail_display_band_panel_without_pixels$|^fail_display_frame_temporary_panel$|^fail_pointer_temporary_display$",
       "targets": "app_loop application theme_follow theme_restyle"
     },
     "include/lv/dump.hpp": {
