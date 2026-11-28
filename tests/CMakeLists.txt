@@ -169,6 +169,11 @@ lvgl26_test(look)
 lvgl26_test(start_style)
 lvgl26_test(style_add)
 target_link_libraries(look PRIVATE lvgl26_test_data)
+# A look whose styles follow the mode of a display; the pictures are both modes.
+add_executable(mode_look mode_look.cpp)
+target_link_libraries(mode_look PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME mode_look COMMAND mode_look A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_day.png
+                                          A:${CMAKE_CURRENT_SOURCE_DIR}/ref/mode_look_dark.png)
 # Two files of one program name looks, with the registration in a header they share.
 add_executable(look_link look_link_main.cpp look_link_cards.cpp)
 target_link_libraries(look_link PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
@@ -442,6 +447,10 @@ add_executable(font font.cpp)
 target_compile_options(font PRIVATE --embed-dir=${lvgl_SOURCE_DIR})  # two of LVGL's own font files
 target_link_libraries(font PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 add_test(NAME font COMMAND font A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font.png)
+# Characters beyond the default set, and a picture of the euro sign and the middle dot.
+add_executable(font_extra font_extra.cpp)
+target_link_libraries(font_extra PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
+add_test(NAME font_extra COMMAND font_extra A:${CMAKE_CURRENT_SOURCE_DIR}/ref/font_extra.png)
 # The fonts are the bytes that one evaluation of the whole font made.
 add_executable(font_bytes font_bytes.cpp)
 target_compile_options(font_bytes PRIVATE --embed-dir=${lvgl_SOURCE_DIR})
@@ -654,7 +663,9 @@ lvgl26_compile_fail(font_size_out_of_range "a font size is from 4 px to 255 px")
 lvgl26_compile_fail(font_no_glyph "the font file has no glyph for the character U\\+0416")
 lvgl26_compile_fail(font_ascii_plus_no_glyph "the font file has no glyph for the character U\\+0416")
 lvgl26_compile_fail_message(font_ascii_plus_not_utf8 constexpr "lv: lv::ascii_plus takes UTF-8 text, and byte 1 of it is not part of a UTF-8 character.")
-lvgl26_compile_fail_message(font_ascii_plus_too_many constexpr "lv: a font holds at most 255 characters, and the default 95 and the 161 you add are 256. Make a second font for the others.")
+lvgl26_compile_fail_message(font_ascii_plus_too_many constexpr "lv: a font holds at most 255 characters, and the 95 of the default set and the 161 you add are 256. Make a second font for the others.")
+lvgl26_compile_fail_message(font_latin1_plus_not_utf8 constexpr "lv: lv::latin1_plus takes UTF-8 text, and byte 1 of it is not part of a UTF-8 character.")
+lvgl26_compile_fail_message(font_latin1_plus_too_many constexpr "lv: a font holds at most 255 characters, and the 191 of lv::latin1 and the 65 you add are 256. Make a second font for the others.")
 lvgl26_compile_fail(font_glyph_too_large "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_glyph_too_tall "a glyph of this font is larger than LVGL's font format holds")
 lvgl26_compile_fail(font_too_many_characters "a font holds at most 255 characters")
@@ -1093,6 +1104,7 @@ add_library(cost_probes OBJECT EXCLUDE_FROM_ALL
   ${PROJECT_SOURCE_DIR}/tools/probes/include_lv.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/one_label.cpp
   ${PROJECT_SOURCE_DIR}/tools/probes/ten_kinds.cpp
+  ${PROJECT_SOURCE_DIR}/tools/probes/look_percent.cpp
   ${PROJECT_SOURCE_DIR}/examples/quick_start/main.cpp)
 target_link_libraries(cost_probes PRIVATE lvgl26::lvgl26 lvgl26_warnings lvgl26_test_data)
 # The run-time probe of docs/research/visibility.md, run under Valgrind by the same job.
@@ -1431,6 +1443,11 @@ lvgl26_compile_fail(missing_header_for_each_items "lv::for_each is in <lv/repeat
 lvgl26_compile_fail(missing_header_for_each_field "lv::for_each_field is in <lv/repeat.hpp>: add #include <lv/repeat.hpp>")
 lvgl26_compile_fail(missing_header_theme "lv::theme is in <lv/theme.hpp>: add #include <lv/theme.hpp>")
 lvgl26_compile_fail(missing_header_look "lv::look is in <lv/look.hpp>: add #include <lv/look.hpp>")
+lvgl26_compile_fail(missing_header_mode_look "lv::mode_look is in <lv/mode_look.hpp>: add #include <lv/mode_look.hpp>")
+lvgl26_compile_fail_message(mode_look_shape_property constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': the property 'border_width' is set in the first design only. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_shape_layer constexpr "lv: the mode look 'tile' has another shape in the design 'dark_design' than in 'day_design': it has 0 layer(s) (a part or a state), the first design has 1. Both token files hold the group with the same entries, as the themes of lv::display::follow have one shape.")
+lvgl26_compile_fail_message(mode_look_unknown_group constexpr "lv: the look 'page' has no group 'page' in the token file. The groups there: <<names>>. Did you mean 'panel'?")
+lvgl26_compile_fail_message(mode_look_no_designs static_assert "lv: no designs are named for lv::mode_look. Name the token file of each mode once, in a header that every file includes: template <> inline constexpr lv::mode_designs_of<day, dark> lv::mode_designs<lv::override>{}; with lv::design<day> and lv::design<dark> specialized as lv::design<lv::override> is for lv::look.")
 lvgl26_compile_fail(missing_header_image_file "lv::image_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_mask_file "lv::mask_file is in <lv/image.hpp>: add #include <lv/image.hpp>")
 lvgl26_compile_fail(missing_header_encoded_image "lv::encoded_image is in <lv/encoded_image.hpp>: add #include <lv/encoded_image.hpp>")

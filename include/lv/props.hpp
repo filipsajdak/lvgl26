@@ -15,6 +15,7 @@
 
 #include <lv/detail/api.hpp>
 #include <lv/detail/fixed_string.hpp>
+#include <lv/detail/mode_look.hpp>
 #include <lv/detail/setter_order.hpp>
 #include <lv/detail/source.hpp>
 #include <lv/event.hpp>
@@ -188,6 +189,8 @@ consteval std::vector<member_item> scan_base(std::string_view prefix) {
   std::vector<member_item> items;
   items.push_back({"id", ^^arg<std::string_view>, std::meta::info{}, member_group::id});
   for (const auto& slot : named_style_slots()) items.push_back({slot.name, ^^style_t<D>, slot.target, member_group::style});
+  // The look of lv/mode_look.hpp: its styles follow the mode of a display that follows a state.
+  items.push_back({"look"sv, ^^arg<mode_look_ref>, ^^join_mode_look, member_group::style});
   for (auto f : setters_with_prefix(prefix)) items.push_back(setter_item<D>(f, prefix.size()));
   for (auto e : std::meta::enumerators_of(std::meta::dealias(^^lv_event_code_t)))
     if (auto name = event_member(std::meta::identifier_of(e)); !name.empty())

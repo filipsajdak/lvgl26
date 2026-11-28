@@ -17,10 +17,11 @@ The table is written from what each header declares, read by reflection (`docs/r
 | Header | Names |
 |---|---|
 | `<lv/encoded_image.hpp>` | `lv::encoded_image` |
-| `<lv/font.hpp>` | `lv::ascii_plus`, `lv::face_file`, `lv::font`, `lv::typeface` |
+| `<lv/font.hpp>` | `lv::ascii_plus`, `lv::face_file`, `lv::font`, `lv::latin1`, `lv::latin1_plus`, `lv::typeface` |
 | `<lv/image.hpp>` | `lv::image_file`, `lv::mask_file` |
 | `<lv/list.hpp>` | `lv::each`, `lv::list`, `lv::list_error`, `lv::row_view` |
 | `<lv/look.hpp>` | `lv::design`, `lv::design_of`, `lv::draw`, `lv::drawn_font`, `lv::font_object`, `lv::font_of`, `lv::look`, `lv::look_of` |
+| `<lv/mode_look.hpp>` | `lv::mode_designs`, `lv::mode_designs_of`, `lv::mode_look` |
 | `<lv/one_of.hpp>` | `lv::held`, `lv::not_mounted`, `lv::one_of` |
 | `<lv/pointer.hpp>` | `lv::contact`, `lv::gesture_limits`, `lv::gesture_settings`, `lv::most_pointer_samples`, `lv::pointer`, `lv::pointer_feed`, `lv::pointer_feeder`, `lv::pointer_sample`, `lv::pressed`, `lv::released` |
 | `<lv/repeat.hpp>` | `lv::caption`, `lv::field`, `lv::for_each`, `lv::for_each_field`, `lv::like`, `lv::name_of`, `lv::repeat_part` |

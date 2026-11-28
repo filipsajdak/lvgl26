@@ -30,6 +30,7 @@ UNITS = [
     ("a time", "lv::duration"),
     ("an opacity", "lv::opa"),
     ("a color", "lv_color_t"),
+    ("lv::detail::mode_look_ref", "lv::stub::mode_look_ref"),
 ]
 FONT = "a font from a typography token"
 TOKEN = "a design token"
@@ -149,7 +150,7 @@ def property_group(name: str) -> int:
     """0 for the id, 1 for properties, 2 for styles, 3 for handlers: include/lv/props.hpp, property_group."""
     if name == "id":
         return 0
-    if name == "style" or name.startswith("style_"):
+    if name == "look" or name == "style" or name.startswith("style_"):
         return 2
     return 3 if name.startswith("on_") else 1
 

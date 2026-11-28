@@ -16,6 +16,7 @@
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/mcp.hpp>
+#include <lv/mode_look.hpp>
 #include <lv/one_of.hpp>
 #include <lv/png.hpp>
 #include <lv/pointer.hpp>
@@ -205,6 +206,9 @@ constexpr auto type = lv::typeface({{"Barlow", 500, barlow_ttf, "0123456789"}});
 constexpr auto label_font = type(tok.text.label);
 constexpr auto odd_font = lv::font<barlow_ttf>(12 * px, "0123456789");
 constexpr auto priced_font = lv::font<barlow_ttf>(12 * px, lv::ascii_plus<"€·">);
+constexpr std::string_view latin_text = lv::latin1_plus<"€">;
+constexpr std::string_view all_latin1 = lv::latin1;  // the set turns into its text
+static_assert(std::same_as<decltype(latin_text), const std::string_view>);  // C API
 constexpr lv::face_file face{"Barlow", 500, barlow_ttf};
 static_assert(std::same_as<decltype(label_font), const lv::token<const lv_font_t*>>);  // C API
 static_assert(std::same_as<decltype(odd_font), const lv_font_t* const>);  // C API
@@ -834,6 +838,10 @@ struct plain_design {};
 template <>
 inline constexpr lv::design_of<decltype(api_uses::tok)> lv::design<plain_design>{.tokens = api_uses::tok};
 
+// The designs of the two modes, in the order of the enumerators of the state a display follows.
+template <>
+inline constexpr lv::mode_designs_of<lv::override, lv::override> lv::mode_designs<lv::override>{};
+
 // A font that a file of its own draws. A file that defines the object does so before it names it.
 template <>
 const lv::drawn_font lv::font_object<"text.label"> = lv::draw<"text.label">(api_uses::type);
@@ -851,6 +859,9 @@ constexpr auto pages = lv::row[lv::for_each<subpage, lv::but<subpage::none>>(per
 template <class Design = lv::override>
 constexpr auto chip = lv::box({.style = lv::look<"tile-print", Design>});
 constexpr auto chips = lv::row[chip<>, chip<plain_design>];
+
+// A look whose styles follow the mode of a display that follows a state.
+constexpr auto follows_the_mode = lv::box({.look = lv::mode_look<"tile">, .style = {.radius = lv::raw(3 * px)}});
 
 // A font that another file draws: named here, defined in the file that draws it.
 constexpr auto split_label = lv::font_of<"text.label">;

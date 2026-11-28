@@ -76,6 +76,14 @@
       "targets": "shown shown_transitions shown_direction shown_kept example_pages printer_cost",
       "parts": 3
     },
+    "include/lv/mode_look.hpp": {
+      "tests": "^mode_look$|fail_mode_look|fail_missing_header_mode_look",
+      "targets": "mode_look"
+    },
+    "include/lv/detail/mode_look.hpp": {
+      "tests": "^mode_look$",
+      "targets": "mode_look"
+    },
     "include/lv/detail/enumerators.hpp": {
       "tests": "^theme_follow$|^shown_direction$",
       "targets": "theme_follow shown_direction"
@@ -213,8 +221,8 @@
       "targets": "handlers l1_views"
     },
     "include/lv/font.hpp": {
-      "tests": "^concepts$|^font$|^font_bytes$|^look$|^fail_font_bitmap_too_large$|^fail_font_glyph_too_large$|^fail_font_glyph_too_tall$|^fail_font_lacks_table$|^fail_font_needs_token$|^fail_font_no_glyph$|^fail_font_ascii_plus",
-      "targets": "concepts font font_bytes look"
+      "tests": "^concepts$|^font$|^font_bytes$|^look$|^fail_font_bitmap_too_large$|^fail_font_glyph_too_large$|^fail_font_glyph_too_tall$|^fail_font_lacks_table$|^fail_font_needs_token$|^fail_font_no_glyph$|^fail_font_ascii_plus|^font_extra$|^fail_font_latin1_plus",
+      "targets": "concepts font font_bytes look font_extra"
     },
     "include/lv/host.hpp": {
       "tests": "^application$|^app_loop$",
