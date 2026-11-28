@@ -1,10 +1,11 @@
 // Step 4 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): brewing takes
 // time. While the brewing page is shown, a task fills the ring and counts the seconds down; holding
 // the ring for a second cancels, and so does CANCEL. The finished cup settles in, steam rises over
-// it, and the machine goes back to the drinks on its own.
+// it, and the machine goes back to the drinks on its own. A swipe left goes on and a swipe right
+// goes back, except while brewing.
 //
-//   coffee_4    checks the brewing, the hold and the screens, then writes coffee_4.png (the
-//               brewing, 20 seconds before the end) and coffee_4_enjoy.png (the finished cup)
+//   coffee_4    checks the brewing, the hold, the swipes and the screens, then writes coffee_4.png
+//               (the brewing, 20 seconds before the end) and coffee_4_enjoy.png (the finished cup)
 
 #include <lv/font.hpp>
 #include <lv/gesture.hpp>
@@ -323,8 +324,14 @@ constexpr auto tiles = lv::group(
   lv::group({.style = lv::look<"tile-row">}, tile<drink::cappuccino>(), tile<drink::latte>())
 );
 
+// A swipe left does what NEXT does. The page takes no drag as a scroll, so a sideways drag is a swipe.
+void drinks_swiped(lv::swipe way) {
+  if (way == lv::swipe::left) go<screen::your_cup>();
+}
+
 constexpr auto drinks = lv::group(
-  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
+  {.scroll_dir = "none", .style = lv::look<"page">, .on_swiped = &drinks_swiped},
+  header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
   footer(nothing, primary("NEXT", &go<screen::your_cup>))
 );
 //! [drinks]
@@ -406,9 +413,15 @@ constexpr auto summary = lv::group(
   )
 );
 
+// A swipe right does what BACK does, and a swipe left what BREW does.
+void cup_swiped(lv::swipe way) {
+  if (way == lv::swipe::right) go<screen::drinks>();
+  if (way == lv::swipe::left) go<screen::brewing>();
+}
+
 constexpr auto your_cup = lv::group(
-  {.style = lv::look<"page">}, header("YOUR CUP", 2, "2 / 4"),
-  lv::group({.style = lv::look<"cup">}, fields, summary),
+  {.scroll_dir = "none", .style = lv::look<"page">, .on_swiped = &cup_swiped},
+  header("YOUR CUP", 2, "2 / 4"), lv::group({.style = lv::look<"cup">}, fields, summary),
   footer(back("BACK", &go<screen::drinks>), primary("BREW", &go<screen::brewing>))
 );
 //! [cup]
@@ -502,8 +515,10 @@ constexpr auto side = lv::group(
   )
 );
 
+// The brewing takes no swipe: the page keeps the swipes of what lies in it and does nothing with
+// them. Only the hold of the ring, or CANCEL, stops it.
 constexpr auto brewing = lv::group(
-  {.style = lv::look<"page">}, header("BREWING", 3, "3 / 4"),
+  {.gesture_bubble = false, .style = lv::look<"page">}, header("BREWING", 3, "3 / 4"),
   lv::group({.style = lv::look<"brew">}, ring, side),
   footer(outline("CANCEL", &go<screen::your_cup>), nothing)
 );
@@ -692,18 +707,23 @@ void serve(lv::held<enjoy> page) {
 //! [enjoy]
 
 //! [pages]
-// The page of the current screen. A new page slides in from the right, and the old one slides out
-// to the left, in the time and the curve of the token file.
+// The page of the current screen. Going on, the new page slides in from the right and the old one
+// out to the left; going back, to an earlier screen of the enum, the other way. The time and the
+// curve are the token file's.
 constexpr auto width = tok.size.screen_width->raw();
 constexpr auto slide_in =
   lv::transition({.x = {width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
 constexpr auto slide_out =
   lv::transition({.x = {0 * px, -width * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto back_in =
+  lv::transition({.x = {-width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto back_out =
+  lv::transition({.x = {0 * px, width * px}}, *tok.duration.enter, *tok.ease.out);
 
 constexpr auto ui = lv::group(
   lv::shown(
-    current, {.enter = slide_in, .leave = slide_out}, lv::is<screen::drinks>(drinks),
-    lv::is<screen::your_cup>(your_cup),
+    current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
+    lv::is<screen::drinks>(drinks), lv::is<screen::your_cup>(your_cup),
     lv::is<screen::brewing>(brewing, {.on_shown = &start_brewing}),
     lv::is<screen::enjoy>(enjoy, {.on_shown = &serve})
   )
@@ -754,9 +774,48 @@ int hold_the_ring(lv::application& app, lv::pointer<>& finger) {
   return current.get() == screen::your_cup ? 0 : 10;
 }
 
+// A swipe: the finger goes down at `from`, moves sideways a quarter of a target in each of six
+// reads of LVGL (one and a half targets, past LVGL's 50 px), left when `way` is negative, and lifts.
+constexpr int swipe_reads = 6;
+constexpr int swipe_step  = tok.size.target->raw() / 4;
+
+void swipe(lv::application& app, lv::pointer<>& finger, lv::point from, int way) {
+  finger.press(from);
+  steps(app, 1);
+  for (int i = 1; i <= swipe_reads; ++i) {
+    finger.move({from.x + way * i, from.y});
+    steps(app, 1);
+  }
+  finger.release();
+  steps(app, 1);
+}
+
+constexpr lv::point header_middle{width / 2, tok.layout.header_height->raw() / 2};
+
+// A swipe either way leaves the brewing where it is.
+int swipe_while_brewing(lv::application& app, lv::pointer<>& finger) {
+  swipe(app, finger, header_middle, swipe_step);
+  swipe(app, finger, header_middle, -swipe_step);
+  steps(app, 30);
+  return current.get() == screen::brewing ? 0 : 13;
+}
+
+// From the cup, a swipe right goes back to the drinks, a swipe left on to the cup, and one more on
+// to the brewing.
+int swipe_back_and_on(lv::application& app, lv::pointer<>& finger) {
+  steps(app, 30);  // past the slide back to the cup
+  swipe(app, finger, header_middle, swipe_step);
+  steps(app, 30);
+  if (current.get() != screen::drinks) return 14;
+  swipe(app, finger, header_middle, -swipe_step);
+  steps(app, 30);
+  if (current.get() != screen::your_cup) return 14;
+  swipe(app, finger, header_middle, -swipe_step);
+  return current.get() == screen::brewing ? 0 : 14;
+}
+
 // Brewed to the end, the cup is ready; ten seconds later the machine shows the drinks again.
 int brew_to_the_end(lv::application& app) {
-  go<screen::brewing>();
   for (int i = 0; i < 5000 && current.get() != screen::enjoy; ++i) steps(app, 1);
   return current.get() == screen::enjoy ? 0 : 11;
 }
@@ -774,7 +833,9 @@ int main() {
   if (display.screen().get<"width">() != coffee::width) return 8;
 
   if (const int wrong = coffee::brew_like_the_mock_up(app, display.screen())) return wrong;
+  if (const int wrong = coffee::swipe_while_brewing(app, finger)) return wrong;
   if (const int wrong = coffee::hold_the_ring(app, finger)) return wrong;
+  if (const int wrong = coffee::swipe_back_and_on(app, finger)) return wrong;
   if (const int wrong = coffee::brew_to_the_end(app)) return wrong;
 
   // The cup has landed and the name is in place: the picture of the finished cup.
