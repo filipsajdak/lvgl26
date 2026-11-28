@@ -4,23 +4,33 @@
 <title>@TITLE@</title>
 <style>
   body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #222; }
-  canvas { display: block; border: 1px solid #888; touch-action: none; cursor: pointer; }
+  canvas { display: block; max-width: 100%; height: auto; border: 1px solid #888; touch-action: none; cursor: pointer; }
   code { background: #eee; padding: 0 3px; }
-  #stats { font: 12px ui-monospace, monospace; margin-top: 8px; white-space: pre; }
+  #stats { font: 12px ui-monospace, monospace; margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 </style>
 <h1>@TITLE@</h1>
 <p>@BLURB@ Compiled by GCC to WebAssembly and linked with LVGL v9.6.0.
   This page calls <code>web_step</code> from <code>requestAnimationFrame</code> and passes the pointer in.</p>
 <canvas id="screen"></canvas>
 <div id="stats">starting</div>
+@FOOT@
 <script type="module">
 // Set by tools/wasm/make-page.py for the self-contained page; that page needs no server.
 const EMBEDDED = null;       // base64 of the module
 const SCRIPT = null;         // examples/wasm/script.json, for the self test
 const EXPECTED_HASH = null;  // SHA-256 of the host build's last frame of that script
 
-const bytes = EMBEDDED ? Uint8Array.from(atob(EMBEDDED), c => c.charCodeAt(0))
-                       : new Uint8Array(await (await fetch('demo.wasm')).arrayBuffer());
+// Without the embedded module, the page loads demo.wasm from its own folder (the site's demos).
+async function load() {
+  if (EMBEDDED) return Uint8Array.from(atob(EMBEDDED), c => c.charCodeAt(0));
+  const response = await fetch('demo.wasm');
+  if (!response.ok) {
+    document.getElementById('stats').textContent = 'The module is not published yet: the nightly run publishes it.';
+    throw new Error('demo.wasm: ' + response.status);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+const bytes = await load();
 
 // A minimal WASI Preview 1 host. The module reads no file and writes no stream.
 let memory;
@@ -53,7 +63,8 @@ const startMs = performance.now() - t0;
 const W = x.web_width(), H = x.web_height(), STRIDE = x.web_stride();
 const canvas = document.getElementById('screen');
 canvas.width = W; canvas.height = H;
-canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+// Full size where it fits; narrower screens scale it down, and position() scales the pointer back.
+canvas.style.width = W + 'px';
 const ctx = canvas.getContext('2d');
 
 // The module's frame is XRGB8888: bytes B, G, R, X. ImageData wants R, G, B, A.
