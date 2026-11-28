@@ -132,6 +132,7 @@ static_assert(!readable<lv_obj_t*> && !readable<lv::styled<int>>);
 using list_ui = lv::runtime<"obj", "dropdown", "roller", "slider", "arc", "button", "switch">;
 
 // A list of options is copied into the buffer next to it, up to one less than its size.
+static_assert(sizeof(lv::detail::json_value<lv::option_list>{}.text) == lv::detail::text_capacity);
 void option_lists_are_copied(lv::obj screen) {
   const auto dropdown_with = [](std::size_t n) {
     return R"({"type": "dropdown", "id": "d", "props": {"options": ")" + std::string(n, 'o') + R"("}})";
