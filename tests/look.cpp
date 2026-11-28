@@ -72,6 +72,9 @@ static_assert(!lv::look<"alpha">.text_opa.set, "an opaque color sets no opacity"
 static_assert(lv::look<"alpha-explicit">.bg_opa.set);
 // `alt` sorts before `any`, and is a state like the others; the opacity of a long name (`border_color`) is its own.
 static_assert(lv::look<"alt-layer">.layers.count == 1);
+// Only a main or default group goes last among a group's members: a state layer adds a selector, so it stays in place.
+static_assert(lv::detail::order_rank(lv::detail::member_named(^^decltype(tok.lit), "radius")) == 1);
+static_assert(lv::detail::order_rank(lv::detail::member_named(^^decltype(tok.checked_wide), "checked")) == 1);
 static_assert(lv::look<"alpha-border">.border_opa.set && lv::look<"alpha-border">.border_color.set);
 
 // A group named for the default state (the token reader names its member default_) adds no selector:
