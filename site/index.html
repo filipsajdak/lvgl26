@@ -643,6 +643,7 @@ ui.post([reading] { temperature = reading; });   <span class="c">// from any thr
         <h2>Motion, written as a coroutine.</h2>
         <p class="mt-s">A ball bounces with gravity, squashes and stretches, and casts a blurred shadow. The screen is a compile-time tree with design tokens. The motion is a task that awaits one animation after another.</p>
         <p>The scene is <a href="https://github.com/filipsajdak/lvgl26/blob/main/examples/bounce/scene.hpp"><code>examples/bounce/scene.hpp</code></a>: the tree, the tokens, the tasks and the easing curves of <code>lv::animate</code>, with no platform in it. <code>window.cpp</code> beside it opens a window, and a test steps its clock and checks the motion and the pictures at fixed times. The <a href="status.html">status page</a> lists what works today.</p>
+        <p>Run it in the browser: <a href="demo/bounce/index.html">the bouncing ball</a>, and <a href="demo/counter/index.html">a counter</a> that takes clicks. Experimental: a GCC from trunk with an unmerged WebAssembly back end builds them every night.</p>
       </div>
     </div>
   </div>

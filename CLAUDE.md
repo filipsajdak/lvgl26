@@ -198,6 +198,7 @@ Every change must pass `host-v96` and `host-v10` locally. Run the tests side by 
 - `app.hpp` is written with lvgl26 only. `platform.cpp` holds what every host needs: a clock, an `lv::pointer` fed with each event of the page as it comes (`web_pointer`), with no hold of a short press, a frame, one step. The page and the host program call the same functions, and the desktop window (`examples/window/main.cpp`) runs the same `app.hpp`.
 - The host build of the example and the WebAssembly build replay `script.json`: the last frame must be equal byte for byte. Change the script and the page together, never the expected hash alone.
 - The module is a reactor. GCC ignores `export_name`, so the exports are linker options in `tools/wasm/link-demo.sh`: add a function to the list there.
+- The site serves the modules that passed: the nightly job `web-browser`, on main only, uploads them to the prerelease `wasm-demos`, and `pages.yml` downloads them and writes `site/demo/<app>/` with `tools/wasm/site-demos.py` from the same page as the nightly run. Pages never builds them, and works without the release (the page then says the module is not published yet). `site/demo/` is generated: do not commit it.
 
 ## Test adequacy
 
@@ -263,7 +264,7 @@ A feature pull request also:
 
 `docs/` is the one source of the documentation: Markdown, read on GitHub, rendered into `site/docs/` and collected into `site/llms.txt` and `site/llms-full.txt` for agents. `docs/research/` is not part of it.
 
-- `python3 tools/docs.py check` must pass. `python3 tools/docs.py build` renders the pages (needs pandoc); then `python3 tools/check_site.py`.
+- `python3 tools/docs.py check` must pass. `python3 tools/docs.py build` renders the pages (needs pandoc), `python3 tools/wasm/site-demos.py` writes the demo pages; then `python3 tools/check_site.py`.
 - A code block that shows a file has the line `<!-- snippet: path name -->` before it and equals that part of the file. A test builds the file. `tools/docs.py sync` rewrites the blocks.
 - `README.md` is checked and synced as a page, and is never rendered: every C++ block in it is a snippet of a built file (`tools/docs.py`, `README`). It is a short front door: a hero, three claims, a few features with one snippet each, each linking its page. A feature's details go to its page under `docs/`, not into the README.
 - A page names no `lv_` function, `lv_..._t` type or `LV_` name in its code. Only a page about `raw()` may, and it says `<!-- c-api: shown -->`.
