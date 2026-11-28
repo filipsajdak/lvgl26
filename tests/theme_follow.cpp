@@ -3,6 +3,7 @@
 //
 //   theme_follow <day reference.png> <dark reference.png>
 //   theme_follow shape        (ends in a contract violation: two themes of different shapes)
+//   theme_follow <case>       (each of the cases in main ends in a contract violation)
 
 #include <lv/lv.hpp>
 #include <lv/signal.hpp>
@@ -121,14 +122,104 @@ void themes_of_two_shapes() {
   display.follow(chosen, {lv::signal::day, other_shape});  // the contract ends the program here
 }
 
+// A display follows a state of an enum: one theme for each enumerator, in their order.
+template <class S>
+concept follows = requires(lv::display& d, const S& s) { d.follow(s, {lv::signal::day, lv::signal::dark}); };
+static_assert(follows<lv::state<mode>> && !follows<lv::state<bool>>);
+
+enum class one { only };
+enum class three { a, b, c };
+enum class eight { a, b, c, d, e, f, g, h };
+enum class nine { a, b, c, d, e, f, g, h, i };
+constinit lv::state<one> single{one::only};
+constinit lv::state<three> trio{three::a};
+constinit lv::state<eight> octet{eight::h};
+constinit lv::state<nine> nonet{nine::a};
+
+// As many themes as a display can follow, the most there is room for.
+void the_most_themes() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(octet, {lv::signal::day, lv::signal::dark, lv::signal::day, lv::signal::dark, lv::signal::day,
+                         lv::signal::dark, lv::signal::day, lv::signal::dark});
+  check(same(bg(display.screen().raw()), *lv::signal::dark_tokens.color.ground));  // the eighth
+  octet = eight::a;
+  check(same(bg(display.screen().raw()), *lv::signal::day_tokens.color.ground));
+}
+
+// Each of these breaks a precondition of follow(), or a contract inside it.
+void one_theme() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(single, {lv::signal::day});
+}
+
+void more_themes_than_room() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(nonet, {lv::signal::day, lv::signal::dark, lv::signal::day, lv::signal::dark, lv::signal::day,
+                         lv::signal::dark, lv::signal::day, lv::signal::dark, lv::signal::day});
+}
+
+void fewer_themes_than_values() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(trio, {lv::signal::day, lv::signal::dark});
+}
+
+void more_themes_than_values() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(chosen, {lv::signal::day, lv::signal::dark, lv::signal::day});
+}
+
+void following_twice() {
+  lv::application app;
+  lv::display display{app, frame};
+  display.follow(chosen, {lv::signal::day, lv::signal::dark});
+  display.follow(chosen, {lv::signal::day, lv::signal::dark});
+}
+
+void a_constructor_theme_of_another_shape() {
+  lv::application app;
+  lv::display display{app, frame, other_shape};
+  display.follow(chosen, {lv::signal::day, lv::signal::dark});
+}
+
+// LVGL's heap has no room for the theme that the first switch makes.
+void no_room_for_the_theme() {
+  lv::application app;
+  lv::display display{app, frame};
+  for (std::size_t size = std::size_t{1} << 24; size > 0; size /= 2)
+    while (lv_malloc(size) != nullptr) {
+    }
+  display.follow(chosen, {lv::signal::day, lv::signal::dark});
+}
+
+struct violation {
+  const char* name;
+  void (*run)();
+};
+constexpr violation violations[] = {
+    {"shape", &themes_of_two_shapes},
+    {"one_theme", &one_theme},
+    {"more_themes_than_room", &more_themes_than_room},
+    {"fewer_themes_than_values", &fewer_themes_than_values},
+    {"more_themes_than_values", &more_themes_than_values},
+    {"following_twice", &following_twice},
+    {"constructor_shape", &a_constructor_theme_of_another_shape},
+    {"no_room_for_the_theme", &no_room_for_the_theme},
+};
+
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (argc == 2 && std::strcmp(argv[1], "shape") == 0) {
-    themes_of_two_shapes();
-    std::printf("no contract violation\n");
-    return 0;
-  }
+  for (const violation& v : violations)
+    if (argc == 2 && std::strcmp(argv[1], v.name) == 0) {
+      v.run();
+      std::printf("no contract violation\n");
+      return 0;
+    }
   if (argc != 3) {
     std::printf("usage: theme_follow <day reference.png> <dark reference.png>\n");
     return 2;
@@ -139,6 +230,7 @@ int main(int argc, char** argv) {
   either_may_end_first();
   chosen = mode::dark;
   a_theme_of_the_constructor_is_the_first_one();
+  the_most_themes();
   if (failures == 0) std::printf("ok\n");
   return failures == 0 ? 0 : 1;
 }
