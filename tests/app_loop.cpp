@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include <optional>
+#include <span>
 #include <vector>
 
 namespace {
@@ -96,6 +97,26 @@ static_assert(lv::loop_source<counter_source> && !lv::waiting_loop_source<counte
 static_assert(lv::pointer_feeder<fake_window> && lv::attached_panel<fake_window> && lv::hideable_panel<fake_window>);
 static_assert(std::is_same_v<decltype(lv::pointer{std::declval<lv::display&>(), std::declval<fake_window&>()}), lv::pointer<16>>);
 
+// A panel is attached only when it can be told both ends, and hidden only when it can also be shown.
+struct only_attach {
+  void attach(lv::display&) {}
+};
+struct only_detach {
+  void detach(lv::display&) {}
+};
+struct only_hide {
+  void hide() {}
+};
+struct only_show {
+  void show() {}
+};
+static_assert(!lv::attached_panel<only_attach> && !lv::attached_panel<only_detach>);
+static_assert(!lv::hideable_panel<only_hide> && !lv::hideable_panel<only_show>);
+
+// A point starts at the top left corner, and two points are equal when both coordinates are.
+static_assert(lv::point{} == lv::point{0, 0});
+static_assert(!(lv::point{1, 2} == lv::point{1, 3}) && !(lv::point{1, 2} == lv::point{2, 2}));
+
 int clicks = 0;
 void clicked() { ++clicks; }
 
@@ -145,7 +166,8 @@ void hidden_draws_nothing(lv::application& app, fake_window& window, lv::display
   text.set({.text = "Changed"});
   for (int i = 0; i < 5; ++i) app.advance(40 * ms), app.step();
   check(window.drawn == drawn && std::memcmp(before.data(), frame.memory, before.size()) == 0);
-  display.show();
+  display.show();  // the panel shows itself
+  check(!window.hidden && display.visible());
   app.advance(40 * ms), app.step();
   check(window.drawn > drawn && std::memcmp(before.data(), frame.memory, before.size()) != 0);
 }
@@ -168,6 +190,45 @@ void visible_is_observable(lv::application& app, lv::display& display) {
 
 void nothing_drawn(lv::area) {}
 
+// A display that ends takes its watchers of visible() out of its list.
+void a_display_ends_its_watchers(lv::application& app) {
+  static constinit lv::frame<32, 32> small;
+  lv::detail::watch_node node;
+  node.changed = &count_told;
+  {
+    lv::display plain{app, small, &nothing_drawn};
+    lv::detail::display_access::visible_watchers(plain).append(node);
+    check(node.linked());
+  }
+  check(!node.linked());
+}
+
+// A panel that is given the screen piece by piece is attached, hidden and shown as a whole one is.
+struct band_window {
+  lv::display* display = nullptr;
+  int detached = 0;
+  bool hidden = false;
+  void operator()(lv::area, std::span<const std::byte>) {}
+  void attach(lv::display& d) { display = &d; }
+  void detach(lv::display&) { display = nullptr, ++detached; }
+  void hide() { hidden = true, display->set_visible(false); }
+  void show() { hidden = false, display->set_visible(true); }
+};
+
+void a_band_panel_is_attached(lv::application& app) {
+  static constinit lv::band<32, 32, 8> strip;
+  band_window window;
+  {
+    lv::display display{app, strip, window};
+    check(window.display == &display);
+    display.hide();
+    check(window.hidden && !display.visible());
+    display.show();
+    check(!window.hidden && display.visible());
+  }
+  check(window.display == nullptr && window.detached == 1);
+}
+
 // A display whose panel is a function has no window to hide: the request changes only its
 // own state.
 void a_function_panel_only_stops_drawing(lv::application& app) {
@@ -181,6 +242,13 @@ void a_function_panel_only_stops_drawing(lv::application& app) {
 
 // display_of finds the lvgl26 display a widget is on.
 void display_of_a_widget(lv::display& display, lv::obj button) { check(&lv::display_of(button) == &display); }
+
+// A widget that is none breaks the precondition of display_of, also while a display exists. Run as a test of its own.
+int display_of_no_widget() {
+  lv::application app;
+  lv::display display{app, frame, &nothing_drawn};
+  return lv::display_of(lv::obj{nullptr}).width();
+}
 
 // The first source that can wait waits; without one, the application's idle function does.
 int idled = 0;
@@ -252,6 +320,10 @@ int main(int argc, char** argv) {
     std::printf("no contract violation: %d\n", display_of_a_c_display());
     return 0;
   }
+  if (argc == 2 && std::strcmp(argv[1], "display_of_no_widget") == 0) {
+    std::printf("no contract violation: %d\n", display_of_no_widget());
+    return 0;
+  }
   a_source_outlives_its_application();
   lv::application app{{.idle = &idle}};
   fake_window window{app};
@@ -268,6 +340,8 @@ int main(int argc, char** argv) {
     display_of_a_widget(display, root->get<"go">());
   }
   visible_is_observable(app, display);
+  a_display_ends_its_watchers(app);
+  a_band_panel_is_attached(app);
   a_function_panel_only_stops_drawing(app);
   the_wait(app, window);
   a_task_tied_to_its_root(app, display);
