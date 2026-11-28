@@ -1459,6 +1459,7 @@ lvgl26_compile_fail(missing_header_pointer "lv::pointer is in <lv/pointer.hpp>: 
 lvgl26_compile_fail(shown_not_enum "lv::shown follows an lv::state or an lv::computed of an enum or a bool")
 lvgl26_compile_fail(shown_missing_value "lv::shown does not cover: ink. Add an arm for each. lv::is<value>\\(\\) shows nothing for it.")
 lvgl26_compile_fail(shown_duplicate_value "lv::shown has two arms for home. Each value needs one. one arm may name several")
+lvgl26_compile_fail(shown_duplicate_later_value "lv::shown has two arms for ink. Each value needs one. one arm may name several")
 lvgl26_compile_fail(shown_tree_twice "lv::shown shows the tree .*a in two arms. Name both values in one arm: lv::is<a, b>")
 lvgl26_compile_fail(shown_other_enum "lv::shown follows a state of page, and an arm names a value of look")
 lvgl26_compile_fail_message(shown_not_an_arm static_assert "lv::shown takes arms: lv::is<value>(tree), lv::is<value>() for nothing, and a last lv::otherwise(tree). A tree is a constexpr variable: constexpr auto home = lv::column(...);")

@@ -373,13 +373,13 @@ void a_page_lets_go_of_its_state(lv::obj screen) {
   check(lv::detail::graph_access::watchers(current_tab).empty());
 }
 
-// Pages whose root is the one widget of the group they have.
+// Pages whose root is the one widget of the group they have, its arms written in another order than the enum's.
 enum class knob { first, second };
 constinit lv::state<knob> current_knob{knob::first};
 constexpr auto first_knob = lv::button({.size = {40 * px, 30 * px}});
 constexpr auto second_knob = lv::button({.size = {50 * px, 30 * px}});
 constexpr auto knobs = lv::group({.size = {100 * px, 40 * px}})[
-    lv::shown(current_knob)[lv::is<knob::first>(first_knob), lv::is<knob::second>(second_knob)]];
+    lv::shown(current_knob)[lv::is<knob::second>(second_knob), lv::is<knob::first>(first_knob)]];  // not in the enum's order
 
 // With a widget of the group outside the node, LVGL gives that widget the focus when the old page goes; the
 // node moves it on to the first widget of the new page. A focus outside the node stays where it is.
