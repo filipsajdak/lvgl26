@@ -6,6 +6,7 @@
 #include <lv/shown.hpp>
 
 #include "check.hpp"
+#include "full_heap.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -321,6 +322,102 @@ void focus_moves_to_the_new_page(lv::obj screen) {
   lv_group_delete(g);
 }
 
+// A page that LVGL's heap has no room for is not shown, and its .on_shown does not run; with room again,
+// the next change shows its page.
+enum class size_of_page { small, large };
+constinit lv::state<size_of_page> current_size{size_of_page::small};
+constexpr auto small_page = lv::label({.text = "s"});
+int large_shown = 0;
+void count_large(lv::held<big_b>) { ++large_shown; }
+constexpr auto sized_window = lv::group({.size = {240 * px, 160 * px}})[
+    lv::shown(current_size)[lv::is<size_of_page::small>(small_page), lv::is<size_of_page::large>(big_b, {.on_shown = &count_large})]];
+
+void a_page_without_room_is_not_shown(lv::obj screen) {
+  lv_log_register_print_cb([](lv_log_level_t, const char*) {});
+  current_size = size_of_page::small;
+  auto w = lv::mount<sized_window>(screen);
+  check(w.has_value());
+  {
+    full_heap full{0};
+    current_size = size_of_page::large;
+    lv::settle();
+    check(lv_obj_get_child_count(w.root().raw()) == 0 && large_shown == 0);
+  }
+  current_size = size_of_page::small;
+  lv::settle();
+  current_size = size_of_page::large;
+  lv::settle();
+  check(lv_obj_get_child_count(w.root().raw()) == 1 && large_shown == 1);
+  w.unmount();
+  lv_log_register_print_cb(nullptr);
+}
+
+// A page that follows a state lets go of it when the tree that holds the node ends.
+enum class one_page { only };
+constinit lv::state<one_page> current_one{one_page::only};
+constinit lv::state<const char*> caption{"a"};
+constexpr auto captioned = lv::label({.text = lv::bind(caption)});
+constexpr auto caption_window = lv::group({.size = {100 * px, 40 * px}})[lv::shown(current_one)[lv::is<one_page::only>(captioned)]];
+
+void a_page_lets_go_of_its_state(lv::obj screen) {
+  auto w = lv::mount<caption_window>(screen);
+  check(w.has_value() && !lv::detail::graph_access::watchers(caption).empty());
+  w.unmount();
+  check(lv::detail::graph_access::watchers(caption).empty());
+  caption = "b";  // nobody follows it
+  // A shown node in a page follows its state from the storage of the page, which ends with it.
+  outer = outer_page::first;
+  auto n = lv::mount<nested>(screen);
+  check(n.has_value() && !lv::detail::graph_access::watchers(current_tab).empty());
+  n.unmount();
+  check(lv::detail::graph_access::watchers(current_tab).empty());
+}
+
+// Pages whose root is the one widget of the group they have.
+enum class knob { first, second };
+constinit lv::state<knob> current_knob{knob::first};
+constexpr auto first_knob = lv::button({.size = {40 * px, 30 * px}});
+constexpr auto second_knob = lv::button({.size = {50 * px, 30 * px}});
+constexpr auto knobs = lv::group({.size = {100 * px, 40 * px}})[
+    lv::shown(current_knob)[lv::is<knob::first>(first_knob), lv::is<knob::second>(second_knob)]];
+
+// With a widget of the group outside the node, LVGL gives that widget the focus when the old page goes; the
+// node moves it on to the first widget of the new page. A focus outside the node stays where it is.
+void focus_moves_past_the_widgets_outside(lv::obj screen) {
+  lv_group_t* g = lv_group_create();
+  lv_group_set_default(g);
+  lv_obj_t* outside = lv_button_create(screen.raw());  // first in the group
+  current = page::home;
+  current_knob = knob::first;
+  auto w = lv::mount<window>(screen);
+  auto k = lv::mount<knobs>(screen);
+  check(w.has_value() && k.has_value());
+  if (!w.has_value() || !k.has_value()) return;
+  lv_group_focus_obj(lv_obj_get_child(lv_obj_get_child(holder_of(w), 0), 1));  // home's button
+  current = page::settings;
+  lv::settle();
+  lv_obj_t* settings_root = lv_obj_get_child(holder_of(w), 0);
+  check(lv_group_get_focused(g) == lv_obj_get_child(settings_root, 1));  // the slider
+
+  lv_obj_t* knob_holder = k.root().raw();
+  lv_group_focus_obj(lv_obj_get_child(knob_holder, 0));
+  current_knob = knob::second;
+  lv::settle();
+  check(lv_group_get_focused(g) == lv_obj_get_child(knob_holder, 0));  // the new page's root itself
+
+  lv_group_focus_obj(outside);
+  current = page::home;
+  current_knob = knob::first;
+  lv::settle();
+  check(lv_group_get_focused(g) == outside);
+
+  w.unmount();
+  k.unmount();
+  lv_obj_delete(outside);
+  lv_group_set_default(nullptr);
+  lv_group_delete(g);
+}
+
 }  // namespace
 
 int main() {
@@ -342,6 +439,9 @@ int main() {
   ends_with_its_tree(screen);
   the_root_deleted_from_outside(screen);
   focus_moves_to_the_new_page(screen);
+  focus_moves_past_the_widgets_outside(screen);
+  a_page_without_room_is_not_shown(screen);
+  a_page_lets_go_of_its_state(screen);
 
   lv_deinit();
   if (failures == 0) std::printf("ok\n");
