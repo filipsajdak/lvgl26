@@ -4,7 +4,9 @@
 
 #include "check.hpp"
 
+#include <algorithm>
 #include <cstring>
+#include <initializer_list>
 #include <string_view>
 
 namespace {
@@ -27,6 +29,17 @@ static_assert(lv::detail::code_of_icon("arrow-line-down-left") == 0xe05e);
 static_assert(lv::detail::code_of_icon("arrow-line-dow") == 0);
 static_assert(lv::detail::code_of_icon("") == 0);
 static_assert(lv::detail::code_of_icon("ARROW-LEFT") == 0);
+
+// The names offered for a wrong one: the first line of the table too, and only names at most three
+// letters longer or shorter, both edges included.
+consteval bool nearest_are(std::string_view wanted, std::initializer_list<std::string_view> names) {
+  return std::ranges::equal(lv::detail::nearest_icons(wanted), names);
+}
+static_assert(nearest_are("acorn", {"acorn", "coin", "alarm", "alien", "anchor"}));
+static_assert(nearest_are("x", {"x", "at", "axe", "pi", "bag"}));
+static_assert(nearest_are("xxxxx", {"axe", "exam", "taxi", "acorn", "alarm"}));
+static_assert(nearest_are("union", {"union", "unite", "alien", "coin", "function"}));
+static_assert(lv::detail::nearest_icons("the-gear-icon-at-the-top-right-corner").empty());
 
 // The characters of a font of several icons, in the order named.
 static_assert(lv::glyphs<"arrow-left", "check"> == "\xee\x81\x98\xee\x86\x82"sv);
