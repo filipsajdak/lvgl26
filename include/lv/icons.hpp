@@ -57,8 +57,7 @@ consteval std::uint32_t code_of_icon(std::string_view name) {
   while (low < high) {
     const std::size_t middle = low + (high - low) / 2;
     const std::size_t found = text.rfind('\n', middle);
-    std::size_t start = found == std::string_view::npos ? 0 : found + 1;
-    if (start < low) start = low;
+    const std::size_t start = found == std::string_view::npos ? 0 : found + 1;  // low is a line start: never below it
     std::size_t next = start;
     const icon_entry entry = icon_line(text, next);
     if (entry.name == name) return entry.code;
@@ -111,12 +110,9 @@ consteval std::string glyph_text(std::string_view name) {
   const std::uint32_t code = code_of_icon(name);
   if (code == 0) {
     const auto near = nearest_icons(name);
-    std::string list;
-    for (const auto n : near) list += (list.empty() ? "" : ", ") + str(n);
-    const std::string maybe = !near.empty() && distance_between(name, near.front()) <= close_enough
-                                  ? " Did you mean '" + str(near.front()) + "'?"
-                                  : std::string{};
-    fail("lv: there is no icon '" + str(name) + "' in Phosphor." + maybe + " The nearest names: " + list + ".");
+    const std::vector<std::string> names(near.begin(), near.end());
+    fail("lv: there is no icon '" + str(name) + "' in Phosphor." + did_you_mean(name, names) +
+         (names.empty() ? std::string{} : " The nearest names: " + joined_names(names) + "."));
   }
   return utf8_of(code);
 }
