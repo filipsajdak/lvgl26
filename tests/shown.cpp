@@ -65,8 +65,11 @@ constexpr auto big_window = lv::group({.size = {240 * px, 160 * px}})[
 
 // What the holder holds when an arm is shown: the old tree must be gone by then.
 std::uint32_t children_when_shown = 0;
+lv::held<settings_ui> kept_settings;
+bool keep_settings = false;  // only while a test asks: a handle must not outlive its tree
 void count_children(lv::held<settings_ui> page) {
   children_when_shown = lv_obj_get_child_count(lv_obj_get_parent(page->root().raw()));
+  if (keep_settings) kept_settings = page;
 }
 
 constexpr auto window = lv::group({.id = "window", .size = {240 * px, 160 * px}})[
@@ -322,6 +325,24 @@ void focus_moves_to_the_new_page(lv::obj screen) {
   lv_group_delete(g);
 }
 
+// A handle to a page is empty once another tree is in its slot, whichever tree that is.
+void a_handle_sees_another_tree_in_its_slot(lv::obj screen) {
+  keep_settings = true;
+  current = page::settings;
+  auto w = lv::mount<window>(screen);
+  check(w.has_value() && kept_settings.has_value());
+  current = page::home;
+  lv::settle();
+  check(!kept_settings.has_value() && kept_home.has_value());
+  current = page::settings;
+  lv::settle();
+  check(kept_settings.has_value() && !kept_home.has_value());
+  w.unmount();
+  kept_settings = {};
+  kept_home = {};
+  keep_settings = false;
+}
+
 // A page that LVGL's heap has no room for is not shown, and its .on_shown does not run; with room again,
 // the next change shows its page.
 enum class size_of_page { small, large };
@@ -440,6 +461,7 @@ int main() {
   the_root_deleted_from_outside(screen);
   focus_moves_to_the_new_page(screen);
   focus_moves_past_the_widgets_outside(screen);
+  a_handle_sees_another_tree_in_its_slot(screen);
   a_page_without_room_is_not_shown(screen);
   a_page_lets_go_of_its_state(screen);
 
