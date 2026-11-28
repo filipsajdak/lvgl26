@@ -1,0 +1,91 @@
+{
+ "$description": "Test tokens of lv::mode_look, the dark mode: the same groups in every mode.",
+ "color": {
+  "$type": "color",
+  "bg": {
+   "$value": {
+    "colorSpace": "srgb",
+    "components": [
+     0.0863,
+     0.0706,
+     0.0627
+    ],
+    "hex": "#161210"
+   }
+  },
+  "card": {
+   "$value": {
+    "colorSpace": "srgb",
+    "components": [
+     0.1647,
+     0.1333,
+     0.1137
+    ],
+    "hex": "#2a221d"
+   }
+  },
+  "ink": {
+   "$value": {
+    "colorSpace": "srgb",
+    "components": [
+     0.9451,
+     0.902,
+     0.8549
+    ],
+    "hex": "#f1e6da"
+   }
+  },
+  "accent": {
+   "$value": {
+    "colorSpace": "srgb",
+    "components": [
+     0.8784,
+     0.6275,
+     0.3137
+    ],
+    "hex": "#e0a050"
+   }
+  }
+ },
+ "radius": {
+  "$type": "dimension",
+  "card": {
+   "$value": {
+    "value": 12,
+    "unit": "px"
+   }
+  }
+ },
+ "tile": {
+  "bg_color": {
+   "$value": "{color.card}"
+  },
+  "radius": {
+   "$value": "{radius.card}"
+  },
+  "border_color": {
+   "$value": "{color.ink}"
+  },
+  "border_width": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2,
+    "unit": "px"
+   }
+  },
+  "pressed": {
+   "bg_color": {
+    "$value": "{color.accent}"
+   }
+  }
+ },
+ "page": {
+  "bg_color": {
+   "$value": "{color.bg}"
+  },
+  "bg_opa": {
+   "$type": "number",
+   "$value": 1
+  }
+ }
+}

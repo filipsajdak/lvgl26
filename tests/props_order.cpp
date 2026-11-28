@@ -13,7 +13,7 @@ using namespace std::string_view_literals;
 
 consteval int group_of(std::string_view name) {
   if (name == "id"sv) return 0;
-  if (name.starts_with("style"sv)) return 2;
+  if (name == "look"sv || name.starts_with("style"sv)) return 2;
   if (name.starts_with("on_"sv)) return 3;
   return 1;
 }

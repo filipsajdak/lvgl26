@@ -15,6 +15,7 @@
   "lv/look.hpp": ["look", "design_of", "design", "drawn_font", "font_object", "look_of", "font_of", "draw"],
   "lv/lv.hpp": ["screen_active"],
   "lv/match.hpp": ["is", "otherwise", "match"],
+  "lv/mode_look.hpp": ["mode_look", "mode_designs_of", "mode_designs"],
   "lv/one_of.hpp": ["one_of", "not_mounted", "held"],
   "lv/options.hpp": ["option_list", "option_text", "options_of"],
   "lv/owned.hpp": ["owned", "weak"],

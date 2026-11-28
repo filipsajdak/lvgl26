@@ -11,6 +11,7 @@
 #include <lv/image.hpp>
 #include <lv/list.hpp>
 #include <lv/look.hpp>
+#include <lv/mode_look.hpp>
 #include <lv/lv.hpp>
 #include <lv/one_of.hpp>
 #include <lv/shown.hpp>

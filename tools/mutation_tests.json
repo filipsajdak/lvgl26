@@ -76,6 +76,14 @@
       "targets": "shown shown_transitions shown_direction shown_kept example_pages printer_cost",
       "parts": 3
     },
+    "include/lv/mode_look.hpp": {
+      "tests": "^mode_look$|fail_mode_look|fail_missing_header_mode_look",
+      "targets": "mode_look"
+    },
+    "include/lv/detail/mode_look.hpp": {
+      "tests": "^mode_look$",
+      "targets": "mode_look"
+    },
     "include/lv/detail/enumerators.hpp": {
       "tests": "^theme_follow$|^shown_direction$",
       "targets": "theme_follow shown_direction"

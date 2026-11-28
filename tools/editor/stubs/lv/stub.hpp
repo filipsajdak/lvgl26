@@ -32,6 +32,9 @@ struct getter;
 template <class Unit, class Raw>
 using unit_of = Unit;
 
+/// What `.look` takes: the value of lv::mode_look<"tile">.
+struct mode_look_ref {};
+
 /// Stands for a value whose type the stubs do not know. It takes and gives anything,
 /// so the editor marks nothing there; GCC checks the value when the program is built.
 struct anything {
