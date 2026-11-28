@@ -34,6 +34,11 @@
   "date": "2026-11-21",
   "value": 58640806993
  },
+ "look_percent": {
+  "commit": "34a61ac64270089166fbd124d3375a46472afcca",
+  "date": "2026-11-28",
+  "value": 103211650081
+ },
  "one_label": {
   "commit": "31dfe1049c6f060f44fb1e65883e23bf6bbcb45e",
   "date": "2026-11-21",
