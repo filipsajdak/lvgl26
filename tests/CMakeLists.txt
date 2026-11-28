@@ -109,9 +109,11 @@ add_test(NAME input_queue_violation_back_of_empty
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
 # The application's loop: sources, a window that feeds a pointer and closes, a hidden display.
 lvgl26_test(app_loop)
-add_test(NAME app_loop_violation_display_of_c_display
-         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:app_loop> -DCASE=display_of_c_display
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+foreach(case display_of_c_display display_of_no_widget)
+  add_test(NAME app_loop_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:app_loop> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # The application of examples/window, fed by an lv::pointer as its window feeds it.
 lvgl26_test(window_app)
 # The host build of examples/wasm: its platform and host program with each application,
@@ -248,9 +250,12 @@ add_executable(theme_follow theme_follow.cpp)
 target_link_libraries(theme_follow PRIVATE lvgl26::lvgl26 lvgl26_warnings)
 add_test(NAME theme_follow COMMAND theme_follow A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_day.png
                                                 A:${CMAKE_CURRENT_SOURCE_DIR}/ref/theme_follow_dark.png)
-add_test(NAME theme_follow_violation_shape
-         COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:theme_follow> -DCASE=shape
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+foreach(case shape one_theme more_themes_than_room fewer_themes_than_values more_themes_than_values following_twice
+             constructor_shape no_room_for_the_theme)
+  add_test(NAME theme_follow_violation_${case}
+           COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:theme_follow> -DCASE=${case}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/expect_violation.cmake)
+endforeach()
 # Only a build without LVGL's default theme can run it (preset host-v96-no-theme).
 if(LVGL26_NO_DEFAULT_THEME)
   lvgl26_test(no_default_theme)
