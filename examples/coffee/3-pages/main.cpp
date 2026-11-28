@@ -1,14 +1,17 @@
 // Step 3 of the coffee machine tutorial (docs/research/tutorial-coffee-draft.md): pages. The screen
-// of the drinks and the screen of the cup are pages of one state; NEXT and BACK change it, and the
-// new page slides in.
+// of the drinks and the screen of the cup are pages of one state; NEXT and BACK change it, and so
+// does a swipe, left to go on and right to go back. The new page slides in from the side it comes
+// from.
 //
-//   coffee_3    writes coffee_3.png: the page of the cup half way in
+//   coffee_3    writes coffee_3.png: the page of the cup half way in, then swipes back and on
 
 #include <lv/font.hpp>
+#include <lv/gesture.hpp>
 #include <lv/image.hpp>
 #include <lv/look.hpp>
 #include <lv/lv.hpp>
 #include <lv/png.hpp>
+#include <lv/pointer.hpp>
 #include <lv/shown.hpp>
 
 #include <mp-units/systems/si.h>
@@ -271,8 +274,14 @@ constexpr auto tiles = lv::group(
   lv::group({.style = lv::look<"tile-row">}, tile<drink::cappuccino>(), tile<drink::latte>())
 );
 
+// A swipe left does what NEXT does. The page takes no drag as a scroll, so a sideways drag is a swipe.
+void drinks_swiped(lv::swipe way) {
+  if (way == lv::swipe::left) go<screen::your_cup>();
+}
+
 constexpr auto drinks = lv::group(
-  {.style = lv::look<"page">}, header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
+  {.scroll_dir = "none", .style = lv::look<"page">, .on_swiped = &drinks_swiped},
+  header("CHOOSE A DRINK", 1, "1 / 4"), tiles,
   footer(no_back, primary("NEXT", &go<screen::your_cup>))
 );
 //! [drinks]
@@ -354,26 +363,36 @@ constexpr auto summary = lv::group(
   )
 );
 
+// A swipe right does what BACK does.
+void cup_swiped(lv::swipe way) {
+  if (way == lv::swipe::right) go<screen::drinks>();
+}
+
 constexpr auto your_cup = lv::group(
-  {.style = lv::look<"page">}, header("YOUR CUP", 2, "2 / 4"),
-  lv::group({.style = lv::look<"cup">}, fields, summary),
+  {.scroll_dir = "none", .style = lv::look<"page">, .on_swiped = &cup_swiped},
+  header("YOUR CUP", 2, "2 / 4"), lv::group({.style = lv::look<"cup">}, fields, summary),
   footer(back("BACK", &go<screen::drinks>), primary("BREW"))
 );
 //! [cup]
 
 //! [pages]
-// The page of the current screen. A new page slides in from the right, and the old one slides out
-// to the left, in the time and the curve of the token file.
+// The page of the current screen. Going on, the new page slides in from the right and the old one
+// out to the left; going back, to an earlier screen of the enum, the other way. The time and the
+// curve are the token file's.
 constexpr auto width = tok.size.screen_width->raw();
 constexpr auto slide_in =
   lv::transition({.x = {width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
 constexpr auto slide_out =
   lv::transition({.x = {0 * px, -width * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto back_in =
+  lv::transition({.x = {-width * px, 0 * px}}, *tok.duration.enter, *tok.ease.out);
+constexpr auto back_out =
+  lv::transition({.x = {0 * px, width * px}}, *tok.duration.enter, *tok.ease.out);
 
 constexpr auto ui = lv::group(
   lv::shown(
-    current, {.enter = slide_in, .leave = slide_out}, lv::is<screen::drinks>(drinks),
-    lv::is<screen::your_cup>(your_cup)
+    current, {.enter = slide_in, .leave = slide_out, .enter_back = back_in, .leave_back = back_out},
+    lv::is<screen::drinks>(drinks), lv::is<screen::your_cup>(your_cup)
   )
 );
 //! [pages]
@@ -386,6 +405,47 @@ void steps(lv::application& app, int count) {
   for (int i = 0; i < count; ++i) app.advance(10 * lv::ms), app.step();
 }
 
+// A swipe: the finger goes down at `from`, moves sideways a quarter of a target in each of six
+// reads of LVGL (one and a half targets, past LVGL's 50 px), left when `way` is negative, and lifts.
+constexpr int swipe_reads = 6;
+constexpr int swipe_step  = tok.size.target->raw() / 4;
+
+void swipe(lv::application& app, lv::pointer<>& finger, lv::point from, int way) {
+  finger.press(from);
+  steps(app, 1);
+  for (int i = 1; i <= swipe_reads; ++i) {
+    finger.move({from.x + way * i, from.y});
+    steps(app, 1);
+  }
+  finger.release();
+  steps(app, 1);
+}
+
+// Where the tokens put the middle of the header, and the middle of the second tile of the first
+// row: the content between the header and the footer holds two rows, with a gap between them and
+// one below.
+constexpr auto margin        = tok.layout.margin->raw();
+constexpr auto gap           = tok.layout.gap->raw();
+constexpr auto header_height = tok.layout.header_height->raw();
+constexpr auto content_height =
+  tok.size.screen_height->raw() - header_height - tok.layout.footer_height->raw();
+constexpr lv::point header_middle{width / 2, header_height / 2};
+constexpr lv::point second_tile{
+  width - margin - (width - 2 * margin - gap) / 4, header_height + (content_height - 2 * gap) / 4
+};
+
+// A swipe right on the cup goes back; a swipe left on the drinks goes on, also when it starts on a
+// tile, and does not choose that tile.
+int swipe_back_and_on(lv::application& app, lv::pointer<>& finger) {
+  swipe(app, finger, header_middle, swipe_step);
+  steps(app, 30);
+  if (current.get() != screen::drinks) return 4;
+  swipe(app, finger, second_tile, -swipe_step);
+  steps(app, 30);
+  if (current.get() != screen::your_cup) return 5;
+  return chosen.get() == drink::espresso ? 0 : 6;
+}
+
 }  // namespace coffee
 
 int main() {
@@ -393,6 +453,7 @@ int main() {
   lv::display display{app, coffee::frame};
   auto root = lv::mount<coffee::ui>(display.screen());
   if (!root) return 1;
+  lv::pointer finger{display};
   coffee::steps(app, 5);  // past the first refresh
   const auto screen = display.screen();
   if (screen.get<"width">() != coffee::width) return 8;
@@ -404,8 +465,9 @@ int main() {
   coffee::steps(app, 10);
   if (!lv::write_png(display.screen(), "coffee_3.png")) return 3;
 
-  // When the slide has ended, BACK goes back the same way.
+  // When the slide has ended, the swipes go back and on, and BACK goes back.
   coffee::steps(app, 30);
+  if (const int wrong = coffee::swipe_back_and_on(app, finger)) return wrong;
   coffee::go<coffee::screen::drinks>();
   coffee::steps(app, 30);
   return coffee::current.get() == coffee::screen::drinks ? 0 : 2;
