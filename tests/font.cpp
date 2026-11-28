@@ -95,6 +95,11 @@ static_assert(lv::ascii_plus<"\u20AC\u00B7">.starts_with(lv::detail::ascii));
 static_assert(lv::detail::invalid_utf8_at("abc") == 3 && lv::detail::invalid_utf8_at("\u20AC") == 3);
 static_assert(lv::detail::invalid_utf8_at("a\x80") == 1 && lv::detail::invalid_utf8_at("a\xE2\x82") == 1);
 static_assert(lv::detail::invalid_utf8_at("a\xE2\x20\x20") == 2 && lv::detail::invalid_utf8_at("\xF8") == 0);
+// A lead byte past the end, every continuation byte checked, and the edges of the ranges of bytes that lead nothing.
+static_assert(lv::detail::invalid_utf8_at("\xE2") == 0 && lv::detail::invalid_utf8_at("\xE2\x82\x41") == 2);
+static_assert(lv::detail::invalid_utf8_at("\xC3\xC3\x41") == 1);
+static_assert(lv::detail::invalid_utf8_at("\x80\x41") == 0 && lv::detail::invalid_utf8_at("\x81\x41") == 0);
+static_assert(lv::detail::invalid_utf8_at("\xF9\x80\x80\x80") == 0);
 
 struct glyph {
   bool found;
