@@ -110,12 +110,9 @@ consteval std::string glyph_text(std::string_view name) {
   const std::uint32_t code = code_of_icon(name);
   if (code == 0) {
     const auto near = nearest_icons(name);
-    std::string list;
-    for (const auto n : near) list += (list.empty() ? "" : ", ") + str(n);
-    const std::string maybe = !near.empty() && distance_between(name, near.front()) <= close_enough
-                                  ? " Did you mean '" + str(near.front()) + "'?"
-                                  : std::string{};
-    fail("lv: there is no icon '" + str(name) + "' in Phosphor." + maybe + " The nearest names: " + list + ".");
+    const std::vector<std::string> names(near.begin(), near.end());
+    fail("lv: there is no icon '" + str(name) + "' in Phosphor." + did_you_mean(name, names) +
+         (names.empty() ? std::string{} : " The nearest names: " + joined_names(names) + "."));
   }
   return utf8_of(code);
 }

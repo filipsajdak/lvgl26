@@ -1500,6 +1500,7 @@ lvgl26_compile_fail(missing_header_shown_arm "lv::is<...>\\(tree\\) is an arm of
 # Icons (lv/icons.hpp): a name that is no icon lists the nearest.
 lvgl26_compile_fail_message(icon_unknown_name constexpr "lv: there is no icon 'arow-left' in Phosphor. Did you mean 'arrow-left'? The nearest names: arrow-left, caret-left, align-left, copyleft, arrow-down.")
 lvgl26_compile_fail_message(icon_far_name constexpr "lv: there is no icon 'steam-engine' in Phosphor. The nearest names: steam-logo, gear-fine, bell-ringing, champagne, dots-nine.")
+lvgl26_compile_fail_message(icon_name_too_long constexpr "lv: there is no icon 'the-gear-icon-at-the-top-right-corner' in Phosphor.")
 
 # Gestures (lv/gesture.hpp).
 lvgl26_compile_fail_message(hold_progress_not_percent deleted "lv: the progress of lv::hold is an lv::state<lv::percent>: lv::state<lv::percent> progress{lv::percent{0}}. It goes from 0 to 100 while the finger stays.")
