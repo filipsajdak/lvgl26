@@ -317,8 +317,8 @@
       "targets": "setter_order"
     },
     "include/lv/icons.hpp": {
-      "tests": "^icons$|^icons_font$|fail_icon_",
-      "targets": "icons icons_font"
+      "tests": "^icons$|^icons_font$|^icons_search$|fail_icon_",
+      "targets": "icons icons_font icons_search"
     },
     "include/lv/gesture.hpp": {
       "tests": "^gesture$|fail_hold_|fail_swiped",

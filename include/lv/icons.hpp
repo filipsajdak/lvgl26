@@ -57,8 +57,7 @@ consteval std::uint32_t code_of_icon(std::string_view name) {
   while (low < high) {
     const std::size_t middle = low + (high - low) / 2;
     const std::size_t found = text.rfind('\n', middle);
-    std::size_t start = found == std::string_view::npos ? 0 : found + 1;
-    if (start < low) start = low;
+    const std::size_t start = found == std::string_view::npos ? 0 : found + 1;  // low is a line start: never below it
     std::size_t next = start;
     const icon_entry entry = icon_line(text, next);
     if (entry.name == name) return entry.code;

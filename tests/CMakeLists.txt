@@ -46,6 +46,10 @@ endfunction()
 lvgl26_test(smoke)
 lvgl26_test(icons)
 lvgl26_test(icons_font)
+# The search of an icon's name under a fixed operation limit: it needed 24,659 operations on 2026-11-28,
+# a search that reads the lines one by one 2.6 to 3.5 million. The limit is about twice the need.
+lvgl26_test(icons_search)
+set_source_files_properties(icons_search.cpp PROPERTIES COMPILE_OPTIONS "-fno-analyzer;-fconstexpr-ops-limit=50000")
 lvgl26_test(api_helpers)
 lvgl26_test(nearest)
 lvgl26_test(all_header)
