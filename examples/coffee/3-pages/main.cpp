@@ -55,9 +55,9 @@ constexpr unsigned char condensed_bold_ttf[] = {
 #embed "fonts/BarlowCondensed-Bold.ttf"
 };
 constexpr auto type = lv::typeface({
-  {"Barlow", 500, barlow_ttf},
-  {"Barlow", 600, semibold_ttf},
-  {"Barlow", 700, bold_ttf},
+  {"Barlow", 500, barlow_ttf, lv::ascii_plus<"€">},
+  {"Barlow", 600, semibold_ttf, lv::ascii_plus<"€">},
+  {"Barlow", 700, bold_ttf, lv::ascii_plus<"·">},
   {"Barlow Condensed", 700, condensed_bold_ttf},
 });
 
@@ -180,7 +180,7 @@ constinit lv::computed price{[](drink d) { return prices[std::to_underlying(d)];
 
 // What the fields say of the values.
 constexpr std::array strength_words{
-  "1 of 5, Mild", "2 of 5, Light", "3 of 5, Medium", "4 of 5, Strong", "5 of 5, Intense"
+  "1 of 5 · Mild", "2 of 5 · Light", "3 of 5 · Medium", "4 of 5 · Strong", "5 of 5 · Intense"
 };
 constexpr const char* size_ranges[] = {
   "20 to 60 mL", "80 to 150 mL", "140 to 240 mL", "180 to 300 mL"
@@ -259,7 +259,7 @@ constexpr auto tile() {
       lv::group(
         {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
         lv::label({.text = prices[std::to_underlying(D)], .style = price_text}),
-        lv::label({.text = "EUR", .style = lv::look<"currency"> | currency_text})
+        lv::label({.text = "€", .style = lv::look<"currency"> | currency_text})
       )
     )
   );
@@ -350,7 +350,7 @@ constexpr auto summary = lv::group(
   lv::group(
     {.size = {lv::size_content, lv::size_content}, .style = lv::look<"price-row">},
     lv::label({.text = lv::bind(price), .style = numeral_text}),
-    lv::label({.text = "EUR", .style = lv::look<"unit"> | body_text})
+    lv::label({.text = "€", .style = lv::look<"unit"> | body_text})
   )
 );
 
