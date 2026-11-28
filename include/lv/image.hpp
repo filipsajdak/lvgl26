@@ -54,7 +54,7 @@ namespace detail {
 consteval bool has_alpha(const png_reader::picture& p) {
   const std::size_t stride = p.w * p.step;
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* row = p.bits() + y * (stride + 1) + 1;
+    const unsigned char* row = p.rows + y * (stride + 1) + 1;
     for (std::size_t x = 0; x < p.w; ++x)
       if (png_reader::pixel(p, row + x * p.step).a != 255) return true;
   }
@@ -93,7 +93,7 @@ consteval void write_rgb565(const png_reader::picture& p, bool alpha, std::uint3
   const std::size_t from = p.w * p.step;
   std::uint8_t* mask = out + static_cast<std::size_t>(stride) * p.h;
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* at = p.bits() + y * (from + 1) + 1;
+    const unsigned char* at = p.rows + y * (from + 1) + 1;
     std::uint8_t* colour = out + y * stride;
     for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
       const auto c = png_reader::pixel(p, at);
@@ -110,7 +110,7 @@ consteval void write_a8(const png_reader::picture& p, std::uint8_t* out) {
   const bool from_alpha = has_alpha(p);
   const std::size_t from = p.w * p.step;
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* at = p.bits() + y * (from + 1) + 1;
+    const unsigned char* at = p.rows + y * (from + 1) + 1;
     for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
       const auto c = png_reader::pixel(p, at);
       *out++ = from_alpha ? c.a : static_cast<std::uint8_t>((77u * c.r + 150u * c.g + 29u * c.b) >> 8);
@@ -122,7 +122,7 @@ consteval void write_a8(const png_reader::picture& p, std::uint8_t* out) {
 consteval void write_argb8888(const png_reader::picture& p, std::uint32_t stride, std::uint8_t* out) {
   const std::size_t from = p.w * p.step;
   for (std::size_t y = 0; y < p.h; ++y) {
-    const unsigned char* at = p.bits() + y * (from + 1) + 1;
+    const unsigned char* at = p.rows + y * (from + 1) + 1;
     std::uint8_t* to = out + y * stride;
     for (std::size_t x = 0; x < p.w; ++x, at += p.step) {
       const auto c = png_reader::pixel(p, at);
@@ -146,10 +146,7 @@ consteval png_reader::bytes bytes_of(png_source file) { return {file.data, file.
 template <std::size_t Size>
 consteval std::array<unsigned char, Size> rows_of(png_source file) {
   std::array<unsigned char, Size> out{};
-  const auto rows = png_reader::decode(bytes_of(file)).rows;
-  unsigned char* to = out.data();
-  const unsigned char* from = rows.data();
-  for (std::size_t i = 0; i < Size; ++i) to[i] = from[i];
+  png_reader::decode(bytes_of(file), out.data());
   return out;
 }
 

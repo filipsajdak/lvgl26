@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <vector>
 
 namespace lv::detail::png_reader {
 
@@ -202,19 +201,17 @@ consteval unsigned char* stored_block(bit_reader& in, unsigned char* out) {
   return out;
 }
 
-// The `size` bytes that the zlib stream `z` holds.
-consteval std::vector<unsigned char> inflate(const std::vector<unsigned char>& z, std::size_t size) {
-  std::vector<unsigned char> buffer(size);
-  unsigned char* out = buffer.data();
-  bit_reader in{z.data() + 2, z.data() + z.size()};  // past the two bytes of the zlib header
+// Writes the `size` bytes that the zlib stream of `n` bytes at `z` holds to `out`.
+consteval void inflate(const unsigned char* z, std::size_t n, unsigned char* out, std::size_t size) {
+  unsigned char* const start = out;
+  bit_reader in{z + 2, z + n};  // past the two bytes of the zlib header
   for (bool last = false; !last;) {
     in.fill();
     last = in.take(1) != 0;
     const auto type = in.take(2);
     out = type == 0 ? stored_block(in, out) : type == 1 ? fixed_block(in, out) : dynamic_block(in, out);
   }
-  if (out != buffer.data() + size) fail("lv: this PNG file is damaged: it does not hold as many pixels as it says.");
-  return buffer;
+  if (out != start + size) fail("lv: this PNG file is damaged: it does not hold as many pixels as it says.");
 }
 
 // ---- filters: each row says how its bytes were changed before compression -------------
@@ -259,16 +256,12 @@ consteval void unfilter(unsigned char* row, const unsigned char* up, std::size_t
 struct picture {
   std::uint32_t w = 0, h = 0;
   int colour = 0;                        // 0 grey, 2 RGB, 3 palette, 4 grey and alpha, 6 RGBA
-  std::size_t step = 0;                  // bytes for each pixel in `rows`
-  std::vector<unsigned char> rows;       // for each row: its filter byte, then its pixels
-  const unsigned char* shared = nullptr;  // rows that someone else holds: they are not copied (see picture_from)
-
-  // The rows: for each its filter byte, then its pixels.
-  consteval const unsigned char* bits() const { return rows.empty() ? shared : rows.data(); }
-  std::vector<unsigned char> palette;    // three bytes for each colour
-  // The tRNS chunk. For a palette: the alpha of each colour. For grey and RGB: the one
+  std::size_t step = 0;                  // bytes for each pixel in the rows
+  const unsigned char* rows = nullptr;   // for each row: its filter byte, then its pixels; held by someone else
+  bytes palette;                         // three bytes for each colour, in the file
+  // The tRNS chunk, in the file. For a palette: the alpha of each colour. For grey and RGB: the one
   // colour that is see-through, each sample in two bytes.
-  std::vector<unsigned char> transparency;
+  bytes transparency;
 };
 
 consteval void check_header(bytes d) {
@@ -279,10 +272,6 @@ consteval void check_header(bytes d) {
   if (d[24] != 8 || d[28] != 0)
     fail("lv: this PNG file has 16 bits or fewer than 8 bits for each channel, or is interlaced. Save it with 8 bits "
          "for each channel and without interlacing.");
-}
-
-consteval std::vector<unsigned char> chunk(bytes d, std::size_t body, std::size_t n) {
-  return {d.begin() + static_cast<std::ptrdiff_t>(body), d.begin() + static_cast<std::ptrdiff_t>(body + n)};
 }
 
 // The size of the picture, read from the first chunk alone.
@@ -297,43 +286,58 @@ consteval std::size_t rows_size(bytes d) {
   return (static_cast<std::size_t>(width_of(d)) * pixel_steps[d[25]] + 1) * height_of(d);
 }
 
-// The header, the palette and the see-through colours of a file, and the zlib data if `z` is given.
-// The rows are left empty.
-consteval picture read_picture(bytes d, std::vector<unsigned char>* z) {
-  check_header(d);
-  picture out{.w = be32(d, 16), .h = be32(d, 20), .colour = d[25]};
+inline constexpr std::uint32_t idat_tag = 0x49444154;
+
+// Each chunk of the file: `visit(tag, body, n)` with the offset of its body and its size.
+consteval void each_chunk(bytes d, auto visit) {
   for (std::size_t at = 8; at + 12 <= d.size();) {
     const std::size_t n = be32(d, at), body = at + 8;
-    const auto tag = be32(d, at + 4);
-    if (tag == 0x504c5445) out.palette = chunk(d, body, n);        // PLTE
-    if (tag == 0x74524e53) out.transparency = chunk(d, body, n);  // tRNS
-    if (tag == 0x49444154 && z != nullptr)                        // IDAT
-      z->insert(z->end(), d.begin() + static_cast<std::ptrdiff_t>(body), d.begin() + static_cast<std::ptrdiff_t>(body + n));
+    visit(be32(d, at + 4), body, n);
     at = body + n + 4;
   }
-  out.step = pixel_steps[out.colour];
-  return out;
 }
 
-// The picture with its filters undone.
-consteval picture decode(bytes d) {
-  std::vector<unsigned char> z;
-  picture out = read_picture(d, &z);
-  const std::size_t stride = out.w * out.step;
-  out.rows = inflate(z, (stride + 1) * out.h);
-  const std::vector<unsigned char> zeros(stride);
-  for (std::size_t y = 0; y < out.h; ++y) {
-    unsigned char* row = out.rows.data() + y * (stride + 1) + 1;
-    unfilter(row, y > 0 ? row - stride - 1 : zeros.data(), stride, out.step, row[-1]);
-  }
-  return out;
-}
-
-// The same picture, from rows that were decoded already: rows_size(d) bytes at `rows`, which are read where they are.
+// The header, the palette and the see-through colours of a file, with its rows at `rows`:
+// rows_size(d) bytes, which are read where they are.
 consteval picture picture_from(bytes d, const unsigned char* rows) {
-  picture out = read_picture(d, nullptr);
-  out.shared = rows;
+  check_header(d);
+  picture out{.w = be32(d, 16), .h = be32(d, 20), .colour = d[25], .step = pixel_steps[d[25]], .rows = rows};
+  each_chunk(d, [&](std::uint32_t tag, std::size_t body, std::size_t n) {
+    if (tag == 0x504c5445) out.palette = d.subspan(body, n);       // PLTE
+    if (tag == 0x74524e53) out.transparency = d.subspan(body, n);  // tRNS
+  });
   return out;
+}
+
+// The zlib data of the file: the bodies of its IDAT chunks, one after the other, in a buffer that
+// the caller deletes. `n` gets its size.
+consteval unsigned char* zlib_data(bytes d, std::size_t& n) {
+  n = 0;
+  each_chunk(d, [&](std::uint32_t tag, std::size_t, std::size_t size) { n += tag == idat_tag ? size : 0; });
+  unsigned char* const z = new unsigned char[n];
+  unsigned char* to = z;
+  each_chunk(d, [&](std::uint32_t tag, std::size_t body, std::size_t size) {
+    if (tag != idat_tag) return;
+    const unsigned char* from = d.data() + body;
+    for (std::size_t i = 0; i < size; ++i) *to++ = *from++;
+  });
+  return z;
+}
+
+// Writes the rows of the file with their filters undone to `rows`, which holds rows_size(d) bytes.
+consteval void decode(bytes d, unsigned char* rows) {
+  check_header(d);
+  const std::size_t stride = static_cast<std::size_t>(be32(d, 16)) * pixel_steps[d[25]], h = be32(d, 20);
+  std::size_t n = 0;
+  unsigned char* const z = zlib_data(d, n);
+  inflate(z, n, rows, (stride + 1) * h);
+  delete[] z;
+  unsigned char* const zeros = new unsigned char[stride]();
+  for (std::size_t y = 0; y < h; ++y) {
+    unsigned char* row = rows + y * (stride + 1) + 1;
+    unfilter(row, y > 0 ? row - stride - 1 : zeros, stride, pixel_steps[d[25]], row[-1]);
+  }
+  delete[] zeros;
 }
 
 struct rgba {
